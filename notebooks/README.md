@@ -164,6 +164,23 @@ como propuesta aún no están en Go):
 - 100 registros (CA-VMP-1, periodo 24 horas) traen un salto de línea dentro de un campo entrecomillado:
   el escaneo del prototipo los une (como pandas); el divisor de Go por líneas los rechazaría.
 
+## Calibración (02): decisiones de la revisión
+
+- La etiqueta ECA de pureza y recall es el **promedio móvil de 24 h** (`aire_lab.movil_24h`: ventana
+  que termina en la hora, al menos 18 h), no la lectura horaria. Además se guarda el **mejor
+  régimen** frente al ECA (el de mayor proporción de horas sobre el ECA), aunque su media no lo supere.
+- «No es geografía»: la NMI del régimen con la estación no supera en más de 0,10 a la de una línea
+  base, la partición en k niveles de PM10. La regla de la spec (NMI con estación < NMI con la etiqueta
+  ECA) casi no puede cumplirse con una etiqueta binaria rara.
+- La submuestra sistemática usa un paso coprimo con 24, para no fijar horas del día.
+- Un criterio que no cumple nadie se dice y se salta; los demás se siguen aplicando en orden.
+- `kmeans_propuesto.json` copia de `configs/kmeans.json` lo que la grilla no calibra (`semilla`,
+  `semillas`, `tolerancia`, `max_iter`, `workers`, `chunk`).
+
+`sintetico.py` todavía escribe el formato del primer borrador (parámetro y valor); el cargador de Go
+ya no lo lee, así que su opción `--go` queda pendiente de actualizar. Para probar contra Go están las
+dos muestras de `data/sample/` (formato real).
+
 ## Lo que hay que confirmar con el CSV real
 
 Todo en `configs/limpieza.json` (probar antes con `AJUSTES` en el 01): nombres de columnas (el
