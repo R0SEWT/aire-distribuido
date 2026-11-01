@@ -1,0 +1,60 @@
+{
+  "receta": {
+    "features": [
+      "pm10",
+      "fraccion_fina"
+    ],
+    "log1p": [],
+    "nivel": "estacion",
+    "k": 4,
+    "semilla": 42,
+    "semillas": 10,
+    "tolerancia": 1e-06,
+    "max_iter": 100,
+    "workers": 0,
+    "chunk": 10000
+  },
+  "fuente_silver": "oefa_ancho.csv",
+  "sha256_silver": "3e84071aa856327eef8d0167d050b094a006b66f0274ec53ba5d53b0c22e4670",
+  "n": 63821,
+  "media": [
+    31.710126134031118,
+    0.5671970609207829
+  ],
+  "desv": [
+    37.596889670075946,
+    0.22706976432946097
+  ],
+  "sklearn": "1.9.1",
+  "semilla_sklearn": 23,
+  "n_semillas": 5,
+  "inercia": 32644.519568034586,
+  "iteraciones": 75,
+  "orden_centroides": "por la primera feature, ascendente",
+  "tamanos": [
+    33653,
+    20352,
+    8862,
+    954
+  ],
+  "centroides_estandarizados": [
+    [
+      -0.4432924020461693,
+      0.8169145009465225
+    ],
+    [
+      -0.07611372410964795,
+      -0.7622701972817458
+    ],
+    [
+      1.3165658627353303,
+      -1.1981524572601348
+    ],
+    [
+      5.005578286175924,
+      -1.4178452951179181
+    ]
+  ],
+  "centroides_desestandarizados": null,
+  "origen": "oefa"
+}
