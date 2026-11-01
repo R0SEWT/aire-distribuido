@@ -459,3 +459,167 @@ func TestLatidoMideLaIdaYVuelta(t *testing.T) {
 		t.Fatalf("rtt=%v err=%v", rtt, err)
 	}
 }
+
+// Un nodo que deja de leer: el ITERAR no sale antes del plazo de escritura. El
+// Codificador queda roto (pudo salir media línea) y el Enlace cierra el socket,
+// así el nodo se entera (lee EOF) en vez de quedarse esperando para siempre.
+func TestPlazoDeEscrituraVencidoCierraLaConexion(t *testing.T) {
+	coord, extremo := net.Pipe()
+	defer coord.Close()
+	soltar := make(chan struct{})
+	finNodo := make(chan error, 1)
+	go func() {
+		defer extremo.Close()
+		cod, dec := protocolo.NuevoCodificador(extremo), protocolo.NuevoDecodificador(extremo)
+		cod.Escribir(protocolo.Mensaje{Tipo: protocolo.Hola, Version: protocolo.Version, Nodo: "sordo"})
+		c, _ := dec.Leer()
+		cod.Escribir(protocolo.Mensaje{Tipo: protocolo.Listo, N: c.Rango.Len(), Huella: c.Huella})
+		<-soltar // deja de leer: el ITERAR se queda en el cable (net.Pipe no tiene búfer)
+		_, err := dec.Leer()
+		finNodo <- err
+	}()
+
+	e := protocolo.NuevoEnlace(coord)
+	limite := time.Now().Add(5 * time.Second)
+	if err := protocolo.RecibirHola(e, limite); err != nil {
+		t.Fatal(err)
+	}
+	if err := protocolo.AsignarRango(e, protocolo.Rango{Desde: 0, Hasta: 2}, huellaGold, limite); err != nil {
+		t.Fatal(err)
+	}
+	_, err := protocolo.Ronda([]*protocolo.Enlace{e}, 1, 1, []float64{0}, time.Now().Add(100*time.Millisecond))
+	if !errors.Is(err, protocolo.ErrPlazoVencido) || !strings.Contains(err.Error(), "ITERAR") {
+		t.Fatalf("se esperaba un plazo vencido al enviar ITERAR, salió %v", err)
+	}
+	close(soltar)
+	select {
+	case err := <-finNodo:
+		if err == nil {
+			t.Error("el nodo debió encontrar la conexión cerrada")
+		}
+	case <-time.After(5 * time.Second):
+		t.Fatal("el nodo sigue esperando: el Enlace no cerró la conexión")
+	}
+
+	// El enlace ya no sirve, y la ronda siguiente lo dice sin esperar el plazo.
+	inicio := time.Now()
+	_, err = protocolo.Ronda([]*protocolo.Enlace{e}, 2, 1, []float64{0}, time.Now().Add(5*time.Second))
+	if err == nil || !strings.Contains(err.Error(), "cerrado") || time.Since(inicio) > time.Second {
+		t.Errorf("ronda sobre un enlace cerrado: %v (tardó %v)", err, time.Since(inicio))
+	}
+}
+
+func TestRondaRechazaUnLimiteYaVencidoSinEscribirNada(t *testing.T) {
+	enlaces := montar(t, &nodoFalso{nombre: "n", filas: [][]float64{{1}}})
+	_, err := protocolo.Ronda(enlaces, 1, 1, []float64{0}, time.Now().Add(-time.Second))
+	if !errors.Is(err, protocolo.ErrPlazoVencido) {
+		t.Fatalf("se esperaba ErrPlazoVencido, salió %v", err)
+	}
+	// No salió nada: la conexión sigue sana y la ronda 1 sigue disponible.
+	ps, err := protocolo.Ronda(enlaces, 1, 1, []float64{0}, time.Now().Add(5*time.Second))
+	if err != nil || ps[0].Iter != 1 {
+		t.Fatalf("la ronda 1 después del rechazo: %v %v", ps, err)
+	}
+}
+
+func TestRondaExigeLosNodosEnOrdenDeRango(t *testing.T) {
+	// El orden del slice es el orden de la fusión; en la PC4 tiene que ser el de
+	// las filas (Rango.Desde), o dos coordinadores con los mismos nodos
+	// fusionarían distinto.
+	a := &nodoFalso{nombre: "a", filas: [][]float64{{1}, {2}}}
+	b := &nodoFalso{nombre: "b", filas: [][]float64{{3}}}
+	enlaces := montar(t, a, b)
+	limite := time.Now().Add(5 * time.Second)
+	_, err := protocolo.Ronda([]*protocolo.Enlace{enlaces[1], enlaces[0]}, 1, 1, []float64{0}, limite)
+	if err == nil || !strings.Contains(err.Error(), "orden") {
+		t.Fatalf("nodos fuera de orden: %v", err)
+	}
+	if _, err := protocolo.Ronda(enlaces, 1, 1, []float64{0}, limite); err != nil {
+		t.Fatalf("en orden, la ronda 1 sigue disponible: %v", err)
+	}
+}
+
+// El caso realista del rezagado, sobre TCP de verdad: el nodo sigue calculando
+// la ronda 1 cuando el coordinador, que ya la abortó, le manda ITERAR 2. El
+// ITERAR 2 espera en el búfer del socket, el nodo termina, manda su PARCIAL 1
+// (que el coordinador descarta) y después responde la ronda 2.
+//
+// Sobre net.Pipe este caso se bloquea: el pipe no tiene búfer, así que el
+// coordinador queda escribiendo ITERAR 2 mientras el nodo queda escribiendo
+// PARCIAL 1, cada uno esperando que el otro lea, hasta que vence el plazo de
+// escritura. Por eso este test usa net.Listen y no montar.
+func TestParcialRezagadoRealistaSobreTCP(t *testing.T) {
+	ln, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Skipf("no hay TCP en este entorno: %v", err)
+	}
+	defer ln.Close()
+
+	filas := [][]float64{{8}, {9}}
+	finNodo := make(chan error, 1)
+	go func() {
+		finNodo <- func() error {
+			conn, err := net.Dial("tcp", ln.Addr().String()) // el nodo abre la conexión
+			if err != nil {
+				return err
+			}
+			defer conn.Close()
+			cod, dec := protocolo.NuevoCodificador(conn), protocolo.NuevoDecodificador(conn)
+			if err := cod.Escribir(protocolo.Mensaje{Tipo: protocolo.Hola, Version: protocolo.Version, Nodo: "lento", Workers: 1}); err != nil {
+				return err
+			}
+			for {
+				m, err := dec.Leer()
+				if err != nil {
+					return err
+				}
+				switch m.Tipo {
+				case protocolo.Cargar:
+					err = cod.Escribir(protocolo.Mensaje{Tipo: protocolo.Listo, N: len(filas), Huella: m.Huella})
+				case protocolo.Iterar:
+					if m.Iter == 1 {
+						time.Sleep(400 * time.Millisecond) // sigue calculando la ronda 1
+					}
+					err = cod.Escribir(parcialDe(filas, m))
+				case protocolo.Fin:
+					return nil
+				}
+				if err != nil {
+					return err
+				}
+			}
+		}()
+	}()
+
+	conn, err := ln.Accept()
+	if err != nil {
+		t.Fatal(err)
+	}
+	e := protocolo.NuevoEnlace(conn)
+	defer e.Cerrar()
+	limite := time.Now().Add(5 * time.Second)
+	if err := protocolo.RecibirHola(e, limite); err != nil {
+		t.Fatal(err)
+	}
+	if err := protocolo.AsignarRango(e, protocolo.Rango{Desde: 0, Hasta: 2}, huellaGold, limite); err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = protocolo.Ronda([]*protocolo.Enlace{e}, 1, 1, []float64{0}, time.Now().Add(100*time.Millisecond))
+	if !errors.Is(err, protocolo.ErrPlazoVencido) {
+		t.Fatalf("ronda 1: se esperaba ErrPlazoVencido, salió %v", err)
+	}
+	ps, err := protocolo.Ronda([]*protocolo.Enlace{e}, 2, 1, []float64{5}, time.Now().Add(5*time.Second))
+	if err != nil {
+		t.Fatalf("ronda 2: %v", err)
+	}
+	if ps[0].Iter != 2 || !reflect.DeepEqual(ps[0].Sumas, []float64{17}) || e.Rezagados != 1 {
+		t.Errorf("ronda 2: %+v, rezagados %d; se esperaba el PARCIAL 2 con suma 17 y un rezagado", ps[0], e.Rezagados)
+	}
+	if err := e.Cod.Escribir(protocolo.Mensaje{Tipo: protocolo.Fin}); err != nil {
+		t.Fatal(err)
+	}
+	if err := <-finNodo; err != nil {
+		t.Errorf("nodo: %v", err)
+	}
+}
