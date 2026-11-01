@@ -23,9 +23,10 @@ salud que no tengan fuente.
 OEFA publica en la Plataforma Nacional de Datos Abiertos la vigilancia continua de la calidad del
 aire de sus estaciones, con licencia Open Data Commons Attribution [@oefa2026aire]. Cada estación
 mide meteorología (presión, precipitación, temperatura, humedad, viento, radiación), material
-particulado y gases. El archivo viene en **formato largo**: cada fila es un parámetro de una
-estación en una fecha y hora, con su valor y su periodo, de modo que una hora de una estación con
-doce parámetros ocupa doce filas.
+particulado y gases. El archivo tiene una columna por parámetro, pero **cada fila trae un solo
+parámetro** con su valor (el resto de columnas viene vacío), su fecha y su periodo: una hora de una
+estación con doce parámetros ocupa doce filas. En la práctica es un formato largo, y hay que
+pivotarlo (@sec-caso).
 
 Ese formato decide dos cosas del informe. La carga de más de un millón de registros que pide el
 enunciado se cumple sobre las filas largas; el modelo, en cambio, trabaja sobre filas anchas (una
@@ -35,11 +36,13 @@ Las estaciones de OEFA acompañan su función de fiscalización: están donde ha
 vigilar, no repartidas para describir el aire de todo el país. El dato describe el aire **alrededor
 de lo que OEFA vigila**, y cualquier respuesta que salga de aquí hereda esa condición.
 
+El archivo descargado trae {{< meta cifras.csv.estaciones >}} estaciones (la ficha del portal habla de
+34) en {{< meta cifras.csv.departamentos >}} departamentos, con lecturas de
+{{< meta cifras.csv.anios >}} (@tbl-csv-oefa).
+
 ::: {.callout-warning title="PENDIENTE"}
-Confirmar con el EDA (notebook 01) cuántas estaciones trae el CSV, dónde están y junto a qué
-actividad, y el rango de fechas. Sale de `reports/eda_criba.md` y de
-`generado/tablas/limpieza_estaciones.md`. La ficha del portal habla de 34 estaciones: decir si el
-archivo coincide.
+Junto a qué actividad fiscalizada está cada estación (las 19 evaluaciones del archivo), desde el EDA
+(notebook 01, `reports/eda_criba.md`).
 :::
 
 ## La pregunta de impacto social {#sec-pregunta}
@@ -108,6 +111,14 @@ leerse como «aquí el aire es bueno» fuera del entorno de una estación.
 :::
 
 {{< include generado/tablas/cobertura.md >}}
+
+![Cobertura de la red: estaciones y horas completas por departamento](generado/figuras/cobertura.png){#fig-cobertura width=14cm}
+
+:::: {si-falta="generado/figuras/cobertura.png"}
+::: {.callout-warning title="PENDIENTE"}
+Falta `generado/figuras/cobertura.png` (la dibuja el notebook 03).
+:::
+::::
 
 Esta advertencia no es un pie de página: es la responsabilidad ética del caso (ABET SO4). Un sistema
 de alertas que solo ve {{< meta cifras.limpieza.n_estaciones >}} puntos y no lo dice puede dejar sin aviso, con apariencia de normalidad, a

@@ -290,3 +290,30 @@ func ExampleCodificador() {
 	// {"tipo":"PARCIAL","iter":3,"sumas":[4.5,-9,30,2.5],"conteos":[600,400],"inercia":812.0625}
 	// {"tipo":"FIN"}
 }
+
+// Un plazo que ya venció antes de escribir no puede romper el Codificador: no
+// salió ni un byte, y el flujo sigue sano.
+func TestEscribirConUnPlazoYaVencidoNoRompeElFlujo(t *testing.T) {
+	a, b := net.Pipe()
+	defer a.Close()
+	defer b.Close()
+	cod := protocolo.NuevoCodificador(a)
+	err := cod.EscribirAntesDe(protocolo.Mensaje{Tipo: protocolo.Ping}, time.Now().Add(-time.Second))
+	if !errors.Is(err, protocolo.ErrPlazoVencido) {
+		t.Fatalf("se esperaba ErrPlazoVencido, salió %v", err)
+	}
+	if cod.Roto() != nil {
+		t.Fatalf("el Codificador quedó roto sin haber escrito nada: %v", cod.Roto())
+	}
+	llego := make(chan protocolo.Mensaje, 1)
+	go func() {
+		m, _ := protocolo.NuevoDecodificador(b).Leer()
+		llego <- m
+	}()
+	if err := cod.Escribir(protocolo.Mensaje{Tipo: protocolo.Pong}); err != nil {
+		t.Fatal(err)
+	}
+	if m := <-llego; m.Tipo != protocolo.Pong {
+		t.Errorf("llegó %+v; se esperaba el PONG, sin restos del PING rechazado", m)
+	}
+}

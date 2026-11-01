@@ -6,6 +6,11 @@ salida/
 # docente y no entra al repo).
 *.docx
 !recursos/plantilla.docx
+# Datos personales y archivos que arma render.sh: los códigos de alumno reales, la participación
+# llenada y el historial de git del momento no se versionan (el repositorio es público).
+equipo.local.yml
+participacion.local.md
+generado/local/
 
 /.quarto/
 **/*.quarto_ipynb

@@ -139,6 +139,31 @@ matplotlib 3.10.0 (lo de Colab).
   `identicos`) y `benchmark_kmeans.json` (`resumen[]` con `speedup` {`punto, inferior, superior`},
   `determinismo[]`).
 
+## El CSV real de OEFA (formato «largo con columnas»)
+
+El CSV real (spec PC3 §4.1) no tiene el formato de la muestra: una columna por parámetro, pero cada
+fila trae un solo parámetro con valor; la hora falta en el 94 %. Mientras `configs/limpieza.json`
+describa la muestra, el 01 detecta el formato real por la cabecera y usa
+`aire_lab.CONFIG_OEFA_REAL`, que deja copiada en `reports/limpieza_propuesta_real.json` para
+compararla con la del cargador de Go. Claves nuevas (nombres acordados para el cargador; las marcadas
+como propuesta aún no están en Go):
+
+- `parametros_en_columnas` (columna → canónico; canónico nuevo `h2s`), `hora_prefijo_ignorar`
+  (`1899-12-31`, el artefacto de Excel; la fecha sola es las 00:00), `hora_por_posicion`
+  (`{"activar", "filas_por_dia": 24, "convencion": "fin"}`).
+- propuestas: `valores_vacios` (`-`, `NA`, vacío), `periodos_horarios_por_grupo` (`-` es horario solo
+  con hora o con su bloque de 24 completo) y `bloques_en_cero_como_faltante` (lista de canónicos).
+- Reglas nuevas en la cascada: `hora` (sin hora y bloque incompleto, después de `fecha`),
+  `bloque_en_cero` (**propuesta**: un bloque del día entero en 0 exacto es un equipo sin medir; después
+  de `fuera_de_rango`) y `duplicado_unidad` (la misma lectura en ppb o mmHg cuando está en µg/m³ o hPa;
+  antes de los duplicados). Marcas: `hora_inferida`, `unidad_convertida`.
+- Silver: columna `hora_inferida` al final (1 si alguna lectura de la fila tuvo la hora inferida).
+- **Convención `fin`**: la lectura de la posición *p* (0 a 23) cubre [*p*, *p*+1) y se etiqueta *p*+1;
+  las horas explícitas de `HORA_INICIO` (que son de inicio) también se corren +1 h, o quedan desfasadas
+  de las inferidas.
+- 100 registros (CA-VMP-1, periodo 24 horas) traen un salto de línea dentro de un campo entrecomillado:
+  el escaneo del prototipo los une (como pandas); el divisor de Go por líneas los rechazaría.
+
 ## Lo que hay que confirmar con el CSV real
 
 Todo en `configs/limpieza.json` (probar antes con `AJUSTES` en el 01): nombres de columnas (el

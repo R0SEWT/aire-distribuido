@@ -52,20 +52,36 @@ func (c *Codificador) Escribir(m Mensaje) error {
 	return c.escribir(m)
 }
 
-// EscribirAntesDe es Escribir con un plazo absoluto. Si vence, el Codificador
-// queda inutilizable: pudo salir media línea y el otro extremo ya no puede
-// confiar en el flujo.
+// EscribirAntesDe es Escribir con un plazo absoluto. Si el plazo ya venció no
+// escribe nada y el flujo sigue sano. Si vence a mitad de la escritura, el
+// Codificador queda inutilizable para siempre (Roto): pudo salir media línea y
+// el otro extremo ya no puede confiar en el flujo. Quien es dueño de la
+// conexión tiene que cerrarla entonces; Enlace lo hace.
 func (c *Codificador) EscribirAntesDe(m Mensaje, limite time.Time) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	if c.plazo == nil {
 		return ErrSinPlazos
 	}
+	if c.err != nil {
+		return c.err
+	}
+	if !limite.After(time.Now()) {
+		return fmt.Errorf("escribir %s: %w antes de empezar: no se escribió nada", m.Tipo, ErrPlazoVencido)
+	}
 	if err := c.plazo.SetWriteDeadline(limite); err != nil {
 		return fmt.Errorf("fijar plazo de escritura: %w", err)
 	}
 	defer c.plazo.SetWriteDeadline(time.Time{})
 	return c.escribir(m)
+}
+
+// Roto devuelve el error que dejó inutilizable al Codificador, o nil si sigue
+// sano. Un Codificador roto no vuelve a escribir: la conexión hay que cerrarla.
+func (c *Codificador) Roto() error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.err
 }
 
 func (c *Codificador) escribir(m Mensaje) error {
@@ -97,10 +113,12 @@ func (c *Codificador) escribir(m Mensaje) error {
 // Decodificador lee mensajes, uno por línea. No es seguro para uso concurrente:
 // cada conexión tiene una sola goroutine lectora.
 //
-// Si vence un plazo a mitad de una línea, lo ya leído se guarda y la siguiente
-// lectura continúa desde ahí: un plazo vencido no desincroniza el flujo, y por
-// eso el coordinador puede seguir usando la conexión de un nodo lento y
-// descartar después su PARCIAL rezagado.
+// Si vence un plazo de LECTURA a mitad de una línea, lo ya leído se guarda y la
+// siguiente lectura continúa desde ahí: un plazo de lectura vencido no
+// desincroniza el flujo, y por eso el coordinador puede seguir leyendo de la
+// conexión de un nodo lento y descartar después su PARCIAL rezagado. Con la
+// escritura no es así: un plazo de escritura que vence a mitad de una línea
+// deja el Codificador roto, y el Enlace cierra la conexión.
 type Decodificador struct {
 	r         *bufio.Reader
 	plazo     interface{ SetReadDeadline(time.Time) error }

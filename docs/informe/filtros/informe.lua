@@ -2,7 +2,7 @@
 Filtro del informe (Quarto → docx). Hace seis cosas:
 
 1. Carátula según el código de alumno. `codigo` es el parámetro del render
-   (`quarto render informe.qmd -M codigo:U202311495`); se busca en `equipo` (_quarto.yml) y:
+   (`quarto render informe.qmd -M codigo:<código>`); se busca en `equipo` (generado/local/equipo.yml) y:
      [ ]{.alumno-codigo}  → el código
      [ ]{.alumno-nombre}  → el nombre de ese integrante
      ::: {.caratula-integrantes} ::: → una línea por integrante, «Nombre (código)»
@@ -78,7 +78,7 @@ local function leer_meta(meta)
     end
     if NOMBRE == nil and #INTEGRANTES > 0 then
       -- Quarto registra un error() de un filtro y sigue: os.exit sí detiene el render.
-      io.stderr:write("error: codigo " .. CODIGO .. " no está en `equipo` de _quarto.yml; "
+      io.stderr:write("error: codigo " .. CODIGO .. " no está en `equipo` (generado/local/equipo.yml); "
         .. "no se genera un informe con una carátula equivocada\n")
       os.exit(1)
     end

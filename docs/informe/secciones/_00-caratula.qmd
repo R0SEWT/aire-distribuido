@@ -1,6 +1,6 @@
 <!-- a) Carátula. Los estilos «Caratula ...» están en recursos/plantilla.docx. El integrante que
-entrega sale del parámetro `codigo` (filtros/informe.lua); la lista de integrantes, de `equipo`
-en _quarto.yml. -->
+entrega sale del parámetro `codigo` (filtros/informe.lua); la lista de integrantes, de `equipo` en
+generado/local/equipo.yml (equipo.local.yml, no versionado). -->
 
 ::: {custom-style="Caratula Logo"}
 ![](recursos/upc-logo.png){width=3cm}

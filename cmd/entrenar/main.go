@@ -11,7 +11,10 @@
 //   - data/gold/asignaciones.csv: estacion,fecha_hora,regimen;
 //   - reports/regimenes.json: por régimen, el perfil en unidades originales, la
 //     etiqueta frente al ECA y la distribución por hora del día y por estación;
-//   - con -codo 2:10, reports/codo.json: la inercia por k sobre una submuestra.
+//   - con -codo 2:10, reports/codo.json: la inercia por k sobre una submuestra;
+//   - reports/centroides_iniciales.json: los centroides iniciales de cada
+//     semilla. Si ya existe, se parte de él en vez de correr k-means++ (ver
+//     kmeans.ArchivoInicios); si es de otro gold o de otra receta, falla.
 //
 // Se corre desde la raíz del repo: go run ./cmd/entrenar
 package main
@@ -38,6 +41,7 @@ type opciones struct {
 	codo, codoSalida                string
 	codoN                           int
 	semillas, paralelas             int
+	centroides                      string
 }
 
 type infoGold struct {
@@ -80,12 +84,15 @@ type salidaKMeans struct {
 	CorridasALaVez    int               `json:"corridas_a_la_vez"`
 	WorkersPorCorrida []int             `json:"workers_por_corrida"`
 
-	Workers             int     `json:"workers"`
-	Chunk               int     `json:"chunk"`
-	TolAbs              float64 `json:"tol_abs"`
-	TolRel              float64 `json:"tol_rel"`
-	MaxIter             int     `json:"max_iter"`
-	CentroidesIniciales string  `json:"centroides_iniciales_sha256"`
+	CentroidesIniciales  infoInicios `json:"centroides_iniciales"`
+	NotaTiemposArranques string      `json:"nota_tiempos_arranques"`
+
+	Workers                int     `json:"workers"`
+	Chunk                  int     `json:"chunk"`
+	TolAbs                 float64 `json:"tol_abs"`
+	TolRel                 float64 `json:"tol_rel"`
+	MaxIter                int     `json:"max_iter"`
+	CentroidesInicialesSha string  `json:"centroides_iniciales_sha256"`
 
 	Iteraciones int       `json:"iteraciones"`
 	Paro        string    `json:"paro"`
@@ -104,6 +111,16 @@ type salidaKMeans struct {
 	Recursos kmeans.Recursos `json:"recursos"`
 }
 
+// infoInicios dice de dónde salieron los centroides iniciales: «generados»
+// (k-means++ en esta corrida, guardados en Archivo), «leidos» (de Archivo, sin
+// correr k-means++) o «sin_archivo» (-centroides vacío: k-means++ y no se
+// guardan). Sha256 es el de los del arranque elegido.
+type infoInicios struct {
+	Archivo string `json:"archivo,omitempty"`
+	Origen  string `json:"origen"`
+	Sha256  string `json:"sha256"`
+}
+
 type umbralesECA struct {
 	PM25  float64 `json:"pm2_5_ugm3"`
 	PM10  float64 `json:"pm10_ugm3"`
@@ -112,14 +129,17 @@ type umbralesECA struct {
 }
 
 type salidaRegimenes struct {
-	Metadatos  kmeans.Metadatos `json:"metadatos"`
-	Gold       infoGold         `json:"gold"`
-	K          int              `json:"k"`
-	Nivel      string           `json:"nivel"`
-	Features   []string         `json:"features"`
-	ECA        umbralesECA      `json:"eca"`
-	NotaPerfil string           `json:"nota_perfil"`
-	Regimenes  []kmeans.Regimen `json:"regimenes"`
+	Metadatos kmeans.Metadatos `json:"metadatos"`
+	Gold      infoGold         `json:"gold"`
+	K         int              `json:"k"`
+	Nivel     string           `json:"nivel"`
+	Features  []string         `json:"features"`
+	ECA       umbralesECA      `json:"eca"`
+	// ConvencionHora es «fin»: OEFA marca cada promedio horario con la hora en
+	// que termina, y el cargador escribe ese instante en fecha_hora.
+	ConvencionHora string           `json:"convencion_hora"`
+	NotaPerfil     string           `json:"nota_perfil"`
+	Regimenes      []kmeans.Regimen `json:"regimenes"`
 }
 
 type salidaCodo struct {
@@ -140,10 +160,19 @@ const (
 		"un centroide promedia filas de estaciones distintas y no tiene unidades absolutas, así que los " +
 		"centroides des-estandarizados no existen. Los perfiles de reports/regimenes.json sí están en unidades: " +
 		"se calculan fila por fila con la estadística de la estación de cada lectura."
-	notaPerfil = "perfil: media aritmética de cada feature en unidades originales del silver (PM en µg/m³), " +
-		"des-estandarizando cada lectura del régimen. pm2_5_medio: la feature pm2_5 o, si no está, " +
-		"fraccion_fina × pm10 lectura por lectura. por_hora: hora del día en Lima (UTC-5), de 0 a 23."
-	notaECA = "El ECA es un promedio de 24 h. Que la media horaria de un régimen lo supere dice que el régimen " +
+	notaPerfil = "perfil: media aritmética de cada feature en unidades originales (PM en µg/m³) sobre las filas " +
+		"del gold asignadas al régimen, es decir, las lecturas horarias completas en todas las features de la " +
+		"receta; cada lectura se des-estandariza antes de promediar. pm2_5_medio: la feature pm2_5 o, si no está, " +
+		"fraccion_fina × pm10 lectura por lectura. por_hora: hora del día en Lima (UTC-5), de 0 a 23, de " +
+		"fecha_hora, que es el FIN del promedio horario (convencion_hora = fin, como lo publica OEFA): la hora 1 " +
+		"es el promedio de 00:00–01:00 y la hora 0, el de 23:00–24:00 del día anterior."
+	notaTiemposArranques = "ms_kmeanspp y ms_lloyd de cada arranque se miden con otras semillas corriendo a la vez y " +
+		"con los workers de su cupo: sirven para comparar semillas entre sí, no para speedup. El speedup del " +
+		"Lloyd concurrente lo mide cmd/benchmark. ms_kmeanspp es 0 si los centroides se leyeron del archivo."
+	origenGenerados = "generados"
+	origenLeidos    = "leidos"
+	origenSinArchiv = "sin_archivo"
+	notaECA         = "El ECA es un promedio de 24 h. Que la media horaria de un régimen lo supere dice que el régimen " +
 		"es peligroso, no que haya un incumplimiento; una lectura horaria alta tampoco lo es por sí sola. " +
 		"excede: PM2.5 medio > 50 o PM10 medio > 100. no_excede: los dos disponibles y ninguno supera. " +
 		"no_evaluable: falta el contaminante que podría superar el umbral."
@@ -161,7 +190,9 @@ func main() {
 	flag.StringVar(&op.codoSalida, "codo-salida", "reports/codo.json", "inercia por k")
 	flag.IntVar(&op.codoN, "codo-n", 200000, "filas de la submuestra sistemática del codo; 0 = todas")
 	flag.IntVar(&op.semillas, "semillas", 0, "arranques de k-means++ (semilla, semilla+1, …); 0 = los de la receta")
-	flag.IntVar(&op.paralelas, "paralelas", 0, "semillas que corren a la vez; 0 = automático (min(semillas, workers))")
+	flag.IntVar(&op.paralelas, "paralelas", 0, "semillas que corren a la vez; 0 = automático: round(√min(semillas, workers))")
+	flag.StringVar(&op.centroides, "centroides", "reports/centroides_iniciales.json",
+		"centroides iniciales de cada semilla: se escriben la primera vez y se leen después; vacío = ni se leen ni se escriben")
 	flag.CommandLine.Parse(argumentos(os.Args))
 
 	if err := correr(op, os.Stdout); err != nil {
@@ -232,7 +263,7 @@ func correr(op opciones, w io.Writer) error {
 	}
 
 	t0 = time.Now()
-	m, err := kmeans.MejorDeSemillas(g.Datos, receta.K, receta.Semilla, nSemillas, conc, op.paralelas)
+	m, origenInicios, err := arrancar(op, g, receta, hash, nSemillas, conc)
 	if err != nil {
 		return err
 	}
@@ -257,8 +288,10 @@ func correr(op opciones, w io.Writer) error {
 		CriterioSemillas: "menor inercia final; si empatan bit a bit, la semilla menor",
 		ArranqueElegido:  m.Elegido, Arranques: m.Arranques, CorridasALaVez: len(m.Cupos), WorkersPorCorrida: m.Cupos,
 		Workers: conc.Workers, Chunk: conc.Chunk,
-		TolAbs: conc.TolAbs, TolRel: conc.TolRel, MaxIter: conc.MaxIter, CentroidesIniciales: elegido.CentroidesIniciales,
-		Iteraciones: r.Iteraciones, Paro: r.Paro, Movimiento: r.Movimiento, Vacios: r.Vacios,
+		TolAbs: conc.TolAbs, TolRel: conc.TolRel, MaxIter: conc.MaxIter, CentroidesInicialesSha: elegido.CentroidesIniciales,
+		CentroidesIniciales:  infoInicios{Archivo: op.centroides, Origen: origenInicios, Sha256: elegido.CentroidesIniciales},
+		NotaTiemposArranques: notaTiemposArranques,
+		Iteraciones:          r.Iteraciones, Paro: r.Paro, Movimiento: r.Movimiento, Vacios: r.Vacios,
 		Inercia: r.Inercia, Inercias: r.Inercias, Features: receta.Features,
 	}
 	for _, reg := range regs {
@@ -287,7 +320,7 @@ func correr(op opciones, w io.Writer) error {
 		Metadatos: meta, Gold: info, K: kEf, Nivel: receta.Nivel, Features: receta.Features,
 		ECA: umbralesECA{PM25: kmeans.ECAPM25, PM10: kmeans.ECAPM10,
 			Norma: "DS 003-2017-MINAM, valores de 24 horas", Nota: notaECA},
-		NotaPerfil: notaPerfil, Regimenes: regs,
+		ConvencionHora: "fin", NotaPerfil: notaPerfil, Regimenes: regs,
 	}); err != nil {
 		return err
 	}
@@ -300,6 +333,40 @@ func correr(op opciones, w io.Writer) error {
 
 	imprimir(w, s, regs, receta, op)
 	return nil
+}
+
+// arrancar corre las semillas. Si el archivo de centroides iniciales existe,
+// parte de él (y falla si es de otro gold o de otra receta); si no existe, corre
+// k-means++ y lo escribe.
+func arrancar(op opciones, g *kmeans.Gold, receta kmeans.Receta, goldSha string, n int,
+	conc kmeans.OpcionesConc) (*kmeans.Multiarranque, string, error) {
+	if op.centroides != "" {
+		if _, err := os.Stat(op.centroides); err == nil {
+			arch, err := kmeans.LeerInicios(op.centroides)
+			if err != nil {
+				return nil, "", err
+			}
+			inicios, err := arch.Para(goldSha, receta, g.Datos.D, receta.Semilla, n)
+			if err != nil {
+				return nil, "", fmt.Errorf("%s: %w", op.centroides, err)
+			}
+			m, err := kmeans.MejorDeInicios(g.Datos, inicios, conc, op.paralelas)
+			return m, origenLeidos, err
+		} else if !os.IsNotExist(err) {
+			return nil, "", err
+		}
+	}
+	m, err := kmeans.MejorDeSemillas(g.Datos, receta.K, receta.Semilla, n, conc, op.paralelas)
+	if err != nil {
+		return nil, "", err
+	}
+	if op.centroides == "" {
+		return m, origenSinArchiv, nil
+	}
+	if err := kmeans.GuardarInicios(op.centroides, kmeans.NuevoArchivoInicios(goldSha, receta, g.Datos.D, m.Inicios)); err != nil {
+		return nil, "", err
+	}
+	return m, origenGenerados, nil
 }
 
 // mismoGold comprueba que la estandarización se haya calculado sobre este
@@ -411,6 +478,10 @@ func imprimir(w io.Writer, s salidaKMeans, regs []kmeans.Regimen, receta kmeans.
 	fmt.Fprintf(w, "semillas    %d arranques (%d…%d) · %d a la vez con %s workers c/u · %.0f ms de pared\n",
 		s.Semillas, s.SemillaBase, s.SemillaBase+int64(s.Semillas)-1, s.CorridasALaVez, rangoCupos(s.WorkersPorCorrida),
 		s.Ms.Arranques)
+	inicios := map[string]string{origenGenerados: "k-means++, guardados en " + s.CentroidesIniciales.Archivo,
+		origenLeidos:    "leídos de " + s.CentroidesIniciales.Archivo + " (sin correr k-means++)",
+		origenSinArchiv: "k-means++, sin guardar (-centroides vacío)"}
+	fmt.Fprintf(w, "inicios    %s\n", inicios[s.CentroidesIniciales.Origen])
 	if s.Semillas > 1 {
 		fmt.Fprintf(w, "            %-8s %14s %11s %-10s %10s\n", "semilla", "inercia", "iteraciones", "paro", "ms")
 		for i, a := range s.Arranques {
@@ -453,7 +524,8 @@ func imprimir(w io.Writer, s salidaKMeans, regs []kmeans.Regimen, receta kmeans.
 	}
 	fmt.Fprintln(w, "\n(perfil: media aritmética en unidades originales; el ECA es de 24 h, ver reports/regimenes.json)")
 
-	fmt.Fprintln(w, "\ndónde y cuándo (las 3 horas del día y las 3 estaciones con más lecturas de cada régimen)")
+	fmt.Fprintln(w, "\ndónde y cuándo (las 3 horas del día y las 3 estaciones con más lecturas de cada régimen;")
+	fmt.Fprintln(w, "la hora es la del FIN del promedio horario, como la publica OEFA: 07h es el promedio de 06:00–07:00)")
 	for _, r := range regs {
 		if r.Tamano == 0 {
 			fmt.Fprintf(w, "  régimen %d  vacío\n", r.Regimen)

@@ -63,9 +63,16 @@ para m = 2 … k:
     d²(i) ← min(d²(i), ‖x_i − μ_m‖²)            para todo i
 ```
 
-Corre **una sola vez**: los centroides iniciales se materializan en disco con su sha256 y todas las
-versiones (secuencial, concurrente, distribuida) parten de ese archivo. La misma semilla no garantiza
-los mismos centroides si cambia el generador o el orden en que se consume; el archivo sí.
+Corre **una sola vez por semilla** y se materializa: `cmd/entrenar` escribe
+`reports/centroides_iniciales.json` con los centroides de cada semilla y su sha256, más el sha256 del gold y
+la receta que define el espacio (features, log1p, nivel, k), y las corridas siguientes parten de ese archivo
+sin correr k-means++ (`kmeans.MejorDeInicios`; la ida y vuelta por JSON es exacta). Si el archivo es de otro
+gold o de otra receta, le faltan semillas o sus centroides no coinciden con su sha256, `cmd/entrenar` falla y
+dice que se borre para regenerarlo. El coordinador de la PC4 parte del mismo archivo. En `cmd/benchmark` la
+versión secuencial y la concurrente parten de los mismos centroides en memoria, con su sha256 en el informe.
+La misma semilla no garantiza los mismos centroides si cambia el generador o el orden en que se consume; el
+archivo sí. Con `semillas > 1` en la receta (la provisional usa 10) se prueban semilla, semilla+1, … y se
+publica la de menor inercia (§4.9).
 
 ### 1.3 Contrato numérico (heredado del TP)
 
@@ -73,8 +80,9 @@ Vale igual para la versión secuencial, la concurrente y la distribuida:
 
 - **Distancia**: euclídea al cuadrado (comparar no necesita la raíz).
 - **Desempate**: si dos centroides empatan, gana el de menor índice.
-- **Parada**: el criterio del Algoritmo 1 con `tol_abs = tol_rel = 1e-9`, o `max_iter = 100`; el
-  resultado registra cuál de los dos paró la corrida.
+- **Parada**: el criterio del Algoritmo 1 con `tol_abs = tol_rel = tolerancia` de `configs/kmeans.json`
+  (`1e-6` en la receta provisional; el TP usaba `1e-9`), o `max_iter` de la receta (`100`); el resultado
+  registra cuál de los dos paró la corrida.
 - **Cluster vacío**: conserva su centroide. Re-sembrarlo con el punto más lejano haría que el resultado
   dependiera del orden de recorrido.
 - **Entradas inválidas**: se rechazan `NaN` e `Inf`, `k ≤ 0`, `k > N`, `workers ≤ 0`, `max_iter ≤ 0`.
@@ -184,11 +192,15 @@ Contra la versión secuencial el árbol de suma es otro, así que la equivalenci
 tolerancia** (`TestConcurrenteEquivaleAlSecuencialConTolerancia`).
 
 En el TP la inercia final salió **idéntica bit a bit en cuatro máquinas**, x86-64 y ARM64
-(`../concurrente/tp/docs/pixel.md`). Conviene no darlo por garantizado: la especificación de Go permite
-fusionar `x*y + z` en una sola instrucción FMA, y en ARM64 el compilador lo hace. Para blindar el
-determinismo entre arquitecturas, el bucle de distancia del port puede escribir `dist += float64(delta *
-delta)`: la conversión explícita obliga a redondear el producto e impide la fusión **[recomendación para
-`kmeans/`]**.
+(`../concurrente/tp/docs/pixel.md`), pero no estaba garantizado: la especificación de Go permite fusionar
+`x*y + z` en una sola instrucción FMA, que redondea una vez en vez de dos, y el compilador lo hace en ARM64
+(`FMADDD`) y también en amd64 cuando se compila con `GOAMD64=v3` (`VFMADD231SD`); el paquete del TP tiene
+cinco fusiones con v3. En el port **ya está aplicado**: todo producto que se suma en `kmeans/` va envuelto en
+`float64(...)` (`dist += float64(delta * delta)` en la distancia de Lloyd y de k-means++, el desplazamiento
+de `Actualizar`, el umbral de parada, la des-estandarización y el PM2.5 del perfil). La especificación
+garantiza que la conversión explícita redondea el producto e impide la fusión. Comprobado con
+`go build -gcflags=-S`: cero FMA en `kmeans/` para arm64 y para amd64 v3; con el `GOAMD64=v1` por omisión no
+cambia ningún bit (los tests contra el TP son bit a bit).
 
 ### 3.5 Por qué no hay condiciones de carrera
 
@@ -435,9 +447,12 @@ Reglas:
   campo que el otro no entiende es un desajuste de versiones que conviene ver.
 - **Escritura atómica por línea**: el `Codificador` serializa las escrituras con un `Mutex`, porque en un
   nodo la goroutine que contesta `PONG` y la que manda el `PARCIAL` escriben en la misma conexión.
-- **Un plazo vencido no desincroniza el flujo**: si vence a mitad de una línea, el `Decodificador` guarda lo
-  leído y la lectura siguiente continúa desde ahí. Por eso el coordinador puede seguir usando la conexión
-  de un nodo lento y descartar después su rezagado, en vez de reconectar.
+- **Un plazo de lectura vencido no desincroniza el flujo**: si vence a mitad de una línea, el `Decodificador`
+  guarda lo leído y la lectura siguiente continúa desde ahí. Por eso el coordinador puede seguir leyendo de
+  la conexión de un nodo lento y descartar después su rezagado, en vez de reconectar. **Con la escritura no
+  vale**: si el plazo de escritura vence a mitad de una línea, pudo salir media línea y el `Codificador` queda
+  roto para siempre; el `Enlace`, que es dueño del `net.Conn`, cierra entonces la conexión y el nodo lee EOF.
+  Un plazo que ya venció antes de empezar no escribe nada y no rompe el flujo.
 
 **Por qué JSON y no binario**: el volumen es chico (§4.5), las líneas se pueden leer con `nc` o `tcpdump`
 durante una demo, y la ida y vuelta de los `float64` es exacta, así que el texto no rompe el determinismo.
@@ -454,7 +469,10 @@ aborta con un error que nombra al nodo, y el operador relanza. Es lo mínimo que
 necesita: sin plazo, un nodo caído bloquea la barrera para siempre y el sistema pierde la vivacidad.
 
 `Ronda` lo implementa con un instante límite absoluto compartido por las K goroutines, aplicado con
-`SetReadDeadline` y `SetWriteDeadline` a cada conexión: vuelve, como muy tarde, en el límite. El error
+`SetReadDeadline` y `SetWriteDeadline` a cada conexión: vuelve, como muy tarde, en el límite. Antes de
+escribir nada rechaza un límite ya vencido, un enlace cerrado, un nodo sin rango confirmado y nodos fuera del
+orden de `Rango.Desde` (el orden del slice es el de la fusión, y tiene que ser el de las filas); en esos
+casos ningún nodo recibe el `ITERAR` y el número de ronda sigue disponible. El error
 envuelve una causa que la API puede distinguir con `errors.Is`: `ErrPlazoVencido` (nodo lento o caído),
 `ErrInformado` (el nodo mandó `ERROR`) o `ErrProtocolo` (un bug o un desajuste de versiones). El mensaje,
 tal como sale en el test:
@@ -468,6 +486,7 @@ ronda 1 abortada: nodo "mudo": no envió su PARCIAL dentro del plazo (100ms): le
 | Nodo caído, sesión de Colab muerta | fin de la conexión o plazo vencido | la ronda se aborta; el error nombra al nodo |
 | Nodo lento | plazo vencido; su `PARCIAL` llega después | la ronda se aborta; el rezagado se descarta por su `iter` |
 | Red partida | plazo vencido | igual que un nodo caído |
+| Nodo que dejó de leer | plazo de escritura vencido al enviar `ITERAR` | la ronda se aborta; el `Enlace` cierra la conexión y el nodo lee EOF |
 | Nodo con otro gold o con otra versión | `LISTO` con otra huella, `HOLA` con otra versión | rechazo en el apretón de manos, antes de iterar |
 | Nodo con un bug (forma, conteos) | `ErrProtocolo` | la ronda se aborta |
 | Coordinador caído | (los nodos ven el fin de la conexión) | se pierde la corrida; se relanza |
@@ -592,7 +611,10 @@ compila `cargar` y `entrenar`; Docker Compose completo llega con la PC4.
   flujo; escritores concurrentes no mezclan líneas; un coordinador y dos nodos falsos sobre `net.Pipe`
   completan una iteración cuya fusión es la de una sola máquina; con tres nodos que llegan al revés la
   fusión sigue el orden de nodo; un nodo mudo dispara el plazo y un error que lo nombra; un `PARCIAL`
-  rezagado se descarta; versión, huella, forma y conservación se verifican.
+  rezagado se descarta, también sobre TCP de verdad con el nodo todavía calculando la ronda anterior cuando
+  llega el `ITERAR` siguiente (sobre `net.Pipe`, que no tiene búfer, ese caso se bloquea); un plazo de
+  escritura vencido cierra la conexión; `Ronda` rechaza un límite vencido y nodos fuera de orden sin escribir
+  nada; versión, huella, forma y conservación se verifican.
 
 Lo que **no** existe todavía, y es la PC4: el listener TCP, el binario del nodo, el bucle de Lloyd sobre
 `Ronda`, el reparto de rangos, la reasignación y el modelo en Promela.

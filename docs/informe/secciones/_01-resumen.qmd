@@ -19,10 +19,11 @@ paralelo con goroutines, portado del Trabajo Parcial, identifica
 {{< meta cifras.kmeans.k >}} regímenes de contaminación que se etiquetan frente al Estándar de
 Calidad Ambiental (ECA) para aire [@minam2017eca] y se ubican por estación y por hora del día.
 
-El cargador alcanza un speedup de {{< meta cifras.benchmark_cargador.speedup_max >}} con
-{{< meta cifras.benchmark_cargador.workers_max >}} workers y el K-Means, de
-{{< meta cifras.benchmark_kmeans.speedup_max >}}, con el mismo resultado bit a bit para cualquier
-número de workers. El diseño de la versión distribuida (coordinador y nodos por TCP, una barrera
+Con {{< meta cifras.benchmark_cargador.w >}} workers, el cargador alcanza un speedup de
+{{< meta cifras.benchmark_cargador.speedup >}} (IC 95 % {{< meta cifras.benchmark_cargador.speedup_ic >}})
+y, con {{< meta cifras.benchmark_kmeans.w >}}, el K-Means uno de
+{{< meta cifras.benchmark_kmeans.speedup >}} (IC 95 % {{< meta cifras.benchmark_kmeans.speedup_ic >}}),
+con el mismo resultado bit a bit para cualquier número de workers. El diseño de la versión distribuida (coordinador y nodos por TCP, una barrera
 por iteración) queda listo para la PC4. Los regímenes que exceden el ECA son:
 {{< meta cifras.regimenes.excede >}}. La red cubre {{< meta cifras.limpieza.n_departamentos >}}
 departamentos, y el informe lo dice sin rodeos: una zona sin estación no es una zona con aire limpio.

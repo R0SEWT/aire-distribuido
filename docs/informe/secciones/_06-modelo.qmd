@@ -19,9 +19,18 @@ probabilidad proporcional al cuadrado de su distancia al más cercano de los ya 
 
 El código se porta del K-Means del Trabajo Parcial [@vilchez2026tp], con su autoría declarada y
 sus pruebas como red de seguridad del port, y conserva su **contrato numérico**: distancia euclídea
-al cuadrado; empate resuelto por el menor índice; k-means++ con semilla fija, ejecutado una sola
-vez; paro por tolerancia o por máximo de iteraciones; un cluster vacío conserva su centroide.
-Cambian la entrada (ya no viajes de taxi) y la interfaz de sumas parciales de la @sec-distribuido.
+al cuadrado; empate resuelto por el menor índice; paro por tolerancia o por máximo de iteraciones; un
+cluster vacío conserva su centroide. Cambian la entrada (ya no viajes de taxi), la interfaz de sumas
+parciales de la @sec-distribuido y la inicialización.
+
+**Varias semillas.** Lloyd converge a un mínimo local que depende de los centroides iniciales. En
+lugar de una sola corrida, `cmd/entrenar` corre el K-Means completo (k-means++ y Lloyd) con
+{{< meta cifras.kmeans.semillas >}} semillas consecutivas a partir de
+{{< meta cifras.kmeans.semilla_base >}} y se queda con la de menor inercia final; si dos empatan bit
+a bit, con la semilla menor (`kmeans/semillas.go`). Es la práctica estándar (scikit-learn usa diez
+reinicios) y, de paso, el **paralelismo por semillas** de la @sec-distribuido: las corridas no
+comparten nada más que los datos, de solo lectura, así que corren a la vez sin sincronizarse
+(@tbl-semillas).
 
 ### Receta: features y número de clusters
 
@@ -46,8 +55,9 @@ Ejes de la grilla de calibración del K-Means
 :::
 
 La receta elegida quedó congelada en `configs/kmeans.json`, que Go lee sin decidir nada: features
-{{< meta cifras.kmeans.features >}}, $k$ = {{< meta cifras.kmeans.k >}}, semilla
-{{< meta cifras.kmeans.semilla >}}. La hora, la estación y el mes **no son features** en ninguna
+{{< meta cifras.kmeans.features >}}, $k$ = {{< meta cifras.kmeans.k >}},
+{{< meta cifras.kmeans.semillas >}} semillas desde {{< meta cifras.kmeans.semilla_base >}} (la
+elegida fue la {{< meta cifras.kmeans.semilla >}}). La hora, la estación y el mes **no son features** en ninguna
 variante: se usan después, para decir dónde y cuándo aparece cada régimen.
 
 ::: {.callout-warning title="PENDIENTE"}
@@ -131,8 +141,17 @@ rezagado de una iteración abortada. Por ronda viajan unos $2 \cdot K \cdot k \c
 (centroides de ida y sumas de vuelta, en `float64`) más los conteos: el costo está en la latencia, no
 en el ancho de banda. **Fallas**: timeout por iteración y error claro; el operador relanza. Sin
 timeout, un nodo caído bloquea la barrera para siempre. Reasignar el rango a otro nodo y repetir la
-iteración queda descrito como extensión, no se implementa. La inicialización k-means++ corre una vez
-en el coordinador; su versión distribuida, k-means‖ [@bahmani2012], no hace falta a esta escala.
+iteración queda descrito como extensión, no se implementa. En la versión distribuida, el k-means++
+de cada semilla corre en el coordinador; su versión distribuida, k-means‖ [@bahmani2012], no hace
+falta a esta escala.
+
+**Lo que ya está escrito.** El protocolo está implementado y probado en el paquete `protocolo/`:
+los mensajes y su codificación (`mensaje.go`, `codec.go`) y la barrera de una iteración del lado
+del coordinador (`coordinador.go`). Sus pruebas cubren la fusión en orden de nodo y no de llegada
+(`TestRondaConDosNodosFusionaEnOrdenDeNodo`, `TestFusionEnOrdenDeNodoNoDeLlegada`), el plazo que
+vence con un error claro (`TestNodoQueNoRespondeVenceElPlazoYDaUnErrorClaro`) y el parcial
+rezagado que se descarta (`TestParcialRezagadoSeDescarta`). Lo que falta es el clúster: el
+listener TCP, el reparto de rangos y el bucle de Lloyd sobre esas piezas, que son la PC4.
 
 **Determinismo entre nodos.** Fusionar por nodo es otro árbol de suma que fusionar por chunk en una
 máquina, y la suma en coma flotante no es asociativa: 1 nodo y 2 nodos coinciden **con tolerancia**,
@@ -141,8 +160,9 @@ workers (@sec-paralelizacion).
 
 **Qué se mide en la PC4.** Dos paralelismos sobre el mismo clúster: por datos (cada nodo una
 partición y una barrera por iteración, lo que pide el enunciado) y por semillas (cada nodo un K-Means
-entero con su semilla; el coordinador se queda con la menor inercia, sin sincronización). La
-diferencia entre los dos es el costo de coordinar. El protocolo de la barrera (nodos, coordinador,
+entero con su semilla; el coordinador se queda con la menor inercia, sin sincronización). El segundo
+ya corre en una máquina en esta PC3, entre goroutines (@tbl-semillas); en la PC4 se reparte entre
+nodos. La diferencia entre los dos es el costo de coordinar. El protocolo de la barrera (nodos, coordinador,
 timeout y un nodo que puede caerse) se modela en Promela y se verifica con Spin en la PC4: que no
 haya deadlock y que toda iteración termine o aborte.
 
@@ -161,9 +181,17 @@ Falta `docs/diagramas/secuencia-iteracion.png` (lo genera `docs/diagramas/render
 ### Regímenes frente al ECA y al INCA {#sec-eca-inca}
 
 Cada cluster es un **régimen**: una combinación típica de material particulado y meteorología. Su
-perfil es el centroide des-estandarizado (la media de cada parámetro en su unidad) y se etiqueta
-frente al ECA para aire (@tbl-eca): un régimen «excede el ECA» si su PM2,5 medio supera 50 µg/m³ o
-su PM10 medio supera 100 µg/m³. El ECA es un promedio de 24 horas; una lectura horaria alta no es un
+**perfil** es la media aritmética, en unidades originales, de las lecturas que lo forman: cada
+lectura se des-estandariza (z-score y log1p invertidos) y después se promedia
+(`kmeans/regimenes.go`). **No es el centroide des-estandarizado.** Con log1p, invertir el centroide
+da la media de los logaritmos llevada de vuelta, que se parece a una media geométrica y es menor
+que la media aritmética (desigualdad de Jensen); como el ECA se compara con una media aritmética, el
+centroide invertido subestimaría el nivel de cada régimen. Por eso el informe tiene una sola tabla
+de perfil (@tbl-regimenes) y los centroides se muestran solo en el espacio estandarizado en que
+corre el modelo (@tbl-centroides-z).
+
+El régimen se etiqueta frente al ECA para aire (@tbl-eca): «excede el ECA» si su PM2,5 medio
+supera 50 µg/m³ o su PM10 medio supera 100 µg/m³. El ECA es un promedio de 24 horas; una lectura horaria alta no es un
 incumplimiento por sí sola, y el informe no la presenta así.
 
 ::: {#tbl-eca tbl-colwidths="[18,16,16,50]"}
@@ -207,3 +235,9 @@ que sigue a la lectura terminó superando el ECA: un número por régimen («cua
 al régimen 4, el promedio de las 24 horas siguientes superó el ECA el X % de las veces»). Se compara
 con dos referencias ingenuas: la misma proporción sin condicionar al régimen, y «la lectura actual ya
 supera el ECA». Eso es lo que el sistema puede avisar, y es la segunda mitad de la pregunta.
+
+Para que esa medición no haga trampa, en el TB2 la media y la desviación del z-score y los
+centroides se calculan **solo con el tramo de entrenamiento**, y el tramo de evaluación se
+estandariza y se asigna con esos valores. Hoy no es así: el gold de la PC3 se estandariza con toda
+la serie, lo que está bien para describir regímenes pero filtraría información del futuro a una
+evaluación de anticipación.

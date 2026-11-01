@@ -12,20 +12,39 @@ contraste entre redes en Lima para el TB2.
 ::: {#tbl-fuentes tbl-colwidths="[30,42,28]"}
 | Fuente | Qué es | Uso en el Trabajo Final |
 |:---|:---|:---|
-| OEFA, *Vigilancia y seguimiento ambiental en la calidad del aire* [@oefa2026aire] | Monitoreo continuo de estaciones con meteorología, material particulado y gases. CSV de 1,3 GB en formato largo, licencia ODC-By. | Alimenta el modelo y es la carga de más de un millón de filas (PC3) |
+| OEFA, *Vigilancia y seguimiento ambiental en la calidad del aire* [@oefa2026aire] | Monitoreo continuo de estaciones con meteorología, material particulado y gases. CSV de 1,3 GB, una columna por parámetro y un parámetro por fila, licencia ODC-By. | Alimenta el modelo y es la carga de más de un millón de filas (PC3) |
 | SENAMHI, *Monitoreo de los contaminantes del aire en Lima Metropolitana* | PM10, PM2,5 y NO2 de la red automática de Lima | Contraste entre redes en Lima (TB2) |
 
 Fuentes de datos del Trabajo Final
 :::
 
-::: {.callout-warning title="PENDIENTE"}
-Del archivo descargado (bead de datos, lun 02/11): nombre, tamaño, sha256 y fecha del CSV y del
-diccionario; columnas y nombres exactos de los parámetros, unidades y valores de `Periodo`;
-delimitador, codificación y si hay campos entrecomillados con saltos de línea. Sale de
-`data/README.md` y de `reports/eda_criba.md`. Tamaño, sha256, cabecera, delimitador y BOM ya los
-registra `cmd/cargar` en `generado/limpieza.json` (`bytes`, `sha256`, `cabecera`, `delimitador`,
-`bom`): citarlos desde ahí, con el shortcode meta.
-:::
+### Lo que el CSV de OEFA es de verdad {#sec-csv}
+
+El CSV se descargó el 01/11 y se inspeccionó antes de escribir el cargador (@tbl-csv-oefa). No es
+lo que la ficha del portal hacía suponer, y tres hallazgos cambian el diseño:
+
+- **Una columna por parámetro, un parámetro por fila.** Las {{< meta cifras.csv.filas >}} filas de
+  datos tienen {{< meta cifras.csv.columnas >}} columnas, con una por parámetro (PM10, PM2.5,
+  gases y meteorología), pero cada fila trae exactamente un valor y el resto en «-»; otras
+  {{< meta cifras.csv.filas_sin_parametro >}} no traen ninguno y se descartan. El parámetro de la
+  fila es su única columna no vacía, así que el pivot a una fila por estación y hora sigue siendo
+  necesario.
+- **La hora falta en el {{< meta cifras.csv.pct_sin_hora >}} de las filas.** Pero las filas de un
+  mismo día, estación, parámetro, unidad y periodo vienen en bloques contiguos de 24
+  ({{< meta cifras.csv.pct_grupos_de_24 >}} de los grupos sin hora), y en las
+  {{< meta cifras.csv.filas_con_hora >}} filas que sí la traen, **la hora es la posición dentro del
+  día más uno** en el {{< meta cifras.csv.control_hora >}}: OEFA usa hora final (la lectura «1» cubre
+  de 00:00 a 01:00). Con ese control, la hora se reconstruye por posición (@sec-hora).
+- **Unidades duplicadas.** {{< meta cifras.csv.gases_dos_unidades >}} aparecen dos veces, en ppb y
+  en µg/m³; se conserva µg/m³. Los promedios de 24 horas y las medias móviles de 3 u 8 horas
+  conviven con los horarios y se descartan por periodo.
+
+{{< include generado/tablas/csv_oefa.md >}}
+
+El volumen útil para el modelo es mucho menor que el archivo: {{< meta cifras.csv.pm10_horario >}}
+filas horarias de PM10 y {{< meta cifras.csv.pm2_5_horario >}} de PM2,5, repartidas de forma muy
+desigual entre estaciones. El «más de un millón de registros» se cumple en las filas del archivo; las
+filas anchas serán del orden de cientos de miles.
 
 ### Arquitectura de la solución
 
@@ -78,7 +97,9 @@ Capas de datos (medallón) y quién produce cada una
 - **Todo el sistema en Go** 1.26, solo con la biblioteca estándar, y contenerizado en Docker.
 - **Pruebas primero y siempre con `go test -race`**: un test que pasa sin `-race` no demuestra nada
   sobre una sección crítica. La integración continua corre `go test -race`, `go vet` y `gofmt`.
-- **Git Flow**: ramas `feature/*` con PR a `develop`; la entrega sale de `release/pc3` hacia `main`.
+- **Git Flow**: una rama `feature/*` por pieza (cargador, K-Means, diseño, informe, notebooks),
+  fusionadas en la rama de integración `feature/spec-pc3`, que entra a `develop` con una PR; la
+  entrega sale de `release/pc3` hacia `main` (@sec-evidencias).
 - **Los datos no se versionan**: el CSV pesa 1,3 GB; el repositorio lleva solo una muestra pequeña
   en `data/sample/` para las pruebas y la integración continua.
 - **Capturas reales** de la terminal para cada ejecución que cita el informe.

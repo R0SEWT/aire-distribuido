@@ -1,6 +1,7 @@
 package kmeans
 
 import (
+	"errors"
 	"fmt"
 	"math"
 	"sync"
@@ -21,12 +22,21 @@ type Arranque struct {
 	MsLloyd             float64 `json:"ms_lloyd"`
 }
 
+// Inicio son los centroides iniciales de una semilla: lo que k-means++
+// produce y lo que se materializa en reports/centroides_iniciales.json.
+type Inicio struct {
+	Semilla    int64
+	KEfectivo  int
+	Centroides []float64 // KEfectivo*D, por filas
+}
+
 // Multiarranque es lo que devuelve MejorDeSemillas: el resultado elegido y la
 // traza de todas las semillas probadas.
 type Multiarranque struct {
 	Mejor     *Resultado
 	Elegido   int        // índice en Arranques del resultado elegido
 	Arranques []Arranque // uno por semilla, en orden de semilla
+	Inicios   []Inicio   // los centroides iniciales de cada semilla, en el mismo orden
 	Cupos     []int      // workers de cada corrida simultánea; len(Cupos) corren a la vez
 }
 
@@ -48,6 +58,40 @@ type Multiarranque struct {
 // op.AlIterar se ignoran: k es el parámetro y las corridas simultáneas no
 // pueden compartir un callback de progreso.
 func MejorDeSemillas(d *Datos, k int, semilla int64, n int, op OpcionesConc, paralelas int) (*Multiarranque, error) {
+	if k <= 0 {
+		return nil, fmt.Errorf("k debe ser positivo, es %d", k)
+	}
+	return correrArranques(d, n, op, paralelas, func(i int) (Inicio, float64, error) {
+		t0 := time.Now()
+		cent, kEf, err := KMeansPP(d, k, semilla+int64(i))
+		if err != nil {
+			return Inicio{Semilla: semilla + int64(i)}, 0, err
+		}
+		return Inicio{Semilla: semilla + int64(i), KEfectivo: kEf, Centroides: cent},
+			float64(time.Since(t0).Nanoseconds()) / 1e6, nil
+	})
+}
+
+// MejorDeInicios es MejorDeSemillas partiendo de centroides iniciales ya
+// materializados (reports/centroides_iniciales.json) en vez de correr
+// k-means++: la misma semilla no garantiza los mismos centroides si cambia el
+// generador o el orden en que se consume; el archivo sí. Con los inicios que
+// produjo MejorDeSemillas da el mismo resultado bit a bit.
+func MejorDeInicios(d *Datos, inicios []Inicio, op OpcionesConc, paralelas int) (*Multiarranque, error) {
+	for _, in := range inicios {
+		if in.KEfectivo <= 0 || len(in.Centroides) != in.KEfectivo*d.D {
+			return nil, fmt.Errorf("semilla %d: %d valores para k=%d y D=%d", in.Semilla, len(in.Centroides), in.KEfectivo, d.D)
+		}
+	}
+	return correrArranques(d, len(inicios), op, paralelas, func(i int) (Inicio, float64, error) {
+		return inicios[i], 0, nil
+	})
+}
+
+// correrArranques reparte las n corridas entre las corridas simultáneas que
+// decide RepartirSemillas; iniciar(i) da los centroides iniciales de la i-ésima.
+func correrArranques(d *Datos, n int, op OpcionesConc, paralelas int,
+	iniciar func(i int) (Inicio, float64, error)) (*Multiarranque, error) {
 	if n <= 0 {
 		return nil, fmt.Errorf("hace falta al menos una semilla, se pidieron %d", n)
 	}
@@ -57,11 +101,9 @@ func MejorDeSemillas(d *Datos, k int, semilla int64, n int, op OpcionesConc, par
 	if op.Workers <= 0 {
 		return nil, fmt.Errorf("workers debe ser positivo, es %d", op.Workers)
 	}
-	if k <= 0 {
-		return nil, fmt.Errorf("k debe ser positivo, es %d", k)
-	}
 
-	m := &Multiarranque{Elegido: -1, Arranques: make([]Arranque, n), Cupos: RepartirSemillas(n, op.Workers, paralelas)}
+	m := &Multiarranque{Elegido: -1, Arranques: make([]Arranque, n), Inicios: make([]Inicio, n),
+		Cupos: RepartirSemillas(n, op.Workers, paralelas)}
 	errs := make([]error, n)
 	indices := make(chan int, n)
 	for i := 0; i < n; i++ {
@@ -69,19 +111,25 @@ func MejorDeSemillas(d *Datos, k int, semilla int64, n int, op OpcionesConc, par
 	}
 	close(indices)
 
-	var mu sync.Mutex // protege Mejor y Elegido; Arranques[i] lo escribe solo quien corrió i
+	var mu sync.Mutex // protege Mejor y Elegido; Arranques[i] e Inicios[i] los escribe solo quien corrió i
 	var wg sync.WaitGroup
 	wg.Add(len(m.Cupos))
 	for _, workers := range m.Cupos {
 		go func() {
 			defer wg.Done()
 			for i := range indices {
-				r, a, err := arrancar(d, k, semilla+int64(i), op, workers)
+				in, msInit, err := iniciar(i)
 				if err != nil {
-					errs[i] = err
+					errs[i] = fmt.Errorf("semilla %d: %w", in.Semilla, err)
 					continue
 				}
-				m.Arranques[i] = a
+				r, a, err := arrancar(d, in, op, workers)
+				if err != nil {
+					errs[i] = fmt.Errorf("semilla %d: %w", in.Semilla, err)
+					continue
+				}
+				a.MsKMeansPP = msInit
+				m.Arranques[i], m.Inicios[i] = a, in
 				mu.Lock()
 				if m.Mejor == nil || r.Inercia < m.Mejor.Inercia || (r.Inercia == m.Mejor.Inercia && i < m.Elegido) {
 					m.Mejor, m.Elegido = r, i
@@ -91,34 +139,24 @@ func MejorDeSemillas(d *Datos, k int, semilla int64, n int, op OpcionesConc, par
 		}()
 	}
 	wg.Wait()
-
-	for i, err := range errs {
-		if err != nil {
-			return nil, fmt.Errorf("semilla %d: %w", semilla+int64(i), err)
-		}
+	if err := errors.Join(errs...); err != nil {
+		return nil, err
 	}
 	return m, nil
 }
 
-func arrancar(d *Datos, k int, semilla int64, op OpcionesConc, workers int) (*Resultado, Arranque, error) {
-	t0 := time.Now()
-	cent, kEf, err := KMeansPP(d, k, semilla)
-	if err != nil {
-		return nil, Arranque{}, err
-	}
-	msInit := float64(time.Since(t0).Nanoseconds()) / 1e6
-
+func arrancar(d *Datos, in Inicio, op OpcionesConc, workers int) (*Resultado, Arranque, error) {
 	opi := op
-	opi.K, opi.Workers, opi.AlIterar = kEf, workers, nil
-	t0 = time.Now()
-	r, err := Concurrente(d, cent, opi)
+	opi.K, opi.Workers, opi.AlIterar = in.KEfectivo, workers, nil
+	t0 := time.Now()
+	r, err := Concurrente(d, in.Centroides, opi)
 	if err != nil {
 		return nil, Arranque{}, err
 	}
 	return r, Arranque{
-		Semilla: semilla, KEfectivo: kEf, Inercia: r.Inercia, Iteraciones: r.Iteraciones, Paro: r.Paro,
-		Vacios: r.Vacios, CentroidesIniciales: HashCentroides(cent), Workers: workers,
-		MsKMeansPP: msInit, MsLloyd: float64(time.Since(t0).Nanoseconds()) / 1e6,
+		Semilla: in.Semilla, KEfectivo: in.KEfectivo, Inercia: r.Inercia, Iteraciones: r.Iteraciones, Paro: r.Paro,
+		Vacios: r.Vacios, CentroidesIniciales: HashCentroides(in.Centroides), Workers: workers,
+		MsLloyd: float64(time.Since(t0).Nanoseconds()) / 1e6,
 	}, nil
 }
 

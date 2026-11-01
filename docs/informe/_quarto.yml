@@ -23,23 +23,17 @@ crossref:
   fig-title: Figura
   tbl-title: Tabla
   title-delim: "."
+# generado/local/ no se versiona: lo arma render.sh. equipo.yml sale de equipo.local.yml (con los
+# códigos de alumno reales, tampoco versionado) o, si no existe, de equipo.ejemplo.yml.
 metadata-files:
   - generado/cifras.yml
+  - generado/local/equipo.yml
 filters:
   - filtros/informe.lua
 
-# Parámetro del render: el código de quien sube el archivo (cambia la carátula).
-#   quarto render informe.qmd -M codigo:U202311495
-# render.sh lo hace para los tres. Por defecto, el del coordinador.
-codigo: U202216562
-equipo:
-  - nombre: Rody Sebastian Vilchez Marin
-    codigo: U202216562
-    rol: coordinador
-  - nombre: Dayana Kety Gómez Rodriguez
-    codigo: U202311495
-  - nombre: Julio Cesar Meza Alfaro
-    codigo: U202218912
+# Parámetro del render: `codigo`, el de quien sube el archivo (cambia la carátula), y `equipo`
+# vienen de generado/local/equipo.yml. render.sh renderiza uno por integrante con
+#   quarto render informe.qmd -M codigo:<código>
 indice-titulo: Índice
 indice-niveles: "1-3"
 
