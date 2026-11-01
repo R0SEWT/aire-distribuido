@@ -1,0 +1,22 @@
+# Lo que no necesita la compilación. Mantiene chico el contexto que se manda
+# al daemon: data/ puede tener el CSV de OEFA de 1.3 GB.
+data/
+.beads/
+notebooks/
+docs/
+experimentos/
+reports/
+
+# Git y configuración de herramientas.
+.git
+.github/
+.claude/
+.codex/
+.agents/
+
+# Artefactos locales.
+bin/
+*.test
+*.out
+coverage.*
+.env
