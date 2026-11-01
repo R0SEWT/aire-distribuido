@@ -15,45 +15,95 @@
   "go": "go1.27.3",
   "plataforma": "linux/amd64",
   "host": "A019803",
-  "fecha": "2026-11-01T00:09:09-05:00",
+  "fecha": "2026-11-01T00:37:56-05:00",
   "base_workers": 1,
   "mediciones": [
     {
       "workers": 1,
       "tiempos_s": [
-        0.010540545,
-        0.007638886,
-        0.005833393
+        0.010532035,
+        0.008532373,
+        0.007284151
       ],
-      "mediana_s": 0.007638886,
+      "mediana_s": 0.008532373,
       "speedup": 1,
       "sha256_silver": "c9803d07cd1d4b50613915eb36d13f79c99ddc4a98e198ada4155ea8ab21aa0a",
-      "sha256_gold": "ddf7ae68f0711a76c719a7b2b18c37dde3aa475e8cbb76e2d3cf0ef3b993b5d3"
+      "sha256_gold": "ddf7ae68f0711a76c719a7b2b18c37dde3aa475e8cbb76e2d3cf0ef3b993b5d3",
+      "media_recortada_s": 0.008782853,
+      "speedup_ic": {
+        "punto": 1,
+        "inferior": 0.7805220039448659,
+        "superior": 1.281193861218341,
+        "nivel": 0.95
+      }
     },
     {
       "workers": 2,
       "tiempos_s": [
-        0.006517989,
-        0.008519586,
-        0.009428087
+        0.006054044,
+        0.006430744,
+        0.007998934
       ],
-      "mediana_s": 0.008519586,
-      "speedup": 0.896626432317251,
+      "mediana_s": 0.006430744,
+      "speedup": 1.326809619540134,
       "sha256_silver": "c9803d07cd1d4b50613915eb36d13f79c99ddc4a98e198ada4155ea8ab21aa0a",
-      "sha256_gold": "ddf7ae68f0711a76c719a7b2b18c37dde3aa475e8cbb76e2d3cf0ef3b993b5d3"
+      "sha256_gold": "ddf7ae68f0711a76c719a7b2b18c37dde3aa475e8cbb76e2d3cf0ef3b993b5d3",
+      "media_recortada_s": 0.006827907333333333,
+      "speedup_ic": {
+        "punto": 1.286316959388533,
+        "inferior": 1.0299645381533196,
+        "superior": 1.5964567239187455,
+        "nivel": 0.95
+      }
     },
     {
       "workers": 4,
       "tiempos_s": [
-        0.006986208,
-        0.00627179,
-        0.01089131
+        0.008380954,
+        0.006936121,
+        0.005787565
       ],
-      "mediana_s": 0.006986208,
-      "speedup": 1.093423785836322,
+      "mediana_s": 0.006936121,
+      "speedup": 1.2301361236345212,
       "sha256_silver": "c9803d07cd1d4b50613915eb36d13f79c99ddc4a98e198ada4155ea8ab21aa0a",
-      "sha256_gold": "ddf7ae68f0711a76c719a7b2b18c37dde3aa475e8cbb76e2d3cf0ef3b993b5d3"
+      "sha256_gold": "ddf7ae68f0711a76c719a7b2b18c37dde3aa475e8cbb76e2d3cf0ef3b993b5d3",
+      "media_recortada_s": 0.00703488,
+      "speedup_ic": {
+        "punto": 1.2484723264647015,
+        "inferior": 0.9747930935522108,
+        "superior": 1.5988353785489702,
+        "nivel": 0.95
+      }
     }
   ],
-  "identicos": true
+  "identicos": true,
+  "sha256": "38fdecc55cb180f57665614326543b74db6ece281682728e6d146c68901c5b89",
+  "protocolo": {
+    "speedup": "mediana con la base / mediana con W (cociente de medianas)",
+    "speedup_ic": "media recortada con la base / media recortada con W, IC bootstrap 95 % (kmeans.ICBootstrapCociente)",
+    "recorte_por_extremo": 0.1,
+    "replicas_bootstrap": 2000,
+    "semilla_bootstrap": 7
+  },
+  "metadatos": {
+    "momento": "2026-11-01T00:37:56.746861744-05:00",
+    "maquina": "A019803",
+    "version_go": "go1.27.3",
+    "gomaxprocs": 14,
+    "cpus_logicas": 14,
+    "commit": "e1cef10dadb7c94434417634a7145a3ff89b0ba4",
+    "arbol_sucio": false
+  },
+  "configs": {
+    "kmeans": {
+      "ruta": "configs/kmeans.json",
+      "sha256": "6e688a8351e4c674f9c87218d5aba9f393e265355565d305afff0e78a6eab4dd",
+      "existe": true
+    },
+    "limpieza": {
+      "ruta": "configs/limpieza.json",
+      "sha256": "584164758e4ba6feeb83559a322b3273b3241882cb2166ec919e160b9de7ddfe",
+      "existe": true
+    }
+  }
 }

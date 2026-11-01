@@ -25,4 +25,4 @@ Cifras de prueba: `generado/limpieza.json` sale de correr los comandos de Go sob
 Filas largas descartadas y marcadas por regla, en el orden de la cascada
 :::
 
-*Nota.* Fuente: `generado/limpieza.json`, escrito por `cmd/cargar` (el JSON no registra commit ni fecha). Cada fila descartada se cuenta en la primera regla que falla (cascada de `datos/bloque.go`), así que la suma no tiene solapes. «Spec» es el número de regla de la @tbl-reglas; «—» son controles de estructura. Marcadas: celdas cuyo valor conservado tuvo un duplicado con otro valor (se conservan). Fuera de rango por parámetro: Humedad 1; PM2,5 1; Viento 1.
+*Nota.* Fuente: `generado/limpieza.json`, escrito por `cmd/cargar` (commit `e1cef10`, 2026-11-01, máquina A019803). Cada fila descartada se cuenta en la primera regla que falla (cascada de `datos/bloque.go`), así que la suma no tiene solapes. «Spec» es el número de regla de la @tbl-reglas; «—» son controles de estructura. Marcadas: celdas cuyo valor conservado tuvo un duplicado con otro valor (se conservan). Fuera de rango por parámetro: Humedad 1; PM2,5 1; Viento 1.

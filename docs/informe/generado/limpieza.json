@@ -3,6 +3,7 @@
   "_nota": "sale de correr los comandos de Go sobre la muestra sintética data/sample/oefa_muestra.csv (estaciones SINT-*, una semana), no sobre el CSV de OEFA.",
   "entrada": "data/sample/oefa_muestra.csv",
   "bytes": 722035,
+  "sha256": "38fdecc55cb180f57665614326543b74db6ece281682728e6d146c68901c5b89",
   "cabecera": [
     "ID_INFORME",
     "PROCEDENCIA_MUESTRA",
@@ -206,10 +207,31 @@
   "bloque_bytes": 67108864,
   "bloques": 1,
   "chunk": 10000,
-  "duracion_s": 0.010464306,
+  "duracion_s": 0.005670557,
   "fases_s": {
-    "gold_estandarizacion": 0.000717617,
-    "lectura_limpieza_pivot": 0.008802567,
-    "orden_tabla_ancha": 0.000944122
+    "gold_estandarizacion": 0.000164027,
+    "lectura_limpieza_pivot": 0.005269834,
+    "orden_tabla_ancha": 0.000236696
+  },
+  "metadatos": {
+    "momento": "2026-11-01T00:37:56.746861744-05:00",
+    "maquina": "A019803",
+    "version_go": "go1.27.3",
+    "gomaxprocs": 14,
+    "cpus_logicas": 14,
+    "commit": "e1cef10dadb7c94434417634a7145a3ff89b0ba4",
+    "arbol_sucio": false
+  },
+  "configs": {
+    "kmeans": {
+      "ruta": "configs/kmeans.json",
+      "sha256": "6e688a8351e4c674f9c87218d5aba9f393e265355565d305afff0e78a6eab4dd",
+      "existe": true
+    },
+    "limpieza": {
+      "ruta": "configs/limpieza.json",
+      "sha256": "584164758e4ba6feeb83559a322b3273b3241882cb2166ec919e160b9de7ddfe",
+      "existe": true
+    }
   }
 }

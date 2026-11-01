@@ -20,4 +20,4 @@ Cifras de prueba: `generado/limpieza.json` sale de correr los comandos de Go sob
 Parámetros vistos en el archivo y si tienen mapeo a un parámetro canónico
 :::
 
-*Nota.* Fuente: `generado/limpieza.json`, escrito por `cmd/cargar` (el JSON no registra commit ni fecha). Nombres tal como vienen en el CSV, con su frecuencia. Periodos vistos: Horario 4 218; Diario 14; Mensual 1. Parámetros canónicos presentes en la tabla ancha: CO, Humedad, NO2, PM10, PM2,5, SO2, Temp., Viento.
+*Nota.* Fuente: `generado/limpieza.json`, escrito por `cmd/cargar` (commit `e1cef10`, 2026-11-01, máquina A019803). Nombres tal como vienen en el CSV, con su frecuencia. Periodos vistos: Horario 4 218; Diario 14; Mensual 1. Parámetros canónicos presentes en la tabla ancha: CO, Humedad, NO2, PM10, PM2,5, SO2, Temp., Viento.

@@ -25,5 +25,26 @@
     17.873844107280206
   ],
   "ddof": 0,
-  "chunk": 10000
+  "chunk": 10000,
+  "metadatos": {
+    "momento": "2026-11-01T00:37:56.746861744-05:00",
+    "maquina": "A019803",
+    "version_go": "go1.27.3",
+    "gomaxprocs": 14,
+    "cpus_logicas": 14,
+    "commit": "e1cef10dadb7c94434417634a7145a3ff89b0ba4",
+    "arbol_sucio": false
+  },
+  "configs": {
+    "kmeans": {
+      "ruta": "configs/kmeans.json",
+      "sha256": "6e688a8351e4c674f9c87218d5aba9f393e265355565d305afff0e78a6eab4dd",
+      "existe": true
+    },
+    "limpieza": {
+      "ruta": "configs/limpieza.json",
+      "sha256": "584164758e4ba6feeb83559a322b3273b3241882cb2166ec919e160b9de7ddfe",
+      "existe": true
+    }
+  }
 }

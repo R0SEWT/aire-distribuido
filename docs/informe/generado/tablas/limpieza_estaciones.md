@@ -15,4 +15,4 @@ Cifras de prueba: `generado/limpieza.json` sale de correr los comandos de Go sob
 Filas por estación: largas leídas y procesadas, anchas, completas para el modelo y rango de fechas
 :::
 
-*Nota.* Fuente: `generado/limpieza.json`, escrito por `cmd/cargar` (el JSON no registra commit ni fecha). Gold: filas anchas con todas las features de la receta (regla 8). Desde y hasta: primera y última hora con fila ancha, en hora de Lima. Una estación con lecturas y ninguna fila procesada aparece igual, con ceros.
+*Nota.* Fuente: `generado/limpieza.json`, escrito por `cmd/cargar` (commit `e1cef10`, 2026-11-01, máquina A019803). Gold: filas anchas con todas las features de la receta (regla 8). Desde y hasta: primera y última hora con fila ancha, en hora de Lima. Una estación con lecturas y ninguna fila procesada aparece igual, con ceros.

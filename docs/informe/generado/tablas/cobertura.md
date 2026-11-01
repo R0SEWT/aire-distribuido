@@ -15,4 +15,4 @@ Cifras de prueba: `generado/limpieza.json` sale de correr los comandos de Go sob
 Cobertura de la red por departamento
 :::
 
-*Nota.* Fuente: `generado/limpieza.json`, escrito por `cmd/cargar` (el JSON no registra commit ni fecha). Un departamento que no aparece no tiene estación en el dataset: no hay dato, no aire limpio.
+*Nota.* Fuente: `generado/limpieza.json`, escrito por `cmd/cargar` (commit `e1cef10`, 2026-11-01, máquina A019803). Un departamento que no aparece no tiene estación en el dataset: no hay dato, no aire limpio.

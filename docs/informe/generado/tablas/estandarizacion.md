@@ -15,4 +15,4 @@ Cifras de prueba: `generado/estandarizacion.json` sale de correr los comandos de
 Media y desviación usadas en el z-score de cada feature
 :::
 
-*Nota.* Fuente: `generado/estandarizacion.json`, escrito por `cmd/cargar` (el JSON no registra commit ni fecha). Nivel absoluto, n = 617 filas anchas completas, ddof = 0, chunk de 10 000 filas. Con log1p, la media y la desviación son de log(1 + x).
+*Nota.* Fuente: `generado/estandarizacion.json`, escrito por `cmd/cargar` (commit `e1cef10`, 2026-11-01, máquina A019803). Nivel absoluto, n = 617 filas anchas completas, ddof = 0, chunk de 10 000 filas. Con log1p, la media y la desviación son de log(1 + x).
