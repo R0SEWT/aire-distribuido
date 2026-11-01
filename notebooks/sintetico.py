@@ -37,7 +37,7 @@ from pathlib import Path
 
 import numpy as np
 
-INICIO = np.datetime64("2023-06-01T00:00")
+INICIO = np.datetime64("2020-01-01T00:00")  # con --dias hasta ~2400 no pasa de fecha_maxima
 
 ESTACIONES = [
     # nombre, departamento, provincia, distrito, ubigeo, lat, lon, zona UTM (texto), altitud,
