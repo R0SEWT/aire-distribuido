@@ -40,4 +40,4 @@
 Filas por estación: largas leídas y procesadas, anchas, completas para el modelo y rango de fechas
 :::
 
-*Nota.* Fuente: `generado/limpieza.json`, escrito por `cmd/cargar` (commit `11cef5a`, 2026-11-01, máquina A019803). Gold: filas anchas con todas las features de la receta (regla 8). Desde y hasta: primera y última hora con fila ancha, en hora de Lima y con la convención de hora final. Una estación con lecturas y ninguna fila procesada aparece igual, con ceros. Con más de una ubicación en el archivo (se cargan como una sola estación): CA-AYAS-01 (2), CA-VMP-1 (2), CA-VMP-2 (3), CA-VMP-7 (2).
+*Nota.* Fuente: `generado/limpieza.json`, escrito por `cmd/cargar` (commit `5306012`, 2026-11-01, máquina A019803). Gold: filas anchas con todas las features de la receta (regla 8). Desde y hasta: primera y última hora con fila ancha, en hora de Lima y con la convención de hora final. Una estación con lecturas y ninguna fila procesada aparece igual, con ceros. Con más de una ubicación en el archivo (se cargan como una sola estación): CA-AYAS-01 (2), CA-VMP-1 (2), CA-VMP-2 (3), CA-VMP-7 (2).

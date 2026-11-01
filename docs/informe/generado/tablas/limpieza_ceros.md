@@ -18,4 +18,4 @@
 Días enteros en cero descartados, por parámetro
 :::
 
-*Nota.* Fuente: `generado/limpieza.json`, escrito por `cmd/cargar` (commit `11cef5a`, 2026-11-01, máquina A019803). Un día completo de un parámetro con todas sus lecturas en 0 exacto es un equipo que no midió, no un día de aire limpio: se descarta entero (regla `bloque_en_cero`).
+*Nota.* Fuente: `generado/limpieza.json`, escrito por `cmd/cargar` (commit `5306012`, 2026-11-01, máquina A019803). Un día completo de un parámetro con todas sus lecturas en 0 exacto es un equipo que no midió, no un día de aire limpio: se descarta entero (regla `bloque_en_cero`).

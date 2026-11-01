@@ -951,30 +951,30 @@
     "la estación CA-VMP-2 aparece con 3 ubicaciones distintas (ver ubicaciones_distintas): se cargan como una sola estación",
     "la estación CA-VMP-7 aparece con 2 ubicaciones distintas (ver ubicaciones_distintas): se cargan como una sola estación"
   ],
-  "workers": 4,
-  "bloque_bytes": 16777216,
-  "bloques": 79,
+  "workers": 12,
+  "bloque_bytes": 67108864,
+  "bloques": 20,
   "chunk": 1000,
-  "duracion_s": 2.140117145,
+  "duracion_s": 1.176236545,
   "fases_s": {
-    "fusion": 0.414683464,
-    "gold_estandarizacion": 0.007934045,
-    "horas": 0.039148292,
-    "lectura_limpieza_pivot": 2.074167344,
-    "lectura_parseo": 1.9530989779999999,
-    "orden_tabla_ancha": 0.058015756,
-    "pivot": 0.081920074,
-    "salida": 0.214697949,
-    "tabla": 0.058015756
+    "fusion": 0.304926465,
+    "gold_estandarizacion": 0.007576789,
+    "horas": 0.039592948,
+    "lectura_limpieza_pivot": 1.11952726,
+    "lectura_parseo": 1.001726548,
+    "orden_tabla_ancha": 0.049132496,
+    "pivot": 0.078207764,
+    "salida": 0.178667312,
+    "tabla": 0.049132496
   },
   "metadatos": {
-    "momento": "2026-11-01T14:32:18.930145136-05:00",
+    "momento": "2026-11-01T15:02:52.5230438-05:00",
     "maquina": "A019803",
     "version_go": "go1.27.3",
     "gomaxprocs": 14,
     "cpus_logicas": 14,
-    "commit": "11cef5a77afd3cbb8a144725d2e51fdd8158ae8a",
-    "arbol_sucio": true
+    "commit": "5306012599785c3a138895a01cb05d7b56fd3239",
+    "arbol_sucio": false
   },
   "configs": {
     "kmeans": {

@@ -17,13 +17,13 @@
   "ddof": 0,
   "chunk": 1000,
   "metadatos": {
-    "momento": "2026-11-01T14:32:18.930145136-05:00",
+    "momento": "2026-11-01T15:02:52.5230438-05:00",
     "maquina": "A019803",
     "version_go": "go1.27.3",
     "gomaxprocs": 14,
     "cpus_logicas": 14,
-    "commit": "11cef5a77afd3cbb8a144725d2e51fdd8158ae8a",
-    "arbol_sucio": true
+    "commit": "5306012599785c3a138895a01cb05d7b56fd3239",
+    "arbol_sucio": false
   },
   "configs": {
     "kmeans": {

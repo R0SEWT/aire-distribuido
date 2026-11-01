@@ -11,4 +11,4 @@
 La hora de cada lectura: explícita o reconstruida por posición
 :::
 
-*Nota.* Fuente: `generado/limpieza.json`, escrito por `cmd/cargar` (commit `11cef5a`, 2026-11-01, máquina A019803). Convención de hora: «fin» (la lectura de 00:00 a 01:00 se fecha a las 01:00). La proporción de las dos primeras filas es sobre las procesadas; la de la regla, sobre las leídas; la última, sobre las filas anchas.
+*Nota.* Fuente: `generado/limpieza.json`, escrito por `cmd/cargar` (commit `5306012`, 2026-11-01, máquina A019803). Convención de hora: «fin» (la lectura de 00:00 a 01:00 se fecha a las 01:00). La proporción de las dos primeras filas es sobre las procesadas; la de la regla, sobre las leídas; la última, sobre las filas anchas.
