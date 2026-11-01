@@ -123,3 +123,72 @@ Mismo esquema que `configs/kmeans.json`. `semilla`, `tolerancia`, `max_iter`, `w
 ```
 
 Centroides de scikit-learn sobre todo el silver (63 821 filas, semilla 23, inercia 32644.5196) en `reports/centroides_sklearn.json`, para el test de equivalencia con Go.
+
+## Decisión del equipo (receta congelada en `configs/kmeans.json`)
+
+> Agregado por la §8 de `notebooks/02_calibracion.ipynb` el 2026-11-01 15:00, con las cifras de `reports/calibracion_resumen.csv` (la grilla de arriba, sin volver a correrla) y, para los descriptores, el modelo de Go (`data/gold/asignaciones.csv`, `reports/regimenes.json`) unido al silver de Go.
+
+La regla automática eligió `F2-M0-T1-N2` con k = 4 (PM10, Fracción fina, nivel por estación). El equipo congeló **`F1-M0-T1-N1` con k = 3**: PM2.5 y PM10 en µg/m³, sin log, nivel absoluto, 10 semillas y chunk 1 000 (`configs/kmeans.json`).
+
+|  | regla automática | equipo (receta final) |
+|---|---|---|
+| variante | `F2-M0-T1-N2` | `F1-M0-T1-N1` |
+| features | PM10, Fracción fina | PM2.5, PM10 |
+| log1p | ninguna | ninguna |
+| nivel | por estación | absoluto |
+| k | 4 | 3 |
+| codo de la variante | 4 | 5 |
+| k desde el codo (piso de la regla) | sí | no |
+| (1) estable | sí | sí |
+| (2) separa el ECA | no | no |
+| (3) no es geografía | sí | sí |
+| (4) interpretable | sí | sí |
+| estaciones | 17 | 17 |
+| horas (filas completas) | 63 821 | 64 236 |
+| ARI entre semillas | 1.000 | 0.987 |
+| ARI entre remuestreos por días | 0.873 | 0.938 |
+| NMI con la estación | 0.010 | 0.077 |
+| NMI de la línea base (k niveles de PM10) | 0.099 | 0.087 |
+| NMI con la hora | 0.082 | 0.014 |
+| silueta | 0.479 | 0.544 |
+| horas en los regímenes que exceden el ECA | 1.5 % | 2.4 % |
+| pureza «excede» (24 h sobre el ECA) | 0.091 | 0.341 |
+| recall «excede» (24 h sobre el ECA) | 0.075 | 0.444 |
+| cluster más chico | 1.5 % | 2.3 % |
+| separación L∞ mínima entre centroides | 1.39 | 1.14 |
+
+**Por qué `F1-M0-T1-N1` con k = 3**:
+
+- **Un solo K-Means de tres niveles de aire, que se explica y se defiende.** Sus regímenes son niveles absolutos (bajo, medio, alto) y el ECA se lee sobre ellos. La automática necesita dos capas: un régimen relativo a cada estación (nivel por estación) y la etiqueta ECA calculada aparte, porque un z-score por estación no son µg/m³.
+- **Estable**: ARI 0.987 entre semillas y 0.938 entre remuestreos por días.
+- **No es geografía**: NMI con la estación 0.077, frente a 0.087 de la línea base (la partición en k niveles de PM10).
+- **Silueta 0.544**: la mejor de la grilla con k ≥ 3; solo la superan 2 candidatos, todos con k = 2.
+- **17 estaciones** (64 236 horas completas).
+- **Su régimen alto excede el ECA en promedio y recoge el 44 % de las horas sobre el ECA** (promedio móvil de 24 h; pureza 0.34, con el 2.4 % de las horas). La automática: pureza 0.09 y recall 0.07.
+- **La fracción fina y la meteorología se describen por régimen, no son features** (tablas de abajo).
+
+**Qué cede**: k = 3 está por debajo del codo de su variante (k = 5), y la regla automática toma el codo como piso de k: por eso no la consideró. Cumple los otros tres criterios aplicados (estable, no es geografía, interpretable) y, como todas, no cumple (2) separa el ECA (pureza > 0.6 y recall > 0.5). Su cluster más chico tiene el 2.3 % de las horas y la separación L∞ mínima entre centroides es 1.14 desviaciones.
+
+### Descriptores por régimen (modelo de Go)
+
+Medias sobre las horas del gold de cada régimen (64 236 horas, 17 estaciones). Horas con 24 h sobre el ECA: el promedio móvil de 24 h de PM2.5 o PM10 (ventana que termina en la hora, al menos 18 h con dato) supera 50 o 100 µg/m³; «parte del total» es qué proporción de todas esas horas cae en el régimen. En `reports/descriptores_regimen.csv`, con cuántas horas y estaciones entran en cada media.
+
+| régimen | horas | PM2.5 / PM10 medios (µg/m³) | ECA (media) | horas con 24 h sobre el ECA | parte del total de esas horas | fracción fina | viento (m/s) | humedad (%) | temperatura (°C) |
+|---|---|---|---|---|---|---|---|---|---|
+| R0 bajo | 47 070 (73.3 %) | 9.0 / 17.5 | no excede | 0.4 % | 16.6 % | 0.600 | 1.99 | 64.9 | 14.4 |
+| R1 medio | 15 651 (24.4 %) | 24.3 / 58.4 | no excede | 2.9 % | 39.2 % | 0.484 | 2.09 | 62.1 | 16.2 |
+| R2 alto | 1 515 (2.4 %) | 65.3 / 187.4 | excede | 34.1 % | 44.1 % | 0.435 | 1.68 | 56.8 | 14.6 |
+
+La meteorología solo existe en 11 de las 17 estaciones del gold (la fracción fina, en 17: falta donde PM10 es 0), así que sus medias mezclan estaciones. La anomalía dentro de la estación (el valor menos la media de su estación sobre las horas del gold) no depende de qué estaciones caen en cada régimen:
+
+| régimen | estaciones con meteorología | horas con viento / humedad / temperatura | viento: anomalía (m/s) | humedad: anomalía (puntos) | temperatura: anomalía (°C) |
+|---|---|---|---|---|---|
+| R0 bajo | 11 de 17 | 31 367 / 31 105 / 31 107 | -0.07 | +2.1 | -0.3 |
+| R1 medio | 11 de 17 | 11 629 / 11 048 / 11 048 | +0.18 | -5.4 | +0.8 |
+| R2 alto | 8 de 15 | 977 / 961 / 961 | -0.03 | -5.1 | +0.5 |
+
+### Archivos
+
+- `reports/kmeans_propuesto.json` queda con la receta final (igual a `configs/kmeans.json`) y reemplaza la propuesta automática del bloque «Receta propuesta» de arriba.
+- `reports/centroides_sklearn.json`: scikit-learn 1.9.1 con la receta final sobre todo el silver de Go (64 236 filas, la mejor de 5 semillas, hasta converger; inercia 49658.3579); frente a Go, máx |Δ centroide| 2.7e-15 tras emparejar e inercia relativa 1.0e-15.
+- `reports/descriptores_regimen.csv`: la tabla de descriptores con todas las columnas.

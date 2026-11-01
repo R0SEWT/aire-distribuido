@@ -1,15 +1,15 @@
 {
   "features": [
-    "pm10",
-    "fraccion_fina"
+    "pm2_5",
+    "pm10"
   ],
   "log1p": [],
-  "nivel": "estacion",
-  "k": 4,
+  "nivel": "absoluto",
+  "k": 3,
   "semilla": 42,
   "semillas": 10,
   "tolerancia": 1e-06,
   "max_iter": 100,
   "workers": 0,
-  "chunk": 10000
+  "chunk": 1000
 }
