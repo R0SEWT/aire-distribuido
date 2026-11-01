@@ -1,15 +1,15 @@
 {
   "cobertura.png": {
-    "sintetico": true,
+    "sintetico": false,
     "fuente": "limpieza.json (estaciones) y silver",
     "notebook": "03_auditoria_figuras",
-    "fecha": "2026-11-01T01:00:19"
+    "fecha": "2026-11-01T14:05:32"
   },
   "codo.png": {
-    "sintetico": true,
+    "sintetico": false,
     "fuente": "codo.json (Go)",
     "notebook": "03_auditoria_figuras",
-    "fecha": "2026-11-01T01:00:17"
+    "fecha": "2026-11-01T14:05:31"
   },
   "completitud.png": {
     "sintetico": false,
@@ -24,33 +24,33 @@
     "fecha": "2026-11-01T13:15:07"
   },
   "episodio.png": {
-    "sintetico": true,
-    "fuente": "silver y asignaciones (Go), SINT-A Lima Norte",
+    "sintetico": false,
+    "fuente": "silver y asignaciones (Go), CA-RZC-02",
     "notebook": "03_auditoria_figuras",
-    "fecha": "2026-11-01T01:00:16"
+    "fecha": "2026-11-01T14:05:15"
   },
   "perfiles.png": {
-    "sintetico": true,
+    "sintetico": false,
     "fuente": "regimenes.json y kmeans.json (Go)",
     "notebook": "03_auditoria_figuras",
-    "fecha": "2026-11-01T01:00:13"
+    "fecha": "2026-11-01T14:05:12"
   },
   "regimen-estacion.png": {
-    "sintetico": true,
+    "sintetico": false,
     "fuente": "regimenes.json, por_estacion (Go)",
     "notebook": "03_auditoria_figuras",
-    "fecha": "2026-11-01T01:00:15"
+    "fecha": "2026-11-01T14:05:14"
   },
   "regimen-hora.png": {
-    "sintetico": true,
+    "sintetico": false,
     "fuente": "regimenes.json, por_hora (Go)",
     "notebook": "03_auditoria_figuras",
-    "fecha": "2026-11-01T01:00:14"
+    "fecha": "2026-11-01T14:05:13"
   },
   "speedup.png": {
-    "sintetico": true,
+    "sintetico": false,
     "fuente": "benchmark_cargador.json y benchmark_kmeans.json",
     "notebook": "03_auditoria_figuras",
-    "fecha": "2026-11-01T01:00:18"
+    "fecha": "2026-11-01T14:05:31"
   }
 }
