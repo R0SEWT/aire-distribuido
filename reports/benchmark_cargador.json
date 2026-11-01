@@ -1,5 +1,5 @@
 {
-  "entrada": "/home/rody/Code/personal/aire-distribuido/data/bronze/1a_Vigilancia y Seguimiento ambiental en la calidad del aire.csv",
+  "entrada": "data/bronze/1a_Vigilancia y Seguimiento ambiental en la calidad del aire.csv",
   "bytes": 1317949839,
   "filas_largas": 2883877,
   "filas_anchas": 233707,
