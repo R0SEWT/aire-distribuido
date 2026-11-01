@@ -71,6 +71,9 @@ type ConfigLimpieza struct {
 	Rangos               map[string][2]float64         `json:"rangos"`
 	Unidades             map[string]map[string]float64 `json:"unidades"`
 	BloquesEnCero        []string                      `json:"bloques_en_cero_como_faltante"`
+	// Parametros es del modo parámetro/valor, que se retiró. Se acepta vacío
+	// para leer las configs del laboratorio en Python, que aún lo escriben.
+	Parametros map[string]any `json:"parametros,omitempty"`
 }
 
 // HoraPorPosicion reconstruye la hora cuando la fila no la trae: las filas de un
@@ -102,6 +105,9 @@ type Columnas struct {
 	Altitud      string `json:"altitud"`
 	Zona         string `json:"zona"`
 	Datum        string `json:"datum"`
+	// Del modo parámetro/valor, retirado: se aceptan vacíos.
+	Parametro string `json:"parametro,omitempty"`
+	Valor     string `json:"valor,omitempty"`
 }
 
 // ubicacion son las columnas que describen dónde está la estación (regla 9,
@@ -126,7 +132,7 @@ func ConfigPorDefecto() ConfigLimpieza {
 			"HORA_INICIO es el inicio del intervalo: 1899-12-31 HH:00:00 (artefacto de Excel); 1899-12-31 solo es la medianoche (posición 0 del día, verificado en 4,691 días).",
 			"Sin hora (NA, 94 %): la hora es la posición dentro del (estación, parámetro, fecha, unidad, periodo) si tiene 24 filas; en los días con hora explícita, hora = posición en el 100 %.",
 			"fecha_hora del silver es el fin del intervalo (convención de OEFA): la lectura de 00:00 a 01:00 se fecha a las 01:00.",
-			"Gases en ppb y ug/m3 a la vez: se prefiere ug/m3; ppb se convierte a 25 °C y 1 atm si es la única. Presión: mmHg a hPa. DIRECCION_VIENTO trae unidad '°c' por error: no se chequea.",
+			"Gases en ppb y ug/m3 a la vez: se prefiere ug/m3; ppb se convierte a 25 °C y 1 atm si es la única (el EDA midió 1.000-1.004 entre gemelas). Presión: mmHg a hPa. DIRECCION_VIENTO trae unidad '°c' por error: son grados.",
 			"Un día entero en 0 exacto es equipo sin medir, no una medición (EDA: 95-99.8 % de los ceros vienen así); la precipitación queda fuera: un día seco es 0.",
 			"Centinelas, rangos físicos y rango de fechas son provisionales hasta el EDA.",
 		},
@@ -208,7 +214,8 @@ func ConfigPorDefecto() ConfigLimpieza {
 			"temperatura":      {"°c": 1, "c": 1},
 			"humedad":          {"%": 1},
 			"viento_velocidad": {"m/s": 1},
-			"presion":          {"hpa": 1, "mbar": 1, "mmhg": 1.33322},
+			"viento_direccion": {"°": 1, "grados": 1, "°c": 1}, // «°c» es un error de OEFA: son grados
+			"presion":          {"hpa": 1, "mbar": 1, "mb": 1, "mmhg": 1.33322},
 			"precipitacion":    {"mm": 1},
 			"radiacion":        {"w/m2": 1},
 		},
@@ -359,6 +366,12 @@ func (c ConfigLimpieza) compilar() (*reglas, error) {
 	if strings.TrimSpace(c.Columnas.Fecha) == "" {
 		mal("columnas.fecha es obligatoria")
 	}
+	if c.Columnas.Parametro != "" || c.Columnas.Valor != "" || len(c.Parametros) > 0 {
+		mal("el modo parámetro/valor (columnas.parametro, columnas.valor, parametros) se retiró: usar parametros_en_columnas")
+	}
+	if len(r.formatosHora) == 0 {
+		r.formatosHora = []string{"15:04:05", "15:04"}
+	}
 
 	r.paramColumnas = make(map[string]int, len(c.ParametrosEnColumnas))
 	nombres := make([]string, 0, len(c.ParametrosEnColumnas))
@@ -401,9 +414,6 @@ func (c ConfigLimpieza) compilar() (*reglas, error) {
 
 	if len(c.FormatosFecha) == 0 {
 		mal("formatos_fecha está vacío")
-	}
-	if c.Columnas.Hora != "" && len(c.FormatosHora) == 0 {
-		mal("formatos_hora está vacío y hay columna de hora")
 	}
 	switch c.HoraSoloPrefijo {
 	case "", HoraMedianoche:

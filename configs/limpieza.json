@@ -5,7 +5,7 @@
     "HORA_INICIO es el inicio del intervalo: 1899-12-31 HH:00:00 (artefacto de Excel); 1899-12-31 solo es la medianoche (posición 0 del día, verificado en 4,691 días).",
     "Sin hora (NA, 94 %): la hora es la posición dentro del (estación, parámetro, fecha, unidad, periodo) si tiene 24 filas; en los días con hora explícita, hora = posición en el 100 %.",
     "fecha_hora del silver es el fin del intervalo (convención de OEFA): la lectura de 00:00 a 01:00 se fecha a las 01:00.",
-    "Gases en ppb y ug/m3 a la vez: se prefiere ug/m3; ppb se convierte a 25 °C y 1 atm si es la única. Presión: mmHg a hPa. DIRECCION_VIENTO trae unidad '°c' por error: no se chequea.",
+    "Gases en ppb y ug/m3 a la vez: se prefiere ug/m3; ppb se convierte a 25 °C y 1 atm si es la única (el EDA midió 1.000-1.004 entre gemelas). Presión: mmHg a hPa. DIRECCION_VIENTO trae unidad '°c' por error: son grados.",
     "Un día entero en 0 exacto es equipo sin medir, no una medición (EDA: 95-99.8 % de los ceros vienen así); la precipitación queda fuera: un día seco es 0.",
     "Centinelas, rangos físicos y rango de fechas son provisionales hasta el EDA."
   ],
@@ -172,6 +172,7 @@
     },
     "presion": {
       "hpa": 1,
+      "mb": 1,
       "mbar": 1,
       "mmhg": 1.33322
     },
@@ -184,6 +185,11 @@
     },
     "temperatura": {
       "c": 1,
+      "°c": 1
+    },
+    "viento_direccion": {
+      "grados": 1,
+      "°": 1,
       "°c": 1
     },
     "viento_velocidad": {

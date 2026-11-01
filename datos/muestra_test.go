@@ -335,12 +335,12 @@ func generarMuestra() *muestraGenerada {
 			default:
 				filas = append(filas, dia(si, d)...)
 			}
-			if si == 21 && d == 0 { // C: un día de meteorología vacía (sin_valor)
+			if si == 21 && d == 0 { // C: un día de meteorología vacía (regla parametro)
 				for h := 0; h < 24; h++ {
 					c := base(2)
 					c["TIPO_ANALISIS"], c["PERIODO"], c["UNIDAD_MEDIDA"] = met, "1 hora", "°c"
 					c["FECHA_INICIO"], c["HORA_INICIO"] = fechaDia(1), "NA"
-					filas = append(filas, filaSint{campos: c, regla: "sin_valor"})
+					filas = append(filas, filaSint{campos: c, regla: "parametro"}) // sin ningún valor
 				}
 			}
 		}

@@ -69,7 +69,8 @@ func TestConfigInvalida(t *testing.T) {
 		"periodo en las dos listas":     func(c *ConfigLimpieza) { c.PeriodosPorGrupo = []string{"1 Hora"} },
 		"sin periodos horarios":         func(c *ConfigLimpieza) { c.PeriodosHorarios, c.PeriodosPorGrupo = nil, nil },
 		"sin formatos de fecha":         func(c *ConfigLimpieza) { c.FormatosFecha = nil },
-		"sin formatos de hora":          func(c *ConfigLimpieza) { c.FormatosHora = nil },
+		"modo parámetro/valor":          func(c *ConfigLimpieza) { c.Columnas.Parametro = "PARAMETRO" },
+		"parametros del modo viejo":     func(c *ConfigLimpieza) { c.Parametros = map[string]any{"PM10": "pm10"} },
 		"hora_solo_prefijo desconocida": func(c *ConfigLimpieza) { c.HoraSoloPrefijo = "mediodia" },
 		"hora_explicita desconocida":    func(c *ConfigLimpieza) { c.HoraExplicita = "medio" },
 		"hora_no_en_punto desconocida":  func(c *ConfigLimpieza) { c.HoraNoEnPunto = "redondear" },
@@ -166,5 +167,34 @@ func TestRecetaArchivoRoto(t *testing.T) {
 	}
 	if _, _, err := LeerReceta(ruta); err == nil || errors.Is(err, os.ErrNotExist) {
 		t.Fatalf("un kmeans.json roto tiene que fallar, no caer en la receta provisional: %v", err)
+	}
+}
+
+// TestConfigDelLaboratorio: la config que escribe notebooks/aire_lab.py trae las
+// claves vacías del modo parámetro/valor y no trae formatos_hora; tiene que
+// leerse igual.
+func TestConfigDelLaboratorio(t *testing.T) {
+	cfg := ConfigPorDefecto()
+	cfg.FormatosHora, cfg.HoraSoloPrefijo, cfg.HoraExplicita, cfg.HoraNoEnPunto = nil, "", "", ""
+	ruta := filepath.Join(t.TempDir(), "limpieza_propuesta_real.json")
+	if err := GuardarJSON(ruta, cfg); err != nil {
+		t.Fatal(err)
+	}
+	crudo, _ := os.ReadFile(ruta)
+	texto := strings.Replace(string(crudo), `"datum": "DATUM"`, `"datum": "DATUM", "parametro": "", "valor": ""`, 1)
+	texto = strings.Replace(texto, `"zona_horaria"`, `"parametros": {}, "zona_horaria"`, 1)
+	if err := os.WriteFile(ruta, []byte(texto), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	leida, err := LeerConfigLimpieza(ruta)
+	if err != nil {
+		t.Fatal(err)
+	}
+	reg, err := leida.compilar()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !reg.horaInicio || reg.soloPrefijoEs != 0 || reg.horaTruncar || len(reg.formatosHora) != 2 {
+		t.Errorf("valores por defecto de la hora: %+v", reg)
 	}
 }

@@ -44,8 +44,8 @@ go test ./datos -run TestMuestraVersionadaAlDia               # falla si difiere
 | SINT-C | H2S en las dos unidades (un día en 0 en µg/m³: queda el de ppb), temperaturas bajo cero, un día de filas sin valor, un día de PM10 con 23 filas y uno de temperatura `-` con 23 |
 | SINT-D | PM10 y PM2.5, «Media móvil de 8 horas», «24 horas» y «24 Horas» (este, multilínea), un día de PM2.5 partido en dos tramos (no contiguo), un día con otras coordenadas, una fila con el nombre en minúsculas |
 
-Casos sembrados de cada regla: fila con columnas de menos, estación vacía, filas sin valor, fila
-con dos valores, periodos no horarios, fecha `NA` e imposible, fecha fuera de rango, hora no en
+Casos sembrados de cada regla: fila con columnas de menos, estación vacía, filas sin valor y una
+con dos valores (regla parametro), periodos no horarios, fecha `NA` e imposible, fecha fuera de rango, hora no en
 punto, días incompletos o no contiguos, `<LD` y `ND`, centinela, negativo, fuera de rango, unidad
 desconocida, día en 0, gases duplicados en dos unidades, duplicados exactos y con otro valor (con
 hora explícita) y horas con PM2.5 > PM10.

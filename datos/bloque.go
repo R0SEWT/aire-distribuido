@@ -23,9 +23,8 @@ type regla int
 const (
 	reglaColumnas               regla = iota // la fila no tiene tantos campos como la cabecera
 	reglaEstacion                            // estación vacía
-	reglaSinValor                            // ninguna columna de parámetro con valor
-	reglaParametro                           // más de una columna de parámetro con valor
 	reglaPeriodo                             // regla 1: periodo no horario (o «-» sin hora y con el día incompleto)
+	reglaParametro                           // ninguna columna de parámetro con valor, o más de una
 	reglaFecha                               // regla 2: fecha no parseable
 	reglaFechaFueraDeRango                   // regla 2: fuera de [fecha_desde, fecha_hasta)
 	reglaHoraNoEnPunto                       // regla 2: hora con minutos o segundos (política descartar)
@@ -43,7 +42,7 @@ const (
 )
 
 var nombresReglas = [numReglas]string{
-	"columnas", "estacion", "sin_valor", "parametro", "periodo", "fecha", "fecha_fuera_de_rango",
+	"columnas", "estacion", "periodo", "parametro", "fecha", "fecha_fuera_de_rango",
 	"hora_no_en_punto", "hora", "valor_no_numerico", "centinela", "unidad", "negativo", "fuera_de_rango",
 	"bloque_en_cero", "duplicado_unidad", "duplicado_exacto", "duplicado_valor_distinto",
 }
@@ -343,15 +342,10 @@ func (w *trabajador) validarFila(eb *estadoBloque, campos [][]byte) {
 			p.vistosParametros[c.nombre]++
 		}
 	}
-	switch {
-	case nvals == 0:
-		p.descartadas[reglaSinValor]++
-		return
-	case nvals > 1:
-		p.descartadas[reglaParametro]++
-		return
-	}
 
+	// Periodo (regla 1) antes que parámetro. Un periodo «por grupo» («-») es
+	// horario con hora explícita o con su día completo; una fila sin parámetro
+	// no tiene día, así que sin hora explícita cae aquí y no en parametro.
 	var flags uint8
 	var per *entradaTexto
 	if cols.periodo >= 0 {
@@ -365,7 +359,15 @@ func (w *trabajador) validarFila(eb *estadoBloque, campos [][]byte) {
 			return
 		case periodoCondicional:
 			flags |= regCondicional
+			if nvals != 1 && (cols.hora < 0 || w.hora(campos[cols.hora]).estado != horaOK) {
+				p.descartadas[reglaPeriodo]++
+				return
+			}
 		}
+	}
+	if nvals != 1 {
+		p.descartadas[reglaParametro]++
+		return
 	}
 
 	f := w.fecha(campos[cols.fecha])
@@ -553,9 +555,13 @@ func (w *trabajador) verUbicacion(est *estacionBloque, campos [][]byte) {
 		vista := ubicacionVista{Campos: map[string]string{}}
 		for _, u := range w.cols.ubicacion {
 			v := strings.TrimSpace(decodificar(bytes.TrimSpace(campos[u.indice]), w.reg.cod))
-			if !w.reg.nulos[v] {
-				vista.Campos[u.nombre] = v
+			if w.reg.nulos[v] {
+				continue
 			}
+			if u.nombre == "ubigeo" {
+				v = rellenarUbigeo(v)
+			}
+			vista.Campos[u.nombre] = v
 		}
 		i = len(est.ubicaciones)
 		est.ubicaciones = append(est.ubicaciones, vista)
@@ -564,6 +570,15 @@ func (w *trabajador) verUbicacion(est *estacionBloque, campos [][]byte) {
 	est.ultima = append(est.ultima[:0], w.tmpU...)
 	est.actual = i
 	est.ubicaciones[i].Filas++
+}
+
+// rellenarUbigeo devuelve el UBIGEO como texto de 6 dígitos: el CSV lo trae
+// como número y pierde el cero inicial (21801 es 021801, Áncash).
+func rellenarUbigeo(v string) string {
+	if len(v) >= 6 || strings.Trim(v, "0123456789") != "" {
+		return v
+	}
+	return strings.Repeat("0", 6-len(v)) + v
 }
 
 // maxNoNumericos acota cuántos textos distintos se inventarían por bloque; el

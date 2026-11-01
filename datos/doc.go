@@ -77,10 +77,9 @@
 //
 //	columnas                 la fila no tiene tantos campos como la cabecera
 //	estacion                 estación vacía
-//	sin_valor                ninguna columna de parámetro con valor
-//	parametro                más de una columna de parámetro con valor
 //	periodo                  regla 1: periodo no horario (24 horas, móviles); «-» sin
-//	                         hora explícita y con el día incompleto
+//	                         hora explícita y con el día incompleto (o sin parámetro)
+//	parametro                ninguna columna de parámetro con valor, o más de una
 //	fecha                    regla 2: fecha no parseable
 //	fecha_fuera_de_rango     regla 2: fuera de [fecha_desde, fecha_hasta)
 //	hora_no_en_punto         regla 2: hora con minutos o segundos (política descartar)
@@ -95,15 +94,21 @@
 //	duplicado_exacto         regla 5: misma (estación, parámetro, fecha-hora) y valor
 //	duplicado_valor_distinto regla 5: misma clave, otro valor; se conserva el primero
 //
+// Es la cascada de notebooks/aire_lab.py (más hora_no_en_punto, que en el CSV
+// real da 0): sobre el CSV completo, los conteos por regla y por estación y el
+// silver coinciden byte a byte con el prototipo del EDA.
+//
 // Se marcan, sin descartar (marcadas_por_regla): las celdas cuyo valor
 // conservado tuvo un duplicado con otro valor, las convertidas desde una unidad
-// no canónica y las horas truncadas (política truncar). Las filas anchas con
+// no canónica, las de hora inferida y las horas truncadas (política truncar). Las filas anchas con
 // PM2.5 > PM10 se cuentan aparte. vistos inventaría periodos, unidades por
 // parámetro, filas por columna de parámetro y los textos no numéricos.
 //
 // La estación es NOMBRE_PUNTO normalizado (espacios colapsados, mayúsculas). Si
 // un mismo nombre aparece con varias combinaciones de columnas de ubicación, se
-// carga como una estación, se listan en ubicaciones_distintas y se avisa.
+// carga como una estación, se listan en ubicaciones_distintas y se avisa; la
+// ubicación del reporte es la más frecuente. UBIGEO es texto de 6 dígitos (el
+// CSV lo trae como número y pierde el cero inicial: 21801 es 021801).
 //
 // # configs/limpieza.json
 //
@@ -127,7 +132,7 @@
 //	                              viento_direccion, presion, precipitacion, radiacion)
 //	periodos_horarios             periodos que son horarios ("1 hora")
 //	periodos_horarios_por_grupo   horarios solo con hora explícita o con el día completo ("-")
-//	formatos_fecha, formatos_hora layouts de Go, en orden
+//	formatos_fecha, formatos_hora layouts de Go, en orden (hora: "15:04:05" y "15:04" por defecto)
 //	hora_prefijo_ignorar          prefijo de la hora que se quita ("1899-12-31")
 //	hora_solo_prefijo             "medianoche" (default) o "sin_hora": qué es el prefijo solo
 //	hora_explicita                "inicio" (default) o "fin": qué marca HORA_INICIO
@@ -146,7 +151,8 @@
 // ConfigPorDefecto es el formato real, verificado sobre el CSV completo, y el de
 // las dos muestras de data/sample/; configs/limpieza.json arranca igual. El modo
 // del primer borrador (una columna de parámetro y una de valor) se retiró: el
-// CSV real no es así.
+// CSV real no es así. Sus claves (parametros, columnas.parametro y
+// columnas.valor) se aceptan vacías, porque el laboratorio en Python las escribe.
 //
 // # configs/kmeans.json (solo lectura)
 //

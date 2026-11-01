@@ -49,7 +49,8 @@ type ConteoLargas struct {
 	DescartadasPorRegla map[string]int64 `json:"descartadas_por_regla"`
 	// MarcadasPorRegla cuenta lo que se conserva pero se señala, en celdas:
 	// duplicado_valor_distinto (el valor conservado tuvo un duplicado con otro
-	// valor), unidad_convertida (el valor viene de ppb o mmHg) y
+	// valor), unidad_convertida (el valor viene de ppb o mmHg), hora_inferida
+	// (la hora salió de la posición en el día; igual a HoraInferida) y
 	// hora_no_en_punto (truncada a la hora, si la política es truncar).
 	MarcadasPorRegla             map[string]int64 `json:"marcadas_por_regla"`
 	FueraDeRangoPorParametro     map[string]int64 `json:"fuera_de_rango_por_parametro"`
@@ -110,6 +111,7 @@ func armarReporte(a *acumulador, t *TablaAncha, st estadoTabla, rec Receta) (*Re
 			MarcadasPorRegla: map[string]int64{
 				"duplicado_valor_distinto": st.celdasEnConflicto,
 				"unidad_convertida":        0,
+				"hora_inferida":            st.inferidas,
 				"hora_no_en_punto":         a.horaTruncada,
 			},
 			FueraDeRangoPorParametro:     map[string]int64{},

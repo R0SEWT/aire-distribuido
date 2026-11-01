@@ -810,7 +810,7 @@ func TestMuestraReal(t *testing.T) {
 	// Presión 0 mmHg (sensor sin dato) cae en fuera_de_rango; cada gas y la
 	// presión de CA-JUPR-01 vienen en dos unidades, así que no queda ninguno convertido.
 	if fl.HoraExplicita == 0 || fl.HoraInferida == 0 || fl.DescartadasPorRegla["duplicado_unidad"] == 0 ||
-		fl.DescartadasPorRegla["periodo"] == 0 || fl.DescartadasPorRegla["sin_valor"] == 0 ||
+		fl.DescartadasPorRegla["periodo"] == 0 || fl.DescartadasPorRegla["parametro"] == 0 ||
 		fl.DescartadasPorRegla["hora"] == 0 || fl.FueraDeRangoPorParametro["presion"] == 0 {
 		t.Errorf("la muestra real tiene hora explícita e inferida, gases en dos unidades, móviles, días incompletos y filas vacías: %+v", fl)
 	}
