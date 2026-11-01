@@ -54,7 +54,9 @@ entre remuestreos por bloques de días, y que sus perfiles sean distinguibles.
 Ejes de la grilla de calibración del K-Means
 :::
 
-La receta elegida quedó congelada en `configs/kmeans.json`, que Go lee sin decidir nada: features
+La receta de esta corrida es la **provisional** de la spec, congelada en `configs/kmeans.json`, que
+Go lee sin decidir nada; la calibración del notebook 02 sobre el dato real está corriendo y puede
+cambiarla. Features
 {{< meta cifras.kmeans.features >}}, $k$ = {{< meta cifras.kmeans.k >}},
 {{< meta cifras.kmeans.semillas >}} semillas desde {{< meta cifras.kmeans.semilla_base >}} (la
 elegida fue la {{< meta cifras.kmeans.semilla >}}). La hora, la estación y el mes **no son features** en ninguna
@@ -62,7 +64,7 @@ variante: se usan después, para decir dónde y cuándo aparece cada régimen.
 
 ::: {.callout-warning title="PENDIENTE"}
 La tabla de decisión de la calibración (variante elegida, por qué, qué perdió frente a la segunda),
-con las métricas de `reports/calibracion.csv` (notebook 02, mar 03/11): ARI entre semillas y por
+con las métricas de `reports/calibracion.csv` (notebook 02, corriendo sobre el dato real): ARI entre semillas y por
 días, pureza y recall de la etiqueta ECA, NMI con estación y hora, tamaño del cluster más chico. Si
 no cerró a tiempo, decir que se usó la receta provisional (F2, M1, T2, N1, $k$ = 5) y por qué.
 Conviene que `tablas.py` la genere desde el CSV.

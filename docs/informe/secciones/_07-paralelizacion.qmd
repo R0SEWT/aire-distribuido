@@ -22,36 +22,39 @@ goroutine acumula en su propia memoria.
 ### Parte A: cargador concurrente
 
 ```
-lector ─ índices de bloques (B bytes, alineados a salto de línea) ─▶ canal
-                                                                       │
-              W workers: parsear, validar, acumular por clave  ◀───────┘
-                │  (índice de bloque, mapa parcial, conteos por regla)
-                ▼
-recolector: fusiona los mapas en orden de bloque ─▶ tabla ancha
-                │
-                ▼
-estandarización: Welford por chunk, fusión de Chan en orden ─▶ Dataset
+productor ─ índices de bloques (B bytes) ─▶ W workers: unir multilínea, parsear, reglas por fila
+   │  (semáforo: a lo sumo 2W bloques sin fusionar)        │ parciales (índice de bloque)
+   │                                                       ▼
+   │                         recolector: cose los bordes y fusiona en orden de bloque
+   │                                                       │
+   │                         horas: posición en el día, reglas por día (serial)
+   │                                                       │
+   │                         pivot por estación (paralelo: una tarea por estación)
+   │                                                       │
+   └──────────────▶ tabla ancha ordenada ─▶ gold: Welford por chunk, fusión de Chan ─▶ Dataset
 ```
 
-- **Lector.** Parte el archivo en bloques de B = 64 MB alineados al siguiente salto de línea y
-  reparte sus índices por un canal. Cada worker lee su rango con `ReadAt` sobre el mismo `*os.File`,
-  que es seguro para uso concurrente: no hay una lectura secuencial compartida.
-- **Workers.** W goroutines. Cada una parsea sus filas, aplica las reglas 1 a 6 y acumula en **su
-  propio mapa** (estación, fecha-hora) → vector parcial, sin estado compartido. Entrega el mapa, los
-  conteos por regla y el índice del bloque.
-- **Recolector.** Fusiona los mapas **en orden de índice de bloque**: la misma clave puede aparecer en
-  varios bloques porque el CSV no viene ordenado por estación, y fusionar en orden hace que «el
-  primero» de un duplicado esté bien definido y que el resultado no dependa de W. Es el *reduce* del
-  pivot.
-- **Orden de salida.** El `Dataset` se vuelca ordenado por (estación, fecha-hora), nunca iterando el
-  mapa: la iteración de mapas en Go es aleatoria y rompería el determinismo aguas abajo.
+- **Lector y productor.** La cabecera se lee una vez. El resto se parte en bloques de B bytes
+  (64 MiB por defecto) alineados al siguiente salto de línea, y sus índices van por un canal. Un
+  semáforo deja a lo sumo 2W bloques leídos sin fusionar: es la cota de memoria con un archivo de
+  1,3 GB. Cada worker lee su rango con `ReadAt` sobre el mismo `*os.File`, que es seguro para uso
+  concurrente.
+- **Workers.** W goroutines. Cada una une las líneas de un registro multilínea (una cantidad impar de
+  comillas), parsea y aplica las reglas que se deciden por fila, sin estado compartido ni `Mutex`:
+  búfer, cachés y tablas son del worker.
+- **Recolector y cosedora.** Recibe los parciales en cualquier orden y los fusiona **en orden de
+  índice de bloque**, de modo que el resultado no depende de W. Si un registro multilínea quedó
+  abierto en el borde de un bloque, la cosedora rehace el siguiente bloque desde su inicio, en serie.
+- **Horas.** Con todos los días ya completos, una fase serial da la hora por posición y aplica las
+  reglas que se deciden por día (`hora`, `bloque_en_cero`, el periodo «-»).
+- **Pivot por estación.** Las celdas de dos estaciones nunca chocan, así que cada estación es una
+  tarea del pool; dentro de ella, los registros se aplican en orden de archivo. Las filas se ordenan
+  por fecha-hora y las estaciones por nombre: nunca se itera un mapa para escribir, porque la
+  iteración de mapas en Go es aleatoria y rompería el determinismo.
 
-En el código: la partición en bloques alineados a salto de línea es `particionar` en
-`datos/lector.go` (bloque de 64 MiB por defecto, flag `-bloque` de `cmd/cargar`); los workers y la
-fusión en orden son `leerBloques` y `fusionar` en `datos/recolector.go`. La partición supone que
-ningún campo entrecomillado contiene un salto de línea; si aparece una comilla sin cerrar en la misma
-línea, la carga falla con un error claro en vez de partir mal el archivo. El CSV real trae textos
-entre comillas y ninguna línea malformada (@sec-csv), así que el supuesto se cumple.
+En el código: `particionar` en `datos/lector.go`; `leerBloques` y la cosedora en
+`datos/pipeline.go`; `fusionar`, `resolverHoras`, `pivotar` y `tabla` en `datos/recolector.go`. La
+@tbl-limpieza-fases dice cuánto pesa cada fase y cuáles son seriales (@sec-evidencias).
 
 ### Parte B: K-Means paralelo
 

@@ -1,71 +1,125 @@
 {
-  "placeholder": true,
-  "_nota": "sale de correr los comandos de Go sobre la muestra sintética data/sample/oefa_muestra.csv (estaciones SINT-*, una semana), no sobre el CSV de OEFA.",
-  "entrada": "data/sample/oefa_muestra.csv",
-  "bytes": 722035,
-  "sha256": "38fdecc55cb180f57665614326543b74db6ece281682728e6d146c68901c5b89",
+  "entrada": "data/bronze/1a_Vigilancia y Seguimiento ambiental en la calidad del aire.csv",
+  "bytes": 1317949839,
+  "sha256": "1f09a8064ee0aed0b3a9a0a90b96f63ce226b45a969dace49f73e45134f26d92",
   "cabecera": [
-    "ID_INFORME",
+    "NOMBRE_EVALUACION",
+    "COMPONENTE_AMBIENTAL",
     "PROCEDENCIA_MUESTRA",
     "NOMBRE_PUNTO",
-    "DEPARTAMENTO",
-    "PROVINCIA",
-    "DISTRITO",
-    "UBIGEO",
     "ESTE",
     "NORTE",
     "ALTITUD",
     "ZONA",
     "DATUM",
-    "PARAMETRO",
-    "UNIDAD",
-    "FECHA",
-    "VALOR",
-    "PERIODO"
+    "DEPARTAMENTO",
+    "PROVINCIA",
+    "DISTRITO",
+    "UBIGEO",
+    "DESCRIPCION_UBICACION",
+    "TIPO_MUESTRA",
+    "TIPO_ANALISIS",
+    "PERIODO",
+    "FECHA_INICIO",
+    "HORA_INICIO",
+    "FECHA_FIN",
+    "HORA_FIN",
+    "UNIDAD_MEDIDA",
+    "DIOXIDO_AZUFRE",
+    "DIRECCION_VIENTO",
+    "HUMEDAD_RELATIVA",
+    "PM10",
+    "PM2.5",
+    "MONOXIDO_CARBONO",
+    "OZONO",
+    "PRECIPITACION",
+    "PRESION_BAROMETRICA",
+    "RADIACION_SOLAR",
+    "SULFURO_HIDROGENO",
+    "TEMPERATURA",
+    "VELOCIDAD_VIENTO",
+    "FECHA_CORTE"
   ],
-  "bom": true,
+  "bom": false,
   "delimitador": ";",
+  "convencion_hora": "fin",
   "filas_largas": {
-    "leidas": 4236,
-    "procesadas": 4188,
-    "descartadas": 48,
+    "leidas": 2883877,
+    "procesadas": 1423958,
+    "descartadas": 1459919,
     "descartadas_por_regla": {
-      "centinela": 3,
-      "columnas": 2,
-      "duplicado_exacto": 4,
-      "duplicado_valor_distinto": 3,
-      "estacion": 1,
+      "bloque_en_cero": 762744,
+      "centinela": 0,
+      "columnas": 0,
+      "duplicado_exacto": 0,
+      "duplicado_unidad": 133809,
+      "duplicado_valor_distinto": 0,
+      "estacion": 0,
       "fecha": 3,
-      "fecha_fuera_de_rango": 2,
-      "fuera_de_rango": 3,
+      "fecha_fuera_de_rango": 0,
+      "fuera_de_rango": 51219,
+      "hora": 30401,
+      "hora_no_en_punto": 0,
       "negativo": 2,
-      "parametro": 5,
-      "periodo": 15,
-      "unidad": 2,
-      "valor_no_numerico": 3
+      "parametro": 262743,
+      "periodo": 218998,
+      "unidad": 0,
+      "valor_no_numerico": 0
     },
     "marcadas_por_regla": {
-      "duplicado_valor_distinto": 3
+      "duplicado_valor_distinto": 0,
+      "hora_inferida": 1323386,
+      "hora_no_en_punto": 0,
+      "unidad_convertida": 151734
     },
     "fuera_de_rango_por_parametro": {
-      "humedad": 1,
-      "pm2_5": 1,
-      "viento_velocidad": 1
+      "o3": 744,
+      "precipitacion": 2,
+      "presion": 50472,
+      "temperatura": 1
+    },
+    "bloque_en_cero_por_parametro": {
+      "co": 107448,
+      "h2s": 137088,
+      "humedad": 42918,
+      "o3": 100944,
+      "pm10": 62400,
+      "pm2_5": 22368,
+      "radiacion": 480,
+      "so2": 168912,
+      "temperatura": 39822,
+      "viento_direccion": 40182,
+      "viento_velocidad": 40182
+    },
+    "hora_explicita": 100572,
+    "hora_inferida": 1323386,
+    "unidad_convertida_por_parametro": {
+      "co": 4152,
+      "h2s": 3888,
+      "o3": 3576,
+      "presion": 135798,
+      "so2": 4320
     }
   },
   "filas_anchas": {
-    "total": 648,
-    "completas_gold": 617,
-    "pm2_5_mayor_pm10": 4
+    "total": 233707,
+    "completas_gold": 41991,
+    "pm2_5_mayor_pm10": 2,
+    "hora_inferida": 217248
   },
   "parametros_presentes": [
     "co",
+    "h2s",
     "humedad",
-    "no2",
+    "o3",
     "pm10",
     "pm2_5",
+    "precipitacion",
+    "presion",
+    "radiacion",
     "so2",
     "temperatura",
+    "viento_direccion",
     "viento_velocidad"
   ],
   "features": [
@@ -76,161 +130,863 @@
   ],
   "nivel": "absoluto",
   "estaciones": {
-    "SINT-A Lima Norte": {
-      "largas_leidas": 1364,
-      "largas_procesadas": 1339,
-      "anchas": 168,
-      "completas_gold": 165,
-      "desde": "2024-03-04T00:00:00-05:00",
-      "hasta": "2024-03-10T23:00:00-05:00",
+    "CA-01": {
+      "largas_leidas": 14,
+      "largas_procesadas": 0,
+      "anchas": 0,
+      "completas_gold": 0,
       "ubicacion": {
-        "altitud": "150",
+        "altitud": "35",
         "datum": "WGS84",
-        "departamento": "LIMA",
-        "distrito": "COMAS",
-        "este": "276500",
-        "norte": "8682300",
-        "provincia": "LIMA",
-        "ubigeo": "150110",
-        "zona": "18L"
+        "departamento": "ANCASH",
+        "distrito": "CHIMBOTE",
+        "este": "768518",
+        "norte": "8990326",
+        "provincia": "SANTA",
+        "ubigeo": "021801",
+        "zona": "17"
       }
     },
-    "SINT-B Arequipa": {
-      "largas_leidas": 1178,
-      "largas_procesadas": 1173,
-      "anchas": 168,
-      "completas_gold": 166,
-      "desde": "2024-03-04T00:00:00-05:00",
-      "hasta": "2024-03-10T23:00:00-05:00",
+    "CA-03": {
+      "largas_leidas": 80136,
+      "largas_procesadas": 38786,
+      "anchas": 6048,
+      "completas_gold": 0,
+      "desde": "2019-04-24T01:00:00-05:00",
+      "hasta": "2020-01-01T00:00:00-05:00",
       "ubicacion": {
-        "altitud": "2400",
+        "altitud": "15",
         "datum": "WGS84",
-        "departamento": "AREQUIPA",
-        "distrito": "CERRO COLORADO",
-        "este": "226000",
-        "norte": "8187000",
-        "provincia": "AREQUIPA",
-        "ubigeo": "040104",
-        "zona": "19K"
+        "departamento": "ANCASH",
+        "distrito": "CHIMBOTE",
+        "este": "767988",
+        "norte": "8992825",
+        "provincia": "SANTA",
+        "ubigeo": "021801",
+        "zona": "17"
       }
     },
-    "SINT-C Junín": {
-      "largas_leidas": 853,
-      "largas_procesadas": 850,
-      "anchas": 144,
-      "completas_gold": 131,
-      "desde": "2024-03-04T00:00:00-05:00",
-      "hasta": "2024-03-10T23:00:00-05:00",
+    "CA-AYAS-01": {
+      "largas_leidas": 83920,
+      "largas_procesadas": 16032,
+      "anchas": 6696,
+      "completas_gold": 336,
+      "desde": "2021-12-10T01:00:00-05:00",
+      "hasta": "2022-12-31T00:00:00-05:00",
       "ubicacion": {
-        "altitud": "3750",
+        "altitud": "3728",
         "datum": "WGS84",
-        "departamento": "JUNÍN",
+        "departamento": "ANCASH",
+        "distrito": "SAN MARCOS",
+        "este": "278211",
+        "norte": "8946586",
+        "provincia": "HUARI",
+        "ubigeo": "021014",
+        "zona": "18"
+      },
+      "ubicaciones_distintas": [
+        {
+          "campos": {
+            "altitud": "3784",
+            "datum": "WGS84",
+            "departamento": "ANCASH",
+            "distrito": "SAN MARCOS",
+            "este": "278211",
+            "norte": "8946586",
+            "provincia": "HUARI",
+            "ubigeo": "021014",
+            "zona": "18"
+          },
+          "filas": 4350
+        },
+        {
+          "campos": {
+            "altitud": "3728",
+            "datum": "WGS84",
+            "departamento": "ANCASH",
+            "distrito": "SAN MARCOS",
+            "este": "278211",
+            "norte": "8946586",
+            "provincia": "HUARI",
+            "ubigeo": "021014",
+            "zona": "18"
+          },
+          "filas": 79570
+        }
+      ]
+    },
+    "CA-CC-01": {
+      "largas_leidas": 318498,
+      "largas_procesadas": 236616,
+      "anchas": 35064,
+      "completas_gold": 0,
+      "desde": "2018-01-01T01:00:00-05:00",
+      "hasta": "2022-01-01T00:00:00-05:00",
+      "ubicacion": {
+        "altitud": "3728",
+        "datum": "WGS84",
+        "departamento": "JUNIN",
         "distrito": "LA OROYA",
-        "este": "401000",
-        "norte": "8724000",
+        "este": "401757",
+        "norte": "8726374",
         "provincia": "YAULI",
         "ubigeo": "120801",
-        "zona": "18L"
+        "zona": "18"
       }
     },
-    "SINT-D Ucayali": {
-      "largas_leidas": 838,
-      "largas_procesadas": 826,
-      "anchas": 168,
-      "completas_gold": 155,
-      "desde": "2024-03-04T00:00:00-05:00",
-      "hasta": "2024-03-10T23:00:00-05:00",
+    "CA-CG-01": {
+      "largas_leidas": 15292,
+      "largas_procesadas": 8904,
+      "anchas": 1752,
+      "completas_gold": 312,
+      "desde": "2021-12-03T01:00:00-05:00",
+      "hasta": "2022-02-14T00:00:00-05:00",
       "ubicacion": {
-        "altitud": "155",
+        "altitud": "149",
         "datum": "WGS84",
-        "departamento": "UCAYALI",
-        "distrito": "CALLERIA",
-        "este": "552000",
-        "norte": "9073000",
-        "provincia": "CORONEL PORTILLO",
-        "ubigeo": "250101",
-        "zona": "18L"
+        "departamento": "LA LIBERTAD",
+        "distrito": "CASA GRANDE",
+        "este": "699904",
+        "norte": "9143748",
+        "provincia": "ASCOPE",
+        "ubigeo": "130208",
+        "zona": "17"
+      }
+    },
+    "CA-CG-02": {
+      "largas_leidas": 69978,
+      "largas_procesadas": 49272,
+      "anchas": 6336,
+      "completas_gold": 5688,
+      "desde": "2022-02-15T01:00:00-05:00",
+      "hasta": "2023-01-01T00:00:00-05:00",
+      "ubicacion": {
+        "altitud": "137",
+        "datum": "WGS84",
+        "departamento": "LA LIBERTAD",
+        "distrito": "CASA GRANDE",
+        "este": "700174",
+        "norte": "9143880",
+        "provincia": "ASCOPE",
+        "ubigeo": "130208",
+        "zona": "17"
+      }
+    },
+    "CA-CH-03": {
+      "largas_leidas": 232458,
+      "largas_procesadas": 75134,
+      "anchas": 15816,
+      "completas_gold": 0,
+      "desde": "2020-01-01T01:00:00-05:00",
+      "hasta": "2022-01-01T00:00:00-05:00",
+      "ubicacion": {
+        "altitud": "15",
+        "datum": "WGS84",
+        "departamento": "ANCASH",
+        "distrito": "CHIMBOTE",
+        "este": "767988",
+        "norte": "8992825",
+        "provincia": "SANTA",
+        "ubigeo": "021801",
+        "zona": "17"
+      }
+    },
+    "CA-COLQ-01": {
+      "largas_leidas": 5660,
+      "largas_procesadas": 1944,
+      "anchas": 696,
+      "completas_gold": 0,
+      "desde": "2021-12-03T01:00:00-05:00",
+      "hasta": "2022-01-01T00:00:00-05:00",
+      "ubicacion": {
+        "altitud": "4285",
+        "datum": "WGS84",
+        "departamento": "PASCO",
+        "distrito": "TINYAHUARCO",
+        "este": "361831",
+        "norte": "8811287",
+        "provincia": "PASCO",
+        "ubigeo": "190111",
+        "zona": "18"
+      }
+    },
+    "CA-CP-01": {
+      "largas_leidas": 137546,
+      "largas_procesadas": 131555,
+      "anchas": 17016,
+      "completas_gold": 15851,
+      "desde": "2020-01-23T01:00:00-05:00",
+      "hasta": "2022-01-01T00:00:00-05:00",
+      "ubicacion": {
+        "altitud": "3600",
+        "datum": "WGS84",
+        "departamento": "CUSCO",
+        "distrito": "CAPACMARCA",
+        "este": "823956",
+        "norte": "8449261",
+        "provincia": "CHUMBIVILCAS",
+        "ubigeo": "080702",
+        "zona": "18"
+      }
+    },
+    "CA-ESP-01": {
+      "largas_leidas": 9092,
+      "largas_procesadas": 3336,
+      "anchas": 1128,
+      "completas_gold": 0,
+      "desde": "2021-11-15T01:00:00-05:00",
+      "hasta": "2022-01-01T00:00:00-05:00",
+      "ubicacion": {
+        "altitud": "3926",
+        "datum": "WGS84",
+        "departamento": "CUSCO",
+        "distrito": "ESPINAR",
+        "este": "240086",
+        "norte": "8361727",
+        "provincia": "ESPINAR",
+        "ubigeo": "080801",
+        "zona": "19"
+      }
+    },
+    "CA-HU-04": {
+      "largas_leidas": 4350,
+      "largas_procesadas": 1056,
+      "anchas": 528,
+      "completas_gold": 0,
+      "desde": "2021-12-10T01:00:00-05:00",
+      "hasta": "2022-01-01T00:00:00-05:00",
+      "ubicacion": {
+        "altitud": "360",
+        "datum": "WGS84",
+        "departamento": "LIMA",
+        "distrito": "LURIGANCHO",
+        "este": "290677",
+        "norte": "8673143",
+        "provincia": "LIMA",
+        "ubigeo": "150118",
+        "zona": "18"
+      }
+    },
+    "CA-HU-09": {
+      "largas_leidas": 3566,
+      "largas_procesadas": 1296,
+      "anchas": 432,
+      "completas_gold": 0,
+      "desde": "2021-12-14T01:00:00-05:00",
+      "hasta": "2022-01-01T00:00:00-05:00",
+      "ubicacion": {
+        "altitud": "315",
+        "datum": "WGS84",
+        "departamento": "LIMA",
+        "distrito": "LURIGANCHO",
+        "este": "289094",
+        "norte": "8671337",
+        "provincia": "LIMA",
+        "ubigeo": "150118",
+        "zona": "18"
+      }
+    },
+    "CA-HUA-01": {
+      "largas_leidas": 84082,
+      "largas_procesadas": 52887,
+      "anchas": 8212,
+      "completas_gold": 5475,
+      "desde": "2021-12-08T19:00:00-05:00",
+      "hasta": "2023-01-01T00:00:00-05:00",
+      "ubicacion": {
+        "altitud": "32",
+        "datum": "WGS84",
+        "departamento": "PIURA",
+        "distrito": "LA HUACA",
+        "este": "504395",
+        "norte": "9456762",
+        "provincia": "PAITA",
+        "ubigeo": "200505",
+        "zona": "17"
+      }
+    },
+    "CA-HUAR-01": {
+      "largas_leidas": 5296,
+      "largas_procesadas": 1200,
+      "anchas": 624,
+      "completas_gold": 0,
+      "desde": "2021-12-05T01:00:00-05:00",
+      "hasta": "2022-01-01T00:00:00-05:00",
+      "ubicacion": {
+        "altitud": "4166",
+        "datum": "WGS84",
+        "este": "358735",
+        "norte": "8806535",
+        "zona": "19"
+      }
+    },
+    "CA-JUPR-01": {
+      "largas_leidas": 53410,
+      "largas_procesadas": 38208,
+      "anchas": 5760,
+      "completas_gold": 3696,
+      "desde": "2022-05-01T01:00:00-05:00",
+      "hasta": "2023-01-01T00:00:00-05:00",
+      "ubicacion": {
+        "altitud": "4138",
+        "datum": "WGS84",
+        "departamento": "ANCASH",
+        "distrito": "SAN MARCOS",
+        "este": "271214",
+        "norte": "8942357",
+        "provincia": "HUARI",
+        "ubigeo": "021014",
+        "zona": "18"
+      }
+    },
+    "CA-MAC-01": {
+      "largas_leidas": 83840,
+      "largas_procesadas": 47685,
+      "anchas": 8247,
+      "completas_gold": 5047,
+      "desde": "2021-12-09T23:00:00-05:00",
+      "hasta": "2023-01-01T00:00:00-05:00",
+      "ubicacion": {
+        "altitud": "38",
+        "datum": "WGS84",
+        "departamento": "PIURA",
+        "distrito": "LA HUACA",
+        "este": "515715",
+        "norte": "9456510",
+        "provincia": "PAITA",
+        "ubigeo": "200505",
+        "zona": "17"
+      }
+    },
+    "CA-ROM-01": {
+      "largas_leidas": 85246,
+      "largas_procesadas": 49584,
+      "anchas": 7752,
+      "completas_gold": 4344,
+      "desde": "2021-12-03T01:00:00-05:00",
+      "hasta": "2023-01-01T00:00:00-05:00",
+      "ubicacion": {
+        "altitud": "177",
+        "datum": "WGS84",
+        "departamento": "LA LIBERTAD",
+        "distrito": "CASA GRANDE",
+        "este": "703789",
+        "norte": "9141429",
+        "provincia": "ASCOPE",
+        "ubigeo": "130208",
+        "zona": "17"
+      }
+    },
+    "CA-RZC-01": {
+      "largas_leidas": 102346,
+      "largas_procesadas": 27576,
+      "anchas": 3504,
+      "completas_gold": 0,
+      "desde": "2021-12-14T01:00:00-05:00",
+      "hasta": "2022-05-30T00:00:00-05:00",
+      "ubicacion": {
+        "altitud": "428",
+        "datum": "WGS84",
+        "departamento": "LIMA",
+        "distrito": "LURIGANCHO",
+        "este": "294343",
+        "norte": "8675073",
+        "provincia": "LIMA",
+        "ubigeo": "150118",
+        "zona": "18"
+      }
+    },
+    "CA-RZC-02": {
+      "largas_leidas": 102200,
+      "largas_procesadas": 24731,
+      "anchas": 3216,
+      "completas_gold": 245,
+      "desde": "2021-12-12T01:00:00-05:00",
+      "hasta": "2022-05-30T00:00:00-05:00",
+      "ubicacion": {
+        "altitud": "504",
+        "datum": "WGS84",
+        "departamento": "LIMA",
+        "distrito": "LURIGANCHO",
+        "este": "295758",
+        "norte": "8677964",
+        "provincia": "LIMA",
+        "ubigeo": "150118",
+        "zona": "18"
+      }
+    },
+    "CA-SB-01": {
+      "largas_leidas": 390087,
+      "largas_procesadas": 239326,
+      "anchas": 35064,
+      "completas_gold": 0,
+      "desde": "2018-01-01T01:00:00-05:00",
+      "hasta": "2022-01-01T00:00:00-05:00",
+      "ubicacion": {
+        "altitud": "4258",
+        "datum": "WGS84",
+        "departamento": "PASCO",
+        "distrito": "SIMON BOLIVAR",
+        "este": "361188",
+        "norte": "8819605",
+        "provincia": "PASCO",
+        "ubigeo": "190109",
+        "zona": "18"
+      }
+    },
+    "CA-SOC-01": {
+      "largas_leidas": 5724,
+      "largas_procesadas": 5555,
+      "anchas": 696,
+      "completas_gold": 696,
+      "desde": "2021-12-03T01:00:00-05:00",
+      "hasta": "2022-01-01T00:00:00-05:00",
+      "ubicacion": {
+        "altitud": "2384",
+        "datum": "WGS84",
+        "departamento": "AREQUIPA",
+        "distrito": "SOCABAYA",
+        "este": "231062",
+        "norte": "8175452",
+        "provincia": "AREQUIPA",
+        "ubigeo": "040122",
+        "zona": "19"
+      }
+    },
+    "CA-TA-01": {
+      "largas_leidas": 601312,
+      "largas_procesadas": 123150,
+      "anchas": 33024,
+      "completas_gold": 0,
+      "desde": "2018-03-27T01:00:00-05:00",
+      "hasta": "2022-01-01T00:00:00-05:00",
+      "ubicacion": {
+        "altitud": "2",
+        "datum": "WGS84",
+        "departamento": "PIURA",
+        "distrito": "PARIÑAS",
+        "este": "469239",
+        "norte": "9494220",
+        "provincia": "TALARA",
+        "ubigeo": "200701",
+        "zona": "17"
+      }
+    },
+    "CA-TAL-01": {
+      "largas_leidas": 4948,
+      "largas_procesadas": 4120,
+      "anchas": 600,
+      "completas_gold": 301,
+      "desde": "2021-12-07T01:00:00-05:00",
+      "hasta": "2022-01-01T00:00:00-05:00",
+      "ubicacion": {
+        "altitud": "3286",
+        "datum": "WGS84",
+        "departamento": "MOQUEGUA",
+        "distrito": "TORATA",
+        "este": "321044",
+        "norte": "8108673",
+        "provincia": "MARISCAL NIETO",
+        "ubigeo": "180106",
+        "zona": "19"
+      }
+    },
+    "CA-TO-01": {
+      "largas_leidas": 334939,
+      "largas_procesadas": 179912,
+      "anchas": 25512,
+      "completas_gold": 0,
+      "desde": "2018-03-04T01:00:00-05:00",
+      "hasta": "2021-01-30T00:00:00-05:00",
+      "ubicacion": {
+        "altitud": "2516",
+        "datum": "WGS84",
+        "departamento": "MOQUEGUA",
+        "distrito": "TORATA",
+        "este": "305512",
+        "norte": "8111192",
+        "provincia": "MARISCAL NIETO",
+        "ubigeo": "180106",
+        "zona": "19"
+      }
+    },
+    "CA-VE-01": {
+      "largas_leidas": 67839,
+      "largas_procesadas": 65277,
+      "anchas": 9744,
+      "completas_gold": 0,
+      "desde": "2019-09-22T01:00:00-05:00",
+      "hasta": "2020-11-01T00:00:00-05:00",
+      "ubicacion": {
+        "altitud": "3768",
+        "datum": "WGS84",
+        "departamento": "CUSCO",
+        "distrito": "VELILLE",
+        "este": "189037",
+        "norte": "8394335",
+        "provincia": "CHUMBIVILCAS",
+        "ubigeo": "080708",
+        "zona": "19"
+      }
+    },
+    "CA-VMP-1": {
+      "largas_leidas": 135,
+      "largas_procesadas": 0,
+      "anchas": 0,
+      "completas_gold": 0,
+      "ubicacion": {
+        "altitud": "106",
+        "datum": "WGS84",
+        "departamento": "CALLAO",
+        "distrito": "MI PERU",
+        "este": "268824",
+        "norte": "8687841",
+        "provincia": "CALLAO",
+        "ubigeo": "070107",
+        "zona": "18"
+      },
+      "ubicaciones_distintas": [
+        {
+          "campos": {
+            "altitud": "0",
+            "datum": "WGS84",
+            "departamento": "CALLAO",
+            "distrito": "MI PERU",
+            "este": "268824",
+            "norte": "8687841",
+            "provincia": "CALLAO",
+            "ubigeo": "070107",
+            "zona": "18"
+          },
+          "filas": 35
+        },
+        {
+          "campos": {
+            "altitud": "106",
+            "datum": "WGS84",
+            "departamento": "CALLAO",
+            "distrito": "MI PERU",
+            "este": "268824",
+            "norte": "8687841",
+            "provincia": "CALLAO",
+            "ubigeo": "070107",
+            "zona": "18"
+          },
+          "filas": 100
+        }
+      ]
+    },
+    "CA-VMP-10": {
+      "largas_leidas": 85,
+      "largas_procesadas": 0,
+      "anchas": 0,
+      "completas_gold": 0,
+      "ubicacion": {
+        "altitud": "54",
+        "datum": "WGS84",
+        "departamento": "CALLAO",
+        "distrito": "VENTANILLA",
+        "este": "268260",
+        "norte": "8687676",
+        "provincia": "CALLAO",
+        "ubigeo": "070106",
+        "zona": "18"
+      }
+    },
+    "CA-VMP-2": {
+      "largas_leidas": 202,
+      "largas_procesadas": 0,
+      "anchas": 0,
+      "completas_gold": 0,
+      "ubicacion": {
+        "altitud": "80",
+        "datum": "WGS84",
+        "departamento": "CALLAO",
+        "distrito": "VENTANILLA",
+        "este": "268570",
+        "norte": "8688061",
+        "provincia": "CALLAO",
+        "ubigeo": "070106",
+        "zona": "18"
+      },
+      "ubicaciones_distintas": [
+        {
+          "campos": {
+            "altitud": "0",
+            "datum": "WGS84",
+            "departamento": "CALLAO",
+            "distrito": "VENTANILLA",
+            "este": "268570",
+            "norte": "8688061",
+            "provincia": "CALLAO",
+            "ubigeo": "070106",
+            "zona": "18"
+          },
+          "filas": 37
+        },
+        {
+          "campos": {
+            "altitud": "80",
+            "datum": "WGS84",
+            "departamento": "CALLAO",
+            "distrito": "VENTANILLA",
+            "este": "268570",
+            "norte": "8688061",
+            "provincia": "CALLAO",
+            "ubigeo": "070106",
+            "zona": "18"
+          },
+          "filas": 104
+        },
+        {
+          "campos": {
+            "altitud": "69",
+            "datum": "WGS84",
+            "departamento": "CALLAO",
+            "distrito": "VENTANILLA",
+            "este": "268573",
+            "norte": "8687999",
+            "provincia": "CALLAO",
+            "ubigeo": "070106",
+            "zona": "18"
+          },
+          "filas": 61
+        }
+      ]
+    },
+    "CA-VMP-2A": {
+      "largas_leidas": 1285,
+      "largas_procesadas": 816,
+      "anchas": 240,
+      "completas_gold": 0,
+      "desde": "2018-11-20T01:00:00-05:00",
+      "hasta": "2018-11-30T00:00:00-05:00",
+      "ubicacion": {
+        "altitud": "0",
+        "datum": "WGS84",
+        "departamento": "CALLAO",
+        "distrito": "VENTANILLA",
+        "este": "268624",
+        "norte": "8688023",
+        "provincia": "CALLAO",
+        "ubigeo": "070106",
+        "zona": "18"
+      }
+    },
+    "CA-VMP-6": {
+      "largas_leidas": 120,
+      "largas_procesadas": 0,
+      "anchas": 0,
+      "completas_gold": 0,
+      "ubicacion": {
+        "altitud": "0",
+        "datum": "WGS84",
+        "departamento": "CALLAO",
+        "distrito": "VENTANILLA",
+        "este": "268441",
+        "norte": "8686660",
+        "provincia": "CALLAO",
+        "ubigeo": "070106",
+        "zona": "18"
+      }
+    },
+    "CA-VMP-7": {
+      "largas_leidas": 80,
+      "largas_procesadas": 0,
+      "anchas": 0,
+      "completas_gold": 0,
+      "ubicacion": {
+        "altitud": "86",
+        "datum": "WGS84",
+        "departamento": "CALLAO",
+        "distrito": "MI PERU",
+        "este": "268736",
+        "norte": "8687699",
+        "provincia": "CALLAO",
+        "ubigeo": "070107",
+        "zona": "18"
+      },
+      "ubicaciones_distintas": [
+        {
+          "campos": {
+            "altitud": "0",
+            "datum": "WGS84",
+            "departamento": "CALLAO",
+            "distrito": "MI PERU",
+            "este": "268736",
+            "norte": "8687699",
+            "provincia": "CALLAO",
+            "ubigeo": "070107",
+            "zona": "18"
+          },
+          "filas": 19
+        },
+        {
+          "campos": {
+            "altitud": "86",
+            "datum": "WGS84",
+            "departamento": "CALLAO",
+            "distrito": "MI PERU",
+            "este": "268736",
+            "norte": "8687699",
+            "provincia": "CALLAO",
+            "ubigeo": "070107",
+            "zona": "18"
+          },
+          "filas": 61
+        }
+      ]
+    },
+    "CA-VMP-8": {
+      "largas_leidas": 96,
+      "largas_procesadas": 0,
+      "anchas": 0,
+      "completas_gold": 0,
+      "ubicacion": {
+        "altitud": "76",
+        "datum": "WGS84",
+        "departamento": "CALLAO",
+        "distrito": "MI PERU",
+        "este": "268699",
+        "norte": "8687894",
+        "provincia": "CALLAO",
+        "ubigeo": "070107",
+        "zona": "18"
+      }
+    },
+    "CA-VMP-9": {
+      "largas_leidas": 95,
+      "largas_procesadas": 0,
+      "anchas": 0,
+      "completas_gold": 0,
+      "ubicacion": {
+        "altitud": "77",
+        "datum": "WGS84",
+        "departamento": "CALLAO",
+        "distrito": "MI PERU",
+        "este": "268698",
+        "norte": "8687828",
+        "provincia": "CALLAO",
+        "ubigeo": "070107",
+        "zona": "18"
       }
     }
   },
   "vistos": {
     "parametros": {
-      "Benceno": 5,
-      "CO": 336,
-      "Humedad Relativa": 650,
-      "NO2": 336,
-      "PM10": 663,
-      "PM2.5": 645,
-      "SO2": 312,
-      "Temperatura": 650,
-      "Velocidad del Viento": 636
+      "DIOXIDO_AZUFRE": 432135,
+      "DIRECCION_VIENTO": 224485,
+      "HUMEDAD_RELATIVA": 223489,
+      "MONOXIDO_CARBONO": 183641,
+      "OZONO": 117086,
+      "PM10": 202057,
+      "PM2.5": 94371,
+      "PRECIPITACION": 225455,
+      "PRESION_BAROMETRICA": 262448,
+      "RADIACION_SOLAR": 7602,
+      "SULFURO_HIDROGENO": 188264,
+      "TEMPERATURA": 223493,
+      "VELOCIDAD_VIENTO": 224485
     },
-    "parametros_no_mapeados": {
-      "Benceno": 5
-    },
+    "parametros_no_mapeados": {},
     "periodos": {
-      "Diario": 14,
-      "Horario": 4218,
-      "Mensual": 1
+      "-": 1127412,
+      "1 hora": 1548507,
+      "24 Horas": 14,
+      "24 horas": 31527,
+      "3 horas móviles": 77088,
+      "Media móvil de 8 horas": 257,
+      "Móvil 3 horas": 33024,
+      "Móvil 8 horas": 66048
     },
     "unidades": {
       "co": {
-        "mg/m3": 167,
-        "ppm": 1,
-        "ug/m3": 168
+        "ppb": 58543,
+        "ug/m3": 58799
+      },
+      "h2s": {
+        "ppb": 91680,
+        "ug/m3": 91866
       },
       "humedad": {
-        "%": 650
+        "%": 223489
       },
-      "no2": {
-        "ppb": 1,
-        "ug/m3": 335
+      "o3": {
+        "ppb": 58543,
+        "ug/m3": 58543
       },
       "pm10": {
-        "ug/m3": 663
+        "ug/m3": 193353
       },
       "pm2_5": {
-        "ug/m3": 645
+        "ug/m3": 90492
+      },
+      "precipitacion": {
+        "mm": 225455
+      },
+      "presion": {
+        "hPa": 37131,
+        "mmHg": 225314
+      },
+      "radiacion": {
+        "W/m2": 7602
       },
       "so2": {
-        "ug/m3": 312
+        "ppb": 159857,
+        "ug/m3": 160043
       },
       "temperatura": {
-        "°C": 650
+        "°c": 223493
+      },
+      "viento_direccion": {
+        "°c": 224485
       },
       "viento_velocidad": {
-        "m/s": 636
+        "m/s": 224485
       }
-    }
+    },
+    "valores_no_numericos": {}
   },
+  "avisos": [
+    "la estación CA-AYAS-01 aparece con 2 ubicaciones distintas (ver ubicaciones_distintas): se cargan como una sola estación",
+    "la estación CA-VMP-1 aparece con 2 ubicaciones distintas (ver ubicaciones_distintas): se cargan como una sola estación",
+    "la estación CA-VMP-2 aparece con 3 ubicaciones distintas (ver ubicaciones_distintas): se cargan como una sola estación",
+    "la estación CA-VMP-7 aparece con 2 ubicaciones distintas (ver ubicaciones_distintas): se cargan como una sola estación"
+  ],
   "workers": 4,
-  "bloque_bytes": 67108864,
-  "bloques": 1,
+  "bloque_bytes": 16777216,
+  "bloques": 79,
   "chunk": 10000,
-  "duracion_s": 0.005670557,
+  "duracion_s": 2.143595526,
   "fases_s": {
-    "gold_estandarizacion": 0.000164027,
-    "lectura_limpieza_pivot": 0.005269834,
-    "orden_tabla_ancha": 0.000236696
+    "fusion": 0.431665738,
+    "gold_estandarizacion": 0.008368255,
+    "horas": 0.037302435,
+    "lectura_limpieza_pivot": 2.08525311,
+    "lectura_parseo": 1.969397834,
+    "orden_tabla_ancha": 0.049974161,
+    "pivot": 0.078552841,
+    "salida": 0.163553095,
+    "tabla": 0.049974161
   },
   "metadatos": {
-    "momento": "2026-11-01T00:37:56.746861744-05:00",
+    "momento": "2026-11-01T13:21:40.748603503-05:00",
     "maquina": "A019803",
     "version_go": "go1.27.3",
     "gomaxprocs": 14,
     "cpus_logicas": 14,
-    "commit": "e1cef10dadb7c94434417634a7145a3ff89b0ba4",
-    "arbol_sucio": false
+    "commit": "53858a093a60e88822c4c46fbbc3a5b2b0e89457",
+    "arbol_sucio": true
   },
   "configs": {
     "kmeans": {
       "ruta": "configs/kmeans.json",
-      "sha256": "6e688a8351e4c674f9c87218d5aba9f393e265355565d305afff0e78a6eab4dd",
+      "sha256": "4fdeea524a470ea788548522ce3cbb5fc74965270c3b520f326c858c57f97129",
       "existe": true
     },
     "limpieza": {
       "ruta": "configs/limpieza.json",
-      "sha256": "584164758e4ba6feeb83559a322b3273b3241882cb2166ec919e160b9de7ddfe",
+      "sha256": "61800952b5c9a56327c7be7c77d03654a643024abf444724591b208970d86651",
       "existe": true
     }
   }

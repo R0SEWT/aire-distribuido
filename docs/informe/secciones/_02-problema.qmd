@@ -36,9 +36,10 @@ Las estaciones de OEFA acompañan su función de fiscalización: están donde ha
 vigilar, no repartidas para describir el aire de todo el país. El dato describe el aire **alrededor
 de lo que OEFA vigila**, y cualquier respuesta que salga de aquí hereda esa condición.
 
-El archivo descargado trae {{< meta cifras.csv.estaciones >}} estaciones (la ficha del portal habla de
-34) en {{< meta cifras.csv.departamentos >}} departamentos, con lecturas de
-{{< meta cifras.csv.anios >}} (@tbl-csv-oefa).
+El archivo descargado nombra {{< meta cifras.limpieza.n_estaciones >}} estaciones (la ficha del portal
+habla de 34) en {{< meta cifras.limpieza.n_departamentos >}} departamentos, con lecturas de
+{{< meta cifras.limpieza.anios >}}; solo {{< meta cifras.limpieza.n_estaciones_con_datos >}} tienen
+lecturas horarias válidas (@tbl-csv-oefa).
 
 ::: {.callout-warning title="PENDIENTE"}
 Junto a qué actividad fiscalizada está cada estación (las 19 evaluaciones del archivo), desde el EDA
@@ -57,25 +58,23 @@ La @tbl-candidatas las resume; las mediciones de la criba están en `reports/eda
 ::: {#tbl-candidatas tbl-colwidths="[6,40,34,20]"}
 | N.º | Pregunta candidata | Qué exige del dato | Resultado de la criba |
 |:---|:---|:---|:---|
-| Q1 | ¿Cuándo y dónde se concentran los episodios que exceden el ECA, y con qué meteorología llegan? | PM2,5 o PM10 horarios con buena completitud y meteorología en las mismas estaciones; al menos un año | PENDIENTE |
-| Q2 | ¿De qué está hecho cada episodio: combustión o polvo (fracción fina PM2,5/PM10)? | PM2,5 y PM10 simultáneos en la misma estación y hora | PENDIENTE |
-| Q3 | ¿Con cuánta anticipación se puede avisar? | Series continuas por estación y suficientes episodios para estimar proporciones | PENDIENTE |
-| Q4 | ¿Cuánto del año respira fuera del ECA la población cercana a cada estación? | Completitud alta y parecida entre estaciones | PENDIENTE |
-| Q5 | ¿Los episodios son regionales o locales? | Varias estaciones cercanas entre sí con datos simultáneos | PENDIENTE |
-| Q6 | ¿Los gases tienen la firma horaria de una fuente industrial? | SO2, NO2 o CO con completitud en las estaciones industriales | PENDIENTE |
+| Q1 | ¿Cuándo y dónde se concentran los episodios que exceden el ECA, y con qué meteorología llegan? | PM2,5 o PM10 horarios con buena completitud y meteorología en las mismas estaciones; al menos un año | Dudoso: pocas estaciones tienen PM, viento y humedad completos durante un año |
+| Q2 | ¿De qué está hecho cada episodio: combustión o polvo (fracción fina PM2,5/PM10)? | PM2,5 y PM10 simultáneos en la misma estación y hora | Pasa: la mayoría de las estaciones con PM mide PM2,5 y PM10 a la vez |
+| Q3 | ¿Con cuánta anticipación se puede avisar? | Series continuas por estación y suficientes episodios para estimar proporciones | Pasa: hay episodios de 24 h sobre el ECA, aunque raros |
+| Q4 | ¿Cuánto del año respira fuera del ECA la población cercana a cada estación? | Completitud alta y parecida entre estaciones | Dudoso: la completitud es muy desigual entre estaciones |
+| Q5 | ¿Los episodios son regionales o locales? | Varias estaciones cercanas entre sí con datos simultáneos | Pasa: hay grupos de estaciones cercanas, pocos con datos simultáneos |
+| Q6 | ¿Los gases tienen la firma horaria de una fuente industrial? | SO2, NO2 o CO con completitud en las estaciones industriales | Pasa: algunas estaciones tienen gases con firma horaria |
 | Q7 | ¿Qué parte del país tiene una estación cerca? | Coordenadas de las estaciones | Entra siempre, como advertencia (@sec-cobertura) |
 | Q8 | ¿Las estaciones de OEFA ven lo mismo que las de SENAMHI en Lima? | Estaciones de ambas redes a pocos kilómetros, mismo periodo | Se difiere al TB2 |
-| Q9 | ¿Los huecos del dato coinciden con los episodios? | Marcas de tiempo completas para contar huecos | PENDIENTE |
+| Q9 | ¿Los huecos del dato coinciden con los episodios? | Marcas de tiempo completas para contar huecos | No pasa: los huecos llegan tras horas de PM bajo, no tras episodios |
 
 Preguntas candidatas y lo que cada una exige del dato
 :::
 
-::: {.callout-warning title="PENDIENTE"}
-Llenar la última columna con el resultado de cada medición de la criba (completitud estación ×
-parámetro, huecos, frecuencia de horas sobre el ECA, simultaneidad PM2,5/PM10, distancias entre
-estaciones, ciclos horarios), citando la cifra desde `reports/eda_criba.md`. Lo hace quien haga el
-EDA (lun 02/11).
-:::
+El resultado de cada candidata es el veredicto automático del notebook 01 sobre el CSV real; las
+mediciones que lo sostienen, con sus umbrales, están en `reports/eda_criba.md`. La lectura
+automática propone como base Q3 apoyada en Q1 y como diferencial Q5, con Q7 y Q9 como advertencias:
+falta validarla con el equipo.
 
 ### La pregunta elegida
 
@@ -96,9 +95,15 @@ avisar es la evaluación experimental del TB2: aquí solo se diseña (@sec-eca-i
 
 ### Lo que este dato no puede responder
 
+La criba descartó Q9: los huecos del dato no coinciden con los episodios (llegan después de horas de
+PM bajo), así que el dato no subestima los episodios por dejar de medir justo entonces; es una
+buena noticia, y se reporta como tal. Q1, Q4 y Q8 quedaron dudosas: con tan pocas estaciones
+completas durante un año, comparar la exposición anual entre lugares (Q4) mediría cobertura más que
+aire, y el contraste con SENAMHI (Q8) espera al TB2.
+
 ::: {.callout-warning title="PENDIENTE"}
-Las candidatas que no pasaron la criba, cada una con la medición que la descartó. También es un
-hallazgo: dice qué no se puede preguntarle a este dato.
+Confirmar con el equipo, junto con la pregunta elegida (mar 03/11), qué candidatas se declaran
+fuera del alcance de este dato.
 :::
 
 ## Advertencia de cobertura {#sec-cobertura}

@@ -20,31 +20,49 @@ Fuentes de datos del Trabajo Final
 
 ### Lo que el CSV de OEFA es de verdad {#sec-csv}
 
-El CSV se descargó el 01/11 y se inspeccionó antes de escribir el cargador (@tbl-csv-oefa). No es
-lo que la ficha del portal hacía suponer, y tres hallazgos cambian el diseño:
+El CSV se descargó el 01/11 y se exploró con el notebook 01 antes de adaptar el cargador; las cifras
+de esta sección son las de la corrida de `cmd/cargar` sobre el archivo completo (@tbl-csv-oefa). El
+dato no es lo que la ficha del portal hacía suponer, y lo que mostró cambió el diseño:
 
-- **Una columna por parámetro, un parámetro por fila.** Las {{< meta cifras.csv.filas >}} filas de
-  datos tienen {{< meta cifras.csv.columnas >}} columnas, con una por parámetro (PM10, PM2.5,
-  gases y meteorología), pero cada fila trae exactamente un valor y el resto en «-»; otras
-  {{< meta cifras.csv.filas_sin_parametro >}} no traen ninguno y se descartan. El parámetro de la
-  fila es su única columna no vacía, así que el pivot a una fila por estación y hora sigue siendo
-  necesario.
-- **La hora falta en el {{< meta cifras.csv.pct_sin_hora >}} de las filas.** Pero las filas de un
-  mismo día, estación, parámetro, unidad y periodo vienen en bloques contiguos de 24
-  ({{< meta cifras.csv.pct_grupos_de_24 >}} de los grupos sin hora), y en las
-  {{< meta cifras.csv.filas_con_hora >}} filas que sí la traen, **la hora es la posición dentro del
-  día más uno** en el {{< meta cifras.csv.control_hora >}}: OEFA usa hora final (la lectura «1» cubre
-  de 00:00 a 01:00). Con ese control, la hora se reconstruye por posición (@sec-hora).
-- **Unidades duplicadas.** {{< meta cifras.csv.gases_dos_unidades >}} aparecen dos veces, en ppb y
-  en µg/m³; se conserva µg/m³. Los promedios de 24 horas y las medias móviles de 3 u 8 horas
-  conviven con los horarios y se descartan por periodo.
+- **Una columna por parámetro, un valor por fila.** Las {{< meta cifras.limpieza.filas_largas_leidas >}}
+  filas tienen {{< meta cifras.limpieza.columnas >}} columnas, una por parámetro (PM10, PM2.5, gases
+  y meteorología), pero cada fila trae un solo valor y el resto en «-». El parámetro de la fila es su
+  única columna con valor, así que el pivot a una fila por estación y hora sigue siendo necesario.
+  {{< meta cifras.limpieza.descartadas_parametro >}} filas no traen ningún valor (o traen más de uno)
+  y se descartan.
+- **Estaciones y años.** El archivo nombra {{< meta cifras.limpieza.n_estaciones >}} estaciones en
+  {{< meta cifras.limpieza.n_departamentos >}} departamentos, entre {{< meta cifras.limpieza.anios >}},
+  pero solo {{< meta cifras.limpieza.n_estaciones_con_datos >}} tienen alguna lectura horaria válida:
+  las demás solo traen promedios de 24 horas o días en cero.
+- **La hora casi nunca viene.** El {{< meta cifras.limpieza.pct_hora_inferida >}} de las lecturas que
+  llegan al silver no trae hora: se reconstruye por la posición de la fila dentro de su día, porque
+  las lecturas de un día vienen en bloques contiguos de 24 en el orden de las horas. El control que lo
+  sostiene: en los {{< meta cifras.eda.control_dias >}} días completos que sí traen la hora explícita,
+  la hora de inicio coincide con la posición en el {{< meta cifras.eda.control_hora >}} de las
+  {{< meta cifras.eda.control_filas >}} filas (@sec-hora).
+- **Hora final.** OEFA fecha cada lectura al **final** de su hora: la de 00:00 a 01:00 es «la de las
+  01:00» y la última del día cae a las 00:00 del siguiente. El cargador usa la misma convención
+  (`{{< meta cifras.limpieza.convencion_hora >}}`), así que una «hora pico» del informe es la hora en
+  que termina la lectura.
+- **Días enteros en cero.** {{< meta cifras.limpieza.bloque_en_cero >}} lecturas
+  ({{< meta cifras.limpieza.pct_bloque_en_cero >}} del archivo) pertenecen a días en que un equipo
+  reportó 0 exacto las 24 horas. Un día así es un equipo apagado, no aire limpio, y se descarta entero.
+- **Gases gemelos.** SO2, CO, O3 y H2S vienen dos veces, en ppb y en µg/m³, con la misma estación y
+  hora: {{< meta cifras.limpieza.duplicado_unidad >}} lecturas son la gemela en otra unidad de una que
+  se conserva. La presión viene en mmHg y en hPa, y se lleva a hPa.
+- **Registros multilínea.** {{< meta cifras.eda.multilinea >}} registros tienen un salto de línea
+  dentro de un campo entrecomillado, lo que obliga al cargador a unir líneas antes de partir el archivo
+  en bloques (@sec-paralelizacion).
 
 {{< include generado/tablas/csv_oefa.md >}}
 
-El volumen útil para el modelo es mucho menor que el archivo: {{< meta cifras.csv.pm10_horario >}}
-filas horarias de PM10 y {{< meta cifras.csv.pm2_5_horario >}} de PM2,5, repartidas de forma muy
-desigual entre estaciones. El «más de un millón de registros» se cumple en las filas del archivo; las
-filas anchas serán del orden de cientos de miles.
+El volumen útil para el modelo es mucho menor que el archivo: el CSV trae
+{{< meta cifras.limpieza.pm10_lecturas >}} lecturas de PM10 y {{< meta cifras.limpieza.pm2_5_lecturas >}}
+de PM2,5, repartidas de forma muy desigual entre estaciones. El «más de un millón de registros» del
+enunciado se cumple en las filas del archivo; las filas anchas son
+{{< meta cifras.limpieza.filas_anchas >}} y las completas para la receta,
+{{< meta cifras.limpieza.filas_completas >}}, de {{< meta cifras.limpieza.n_estaciones_gold >}}
+estaciones (@sec-limpieza).
 
 ### Arquitectura de la solución
 

@@ -1,20 +1,16 @@
 <!-- Generado por tablas.py desde generado/limpieza.json. No editar a mano. -->
 
-::: {.callout-warning title="PLACEHOLDER"}
-Cifras de prueba: `generado/limpieza.json` sale de correr los comandos de Go sobre la muestra sintética data/sample/oefa_muestra.csv (estaciones SINT-*, una semana), no sobre el CSV de OEFA. Se reemplaza cuando `cmd/cargar` corra sobre el CSV completo.
-:::
-
 ::: {#tbl-limpieza-resumen tbl-colwidths="[62,20,18]"}
 | Concepto | Filas | Proporción |
 |:---|---:|---:|
-| Filas largas leídas | 4 236 | 100 % |
-| Filas largas procesadas (llegan al silver) | 4 188 | 98,9 % |
-| Filas largas descartadas | 48 | 1,1 % |
-| Filas anchas (estación × fecha-hora), regla 7 | 648 | 100 % |
-| Filas anchas completas para el modelo (gold), regla 8 | 617 | 95,2 % |
-| Filas anchas con PM2,5 > PM10 (se marcan, no se descartan) | 4 | 0,62 % |
+| Filas largas leídas | 2 883 877 | 100 % |
+| Filas largas procesadas (llegan al silver) | 1 423 958 | 49,4 % |
+| Filas largas descartadas | 1 459 919 | 50,6 % |
+| Filas anchas (estación × fecha-hora), regla 7 | 233 707 | 100 % |
+| Filas anchas completas para el modelo (gold), regla 8 | 41 991 | 18,0 % |
+| Filas anchas con PM2,5 > PM10 (se marcan, no se descartan) | 2 | 0,00 % |
 
 Conservación de filas en la carga
 :::
 
-*Nota.* Fuente: `generado/limpieza.json`, escrito por `cmd/cargar` (commit `e1cef10`, 2026-11-01, máquina A019803). Leídas = procesadas + descartadas, en filas largas. Archivo `data/sample/oefa_muestra.csv` (722 035 bytes, sha256 `38fdecc55cb1`, delimitador «;», con BOM), 4 workers, 1 bloque(s) de 64 MiB, 0,00567 s.
+*Nota.* Fuente: `generado/limpieza.json`, escrito por `cmd/cargar` (commit `53858a0`, 2026-11-01, máquina A019803). Leídas = procesadas + descartadas, en filas largas. Archivo `1a_Vigilancia y Seguimiento ambiental en la calidad del aire.csv` (1 317 949 839 bytes, sha256 `1f09a8064ee0`, delimitador «;», sin BOM), 4 workers, 79 bloque(s) de 16 MiB, 2,14 s.
