@@ -1,0 +1,11 @@
+{
+  "features": ["pm10", "fraccion_fina", "viento_velocidad", "humedad"],
+  "log1p": ["pm10"],
+  "nivel": "absoluto",
+  "k": 5,
+  "semilla": 42,
+  "tolerancia": 1e-6,
+  "max_iter": 100,
+  "workers": 0,
+  "chunk": 10000
+}
