@@ -12,16 +12,16 @@
     "fecha": "2026-11-01T01:00:17"
   },
   "completitud.png": {
-    "sintetico": true,
-    "fuente": "bronze oefa_muestra.csv",
+    "sintetico": false,
+    "fuente": "bronze 1a_Vigilancia y Seguimiento ambiental en la calidad del aire.csv",
     "notebook": "01_eda_criba",
-    "fecha": "2026-11-01T00:59:27"
+    "fecha": "2026-11-01T13:15:01"
   },
   "distribuciones.png": {
-    "sintetico": true,
-    "fuente": "bronze oefa_muestra.csv",
+    "sintetico": false,
+    "fuente": "bronze 1a_Vigilancia y Seguimiento ambiental en la calidad del aire.csv",
     "notebook": "01_eda_criba",
-    "fecha": "2026-11-01T00:59:29"
+    "fecha": "2026-11-01T13:15:07"
   },
   "episodio.png": {
     "sintetico": true,
