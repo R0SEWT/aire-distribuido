@@ -75,9 +75,9 @@ ellos, nunca al revés. Se copian desde `reports/` (o `python3 tablas.py --entra
 
 | Archivo | Lo escribe | Esquema en | Qué toma el informe |
 |---|---|---|---|
-| `limpieza.json` | `cmd/cargar` | `datos/reporte.go` | filas largas (leídas, procesadas, descartadas y marcadas por regla, fuera de rango por parámetro), filas anchas (total, completas del gold, PM2.5 > PM10), por estación (leídas, procesadas, anchas, gold, desde, hasta, departamento), parámetros, periodos y unidades vistos, workers, bloques, duración |
-| `estandarizacion.json` | `cmd/cargar` | `datos/estandarizar.go` | features, log1p, nivel, n, media, desv, ddof, chunk |
-| `benchmark_cargador.json` | `cmd/cargar -bench` | `datos/medicion.go` | por W: tiempos, mediana, speedup (cociente de medianas), sha256 del silver y del gold; `identicos` |
+| `limpieza.json` | `cmd/cargar` | `datos/reporte.go` | `metadatos` (commit, fecha, máquina), `sha256` del CSV y de las `configs`, filas largas (leídas, procesadas, descartadas y marcadas por regla, fuera de rango por parámetro), filas anchas (total, completas del gold, PM2.5 > PM10), por estación (leídas, procesadas, anchas, gold, desde, hasta, departamento), parámetros, periodos y unidades vistos, workers, bloques, duración |
+| `estandarizacion.json` | `cmd/cargar` | `datos/estandarizar.go` | `metadatos`, features, log1p, nivel, n, media, desv, ddof, chunk |
+| `benchmark_cargador.json` | `cmd/cargar -bench` | `datos/medicion.go` | `metadatos`, `protocolo`; por W: tiempos, mediana, media recortada, speedup con IC bootstrap (`speedup_ic`, cociente de medias recortadas) y cociente de medianas (`speedup`), sha256 del silver y del gold; `identicos` |
 | `benchmark_kmeans.json` | `cmd/benchmark` | `cmd/benchmark/main.go` | `resumen` por experimento (iteraciones fijas y hasta converger), modo, W y chunk: mediana, media recortada, ms por iteración, speedup con IC bootstrap, eficiencia; `determinismo` |
 | `kmeans.json` | `cmd/entrenar` | `cmd/entrenar/main.go` | k, k efectivo, semilla, iteraciones, paro, inercia, tamaños, centroides estandarizados y des-estandarizados |
 | `regimenes.json` | `cmd/entrenar` | `kmeans/regimenes.go` | por régimen: perfil (media aritmética), PM2.5 medio (derivado si no es feature), PM10 medio, etiqueta ECA, conteos por hora y por estación |
@@ -88,15 +88,14 @@ Hoy los siete son **PLACEHOLDER**: salidas reales de Go sobre la muestra sintét
 correr los comandos sobre el CSV de OEFA se reemplaza cada archivo entero (sin `placeholder`).
 
 `tablas.py` comprueba los invariantes de Go (leídas = procesadas + descartadas = procesadas + Σ por
-regla; las sumas por estación, por cluster y por hora; el speedup del cargador como cociente de
-medianas; el determinismo de los dos benchmarks) y los avisa en el informe. Con `--estricto` falla
+regla; las sumas por estación, por cluster y por hora; los dos speedups del cargador (medianas y
+medias recortadas); el determinismo de los dos benchmarks) y los avisa en el informe. Con `--estricto` falla
 si falta un JSON o un invariante no cuadra; con `--final`, además, si queda un PLACEHOLDER (es el que
 usa `empaquetar-pc3.sh`).
 
-**Lo que el informe querría y Go todavía no escribe** (está como PENDIENTE en el informe, no
-inventado): commit, fecha y máquina en `limpieza.json` y `estandarizacion.json`; sha256 del CSV de
-entrada; intervalo de confianza del speedup del cargador; nombre interpretativo y banda INCA de cada
-régimen; la tabla de decisión de la calibración (sale de los notebooks).
+**Lo que el informe querría y no sale de Go** (está como PENDIENTE en el informe, no inventado): el
+nombre interpretativo y la banda INCA de cada régimen (`regimenes.json` trae el perfil y la etiqueta
+ECA), y la tabla de decisión de la calibración, que sale de los notebooks.
 
 ## Antes de entregar
 

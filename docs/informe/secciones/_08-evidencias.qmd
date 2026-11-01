@@ -70,18 +70,15 @@ Captura de los checks de GitHub Actions en verde sobre la PR de `release/pc3` a 
 El cargador se midió con el bloque fijo de {{< meta cifras.benchmark_cargador.bloque >}}, con
 {{< meta cifras.benchmark_cargador.workers >}} workers y
 {{< meta cifras.benchmark_cargador.repeticiones >}} repeticiones por configuración
-(@tbl-bench-cargador). El mejor speedup, cociente de medianas, fue
-{{< meta cifras.benchmark_cargador.speedup_max >}} con
-{{< meta cifras.benchmark_cargador.workers_max >}} workers: de
+(@tbl-bench-cargador). El mejor speedup, cociente de medias recortadas como en el K-Means, fue
+{{< meta cifras.benchmark_cargador.speedup_max >}} (IC 95 %
+{{< meta cifras.benchmark_cargador.speedup_max_ic >}}) con
+{{< meta cifras.benchmark_cargador.workers_max >}} workers, con una eficiencia de
+{{< meta cifras.benchmark_cargador.eficiencia_max >}}; el cociente de medianas fue
+{{< meta cifras.benchmark_cargador.speedup_medianas >}} (de
 {{< meta cifras.benchmark_cargador.mediana_referencia_s >}} s a
-{{< meta cifras.benchmark_cargador.mediana_mejor_s >}} s, con una eficiencia de
-{{< meta cifras.benchmark_cargador.eficiencia_max >}}. El silver y el gold salieron idénticos (mismo
-sha256) para todo número de workers: {{< meta cifras.benchmark_cargador.identicos >}}.
-
-::: {.callout-warning title="PENDIENTE"}
-`cmd/cargar -bench` no calcula un intervalo de confianza del speedup (el del K-Means sí, con
-bootstrap). Decidir si se agrega en Go o si el informe lo reporta sin intervalo, y decirlo.
-:::
+{{< meta cifras.benchmark_cargador.mediana_mejor_s >}} s). El silver y el gold salieron idénticos
+(mismo sha256) para todo número de workers: {{< meta cifras.benchmark_cargador.identicos >}}.
 
 {{< include generado/tablas/benchmark_cargador.md >}}
 

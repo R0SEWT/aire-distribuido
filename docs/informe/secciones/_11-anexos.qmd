@@ -9,12 +9,16 @@
 - **Video:** PENDIENTE.
 - **Datos:** no se versionan (1,3 GB). Ficha y descarga en la Plataforma Nacional de Datos Abiertos
   [@oefa2026aire]; instrucciones en `data/README.md`.
+- **Archivo que produjo los resultados** (de `generado/limpieza.json`):
+  {{< meta cifras.limpieza.entrada >}}, {{< meta cifras.limpieza.bytes >}} bytes, sha256
+  {{< meta cifras.limpieza.sha256 >}}.
+- **Configuración usada:** `configs/limpieza.json`, sha256
+  {{< meta cifras.limpieza.sha256_config_limpieza >}}; `configs/kmeans.json`, sha256
+  {{< meta cifras.limpieza.sha256_config_kmeans >}}.
 
 ::: {.callout-warning title="PENDIENTE"}
 Crear el tag `pc3` en `main` después del release. Enlace del video si la PC3 lo lleva (se pregunta
-al docente el lun 02/11; si sí, participan los tres). Nombre, tamaño y sha256 del CSV de OEFA que
-produjo los resultados: `generado/limpieza.json` trae la ruta (`entrada`) y el tamaño (`bytes`), pero
-no el sha256; sale del bead de datos (`data/README.md`).
+al docente el lun 02/11; si sí, participan los tres).
 :::
 
 ## Anexo B. Tablero Kanban {.unnumbered}

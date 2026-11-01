@@ -303,7 +303,8 @@ class Informe:
         ], columns=["Concepto", "Filas", "Proporción"])
         self.tabla(tablas[0][0], o, d, tablas[0][1], tablas[0][2], markdown(r, "lrr"), anchos=[62, 20, 18], nota=
                    f"Leídas = procesadas + descartadas, en filas largas. Archivo `{d.get('entrada', '¿?')}` "
-                   f"({entero(d.get('bytes'))} bytes, delimitador «{d.get('delimitador', '?')}», "
+                   f"({entero(d.get('bytes'))} bytes, sha256 `{(d.get('sha256') or '¿?')[:12]}`, "
+                   f"delimitador «{d.get('delimitador', '?')}», "
                    f"{'con' if d.get('bom') else 'sin'} BOM), {d.get('workers')} workers, "
                    f"{entero(d.get('bloques'))} bloque(s) de {entero(d.get('bloque_bytes', 0) / 2**20)} MiB, "
                    f"{tiempo(d.get('duracion_s'))} s.")
@@ -396,6 +397,10 @@ class Informe:
             "no_mapeados": ", ".join(sorted(nomap)) or "ninguno",
             "delimitador": d.get("delimitador", "?"),
             "entrada": d.get("entrada", "?"),
+            "bytes": entero(d.get("bytes")),
+            "sha256": d.get("sha256") or "—",
+            "sha256_config_limpieza": ((d.get("configs") or {}).get("limpieza") or {}).get("sha256") or "—",
+            "sha256_config_kmeans": ((d.get("configs") or {}).get("kmeans") or {}).get("sha256") or "—",
         })
 
     # ----------------------------------------------------------------------- estandarización
@@ -437,38 +442,58 @@ class Informe:
             return
         med = d["mediciones"]
         base = med[0]
+        pr = d.get("protocolo", {})
         for m in med:
             self.comprobar(o, abs(m["speedup"] - base["mediana_s"] / m["mediana_s"]) < 1e-9,
                            f"el speedup de W = {m['workers']} no es mediana(base) / mediana(W)")
+            if m.get("speedup_ic") and m.get("media_recortada_s"):
+                self.comprobar(o, abs(m["speedup_ic"]["punto"] - base["media_recortada_s"] / m["media_recortada_s"]) < 1e-9,
+                               f"el speedup_ic de W = {m['workers']} no es media recortada(base) / media recortada(W)")
         self.comprobar(o, bool(d.get("identicos")), "silver y gold NO son idénticos entre W: se perdió el determinismo")
-        t = pd.DataFrame([{
-            "Workers": entero(m["workers"]),
-            "Tiempos (s)": "; ".join(tiempo(x) for x in m["tiempos_s"]),
-            "Mediana (s)": tiempo(m["mediana_s"]),
-            "Speedup": decimal(m["speedup"], 2),
-            "Eficiencia": pct(m["speedup"] / m["workers"], 0),
-            "sha256 del gold": f"`{m.get('sha256_gold', '')[:12]}`",
-        } for m in med])
-        self.tabla("benchmark_cargador.md", o, d, "tbl-bench-cargador", titulo, markdown(t, "rlrrrl"),
-                   anchos=[10, 34, 13, 11, 12, 20], nota=
+
+        def punto(m):
+            """Speedup principal: cociente de medias recortadas (con IC), como en el K-Means."""
+            return (m.get("speedup_ic") or {}).get("punto", m["speedup"])
+
+        def ic(m):
+            x = m.get("speedup_ic")
+            return f"[{decimal(x['inferior'], 2)}; {decimal(x['superior'], 2)}]" if x else "—"
+
+        t = pd.DataFrame([(
+            entero(m["workers"]),
+            tiempo(m["mediana_s"]),
+            tiempo(m.get("media_recortada_s")),
+            decimal(m["speedup"], 2),
+            decimal(punto(m), 2),
+            ic(m),
+            pct(punto(m) / m["workers"], 0),
+            f"`{m.get('sha256_gold', '')[:12]}`",
+        ) for m in med], columns=["Workers", "Mediana (s)", "Media recortada (s)", "Speedup (medianas)",
+                                  "Speedup", "IC 95 %", "Eficiencia", "sha256 del gold"])
+        self.tabla("benchmark_cargador.md", o, d, "tbl-bench-cargador", titulo, markdown(t, "rrrrrrrl"),
+                   anchos=[9, 11, 12, 11, 9, 15, 11, 22], nota=
                    f"Carga completa (lectura, limpieza, pivot y gold, sin escribir los CSV) de `{d.get('entrada')}` "
                    f"({entero(d.get('filas_largas'))} filas largas, {entero(d.get('bloques'))} bloque(s) de "
                    f"{entero(d.get('bloque_bytes', 0) / 2**20)} MiB). {d.get('repeticiones')} repeticiones por W, orden "
-                   f"{d.get('orden', '¿?')}. Speedup = mediana con {base['workers']} worker(s) / mediana con W; el JSON "
-                   f"no trae intervalo de confianza. {d.get('cpus')} CPU, {d.get('go', '')}, {d.get('plataforma', '')}. "
+                   f"{d.get('orden', '¿?')}. Speedup: {pr.get('speedup_ic', 'media recortada con la base / media recortada con W')}, "
+                   f"{entero(pr.get('replicas_bootstrap'))} réplicas, recorte de {pct(pr.get('recorte_por_extremo'), 0)} "
+                   f"por extremo; al lado, el cociente de medianas. Base: {base['workers']} worker(s). "
+                   f"Eficiencia = speedup / workers. {d.get('cpus')} CPU, {d.get('go', '')}, {d.get('plataforma', '')}. "
                    f"Silver y gold idénticos para todo W: {'sí' if d.get('identicos') else 'NO'}.")
-        mejor = max(med, key=lambda m: m["speedup"])
+        mejor = max(med, key=punto)
         self.guardar_cifras("benchmark_cargador", d, {
-            "speedup_max": decimal(mejor["speedup"], 2),
+            "speedup_max": decimal(punto(mejor), 2),
+            "speedup_max_ic": ic(mejor),
+            "speedup_medianas": decimal(mejor["speedup"], 2),
             "workers_max": entero(mejor["workers"]),
             "mediana_referencia_s": tiempo(base["mediana_s"]),
             "mediana_mejor_s": tiempo(mejor["mediana_s"]),
-            "eficiencia_max": pct(mejor["speedup"] / mejor["workers"], 0),
+            "eficiencia_max": pct(punto(mejor) / mejor["workers"], 0),
             "workers": lista([m["workers"] for m in med]),
             "bloque": f"{entero(d.get('bloque_bytes', 0) / 2**20)} MiB",
             "repeticiones": entero(d.get("repeticiones")),
             "identicos": "sí" if d.get("identicos") else "no",
-            "maquina": str(d.get("host", "")),
+            "maquina": str((d.get("metadatos") or {}).get("maquina") or d.get("host", "")),
         })
 
     def benchmark_kmeans(self) -> None:

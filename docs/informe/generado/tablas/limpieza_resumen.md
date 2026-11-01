@@ -17,4 +17,4 @@ Cifras de prueba: `generado/limpieza.json` sale de correr los comandos de Go sob
 Conservación de filas en la carga
 :::
 
-*Nota.* Fuente: `generado/limpieza.json`, escrito por `cmd/cargar` (commit `e1cef10`, 2026-11-01, máquina A019803). Leídas = procesadas + descartadas, en filas largas. Archivo `data/sample/oefa_muestra.csv` (722 035 bytes, delimitador «;», con BOM), 4 workers, 1 bloque(s) de 64 MiB, 0,00567 s.
+*Nota.* Fuente: `generado/limpieza.json`, escrito por `cmd/cargar` (commit `e1cef10`, 2026-11-01, máquina A019803). Leídas = procesadas + descartadas, en filas largas. Archivo `data/sample/oefa_muestra.csv` (722 035 bytes, sha256 `38fdecc55cb1`, delimitador «;», con BOM), 4 workers, 1 bloque(s) de 64 MiB, 0,00567 s.

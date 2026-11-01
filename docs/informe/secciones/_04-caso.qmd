@@ -22,8 +22,9 @@ Fuentes de datos del Trabajo Final
 Del archivo descargado (bead de datos, lun 02/11): nombre, tamaño, sha256 y fecha del CSV y del
 diccionario; columnas y nombres exactos de los parámetros, unidades y valores de `Periodo`;
 delimitador, codificación y si hay campos entrecomillados con saltos de línea. Sale de
-`data/README.md` y de `reports/eda_criba.md`; la cabecera, el delimitador y el BOM los registra
-`cmd/cargar` en `generado/limpieza.json` (`cabecera`, `delimitador`, `bom`).
+`data/README.md` y de `reports/eda_criba.md`. Tamaño, sha256, cabecera, delimitador y BOM ya los
+registra `cmd/cargar` en `generado/limpieza.json` (`bytes`, `sha256`, `cabecera`, `delimitador`,
+`bom`): citarlos desde ahí, con el shortcode meta.
 :::
 
 ### Arquitectura de la solución
