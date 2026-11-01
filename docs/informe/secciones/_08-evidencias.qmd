@@ -129,33 +129,32 @@ tiempo de lectura al de la fusión, que no se reparte.
 
 {{< include generado/tablas/limpieza_fases.md >}}
 
-En el K-Means pesa otra cosa: el **tamaño de chunk frente a n**. El gold tiene
-{{< meta cifras.kmeans.n >}} filas; con chunks de {{< meta cifras.benchmark_kmeans.chunk >}} filas,
-el de la receta, hay solo {{< meta cifras.benchmark_kmeans.n_chunks >}} chunks por iteración, y un
-worker sin chunk no hace nada: por encima de esa cantidad de workers el speedup se estanca, y la
-fracción serial de Karp y Flatt sube a {{< meta cifras.benchmark_kmeans.karp_flatt >}}. Con chunks
-de {{< meta cifras.benchmark_kmeans.otro_chunk >}} filas ({{< meta cifras.benchmark_kmeans.n_chunks_otro >}}
-chunks) y los mismos {{< meta cifras.benchmark_kmeans.w >}} workers, el speedup sube a
-{{< meta cifras.benchmark_kmeans.speedup_otro_chunk >}} (IC 95 %
-{{< meta cifras.benchmark_kmeans.speedup_otro_chunk_ic >}}). Además, cada iteración termina en una
-barrera y una reducción de $k \times D$ sumas en orden de chunk, que no se reparten. Con un solo
-worker, la versión concurrente queda a la par o un poco por debajo de la secuencial
-(@tbl-bench-kmeans): paga la coordinación del pool sin repartir nada.
-
-::: {.callout-warning title="PENDIENTE"}
-Decidir si el chunk de la receta (`configs/kmeans.json`) baja para que el K-Means aproveche más
-workers con este n, y volver a medir. El tamaño del gold puede cambiar con la calibración.
-:::
+En el K-Means pesan otras dos cosas. La primera, **lo poco que hay que calcular por iteración**: con
+la receta final, cada punto tiene $D$ = 2 dimensiones y hay $k$ = 3 centroides, así que la versión
+secuencial converge en {{< meta cifras.benchmark_kmeans.mediana_seq_ms >}} ms sobre
+{{< meta cifras.kmeans.n >}} filas. Con tan poco trabajo, la barrera y la reducción de cada
+iteración, que no se reparten, pesan mucho: con {{< meta cifras.benchmark_kmeans.w >}} workers el
+speedup es {{< meta cifras.benchmark_kmeans.speedup >}} y la fracción serial de Karp y Flatt,
+{{< meta cifras.benchmark_kmeans.karp_flatt >}}. La segunda, **el tamaño de chunk frente a n**: con
+chunks de {{< meta cifras.benchmark_kmeans.chunk >}} filas, el de la receta, hay
+{{< meta cifras.benchmark_kmeans.n_chunks >}} chunks por iteración, de sobra para los workers; con
+chunks de {{< meta cifras.benchmark_kmeans.otro_chunk >}} filas habría solo
+{{< meta cifras.benchmark_kmeans.n_chunks_otro >}}, y un worker sin chunk no hace nada: con los
+mismos workers, el speedup sería {{< meta cifras.benchmark_kmeans.speedup_otro_chunk >}} (IC 95 %
+{{< meta cifras.benchmark_kmeans.speedup_otro_chunk_ic >}}). Por eso la receta final usa chunks de
+{{< meta cifras.benchmark_kmeans.chunk >}}. Con un solo worker, la versión concurrente queda a la
+par de la secuencial (@tbl-bench-kmeans): paga la coordinación del pool sin repartir nada. El
+paralelismo de datos rinde más cuanto más trabajo hay por iteración, que es el argumento para el
+clúster de la PC4 cuando el gold crezca o $k$ y $D$ suban.
 
 ### Resultados del K-Means {#sec-resultados-kmeans}
 
 **Semillas.** De las {{< meta cifras.kmeans.semillas >}} semillas, se quedó la
-{{< meta cifras.kmeans.semilla >}}, la de menor inercia (@tbl-semillas).
-{{< meta cifras.kmeans.semillas_cerca_del_minimo >}} de las {{< meta cifras.kmeans.semillas >}}
-llegaron a menos de 0,001 % de ese mínimo y la peor quedó apenas
-{{< meta cifras.kmeans.inercia_relativa_peor >}} por encima: con este gold, Lloyd cae en mínimos
-locales casi equivalentes, y la partición no depende mucho del arranque. Las corridas fueron
-simultáneas, {{< meta cifras.kmeans.corridas_a_la_vez >}} a la vez: los arranques tardaron
+{{< meta cifras.kmeans.semilla >}}, la de menor inercia (@tbl-semillas), y las
+{{< meta cifras.kmeans.semillas_cerca_del_minimo >}} llegaron a menos de 0,001 % de ese mínimo: con
+esta receta, Lloyd converge a la misma partición sin importar el arranque, que es lo que la
+calibración midió como estabilidad. Las corridas fueron simultáneas,
+{{< meta cifras.kmeans.corridas_a_la_vez >}} a la vez: los arranques tardaron
 {{< meta cifras.kmeans.ms_arranques_pared >}} ms de pared frente a
 {{< meta cifras.kmeans.ms_arranques_suma >}} ms que suman sus corridas, que es la evidencia del
 paralelismo por semillas.
@@ -163,69 +162,70 @@ paralelismo por semillas.
 {{< include generado/tablas/kmeans_semillas.md >}}
 
 **El modelo elegido.** El K-Means {{< meta cifras.kmeans.paro >}} sobre
-{{< meta cifras.kmeans.n >}} horas-estación, con inercia {{< meta cifras.kmeans.inercia >}}. Sus
-centroides, en el espacio estandarizado en que corre, están en la @tbl-centroides-z; el **perfil**
-de cada régimen, en unidades originales, en la @tbl-regimenes. Son cosas distintas: el perfil es la
-media aritmética de las lecturas del régimen, y el centroide invertido (con log1p) se parece a una
-media geométrica, menor (@sec-eca-inca).
+{{< meta cifras.kmeans.n >}} horas-estación de {{< meta cifras.limpieza.n_estaciones_gold >}}
+estaciones, con inercia {{< meta cifras.kmeans.inercia >}}. Sus centroides, en el espacio
+estandarizado en que corre, están en la @tbl-centroides-z; el **perfil** de cada régimen, en µg/m³,
+en la @tbl-regimenes.
 
 {{< include generado/tablas/kmeans_centroides_z.md >}}
 
 {{< include generado/tablas/regimenes.md >}}
 
-**Los regímenes.** Leídos desde su perfil (@tbl-regimenes), su hora (@tbl-regimenes-hora, en hora
-final) y sus estaciones (@tbl-regimenes-estacion):
+**Tres niveles de aire.** Con solo PM2,5 y PM10 como features, el K-Means parte las horas por nivel
+de material particulado:
 
-- **Régimen 0, polvo seco de tarde.** El PM10 medio más alto ({{< meta cifras.r0.pm10 >}} µg/m³)
-  con la fracción fina más baja ({{< meta cifras.r0.fraccion_fina >}}) y la humedad más baja
-  ({{< meta cifras.r0.humedad >}} %): partículas gruesas, que apuntan a polvo antes que a combustión.
-  Se concentra en la {{< meta cifras.r0.franja >}} ({{< meta cifras.r0.pct_franja >}} de sus horas,
-  pico a las {{< meta cifras.r0.hora_pico >}}) y el {{< meta cifras.r0.pct_estacion >}} de sus horas
-  son de {{< meta cifras.r0.estacion >}} ({{< meta cifras.r0.departamento >}},
-  {{< meta cifras.r0.altitud >}} m).
-- **Régimen 1, tarde ventosa.** El viento más fuerte ({{< meta cifras.r1.viento_velocidad >}} m/s)
-  con PM10 de {{< meta cifras.r1.pm10 >}} µg/m³; el {{< meta cifras.r1.pct_franja >}} de sus horas son
-  de {{< meta cifras.r1.franja >}}, sobre todo en {{< meta cifras.r1.estacion >}}
-  ({{< meta cifras.r1.departamento >}}).
-- **Régimen 2, calma con PM moderado.** PM10 de {{< meta cifras.r2.pm10 >}} µg/m³ y viento débil
-  ({{< meta cifras.r2.viento_velocidad >}} m/s), repartido a lo largo del día (pico a las
-  {{< meta cifras.r2.hora_pico >}}), y el {{< meta cifras.r2.pct_estacion >}} en
-  {{< meta cifras.r2.estacion >}}.
-- **Régimen 3, noche húmeda con PM bajo.** El PM10 más bajo ({{< meta cifras.r3.pm10 >}} µg/m³) y
-  la fracción fina más alta ({{< meta cifras.r3.fraccion_fina >}}), con humedad de
-  {{< meta cifras.r3.humedad >}} %; el {{< meta cifras.r3.pct_franja >}} de sus horas son de
-  {{< meta cifras.r3.franja >}} (pico a las {{< meta cifras.r3.hora_pico >}}).
-- **Régimen 4, mañana húmeda en estaciones bajas.** La humedad más alta
-  ({{< meta cifras.r4.humedad >}} %) y el PM2,5 medio más alto ({{< meta cifras.r4.pm2_5 >}} µg/m³),
-  con fracción fina alta ({{< meta cifras.r4.fraccion_fina >}}); de
-  {{< meta cifras.r4.franja >}} (pico a las {{< meta cifras.r4.hora_pico >}}) y con
-  {{< meta cifras.r4.estacion >}} ({{< meta cifras.r4.departamento >}},
-  {{< meta cifras.r4.altitud >}} m) como estación principal. Es el régimen más grande
-  ({{< meta cifras.r4.pct >}} de las horas).
+- **Nivel bajo** (régimen {{< meta cifras.bajo.regimen >}}): el {{< meta cifras.bajo.pct >}} de las
+  horas, con PM2,5 medio de {{< meta cifras.bajo.pm2_5 >}} µg/m³ y PM10 de
+  {{< meta cifras.bajo.pm10 >}}. Aparece a toda hora, con algo más de peso en la
+  {{< meta cifras.bajo.franja >}}, y en las {{< meta cifras.bajo.n_estaciones >}} estaciones.
+- **Nivel medio** (régimen {{< meta cifras.medio.regimen >}}): el {{< meta cifras.medio.pct >}},
+  con PM2,5 de {{< meta cifras.medio.pm2_5 >}} y PM10 de {{< meta cifras.medio.pm10 >}} µg/m³; más
+  frecuente de {{< meta cifras.medio.franja >}} (pico a las {{< meta cifras.medio.hora_pico >}}).
+  Sus estaciones principales: {{< meta cifras.medio.principales >}}.
+- **Nivel alto** (régimen {{< meta cifras.alto.regimen >}}): solo el {{< meta cifras.alto.pct >}}
+  de las horas ({{< meta cifras.alto.filas >}}), con PM2,5 medio de {{< meta cifras.alto.pm2_5 >}}
+  µg/m³ y PM10 de {{< meta cifras.alto.pm10 >}}: **{{< meta cifras.alto.eca >}} el ECA por los dos
+  contaminantes en promedio**. El {{< meta cifras.alto.pct_franja >}} de sus horas son de
+  {{< meta cifras.alto.franja >}} (pico a las {{< meta cifras.alto.hora_pico >}}, en hora final), y
+  se concentra en pocas estaciones: {{< meta cifras.alto.principales >}}.
 
-Los nombres son una lectura de los perfiles de esta corrida; si la calibración cambia la receta, se
-rehacen. Una advertencia sobre su peso: {{< meta cifras.limpieza.estacion_gold_max >}} aporta el
-{{< meta cifras.limpieza.pct_estacion_gold_max >}} de las horas completas del gold y domina tres de
-los cinco regímenes, así que parte de lo que separa el K-Means es el ciclo diario de esa estación.
+El nivel alto es la respuesta de esta PC3 a la primera mitad de la pregunta: **dónde y cuándo** el
+aire entra en él. Que su media supere el ECA no significa que cada hora suya sea un incumplimiento
+(el ECA es un promedio de 24 horas), pero en la calibración este régimen recogió el
+{{< meta cifras.calibracion.recall >}} de las horas en que el promedio de 24 horas sí lo superó: es
+la señal de partida para medir, en el TB2, con cuánta anticipación avisa. Los episodios son raros, y
+eso se ve en su tamaño. La fracción fina, como cociente PM2,5/PM10 de las medias, es de
+{{< meta cifras.alto.cociente >}} en el nivel alto frente a {{< meta cifras.bajo.cociente >}} en el
+bajo: si es menor, los episodios traen más partícula gruesa, lo que apunta a polvo antes que a
+combustión; es una lectura a confirmar con la meteorología por régimen.
 
-**Ningún régimen excede el ECA en promedio, y eso es un hallazgo.** El PM10 medio más alto de un
-régimen es {{< meta cifras.regimenes.pm10_max >}} µg/m³ y el PM2,5, {{< meta cifras.regimenes.pm2_5_max >}}.
-No es que no haya episodios: el EDA contó {{< meta cifras.eda.episodios_24h >}} episodios de 24
-horas sobre el ECA en {{< meta cifras.eda.estaciones_episodios >}} estaciones. Pero son raros, y el
-K-Means, que minimiza la inercia, reparte esas pocas horas dentro de regímenes mucho más grandes
-cuya media queda por debajo del umbral (el desbalance que la spec de calibración anticipaba). Con
-este dato, un régimen describe el aire típico de un lugar y una hora, no el episodio: la alerta no
-puede ser «el régimen excede el ECA», sino el umbral sobre la lectura y su promedio móvil,
-condicionado por el régimen, que es lo que mide la anticipación del TB2 (@sec-eca-inca). La
-calibración del notebook 02 puede cambiar esto (más clusters, o el nivel relativo a cada estación),
-y el informe lo dice tal como salga.
+**Una advertencia de peso.** {{< meta cifras.limpieza.estacion_gold_max >}}
+({{< meta cifras.bajo.departamento >}}) aporta el {{< meta cifras.limpieza.pct_estacion_gold_max >}}
+de las horas completas del gold y es la estación principal de los tres niveles: lo que el modelo dice
+del aire «en general» está cargado hacia esa estación. Y vale la advertencia de cobertura: el nivel
+de un lugar sin estación no se conoce (@sec-cobertura).
 
-**Dónde y cuándo.** Es la primera mitad de la pregunta de impacto (@sec-pregunta): las tablas de
-abajo dicen en qué estaciones y franjas aparece cada régimen.
+::: {.callout-warning title="PENDIENTE"}
+La descripción de la meteorología por régimen (viento, humedad, temperatura), que el modelo no usa
+como feature: no está en `regimenes.json`; sale del notebook 03 cruzando las asignaciones con el
+silver.
+:::
+
+**Dónde y cuándo, en detalle.** La @tbl-regimenes-hora reparte cada nivel por franja horaria (en hora
+final) y la @tbl-regimenes-estacion dice en qué estaciones aparece más.
 
 {{< include generado/tablas/regimenes_hora.md >}}
 
 {{< include generado/tablas/regimenes_estacion.md >}}
+
+![Los tres niveles de aire: PM2,5 frente a PM10 de cada hora, coloreada por su régimen, con las líneas del ECA](generado/figuras/niveles.png){#fig-niveles width=15cm}
+
+:::: {si-falta="generado/figuras/niveles.png"}
+::: {.callout-warning title="PENDIENTE"}
+Dispersión PM2,5 frente a PM10 por régimen, con las líneas del ECA. La dibuja el notebook 03 en
+`docs/informe/generado/figuras/niveles.png` (llega en un commit de `feature/notebooks`).
+:::
+::::
 
 ![Perfil de cada régimen: media de cada parámetro, estandarizada](generado/figuras/perfiles.png){#fig-perfiles width=15cm}
 

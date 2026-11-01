@@ -175,16 +175,16 @@ meteorología, y en CA-03 y CA-TA-01 el ciclo diario de la temperatura no es cre
 temperatura antes del mediodía o mínimo cerca de la medianoche), así que su meteorología no se usa como feature tal como viene. Además,
 {{< meta cifras.limpieza.n_ubicaciones_distintas >}} estaciones aparecen con más de una ubicación
 ({{< meta cifras.limpieza.estaciones_ubicaciones_distintas >}}) y se cargan como una sola. La
-completitud decide las features: con PM10, la fracción fina, el viento y la humedad (la receta
-provisional) quedan {{< meta cifras.limpieza.n_estaciones_gold >}} estaciones con horas completas,
-y la calibración (@sec-modelo) puede cambiar ese equilibrio entre features y estaciones.
+completitud decide las features: exigir viento y humedad junto con el PM dejaba pocas estaciones,
+y la receta final, solo con PM2,5 y PM10, deja {{< meta cifras.limpieza.n_estaciones_gold >}}
+estaciones con horas completas (@sec-modelo).
 
 ### Estandarización
 
 Las features de la receta se estandarizan con z-score antes del K-Means, para que ninguna domine la
-distancia euclídea por su escala. Los contaminantes pasan antes por log1p: PM2,5 y PM10 tienen colas
-largas y, sin el logaritmo, una lectura extrema pesa más que mil normales; con él, la distancia
-compara razones y no diferencias. La media y la desviación se calculan sobre la tabla ancha ya
+distancia euclídea por su escala. El cargador admite log1p antes del z-score (la spec lo proponía
+para las colas largas de PM2,5 y PM10), pero la receta final no lo usa: la calibración mostró que el
+logaritmo comprime justo la cola donde viven los episodios y borra su separación (@sec-modelo). La media y la desviación se calculan sobre la tabla ancha ya
 deduplicada y filtrada por completitud, para que sean las de la matriz que ve el modelo. No se usa
 la fórmula $\sum x^2 - (\sum x)^2/n$, que cancela cuando la media es grande frente a la desviación
 (la presión, unos 1000 hPa con pocos hPa de variación): se usa el algoritmo de Welford por chunk
@@ -194,11 +194,20 @@ concurrente y determinista. La @tbl-estandarizacion da los valores usados
 
 {{< include generado/tablas/estandarizacion.md >}}
 
-### Auditoría de la limpieza
+### Auditoría de la limpieza y del modelo
+
+El patrón es el del TP: dos implementaciones independientes, y si discrepan hay un bug. El notebook
+03 rehace en pandas la limpieza, el silver y el gold desde el bronze, y en scikit-learn el K-Means, y
+los compara con lo que escribió Go (@tbl-auditoria): {{< meta cifras.auditoria.ok >}} de
+{{< meta cifras.auditoria.chequeos >}} chequeos dan OK, {{< meta cifras.auditoria.diferencias >}}
+encuentran una diferencia y {{< meta cifras.auditoria.avisos >}} queda con un aviso, que no es un bug
+(el detalle está en la tabla). El silver es idéntico byte a byte. La auditoría
+se corrió con la misma receta que el modelo de este informe: {{< meta cifras.auditoria.misma_receta >}}.
+
+{{< include generado/tablas/auditoria.md >}}
 
 ::: {.callout-warning title="PENDIENTE"}
-Resultado de la auditoría cruzada (patrón del TP: dos implementaciones, si discrepan hay un bug): el
-notebook recalcula gold desde silver con la misma receta y lo compara con el gold de Go (tolerancia
-1e-9 tras el z-score), y compara el prototipo de silver en pandas con el de Go. Una tabla o una
-captura con la diferencia máxima. Sale del notebook 01/03.
+Volver a correr el notebook 03 con la receta final para auditar el gold y el K-Means de esta
+corrida (hoy valida la limpieza y el silver, que no dependen de la receta, y el código del gold y del
+K-Means con la receta provisional) y regenerar sus figuras.
 :::

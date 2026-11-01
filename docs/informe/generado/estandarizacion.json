@@ -1,42 +1,34 @@
 {
   "features": [
-    "pm10",
-    "fraccion_fina",
-    "viento_velocidad",
-    "humedad"
-  ],
-  "log1p": [
+    "pm2_5",
     "pm10"
   ],
+  "log1p": [],
   "nivel": "absoluto",
-  "n": 41991,
+  "n": 64236,
   "media": [
-    3.1351240137748935,
-    0.5653417692427812,
-    2.013991093329524,
-    64.07720463908935
+    14.032933401830746,
+    31.505261224235625
   ],
   "desv": [
-    0.8907562067600253,
-    0.2300388179844095,
-    1.307648013315814,
-    20.91395477495912
+    13.403818928851493,
+    37.56126031976579
   ],
   "ddof": 0,
-  "chunk": 10000,
+  "chunk": 1000,
   "metadatos": {
-    "momento": "2026-11-01T13:21:40.748603503-05:00",
+    "momento": "2026-11-01T14:32:18.930145136-05:00",
     "maquina": "A019803",
     "version_go": "go1.27.3",
     "gomaxprocs": 14,
     "cpus_logicas": 14,
-    "commit": "53858a093a60e88822c4c46fbbc3a5b2b0e89457",
+    "commit": "11cef5a77afd3cbb8a144725d2e51fdd8158ae8a",
     "arbol_sucio": true
   },
   "configs": {
     "kmeans": {
       "ruta": "configs/kmeans.json",
-      "sha256": "4fdeea524a470ea788548522ce3cbb5fc74965270c3b520f326c858c57f97129",
+      "sha256": "a9e48be6dd31906f53a29209a1a5dc7364b4b2110c3f24c9c025e42a3afa9234",
       "existe": true
     },
     "limpieza": {

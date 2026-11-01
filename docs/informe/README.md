@@ -114,6 +114,8 @@ ellos, nunca al revés. Se copian desde `reports/` (o `python3 tablas.py --entra
 | `kmeans.json` | `cmd/entrenar` | `cmd/entrenar/main.go`, `kmeans/semillas.go`, `kmeans/doc.go` | k, semilla elegida, `arranques` (una corrida por semilla), `arranque_elegido`, corridas a la vez, `centroides_iniciales` (archivo, origen, sha256) y `nota_tiempos_arranques`, iteraciones, paro, inercia, tamaños, centroides estandarizados |
 | `regimenes.json` | `cmd/entrenar` | `kmeans/regimenes.go` | por régimen: perfil (media aritmética de las lecturas), PM2.5 medio (derivado si no es feature), PM10 medio, etiqueta ECA, conteos por hora y por estación |
 | `codo.json` | `cmd/entrenar -codo` | `kmeans/codo.go` | inercia, semilla, iteraciones y paro por k; el k elegido es el de la receta |
+| `auditoria.json` | notebook 03 | — | los chequeos de Go contra pandas y scikit-learn; si la auditoría corrió con otra receta que `kmeans.json`, el informe lo dice y `--final` falla |
+| `../../reports/calibracion_resumen.csv`, `kmeans_propuesto.json` | notebook 02 | — | la tabla de la calibración: la receta final frente a su versión con log1p, la que prefería la regla automática y la provisional (se leen de `reports/`, no se copian: `*.csv` está ignorado en el repo) |
 | `eda.json` | transcrito de `reports/eda_criba.md` (notebook 01) | — | lo que solo mide el EDA: el control de la hora por posición (días completos con hora explícita), los registros multilínea y los episodios de 24 h sobre el ECA. Si el notebook 01 vuelve a correr, se actualiza desde el `.md` |
 
 Los siete de Go son copias de `reports/` de la **corrida sobre el CSV completo de OEFA** (01/11).
@@ -130,10 +132,14 @@ Con `--estricto` falla si falta un JSON o un invariante no cuadra. Con `--final`
 sintética en `generado/figuras/origen.json`. Go no marca sus salidas como sintéticas: estas guardas
 son las que impiden entregar la muestra como si fueran los datos.
 
-**Lo que el informe querría y no sale de Go** (no se inventa): la banda INCA de cada régimen
-(`regimenes.json` trae el perfil y la etiqueta ECA; los nombres de los regímenes son una lectura de
-sus perfiles, escrita en la prosa); la tabla de decisión de la calibración (notebook 02); y lo que
-solo mide el EDA (`generado/eda.json`, transcrito).
+Además, `--final` falla si una figura que sale del modelo (`origen.json` dice su fuente y fecha) es
+anterior a `kmeans.json`: mostraría otro modelo. Con k = 3, `tablas.py` nombra los regímenes por su
+PM10 medio (bajo, medio, alto) y escribe sus cifras como `cifras.bajo.*`, `cifras.medio.*` y
+`cifras.alto.*`, para que la prosa no dependa del número de régimen.
+
+**Lo que el informe querría y no sale de Go** (no se inventa): la banda INCA de cada régimen y su
+meteorología (`regimenes.json` trae el perfil de las features y la etiqueta ECA); y lo que solo mide
+el EDA (`generado/eda.json`, transcrito).
 
 ## Antes de entregar
 

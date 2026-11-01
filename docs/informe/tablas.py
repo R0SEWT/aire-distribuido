@@ -23,6 +23,8 @@ generado/cifras.yml). Los esquemas son los de Go, que son la fuente de verdad:
     codo.json                cmd/entrenar -codo     kmeans/codo.go
     benchmark_kmeans.json    cmd/benchmark          cmd/benchmark/main.go
     eda.json                 (transcrito)           lo que solo mide el EDA, de reports/eda_criba.md
+    auditoria.json           notebook 03            Go contra pandas y scikit-learn
+    ../../reports/calibracion_resumen.csv y kmeans_propuesto.json   notebook 02 (calibración)
 
 Si un JSON trae `"placeholder": true` (lo agrega el equipo, no Go), su tabla sale con un aviso
 PLACEHOLDER y sus cifras con la marca [PLACEHOLDER], para que nadie las confunda con resultados.
@@ -209,12 +211,13 @@ def markdown(df: pd.DataFrame, alineacion: str | None = None) -> str:
 
 # --------------------------------------------------------------------------- salida
 class Informe:
-    def __init__(self, entrada: Path, salida: Path):
-        self.entrada, self.salida = entrada, salida
+    def __init__(self, entrada: Path, salida: Path, reports: Path):
+        self.entrada, self.salida, self.reports = entrada, salida, reports
         self.datos: dict[str, dict] = {}
         self.cifras: dict[str, dict] = {}
         self.placeholders: list[str] = []
         self.sinteticos: list[str] = []
+        self.desactualizadas: list[str] = []
         self.faltantes: list[str] = []
         self.problemas: list[str] = []
 
@@ -254,10 +257,21 @@ class Informe:
         ruta = AQUI / "generado" / "figuras" / "origen.json"
         if not ruta.exists():
             return
-        sint = [f for f, meta in sorted(json.loads(ruta.read_text(encoding="utf-8")).items())
-                if isinstance(meta, dict) and meta.get("sintetico")]
+        origen = json.loads(ruta.read_text(encoding="utf-8"))
+        sint = [f for f, meta in sorted(origen.items()) if isinstance(meta, dict) and meta.get("sintetico")]
         if sint:
             self.sintetico("figuras/origen.json", "figuras sintéticas " + ", ".join(sint))
+        # Una figura que sale del modelo y es anterior a él muestra otro modelo: la entrega no la lleva.
+        momento = ((self.datos.get("kmeans.json") or {}).get("metadatos") or {}).get("momento")
+        if momento:
+            modelo = datetime.fromisoformat(momento).replace(tzinfo=None)
+            claves = ("kmeans", "regimenes", "codo", "asignaciones", "benchmark")
+            viejas = [f for f, meta in sorted(origen.items())
+                      if isinstance(meta, dict) and meta.get("fecha")
+                      and any(c in str(meta.get("fuente", "")) for c in claves)
+                      and datetime.fromisoformat(meta["fecha"]).replace(tzinfo=None) < modelo]
+            if viejas:
+                self.desactualizadas.append("figuras anteriores al modelo de kmeans.json: " + ", ".join(viejas))
 
     def problema(self, origen: str, texto: str) -> None:
         self.problemas.append(f"{origen}: {texto}")
@@ -284,7 +298,7 @@ class Informe:
         return " (" + ", ".join(partes) + ")" if partes else " (el JSON no registra commit ni fecha)"
 
     def tabla(self, archivo: str, origen: str, d: dict | None, ident: str, titulo: str,
-              cuerpo: str = "", nota: str = "", anchos: list[int] | None = None) -> None:
+              cuerpo: str = "", nota: str = "", anchos: list[int] | None = None, fuente: str | None = None) -> None:
         """Escribe generado/tablas/<archivo>: aviso si es PLACEHOLDER, tabla con id y título, nota.
 
         anchos: porcentaje de cada columna (tbl-colwidths); sin él, Pandoc reparte por igual.
@@ -303,8 +317,8 @@ class Informe:
                            f"Cifras de prueba: `generado/{origen}` {motivo} Se reemplaza cuando "
                            f"`{COMANDOS.get(origen, '¿?')}` corra sobre el CSV completo.", ":::", ""]
             partes += [f"::: {{#{ident}{attr}}}", cuerpo, "", titulo, ":::", ""]
-            fuente = (f"*Nota.* Fuente: `generado/{origen}`, escrito por "
-                      f"`{COMANDOS.get(origen, '¿?')}`{self.procedencia(d)}.")
+            fuente = "*Nota.* " + (fuente or (f"Fuente: `generado/{origen}`, escrito por "
+                                              f"`{COMANDOS.get(origen, '¿?')}`{self.procedencia(d)}."))
             partes += [f"{fuente} {nota}".strip(), ""]
         (self.salida / archivo).write_text("\n".join(partes), encoding="utf-8")
 
@@ -521,6 +535,7 @@ class Informe:
             "pct_bloque_en_cero": pct(desc.get("bloque_en_cero", 0) / leidas) if leidas else "—",
             "bloque_en_cero_pm10": entero(ceros.get("pm10", 0)),
             "fuera_de_rango": entero(desc.get("fuera_de_rango", 0)),
+            "n_estaciones_sin_datos": entero(sum(1 for x in est.values() if x["largas_procesadas"] == 0)),
             "n_ubicaciones_distintas": entero(sum(1 for x in est.values() if x.get("ubicaciones_distintas"))),
             "estacion_gold_max": max(est.items(), key=lambda kv: kv[1]["completas_gold"])[0] if est else "—",
             "pct_estacion_gold_max": pct(max(x["completas_gold"] for x in est.values()) / fa["completas_gold"], 0)
@@ -861,9 +876,17 @@ class Informe:
             por = x.get("eca_por") or []
             return f"{e} ({', '.join(corto(p) for p in por)})" if por else e
 
+        # Con k = 3 y solo PM como features, los regímenes son niveles: se nombran por su PM10 medio.
+        niveles = {}
+        if len(rg) == 3:
+            orden = sorted(rg, key=lambda x: x.get("pm10_medio") or 0)
+            niveles = {x["regimen"]: n for x, n in zip(orden, ("bajo", "medio", "alto"))}
         filas = []
         for x in rg:
-            f = {"Régimen": entero(x["regimen"]), "Filas": entero(x["tamano"]), "%": pct(x["fraccion"])}
+            f = {"Régimen": entero(x["regimen"])}
+            if niveles:
+                f["Nivel"] = niveles[x["regimen"]]
+            f.update({"Filas": entero(x["tamano"]), "%": pct(x["fraccion"])})
             for c in feats:
                 f[corto(c)] = decimal(x["perfil"].get(c), 2 if c == "fraccion_fina" else 1)
             # PM2,5 y PM10 medios van aparte solo si no son features (si lo son, ya están en el perfil).
@@ -871,11 +894,14 @@ class Informe:
                 f["PM2,5 medio"] = decimal(x.get("pm2_5_medio"), 1)
             if "pm10" not in feats:
                 f["PM10 medio"] = decimal(x.get("pm10_medio"), 1)
+            if "fraccion_fina" not in feats and x.get("pm2_5_medio") and x.get("pm10_medio"):
+                f["PM2,5/PM10"] = decimal(x["pm2_5_medio"] / x["pm10_medio"], 2)
             f["ECA"] = etiqueta(x)
             filas.append(f)
         t = pd.DataFrame(filas)
-        extra = len(t.columns) - 3 - len(feats) - 1          # columnas de PM medio agregadas
-        anch = [9, 8, 8] + [(62 - 10 * extra) // len(feats)] * len(feats) + [10] * extra + [13]
+        fijas = 4 if niveles else 3                          # Régimen, (Nivel,) Filas, %
+        extra = len(t.columns) - fijas - len(feats) - 1      # columnas agregadas (PM medio, cociente)
+        anch = [9] + ([9] if niveles else []) + [10, 9] + [(58 - 11 * extra - (9 if niveles else 0)) // len(feats)] * len(feats) + [11] * extra + [16]
         anch[-1] += 100 - sum(anch)
         origenes = {x.get("pm2_5_origen") for x in rg if x.get("pm2_5_origen")}
         nota = (f"{unidades(feats)} Perfil: media aritmética de cada feature en unidades originales sobre las lecturas "
@@ -886,11 +912,11 @@ class Informe:
                 f"{eca.get('pm10_ugm3', 100)} µg/m³; no evaluable si falta el contaminante que podría superarlo. "
                 "El ECA es un promedio de 24 horas: una media horaria alta no es por sí sola un incumplimiento.")
         self.tabla(archivos[0][0], o, d, archivos[0][1], archivos[0][2],
-                   markdown(t, "rrr" + "r" * (len(feats) + extra) + "l"), anchos=anch, nota=nota)
+                   markdown(t, ("rlrr" if niveles else "rrr") + "r" * (len(feats) + extra) + "l"), anchos=anch, nota=nota)
 
         h = []
         for x in rg:
-            f = {"Régimen": entero(x["regimen"])}
+            f = {"Régimen": entero(x["regimen"]) + (f" ({niveles[x['regimen']]})" if niveles else "")}
             for etiq, horas in FRANJAS:
                 f[etiq] = pct(sum(x["por_hora"][i] for i in horas) / x["tamano"], 0) if x["tamano"] else "—"
             pico = max(range(24), key=lambda i: x["por_hora"][i])
@@ -904,7 +930,7 @@ class Informe:
         s = []
         for x in rg:
             top = sorted(x["por_estacion"].items(), key=lambda kv: (-kv[1], kv[0]))[:3]
-            s.append({"Régimen": entero(x["regimen"]),
+            s.append({"Régimen": entero(x["regimen"]) + (f" ({niveles[x['regimen']]})" if niveles else ""),
                       "Estaciones principales (proporción del régimen)":
                           "; ".join(f"{e} ({pct(c / x['tamano'], 0)})" for e, c in top if c > 0),
                       "Estaciones donde aparece": entero(sum(1 for c in x["por_estacion"].values() if c > 0))})
@@ -921,8 +947,9 @@ class Informe:
             ub = (lim.get(est0) or {}).get("ubicacion") or {}
             pico = max(range(24), key=lambda i: x["por_hora"][i])
             franja = max(FRANJAS, key=lambda fr: sum(x["por_hora"][i] for i in fr[1]))
-            self.guardar_cifras(f"r{r}", d, {
-                "pct": pct(x["fraccion"], 0),
+            self.guardar_cifras(niveles.get(r, f"r{r}"), d, {
+                "regimen": entero(r),
+                "pct": pct(x["fraccion"], 1),
                 "filas": entero(x["tamano"]),
                 **{c: decimal(x["perfil"].get(c), 2 if c == "fraccion_fina" else 1) for c in feats},
                 "pm2_5": decimal(x.get("pm2_5_medio"), 1),
@@ -935,6 +962,11 @@ class Informe:
                 "pct_estacion": pct(n0 / x["tamano"], 0) if x["tamano"] else "—",
                 "departamento": titulo_lugar(ub.get("departamento")),
                 "altitud": entero(float(ub["altitud"])) if ub.get("altitud") else "—",
+                "principales": ", ".join(
+                    f"{e} ({titulo_lugar(((lim.get(e) or {}).get('ubicacion') or {}).get('departamento'))}, "
+                    f"{pct(c / x['tamano'], 0)})" for e, c in top[:3] if c > 0) if x["tamano"] else "—",
+                "n_estaciones": entero(sum(1 for c in x["por_estacion"].values() if c > 0)),
+                "cociente": decimal(x["pm2_5_medio"] / x["pm10_medio"], 2) if x.get("pm2_5_medio") and x.get("pm10_medio") else "—",
             })
         excede = [x for x in rg if x["eca"] == "excede"]
         self.guardar_cifras("regimenes", d, {
@@ -1035,16 +1067,157 @@ class Informe:
                 "episodios_24h": entero(ep.get("episodios_24h")),
             }.items()}
 
+    # ----------------------------------------------------------------------- calibración y auditoría
+    @staticmethod
+    def variante(rec: dict) -> str:
+        """Código de la grilla de calibración (spec de calibración §3) para una receta."""
+        f = set(rec.get("features", []))
+        F = "F2" if "fraccion_fina" in f else "F1"
+        met = f & {"viento_velocidad", "humedad", "temperatura", "presion"}
+        M = "M0" if not met else ("M2" if met & {"temperatura", "presion"} else "M1")
+        T = "T2" if rec.get("log1p") else "T1"
+        N = "N2" if rec.get("nivel") in ("estacion", "por_estacion") else "N1"
+        return f"{F}-{M}-{T}-{N}"
+
+    def calibracion(self) -> None:
+        """La decisión de la receta: la final frente a su versión con log1p, la que prefería la regla
+        automática del notebook 02 y la provisional, con las métricas de reports/calibracion_resumen.csv."""
+        o = "calibracion_resumen.csv"
+        ruta = self.reports / o
+        titulo = "Calibración: la receta final frente a las alternativas"
+        km = self.datos.get("kmeans.json")
+        if not ruta.exists() or km is None:
+            self.faltantes.append(o)
+            self.tabla("calibracion.md", o, None, "tbl-calibracion", titulo)
+            return
+        r = pd.read_csv(ruta)
+        rec = km["receta"]
+        final = (self.variante(rec), rec["k"])
+        con_log = (final[0].replace("-T1-", "-T2-"), rec["k"])
+        prop = self.reports / "kmeans_propuesto.json"
+        auto = None
+        if prop.exists():
+            pr = json.loads(prop.read_text(encoding="utf-8"))
+            auto = (self.variante(pr), pr["k"])
+        provisional = ("F2-M1-T2-N1", 5)     # la receta provisional de la spec de la PC3 (§4.3)
+        cols = [("Final (elegida)", final), ("Final con log1p", con_log)]
+        if auto and auto != final:
+            cols.append(("Regla automática", auto))
+        cols.append(("Provisional", provisional))
+        filas_r = {}
+        for nombre_col, (v, k) in cols:
+            x = r[(r["variante"] == v) & (r["k"] == k)]
+            if x.empty:
+                self.problema(o, f"no está la variante {v} con k = {k}")
+                continue
+            filas_r[nombre_col] = x.iloc[0]
+        if "Final (elegida)" not in filas_r:
+            self.tabla("calibracion.md", o, None, "tbl-calibracion", titulo)
+            return
+
+        def f3(x):
+            return decimal(x, 3)
+
+        filas = [
+            ("Variante", lambda x: f"`{x['variante']}`"),
+            ("k", lambda x: entero(x["k"])),
+            ("Estaciones · filas", lambda x: f"{entero(x['n_estaciones'])} · {entero(x['n_filas'])}"),
+            ("ARI entre semillas (> 0,8)", lambda x: f3(x["ari_semillas"])),
+            ("ARI por bloques de días (> 0,7)", lambda x: f3(x["ari_dias"])),
+            ("Pureza del régimen «excede» (> 0,6)", lambda x: f3(x["pureza"])),
+            ("Recall de las horas sobre el ECA (> 0,5)", lambda x: f3(x["recall"])),
+            ("NMI con la estación · línea base", lambda x: f"{f3(x['nmi_estacion'])} · {f3(x['nmi_estacion_base'])}"),
+            ("NMI con la hora", lambda x: f3(x["nmi_hora"])),
+            ("Cluster más chico", lambda x: pct(x["min_cluster"])),
+            ("Silueta", lambda x: f3(x["silueta"])),
+        ]
+        t = pd.DataFrame([[n] + [fn(filas_r[c]) for c, _ in cols if c in filas_r] for n, fn in filas],
+                         columns=["Criterio (umbral)"] + [c for c, _ in cols if c in filas_r])
+        n_corridas = None
+        crudo = self.reports / "calibracion.csv"
+        if crudo.exists():
+            n_corridas = sum(1 for _ in crudo.open(encoding="utf-8")) - 1
+        self.tabla("calibracion.md", o, {"generado_por": "notebook 02"}, "tbl-calibracion", titulo,
+                   markdown(t, "l" + "r" * (len(t.columns) - 1)),
+                   anchos=[34] + [66 // (len(t.columns) - 1)] * (len(t.columns) - 1),
+                   fuente=f"Fuente: `reports/calibracion_resumen.csv` (notebook 02: {entero(r['variante'].nunique())} "
+                          f"variantes × k de 2 a 10 × 5 semillas{', ' + entero(n_corridas) + ' corridas' if n_corridas else ''}).",
+                   nota=
+                   "Umbrales entre paréntesis, los de la spec de calibración. La línea base de NMI es la de "
+                   "partir solo por el nivel de PM10: un régimen por debajo de ella no aprendió geografía. "
+                   "Pureza y recall usan la etiqueta del promedio móvil de 24 h sobre el ECA.")
+        x = filas_r["Final (elegida)"]
+        mismos_k = r[r["k"] >= final[1]]
+        rango = int((mismos_k["silueta"] > x["silueta"]).sum()) + 1
+        cif = {
+            "variante": final[0], "k": entero(final[1]),
+            "silueta": decimal(x["silueta"], 2), "ari_semillas": decimal(x["ari_semillas"], 2),
+            "ari_dias": decimal(x["ari_dias"], 2), "pureza": decimal(x["pureza"], 2),
+            "recall": pct(x["recall"], 0), "nmi_estacion": decimal(x["nmi_estacion"], 3),
+            "nmi_base": decimal(x["nmi_estacion_base"], 3), "estaciones": entero(x["n_estaciones"]),
+            "silueta_frase": (f"la más alta de la grilla con k ≥ {final[1]}" if rango == 1
+                              else f"la {rango}.ª de la grilla con k ≥ {final[1]}"),
+            "n_variantes": entero(r["variante"].nunique()),
+            "n_corridas": entero(n_corridas) if n_corridas else "—",
+        }
+        if "Final con log1p" in filas_r:
+            y = filas_r["Final con log1p"]
+            cif.update({"log_pureza": decimal(y["pureza"], 2), "log_recall": pct(y["recall"], 0)})
+        if "Provisional" in filas_r:
+            y = filas_r["Provisional"]
+            cif.update({"prov_ari_semillas": decimal(y["ari_semillas"], 2), "prov_nmi_estacion": decimal(y["nmi_estacion"], 3),
+                        "prov_nmi_base": decimal(y["nmi_estacion_base"], 3), "prov_estaciones": entero(y["n_estaciones"])})
+        if "Regla automática" in filas_r:
+            y = filas_r["Regla automática"]
+            cif.update({"auto_variante": y["variante"], "auto_k": entero(y["k"]),
+                        "auto_silueta": decimal(y["silueta"], 2), "auto_recall": pct(y["recall"], 0)})
+        self.cifras["calibracion"] = {k: str(v) for k, v in cif.items()}
+
+    def auditoria(self) -> None:
+        """Go contra pandas y scikit-learn (notebook 03). Si la auditoría corrió con otra receta, lo dice."""
+        o = "auditoria.json"
+        d = self.leer(o)
+        titulo = "Auditoría de las salidas de Go contra una segunda implementación"
+        if d is None:
+            self.tabla("auditoria.md", o, None, "tbl-auditoria", titulo)
+            return
+        ch = d.get("chequeos", [])
+        cuenta = {e: sum(1 for c in ch if c.get("estado") == e) for e in ("OK", "DIFERENCIA", "AVISO", "OMITIDO")}
+        if cuenta["DIFERENCIA"]:
+            self.problema(o, f"{cuenta['DIFERENCIA']} chequeos con DIFERENCIA (bug en Go o en Python)")
+        rec_km = (self.datos.get("kmeans.json") or {}).get("receta") or {}
+        claves = ("features", "log1p", "nivel", "k")
+        misma = all(d.get("receta", {}).get(c) == rec_km.get(c) for c in claves) if rec_km else False
+        if not misma:
+            self.desactualizadas.append("la auditoría (auditoria.json) corrió con otra receta que la de kmeans.json")
+        t = pd.DataFrame([(c["chequeo"], c["estado"], c.get("detalle", "")) for c in ch],
+                         columns=["Chequeo", "Estado", "Detalle"])
+        self.tabla("auditoria.md", o, {**d, "generado_por": "notebook 03"}, "tbl-auditoria", titulo,
+                   markdown(t, "lll"), anchos=[30, 12, 58],
+                   fuente=f"Fuente: `generado/auditoria.json` (notebook 03, {d.get('fecha', '¿?')}).", nota=
+                   f"OK: {cuenta['OK']}; "
+                   f"DIFERENCIA (bug): {cuenta['DIFERENCIA']}; AVISO: {cuenta['AVISO']}; OMITIDO: {cuenta['OMITIDO']}. "
+                   + ("" if misma else "La auditoría corrió con una receta anterior a la de `kmeans.json`: valida la "
+                      "limpieza y el silver, que no dependen de la receta, y el código del gold y del K-Means con "
+                      "aquella receta."))
+        self.cifras["auditoria"] = {k: str(v) for k, v in {
+            "ok": entero(cuenta["OK"]), "diferencias": entero(cuenta["DIFERENCIA"]),
+            "avisos": entero(cuenta["AVISO"]), "chequeos": entero(len(ch)),
+            "misma_receta": "sí" if misma else "no",
+        }.items()}
+
     # ----------------------------------------------------------------------- estado y cifras
     def cerrar(self, estricto: bool, final: bool) -> int:
         estado = ["<!-- Generado por tablas.py. No editar a mano. -->", ""]
-        if self.placeholders or self.faltantes or self.problemas or self.sinteticos:
-            estado += ["::: {.callout-warning title=\"PENDIENTE: cifras de prueba\"}"]
+        if self.placeholders or self.faltantes or self.problemas or self.sinteticos or self.desactualizadas:
+            estado += ["::: {.callout-warning title=\"PENDIENTE: salidas por actualizar\"}"]
             if self.placeholders:
                 estado.append("Estos archivos de `generado/` todavía son PLACEHOLDER y sus cifras no son "
                               "resultados sobre el dataset de OEFA: " + ", ".join(f"`{p}`" for p in self.placeholders) + ".")
             if self.sinteticos:
                 estado.append("\nDatos sintéticos: " + "; ".join(self.sinteticos) + ".")
+            if self.desactualizadas:
+                estado.append("\nDesactualizado (se regenera con el notebook 03): " + "; ".join(self.desactualizadas) + ".")
             if self.faltantes:
                 estado.append("\nFaltan: " + ", ".join(f"`{p}`" for p in self.faltantes) + ".")
             if self.problemas:
@@ -1067,10 +1240,12 @@ class Informe:
         if (estricto or final) and (self.faltantes or self.problemas):
             print("error: faltan JSON o no cuadran invariantes", file=sys.stderr)
             return 1
-        if final and (self.placeholders or self.sinteticos):
+        if final and (self.placeholders or self.sinteticos or self.desactualizadas):
+            for x in self.desactualizadas:
+                print(f"desactualizado: {x}", file=sys.stderr)
             for x in self.sinteticos:
                 print(f"sintético: {x}", file=sys.stderr)
-            print("error (--final): quedan JSON PLACEHOLDER o datos sintéticos", file=sys.stderr)
+            print("error (--final): quedan JSON PLACEHOLDER, datos sintéticos o salidas desactualizadas", file=sys.stderr)
             return 1
         return 0
 
@@ -1078,12 +1253,14 @@ class Informe:
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("--entrada", type=Path, default=AQUI / "generado", help="carpeta con los JSON (p. ej. ../../reports)")
+    ap.add_argument("--reports", type=Path, default=AQUI.parent.parent / "reports",
+                    help="reports/ del repo: calibracion_resumen.csv y kmeans_propuesto.json del notebook 02")
     ap.add_argument("--estricto", action="store_true", help="falla si falta un JSON o no cuadra un invariante")
     ap.add_argument("--final", action="store_true", help="como --estricto y, además, falla si queda un PLACEHOLDER")
     a = ap.parse_args()
     salida = AQUI / "generado" / "tablas"
     salida.mkdir(parents=True, exist_ok=True)
-    inf = Informe(a.entrada.resolve(), salida)
+    inf = Informe(a.entrada.resolve(), salida, a.reports.resolve())
     inf.limpieza()          # primero: estandarizacion lo usa para cruzar n
     inf.estandarizacion()
     inf.benchmark_cargador()
@@ -1092,6 +1269,8 @@ def main() -> int:
     inf.regimenes()
     inf.codo()
     inf.csv_oefa()
+    inf.calibracion()
+    inf.auditoria()
     inf.figuras()
     return inf.cerrar(a.estricto, a.final)
 

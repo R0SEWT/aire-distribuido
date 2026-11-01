@@ -54,21 +54,45 @@ entre remuestreos por bloques de días, y que sus perfiles sean distinguibles.
 Ejes de la grilla de calibración del K-Means
 :::
 
-La receta de esta corrida es la **provisional** de la spec, congelada en `configs/kmeans.json`, que
-Go lee sin decidir nada; la calibración del notebook 02 sobre el dato real está corriendo y puede
-cambiarla. Features
-{{< meta cifras.kmeans.features >}}, $k$ = {{< meta cifras.kmeans.k >}},
-{{< meta cifras.kmeans.semillas >}} semillas desde {{< meta cifras.kmeans.semilla_base >}} (la
-elegida fue la {{< meta cifras.kmeans.semilla >}}). La hora, la estación y el mes **no son features** en ninguna
-variante: se usan después, para decir dónde y cuándo aparece cada régimen.
+**Cómo se eligió.** La grilla del notebook 02 corrió {{< meta cifras.calibracion.n_corridas >}}
+K-Means sobre el silver real ({{< meta cifras.calibracion.n_variantes >}} variantes, $k$ de 2 a 10,
+5 semillas cada una) y midió, para cada una, los criterios de la @tbl-calibracion. Tres resultados
+decidieron la receta:
 
-::: {.callout-warning title="PENDIENTE"}
-La tabla de decisión de la calibración (variante elegida, por qué, qué perdió frente a la segunda),
-con las métricas de `reports/calibracion.csv` (notebook 02, corriendo sobre el dato real): ARI entre semillas y por
-días, pureza y recall de la etiqueta ECA, NMI con estación y hora, tamaño del cluster más chico. Si
-no cerró a tiempo, decir que se usó la receta provisional (F2, M1, T2, N1, $k$ = 5) y por qué.
-Conviene que `tablas.py` la genere desde el CSV.
-:::
+- **La receta provisional quedó descartada.** Con meteorología y log1p, era inestable (ARI entre
+  semillas {{< meta cifras.calibracion.prov_ari_semillas >}}) y aprendía geografía: su NMI con la
+  estación ({{< meta cifras.calibracion.prov_nmi_estacion >}}) superaba la línea base
+  ({{< meta cifras.calibracion.prov_nmi_base >}}), es decir, sus regímenes eran en buena parte las
+  estaciones. Además, exigir viento y humedad la dejaba en
+  {{< meta cifras.calibracion.prov_estaciones >}} estaciones.
+- **El log1p borra los episodios.** La spec de calibración suponía que el logaritmo, al comprimir la
+  cola, ayudaría a separarlos. El dato dice lo contrario: con la misma receta y log1p, la pureza del
+  régimen «excede» cae a {{< meta cifras.calibracion.log_pureza >}} y el recall a
+  {{< meta cifras.calibracion.log_recall >}}. Los episodios viven justo en esa cola, y el logaritmo
+  los mezcla con el aire normal. Es un hallazgo que corrige la spec.
+- **La regla automática y la decisión del equipo no coinciden.** Aplicando los criterios en el orden
+  de la spec, la regla prefería `{{< meta cifras.calibracion.auto_variante >}}` (PM10 y fracción
+  fina, estandarizadas por estación) con $k$ = {{< meta cifras.calibracion.auto_k >}}. El equipo
+  eligió la receta más simple: un K-Means relativo a cada estación obliga a calcular la etiqueta ECA
+  aparte, en absoluto, y dos capas no se explican ni se defienden como un solo modelo. La simple es
+  estable (ARI {{< meta cifras.calibracion.ari_semillas >}} entre semillas y
+  {{< meta cifras.calibracion.ari_dias >}} por bloques de días), no aprende geografía (NMI con la
+  estación {{< meta cifras.calibracion.nmi_estacion >}}, por debajo de la línea base de
+  {{< meta cifras.calibracion.nmi_base >}}), tiene la silueta {{< meta cifras.calibracion.silueta_frase >}}
+  ({{< meta cifras.calibracion.silueta >}}) y su régimen alto coincide con el ECA: recoge el
+  {{< meta cifras.calibracion.recall >}} de las horas en que el promedio de 24 horas lo supera.
+
+{{< include generado/tablas/calibracion.md >}}
+
+**La receta final**, congelada en `configs/kmeans.json`, que Go lee sin decidir nada: features
+{{< meta cifras.kmeans.features >}}, sin log, nivel {{< meta cifras.kmeans.nivel >}},
+$k$ = {{< meta cifras.kmeans.k >}}, {{< meta cifras.kmeans.semillas >}} semillas desde
+{{< meta cifras.kmeans.semilla_base >}} y chunk de {{< meta cifras.kmeans.chunk >}} filas. Con solo
+PM2,5 y PM10 en su unidad, los tres regímenes son **niveles de aire** (bajo, medio y alto), que es
+lo que una alerta necesita. Ninguna variante cumplió el criterio de separar el ECA con pureza > 0,6:
+se dice y no se esconde. La fracción fina y la meteorología no son features: se describen por
+régimen. La hora, la estación y el mes tampoco lo son en ninguna variante: se usan después, para
+decir dónde y cuándo aparece cada régimen.
 
 {{< include generado/tablas/codo.md >}}
 
@@ -185,12 +209,12 @@ Falta `docs/diagramas/secuencia-iteracion.png` (lo genera `docs/diagramas/render
 Cada cluster es un **régimen**: una combinación típica de material particulado y meteorología. Su
 **perfil** es la media aritmética, en unidades originales, de las lecturas que lo forman: cada
 lectura se des-estandariza (z-score y log1p invertidos) y después se promedia
-(`kmeans/regimenes.go`). **No es el centroide des-estandarizado.** Con log1p, invertir el centroide
-da la media de los logaritmos llevada de vuelta, que se parece a una media geométrica y es menor
-que la media aritmética (desigualdad de Jensen); como el ECA se compara con una media aritmética, el
-centroide invertido subestimaría el nivel de cada régimen. Por eso el informe tiene una sola tabla
-de perfil (@tbl-regimenes) y los centroides se muestran solo en el espacio estandarizado en que
-corre el modelo (@tbl-centroides-z).
+(`kmeans/regimenes.go`). En general **no es el centroide des-estandarizado**: con log1p, invertir el
+centroide da la media de los logaritmos llevada de vuelta, que se parece a una media geométrica y es
+menor que la media aritmética (desigualdad de Jensen), y el ECA se compara con una media aritmética.
+En la receta final, sin log, los dos coinciden; el informe igual usa una sola tabla de perfil
+(@tbl-regimenes), calculada siempre como media de las lecturas, y muestra los centroides solo en el
+espacio estandarizado en que corre el modelo (@tbl-centroides-z).
 
 El régimen se etiqueta frente al ECA para aire (@tbl-eca): «excede el ECA» si su PM2,5 medio
 supera 50 µg/m³ o su PM10 medio supera 100 µg/m³. El ECA es un promedio de 24 horas; una lectura horaria alta no es un
@@ -234,7 +258,7 @@ bibliografía) antes de entregar.
 **Anticipación (diseñada aquí, medida en el TB2).** Para cada régimen, en una parte temporal de
 evaluación, se medirá la proporción de veces en que el promedio móvil de 24 horas de PM2,5 o PM10
 que sigue a la lectura terminó superando el ECA: un número por régimen («cuando una estación entra
-al régimen 4, el promedio de las 24 horas siguientes superó el ECA el X % de las veces»). Se compara
+al nivel alto, el promedio de las 24 horas siguientes superó el ECA el X % de las veces»). Se compara
 con dos referencias ingenuas: la misma proporción sin condicionar al régimen, y «la lectura actual ya
 supera el ECA». Eso es lo que el sistema puede avisar, y es la segunda mitad de la pregunta.
 

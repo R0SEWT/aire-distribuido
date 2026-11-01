@@ -72,39 +72,40 @@ Preguntas candidatas y lo que cada una exige del dato
 :::
 
 El resultado de cada candidata es el veredicto automático del notebook 01 sobre el CSV real; las
-mediciones que lo sostienen, con sus umbrales, están en `reports/eda_criba.md`. La lectura
-automática propone como base Q3 apoyada en Q1 y como diferencial Q5, con Q7 y Q9 como advertencias:
-falta validarla con el equipo.
+mediciones que lo sostienen, con sus umbrales, están en `reports/eda_criba.md`.
 
 ### La pregunta elegida
 
-::: {.callout-warning title="PENDIENTE"}
-La pregunta elegida el mar 03/11 (spec de la PC3, §12, abierta 1), en una sola frase que nombre la
-**base** y el **diferencial**, con la medición que la sostiene al lado. Propuesta de la spec: base =
-Q3 apoyada en Q1; diferencial = Q5 o Q2, la que el dato permita; Q7 y Q9 como advertencias. El
-borrador de abajo es el de `CLAUDE.md` y se reemplaza.
-:::
+La criba dejó como base **Q3 apoyada en Q1**: hay episodios sobre el ECA con los que estimar cuánto
+avisa cada régimen, y hay estaciones con PM horario suficiente para decir dónde y cuándo ocurren. Como
+diferencial, **Q5**, que solo permite una red como la de OEFA: hay estaciones vecinas, la más densa
+el grupo de Ventanilla y Mi Perú, en el Callao, con las que distinguir un episodio local, que apunta a
+una fuente fiscalizable, de uno de toda la zona. El equipo la adoptó el 01/11:
 
-> ¿En qué estaciones y a qué horas se concentran los episodios de PM2,5 y PM10 que superan el ECA
-> de aire, y con cuánta anticipación se podría avisar a la población cercana?
+> **¿En qué estaciones de OEFA y a qué horas el aire entra en el nivel alto de PM2,5/PM10, y con
+> cuánta anticipación eso avisa de un episodio que supera el ECA?** Y, como diferencial: ¿esos
+> episodios son locales o de toda la zona?
 
-La pregunta se responde por partes, una por entregable. Esta PC3 responde **dónde, cuándo y de qué
-tipo** son los episodios: los regímenes del K-Means, su etiqueta frente al ECA y su distribución por
-estación y hora (@sec-resultados-kmeans). **Con cuánta anticipación y con qué acierto** se puede
-avisar es la evaluación experimental del TB2: aquí solo se diseña (@sec-eca-inca).
+Tres advertencias van con ella: la cobertura, porque una zona sin estación no es una zona con aire
+limpio (@sec-cobertura); que los huecos del dato no esconden episodios (Q9, abajo); y que
+{{< meta cifras.limpieza.n_estaciones_sin_datos >}} de las {{< meta cifras.limpieza.n_estaciones >}}
+estaciones del archivo no tienen ninguna lectura horaria válida.
+
+La pregunta se responde por partes, una por entregable. Esta PC3 responde **dónde y cuándo** el aire
+entra en el nivel alto: los regímenes del K-Means, su etiqueta frente al ECA y su distribución por
+estación y hora (@sec-resultados-kmeans). **Con cuánta anticipación y con qué acierto** avisa es la
+evaluación experimental del TB2: aquí solo se diseña (@sec-eca-inca), igual que el análisis de
+episodios locales o de zona, que depende de que las estaciones vecinas tengan lecturas horarias a la
+vez; cuántas las tienen está en la @tbl-limpieza-estaciones.
 
 ### Lo que este dato no puede responder
 
-La criba descartó Q9: los huecos del dato no coinciden con los episodios (llegan después de horas de
-PM bajo), así que el dato no subestima los episodios por dejar de medir justo entonces; es una
-buena noticia, y se reporta como tal. Q1, Q4 y Q8 quedaron dudosas: con tan pocas estaciones
-completas durante un año, comparar la exposición anual entre lugares (Q4) mediría cobertura más que
-aire, y el contraste con SENAMHI (Q8) espera al TB2.
-
-::: {.callout-warning title="PENDIENTE"}
-Confirmar con el equipo, junto con la pregunta elegida (mar 03/11), qué candidatas se declaran
-fuera del alcance de este dato.
-:::
+La criba descartó Q9, y el resultado es favorable: los huecos del dato no coinciden con los episodios
+(llegan después de horas de PM bajo), así que el dato no subestima los episodios por dejar de medir
+justo entonces. Q1, Q4 y Q8 quedaron dudosas: con tan pocas estaciones completas durante un año,
+comparar la exposición anual entre lugares (Q4) mediría cobertura más que aire, y el contraste con
+SENAMHI (Q8) espera al TB2. Q1 entra solo como apoyo de la base, sin pedirle un año completo por
+estación.
 
 ## Advertencia de cobertura {#sec-cobertura}
 

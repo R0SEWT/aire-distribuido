@@ -27,9 +27,11 @@ Con {{< meta cifras.benchmark_cargador.w >}} workers, el cargador alcanza un spe
 y, con {{< meta cifras.benchmark_kmeans.w >}}, el K-Means uno de
 {{< meta cifras.benchmark_kmeans.speedup >}} (IC 95 % {{< meta cifras.benchmark_kmeans.speedup_ic >}}),
 con el mismo resultado bit a bit para cualquier número de workers. El diseño de la versión distribuida (coordinador y nodos por TCP, una barrera
-por iteración) queda listo para la PC4. En promedio, {{< meta cifras.regimenes.n_excede >}} de los
-{{< meta cifras.regimenes.n >}} regímenes exceden el ECA: los episodios existen pero son raros, y
-el régimen describe el aire típico de un lugar y una hora, no el episodio. La red cubre {{< meta cifras.limpieza.n_departamentos >}}
+por iteración) queda listo para la PC4. La receta, elegida con una calibración de
+{{< meta cifras.calibracion.n_corridas >}} corridas, usa solo PM2,5 y PM10, y sus tres regímenes son
+niveles de aire: el alto, el {{< meta cifras.alto.pct >}} de las horas, excede el ECA en promedio y
+se concentra de mañana en pocas estaciones ({{< meta cifras.alto.principales >}}). Es la primera
+mitad de la pregunta de impacto; cuánto anticipa ese nivel un episodio se mide en el TB2. La red cubre {{< meta cifras.limpieza.n_departamentos >}}
 departamentos, y el informe lo dice sin rodeos: una zona sin estación no es una zona con aire limpio.
 
 *Palabras clave:* calidad del aire, PM2,5, PM10, K-Means paralelo, Go, goroutines, worker pool,

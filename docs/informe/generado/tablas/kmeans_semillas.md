@@ -3,18 +3,18 @@
 ::: {#tbl-semillas tbl-colwidths="[11,15,13,14,11,14,12,10]"}
 | Semilla | Inercia | Iteraciones | Paro | Workers | k-means++ (ms) | Lloyd (ms) | Elegida |
 |---:|---:|---:|:---|---:|---:|---:|:---:|
-| 42 | 59 232,9 | 57 | tolerancia | 4 | 2,40 | 82,0 |  |
-| 43 | 59 232,9 | 43 | tolerancia | 5 | 3,62 | 60,6 |  |
-| 44 | 59 249,5 | 22 | tolerancia | 5 | 4,29 | 34,4 |  |
-| 45 | 59 249,5 | 21 | tolerancia | 5 | 3,98 | 29,4 |  |
-| 46 | 59 232,9 | 55 | tolerancia | 5 | 3,84 | 68,2 |  |
-| 47 | 59 232,8 | 21 | tolerancia | 5 | 2,29 | 29,1 | **sí** |
-| 48 | 59 232,9 | 48 | tolerancia | 4 | 3,90 | 68,2 |  |
-| 49 | 59 232,9 | 60 | tolerancia | 5 | 4,04 | 80,1 |  |
-| 50 | 59 232,9 | 37 | tolerancia | 5 | 2,31 | 50,8 |  |
-| 51 | 59 249,5 | 28 | tolerancia | 4 | 3,65 | 36,5 |  |
+| 42 | 49 658,4 | 24 | tolerancia | 4 | 1,46 | 29,2 | **sí** |
+| 43 | 49 658,4 | 38 | tolerancia | 5 | 3,17 | 34,9 |  |
+| 44 | 49 658,4 | 33 | tolerancia | 5 | 4,17 | 32,5 |  |
+| 45 | 49 658,4 | 43 | tolerancia | 4 | 2,42 | 51,7 |  |
+| 46 | 49 658,4 | 33 | tolerancia | 5 | 2,69 | 28,8 |  |
+| 47 | 49 658,4 | 34 | tolerancia | 5 | 1,45 | 31,1 |  |
+| 48 | 49 658,4 | 42 | tolerancia | 5 | 2,79 | 34,4 |  |
+| 49 | 49 658,4 | 29 | tolerancia | 5 | 3,23 | 26,0 |  |
+| 50 | 49 658,4 | 40 | tolerancia | 4 | 5,53 | 34,1 |  |
+| 51 | 49 658,4 | 39 | tolerancia | 5 | 3,72 | 25,1 |  |
 
 Arranques del K-Means: una corrida completa por semilla
 :::
 
-*Nota.* Fuente: `generado/kmeans.json`, escrito por `cmd/entrenar` (commit `53858a0`, 2026-11-01, máquina A019803). 10 semillas desde 42; criterio: menor inercia final; si empatan bit a bit, la semilla menor. Paralelismo por semillas: 3 corridas a la vez, con 5, 5, 4 workers cada una (14 en total). Los 10 arranques tardaron 197,4 ms de pared frente a 573,8 ms de la suma de sus corridas (2,9 corridas a la vez en promedio). ms_kmeanspp y ms_lloyd de cada arranque se miden con otras semillas corriendo a la vez y con los workers de su cupo: sirven para comparar semillas entre sí, no para speedup. El speedup del Lloyd concurrente lo mide cmd/benchmark. ms_kmeanspp es 0 si los centroides se leyeron del archivo. Centroides iniciales de k-means++: `reports/centroides_iniciales.json` (generados, sha256 `3e0b1a3986ef`), para que otra corrida parta de los mismos.
+*Nota.* Fuente: `generado/kmeans.json`, escrito por `cmd/entrenar` (commit `11cef5a`, 2026-11-01, máquina A019803). 10 semillas desde 42; criterio: menor inercia final; si empatan bit a bit, la semilla menor. Paralelismo por semillas: 3 corridas a la vez, con 5, 5, 4 workers cada una (14 en total). Los 10 arranques tardaron 129,2 ms de pared frente a 358,2 ms de la suma de sus corridas (2,8 corridas a la vez en promedio). ms_kmeanspp y ms_lloyd de cada arranque se miden con otras semillas corriendo a la vez y con los workers de su cupo: sirven para comparar semillas entre sí, no para speedup. El speedup del Lloyd concurrente lo mide cmd/benchmark. ms_kmeanspp es 0 si los centroides se leyeron del archivo. Centroides iniciales de k-means++: `reports/centroides_iniciales.json` (generados, sha256 `69338b94cc78`), para que otra corrida parta de los mismos.
