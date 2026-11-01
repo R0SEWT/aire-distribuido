@@ -1,0 +1,56 @@
+{
+  "cobertura.png": {
+    "sintetico": true,
+    "fuente": "limpieza.json (estaciones) y silver",
+    "notebook": "03_auditoria_figuras",
+    "fecha": "2026-11-01T01:00:19"
+  },
+  "codo.png": {
+    "sintetico": true,
+    "fuente": "codo.json (Go)",
+    "notebook": "03_auditoria_figuras",
+    "fecha": "2026-11-01T01:00:17"
+  },
+  "completitud.png": {
+    "sintetico": true,
+    "fuente": "bronze oefa_muestra.csv",
+    "notebook": "01_eda_criba",
+    "fecha": "2026-11-01T00:59:27"
+  },
+  "distribuciones.png": {
+    "sintetico": true,
+    "fuente": "bronze oefa_muestra.csv",
+    "notebook": "01_eda_criba",
+    "fecha": "2026-11-01T00:59:29"
+  },
+  "episodio.png": {
+    "sintetico": true,
+    "fuente": "silver y asignaciones (Go), SINT-A Lima Norte",
+    "notebook": "03_auditoria_figuras",
+    "fecha": "2026-11-01T01:00:16"
+  },
+  "perfiles.png": {
+    "sintetico": true,
+    "fuente": "regimenes.json y kmeans.json (Go)",
+    "notebook": "03_auditoria_figuras",
+    "fecha": "2026-11-01T01:00:13"
+  },
+  "regimen-estacion.png": {
+    "sintetico": true,
+    "fuente": "regimenes.json, por_estacion (Go)",
+    "notebook": "03_auditoria_figuras",
+    "fecha": "2026-11-01T01:00:15"
+  },
+  "regimen-hora.png": {
+    "sintetico": true,
+    "fuente": "regimenes.json, por_hora (Go)",
+    "notebook": "03_auditoria_figuras",
+    "fecha": "2026-11-01T01:00:14"
+  },
+  "speedup.png": {
+    "sintetico": true,
+    "fuente": "benchmark_cargador.json y benchmark_kmeans.json",
+    "notebook": "03_auditoria_figuras",
+    "fecha": "2026-11-01T01:00:18"
+  }
+}
