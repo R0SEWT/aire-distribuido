@@ -19,7 +19,7 @@ regímenes de scikit-learn, con una nota que lo dice. Estados de la auditoría: 
 (bug en Go o en Python); **AVISO** (no es un bug pero hay que mirarlo, p. ej. Go quedó en otro
 mínimo local); **OMITIDO**.
 
-Specs que implementan: `docs/superpowers/specs/2026-10-31-preguntas-candidatas.md` (01),
+Specs que implementan: `docs/specs/2026-10-31-preguntas-candidatas.md` (01),
 `2026-10-31-kmeans-calibracion-design.md` §1–§4 (02 y 03) y `2026-10-31-pc3-design.md` §4 y §9.
 
 ## Abrirlos en Colab
