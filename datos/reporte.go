@@ -1,12 +1,17 @@
 package datos
 
-import "time"
+import (
+	"time"
+
+	"github.com/R0SEWT/aire-distribuido/kmeans"
+)
 
 // ReporteLimpieza es reports/limpieza.json: la evidencia de limpieza del
 // informe. Todas las reglas aparecen, aun en cero.
 type ReporteLimpieza struct {
 	Entrada             string                      `json:"entrada"`
 	Bytes               int64                       `json:"bytes"`
+	Sha256              string                      `json:"sha256,omitempty"` // de la entrada; lo pone Anotar
 	Cabecera            []string                    `json:"cabecera"`
 	BOM                 bool                        `json:"bom"`
 	Delimitador         string                      `json:"delimitador"`
@@ -24,6 +29,9 @@ type ReporteLimpieza struct {
 	Chunk               int                         `json:"chunk"`
 	DuracionS           float64                     `json:"duracion_s"`
 	FasesS              map[string]float64          `json:"fases_s"`
+	// Procedencia (Anotar): máquina, Go y commit, y versión de cada config.
+	Metadatos *kmeans.Metadatos         `json:"metadatos,omitempty"`
+	Configs   map[string]VersionArchivo `json:"configs,omitempty"`
 }
 
 // ConteoLargas cuenta filas del CSV largo. Se cumple

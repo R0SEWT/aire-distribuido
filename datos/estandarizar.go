@@ -5,6 +5,8 @@ import (
 	"slices"
 	"sync"
 	"time"
+
+	"github.com/R0SEWT/aire-distribuido/kmeans"
 )
 
 // Dataset es el gold en memoria, con el mismo contrato que kmeans.Datos del TP:
@@ -38,6 +40,9 @@ type ReporteEstandarizacion struct {
 	PorEstacion map[string]EstadisticaEstacion `json:"por_estacion,omitempty"`
 	Ddof        int                            `json:"ddof"`
 	Chunk       int                            `json:"chunk"`
+	// Procedencia (Anotar): máquina, Go y commit, y versión de cada config.
+	Metadatos *kmeans.Metadatos         `json:"metadatos,omitempty"`
+	Configs   map[string]VersionArchivo `json:"configs,omitempty"`
 }
 
 // EstadisticaEstacion son la media y la desviación de una estación (nivel = estacion).

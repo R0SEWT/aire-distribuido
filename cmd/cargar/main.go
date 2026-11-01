@@ -23,6 +23,7 @@ import (
 	"text/tabwriter"
 
 	"github.com/R0SEWT/aire-distribuido/datos"
+	"github.com/R0SEWT/aire-distribuido/kmeans"
 )
 
 func main() {
@@ -81,6 +82,14 @@ func ejecutar(args []string, out io.Writer) error {
 	if err != nil {
 		return err
 	}
+	// Procedencia: los mismos metadatos que cmd/entrenar y la versión exacta
+	// de cada config, leída junto con ella.
+	proc := datos.Procedencia{Metadatos: kmeans.RecolectarMetadatos(), Configs: map[string]datos.VersionArchivo{}}
+	for nombre, ruta := range map[string]string{"limpieza": r.config, "kmeans": r.kmeans} {
+		if proc.Configs[nombre], err = datos.VersionDeArchivo(ruta); err != nil {
+			return err
+		}
+	}
 
 	op := datos.Opciones{Bloque: tamBloque, Chunk: *chunk}
 	var res *datos.Resultado
@@ -93,6 +102,16 @@ func ejecutar(args []string, out io.Writer) error {
 	}
 	if err != nil {
 		return err
+	}
+	// El sha256 de la entrada se calcula en una pasada aparte, después de la
+	// carga: dentro de ella competiría por CPU y disco con los workers y
+	// distorsionaría la duración y el benchmark. Con -bench, una sola vez.
+	if proc.Sha256Entrada, err = kmeans.Sha256Archivo(r.entrada); err != nil {
+		return err
+	}
+	res.Anotar(proc)
+	if bm != nil {
+		bm.Anotar(proc)
 	}
 
 	escritos, err := escribirSalidas(r, res, bm)
@@ -195,8 +214,16 @@ func imprimirResumen(out io.Writer, r rutas, provisional bool, res *datos.Result
 	fmt.Fprintf(out, "Cargador concurrente OEFA (parte A)\n\n")
 	tw := tabwriter.NewWriter(out, 0, 0, 2, ' ', 0)
 	fmt.Fprintf(tw, "entrada\t%s (%s bytes, delimitador %q, BOM %s)\n", l.Entrada, miles(l.Bytes), l.Delimitador, siNo(l.BOM))
-	fmt.Fprintf(tw, "config\t%s\n", r.config)
+	fmt.Fprintf(tw, "sha256\t%s\n", l.Sha256)
+	fmt.Fprintf(tw, "config\t%s (sha256 %s)\n", r.config, corto(l.Configs["limpieza"].Sha256))
 	fmt.Fprintf(tw, "receta\t%s\n", receta)
+	if m := l.Metadatos; m != nil {
+		sucio := ""
+		if m.ArbolSucio {
+			sucio = ", árbol sucio"
+		}
+		fmt.Fprintf(tw, "corrida\tcommit %s%s · %s · %s · %d CPU\n", corto(m.Commit), sucio, m.Maquina, m.VersionGo, m.CPUsLogicas)
+	}
 	fmt.Fprintf(tw, "paralelismo\t%d workers, %d bloques de %s bytes, chunk de %s filas\n",
 		l.Workers, l.Bloques, miles(l.BloqueBytes), miles(int64(l.Chunk)))
 	fmt.Fprintf(tw, "duración\t%.3f s (lectura, limpieza y pivot %.3f s; orden %.3f s; gold %.3f s)\n", l.DuracionS,
@@ -273,15 +300,21 @@ func imprimirResumen(out io.Writer, r rutas, provisional bool, res *datos.Result
 		fmt.Fprintf(out, "\nBenchmark (%d repeticiones intercaladas, mediana; base W=%d; %d CPU, %s, %s)\n",
 			bm.Repeticiones, bm.BaseWorkers, bm.CPUs, bm.Go, bm.Host)
 		tw = tabwriter.NewWriter(out, 0, 0, 2, ' ', tabwriter.AlignRight)
-		fmt.Fprintf(tw, "  W\tmediana_s\tspeedup\ttiempos_s\t\n")
+		fmt.Fprintf(tw, "  W\tmediana_s\tspeedup\trecortada_s\tspeedup [IC 95 %%]\ttiempos_s\t\n")
 		for _, m := range bm.Mediciones {
 			ts := make([]string, len(m.TiemposS))
 			for i, t := range m.TiemposS {
 				ts[i] = strconv.FormatFloat(t, 'f', 3, 64)
 			}
-			fmt.Fprintf(tw, "  %d\t%.3f\t%.2f\t%s\t\n", m.Workers, m.MedianaS, m.Speedup, strings.Join(ts, " "))
+			ic := "-"
+			if m.SpeedupIC != nil {
+				ic = fmt.Sprintf("%.2f [%.2f, %.2f]", m.SpeedupIC.Punto, m.SpeedupIC.Inferior, m.SpeedupIC.Superior)
+			}
+			fmt.Fprintf(tw, "  %d\t%.3f\t%.2f\t%.3f\t%s\t%s\t\n", m.Workers, m.MedianaS, m.Speedup, m.MediaRecortadaS, ic, strings.Join(ts, " "))
 		}
 		tw.Flush()
+		fmt.Fprintf(out, "  speedup = cociente de medianas; IC: medias recortadas (%.0f %% por extremo), bootstrap de %d réplicas\n",
+			100*bm.Protocolo.RecortePorExtremo, bm.Protocolo.ReplicasBootstrap)
 		fmt.Fprintf(out, "  silver y gold idénticos en todas las corridas: %s\n", siNo(bm.Identicos))
 	}
 
@@ -308,6 +341,17 @@ func conteos(m map[string]int64) string {
 		partes[i] = fmt.Sprintf("%s (%s)", n, miles(m[n]))
 	}
 	return strings.Join(partes, ", ")
+}
+
+// corto abrevia un hash a 12 caracteres para el resumen; el JSON lo trae completo.
+func corto(h string) string {
+	if len(h) > 12 {
+		return h[:12] + "…"
+	}
+	if h == "" {
+		return "-"
+	}
+	return h
 }
 
 func siNo(b bool) string {

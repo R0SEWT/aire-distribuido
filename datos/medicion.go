@@ -9,6 +9,8 @@ import (
 	"runtime"
 	"slices"
 	"time"
+
+	"github.com/R0SEWT/aire-distribuido/kmeans"
 )
 
 // Benchmark es reports/benchmark_cargador.json: tiempos de la carga completa
@@ -32,17 +34,38 @@ type Benchmark struct {
 	BaseWorkers  int        `json:"base_workers"`
 	Mediciones   []Medicion `json:"mediciones"`
 	Identicos    bool       `json:"identicos"`
+	// Agregados para el informe: sha256 de la entrada (calculado una vez,
+	// fuera de las mediciones), cómo se estima el IC del speedup, y la
+	// procedencia de la corrida.
+	Sha256    string                    `json:"sha256,omitempty"`
+	Protocolo ProtocoloSpeedup          `json:"protocolo"`
+	Metadatos *kmeans.Metadatos         `json:"metadatos,omitempty"`
+	Configs   map[string]VersionArchivo `json:"configs,omitempty"`
+}
+
+// ProtocoloSpeedup dice cómo se calcularon los dos speedups de cada medición,
+// con los nombres de campo del protocolo de cmd/benchmark.
+type ProtocoloSpeedup struct {
+	Speedup           string  `json:"speedup"`
+	SpeedupIC         string  `json:"speedup_ic"`
+	RecortePorExtremo float64 `json:"recorte_por_extremo"`
+	ReplicasBootstrap int     `json:"replicas_bootstrap"`
+	SemillaBootstrap  int64   `json:"semilla_bootstrap"`
 }
 
 // Medicion son las repeticiones de un W. Speedup es la mediana de la base
-// (el primer W de la lista) sobre la mediana de este W.
+// (el primer W de la lista) sobre la mediana de este W. SpeedupIC es el
+// cociente de medias recortadas con su intervalo bootstrap del 95 %, como el
+// campo speedup de cmd/benchmark (punto, inferior, superior, nivel).
 type Medicion struct {
-	Workers      int       `json:"workers"`
-	TiemposS     []float64 `json:"tiempos_s"`
-	MedianaS     float64   `json:"mediana_s"`
-	Speedup      float64   `json:"speedup"`
-	Sha256Silver string    `json:"sha256_silver"`
-	Sha256Gold   string    `json:"sha256_gold"`
+	Workers         int                       `json:"workers"`
+	TiemposS        []float64                 `json:"tiempos_s"`
+	MedianaS        float64                   `json:"mediana_s"`
+	Speedup         float64                   `json:"speedup"`
+	Sha256Silver    string                    `json:"sha256_silver"`
+	Sha256Gold      string                    `json:"sha256_gold"`
+	MediaRecortadaS float64                   `json:"media_recortada_s"`
+	SpeedupIC       *kmeans.IntervaloCociente `json:"speedup_ic,omitempty"`
 }
 
 // MedirCarga repite la carga reps veces para cada W de workers (0 =
@@ -130,8 +153,20 @@ func MedirCarga(ruta string, cfg ConfigLimpieza, rec Receta, workers []int, reps
 	for i := range bm.Mediciones {
 		bm.Mediciones[i].MedianaS = mediana(bm.Mediciones[i].TiemposS)
 	}
+	b := BootstrapPorDefecto
+	bm.Protocolo = ProtocoloSpeedup{
+		Speedup:           "mediana con la base / mediana con W (cociente de medianas)",
+		SpeedupIC:         "media recortada con la base / media recortada con W, IC bootstrap 95 % (kmeans.ICBootstrapCociente)",
+		RecortePorExtremo: b.Recorte,
+		ReplicasBootstrap: b.Replicas,
+		SemillaBootstrap:  b.Semilla,
+	}
 	for i := range bm.Mediciones {
-		bm.Mediciones[i].Speedup = bm.Mediciones[0].MedianaS / bm.Mediciones[i].MedianaS
+		m := &bm.Mediciones[i]
+		m.Speedup = bm.Mediciones[0].MedianaS / m.MedianaS
+		if m.SpeedupIC, m.MediaRecortadaS, err = speedupConIC(bm.Mediciones[0].TiemposS, m.TiemposS, b); err != nil {
+			return nil, nil, fmt.Errorf("benchmark: IC del speedup con W=%d: %w", m.Workers, err)
+		}
 	}
 	l := ultimo.Limpieza
 	bm.FilasLargas, bm.FilasAnchas = l.FilasLargas.Leidas, l.FilasAnchas.Total

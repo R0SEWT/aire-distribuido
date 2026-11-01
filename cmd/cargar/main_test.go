@@ -2,6 +2,8 @@ package main
 
 import (
 	"bytes"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"os"
 	"path/filepath"
@@ -10,9 +12,23 @@ import (
 	"testing"
 
 	"github.com/R0SEWT/aire-distribuido/datos"
+	"github.com/R0SEWT/aire-distribuido/kmeans"
 )
 
-const muestra = "../../data/sample/oefa_muestra.csv"
+const (
+	muestra       = "../../data/sample/oefa_muestra.csv"
+	sha256Muestra = "38fdecc55cb180f57665614326543b74db6ece281682728e6d146c68901c5b89"
+)
+
+func sha256De(t *testing.T, ruta string) string {
+	t.Helper()
+	b, err := os.ReadFile(ruta)
+	if err != nil {
+		t.Fatal(err)
+	}
+	s := sha256.Sum256(b)
+	return hex.EncodeToString(s[:])
+}
 
 // entorno arma una config por defecto y rutas de salida en un directorio temporal.
 func entorno(t *testing.T) (dir string, args []string) {
@@ -68,12 +84,37 @@ func TestCargarLaMuestra(t *testing.T) {
 	if !slices.Equal(est.Features, []string{"pm10", "fraccion_fina", "viento_velocidad", "humedad"}) || est.N == 0 {
 		t.Errorf("estandarización: %+v", est)
 	}
+	// Procedencia: sha256 de la entrada, metadatos de la corrida y versión de las configs.
+	if lim.Sha256 != sha256Muestra {
+		t.Errorf("sha256 de la entrada: %q, quiero %q", lim.Sha256, sha256Muestra)
+	}
+	shaConfig := sha256De(t, filepath.Join(dir, "limpieza.json"))
+	for nombre, p := range map[string]struct {
+		meta    *kmeans.Metadatos
+		configs map[string]datos.VersionArchivo
+	}{"limpieza": {lim.Metadatos, lim.Configs}, "estandarizacion": {est.Metadatos, est.Configs}} {
+		if p.meta == nil || p.meta.VersionGo == "" || p.meta.CPUsLogicas < 1 || p.meta.Momento.IsZero() {
+			t.Errorf("%s.json: metadatos incompletos: %+v", nombre, p.meta)
+		}
+		if c := p.configs["limpieza"]; !c.Existe || c.Sha256 != shaConfig || c.Ruta != filepath.Join(dir, "limpieza.json") {
+			t.Errorf("%s.json: versión de la config de limpieza %+v", nombre, c)
+		}
+		if c := p.configs["kmeans"]; c.Existe || c.Sha256 != "" {
+			t.Errorf("%s.json: kmeans.json no existe en la prueba: %+v", nombre, c)
+		}
+	}
+	crudo, _ := os.ReadFile(filepath.Join(dir, "reports", "limpieza.json"))
+	for _, clave := range []string{`"sha256":`, `"metadatos":`, `"version_go":`, `"cpus_logicas":`, `"arbol_sucio":`, `"configs":`} {
+		if !strings.Contains(string(crudo), clave) {
+			t.Errorf("limpieza.json no trae %s", clave)
+		}
+	}
 	gold, _ := os.ReadFile(filepath.Join(dir, "gold", "oefa_features.csv"))
 	if !strings.HasPrefix(string(gold), "estacion,fecha_hora,pm10,fraccion_fina,viento_velocidad,humedad\n") {
 		t.Errorf("cabecera del gold: %q", strings.SplitN(string(gold), "\n", 2)[0])
 	}
 	resumen := out.String()
-	for _, s := range []string{"leídas", "4,236", "duplicado_valor_distinto", "SINT-C Junín", "receta provisional", "Benceno"} {
+	for _, s := range []string{"leídas", "4,236", "duplicado_valor_distinto", "SINT-C Junín", "receta provisional", "Benceno", sha256Muestra} {
 		if !strings.Contains(resumen, s) {
 			t.Errorf("el resumen no menciona %q:\n%s", s, resumen)
 		}
@@ -90,6 +131,22 @@ func TestCargarConBenchmark(t *testing.T) {
 	leerJSON(t, filepath.Join(dir, "reports", "benchmark_cargador.json"), &bm)
 	if len(bm.Mediciones) != 2 || !bm.Identicos || len(bm.Mediciones[1].TiemposS) != 2 {
 		t.Errorf("benchmark: %+v", bm)
+	}
+	if bm.Sha256 != sha256Muestra || bm.Metadatos == nil || bm.Metadatos.VersionGo == "" {
+		t.Errorf("procedencia del benchmark: sha256 %q, metadatos %+v", bm.Sha256, bm.Metadatos)
+	}
+	for _, m := range bm.Mediciones {
+		if m.SpeedupIC == nil || m.SpeedupIC.Nivel != 0.95 {
+			t.Errorf("W=%d sin IC del speedup: %+v", m.Workers, m.SpeedupIC)
+		}
+	}
+	var lim datos.ReporteLimpieza
+	leerJSON(t, filepath.Join(dir, "reports", "limpieza.json"), &lim)
+	if lim.Sha256 != sha256Muestra {
+		t.Errorf("con -bench el sha256 de la entrada también va a limpieza.json: %q", lim.Sha256)
+	}
+	if !strings.Contains(out.String(), "IC 95") {
+		t.Errorf("el resumen tiene que traer el IC del speedup:\n%s", out.String())
 	}
 	if !strings.Contains(out.String(), "speedup") || !strings.Contains(out.String(), "idénticos") {
 		t.Errorf("el resumen tiene que traer la tabla del benchmark:\n%s", out.String())
