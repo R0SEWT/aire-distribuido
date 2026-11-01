@@ -11,7 +11,7 @@
     "arbol_sucio": false
   },
   "gold": {
-    "ruta": "/tmp/claude-1000/-home-rody-Code-personal-concurrente/abfa3006-394e-404e-9865-0a60a57d95b1/scratchpad/integ/data/gold/oefa_features.csv",
+    "ruta": "data/gold/oefa_features.csv",
     "sha256": "ddf7ae68f0711a76c719a7b2b18c37dde3aa475e8cbb76e2d3cf0ef3b993b5d3",
     "n": 617,
     "d": 4,
