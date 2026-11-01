@@ -1,0 +1,396 @@
+{
+  "placeholder": true,
+  "_nota": "PLACEHOLDER: cifras inventadas con el esquema que escribe cmd/entrenar. No describen los datos de OEFA y no se citan. Se reemplaza el archivo entero cuando cmd/entrenar escriba el real (ver docs/informe/README.md, «Contrato de los JSON»).",
+  "generado_por": "cmd/entrenar",
+  "momento": "2026-11-04T12:00:00-05:00",
+  "commit": "PLACEHOLDER",
+  "maquina": "PLACEHOLDER",
+  "version_go": "go1.26.x",
+  "eca": {
+    "pm2_5_24h": 50,
+    "pm10_24h": 100,
+    "unidad": "µg/m³",
+    "norma": "DS 003-2017-MINAM",
+    "regla": "un régimen excede si la media de PM2.5 de sus lecturas supera 50 o la de PM10 supera 100"
+  },
+  "unidades": {
+    "pm2_5": "µg/m³",
+    "pm10": "µg/m³",
+    "fraccion_fina": "",
+    "viento": "m/s",
+    "humedad": "%",
+    "temperatura": "°C"
+  },
+  "regimenes": [
+    {
+      "cluster": 0,
+      "nombre": "Fondo con viento",
+      "tamano": 92000,
+      "proporcion": 0.3428,
+      "perfil": {
+        "pm2_5": 9.9,
+        "pm10": 22.0,
+        "fraccion_fina": 0.45,
+        "viento": 3.56,
+        "humedad": 66.6,
+        "temperatura": 19.8
+      },
+      "etiqueta_eca": "no excede",
+      "banda_inca": "buena",
+      "por_hora": [
+        0.0165,
+        0.0151,
+        0.0143,
+        0.0151,
+        0.0165,
+        0.0189,
+        0.0227,
+        0.0281,
+        0.0355,
+        0.0445,
+        0.0545,
+        0.0645,
+        0.0732,
+        0.079,
+        0.0811,
+        0.079,
+        0.0732,
+        0.0645,
+        0.0545,
+        0.0445,
+        0.0355,
+        0.0281,
+        0.0227,
+        0.0189
+      ],
+      "por_estacion": [
+        {
+          "estacion": "PH-01",
+          "filas": 9200,
+          "proporcion": 0.1
+        },
+        {
+          "estacion": "PH-02",
+          "filas": 11040,
+          "proporcion": 0.12
+        },
+        {
+          "estacion": "PH-03",
+          "filas": 18400,
+          "proporcion": 0.2
+        },
+        {
+          "estacion": "PH-04",
+          "filas": 16560,
+          "proporcion": 0.18
+        },
+        {
+          "estacion": "PH-05",
+          "filas": 23000,
+          "proporcion": 0.25
+        },
+        {
+          "estacion": "PH-06",
+          "filas": 13800,
+          "proporcion": 0.15
+        }
+      ]
+    },
+    {
+      "cluster": 1,
+      "nombre": "Humedad nocturna",
+      "tamano": 71500,
+      "proporcion": 0.2664,
+      "perfil": {
+        "pm2_5": 17.2,
+        "pm10": 32.5,
+        "fraccion_fina": 0.53,
+        "viento": 1.36,
+        "humedad": 87.9,
+        "temperatura": 14.1
+      },
+      "etiqueta_eca": "no excede",
+      "banda_inca": "buena",
+      "por_hora": [
+        0.0645,
+        0.0732,
+        0.079,
+        0.0811,
+        0.079,
+        0.0732,
+        0.0645,
+        0.0545,
+        0.0445,
+        0.0355,
+        0.0281,
+        0.0227,
+        0.0189,
+        0.0165,
+        0.0151,
+        0.0143,
+        0.0151,
+        0.0165,
+        0.0189,
+        0.0227,
+        0.0281,
+        0.0355,
+        0.0445,
+        0.0545
+      ],
+      "por_estacion": [
+        {
+          "estacion": "PH-01",
+          "filas": 21450,
+          "proporcion": 0.3
+        },
+        {
+          "estacion": "PH-02",
+          "filas": 22880,
+          "proporcion": 0.32
+        },
+        {
+          "estacion": "PH-03",
+          "filas": 5720,
+          "proporcion": 0.08
+        },
+        {
+          "estacion": "PH-04",
+          "filas": 4290,
+          "proporcion": 0.06
+        },
+        {
+          "estacion": "PH-05",
+          "filas": 8580,
+          "proporcion": 0.12
+        },
+        {
+          "estacion": "PH-06",
+          "filas": 8580,
+          "proporcion": 0.12
+        }
+      ]
+    },
+    {
+      "cluster": 2,
+      "nombre": "Polvo diurno",
+      "tamano": 52300,
+      "proporcion": 0.1949,
+      "perfil": {
+        "pm2_5": 16.6,
+        "pm10": 51.8,
+        "fraccion_fina": 0.32,
+        "viento": 2.92,
+        "humedad": 63.6,
+        "temperatura": 21.5
+      },
+      "etiqueta_eca": "no excede",
+      "banda_inca": "buena",
+      "por_hora": [
+        0.0101,
+        0.0102,
+        0.0105,
+        0.0112,
+        0.013,
+        0.0167,
+        0.0237,
+        0.0352,
+        0.0515,
+        0.0712,
+        0.0908,
+        0.1054,
+        0.1109,
+        0.1054,
+        0.0908,
+        0.0712,
+        0.0515,
+        0.0352,
+        0.0237,
+        0.0167,
+        0.013,
+        0.0112,
+        0.0105,
+        0.0102
+      ],
+      "por_estacion": [
+        {
+          "estacion": "PH-01",
+          "filas": 4184,
+          "proporcion": 0.08
+        },
+        {
+          "estacion": "PH-02",
+          "filas": 3138,
+          "proporcion": 0.06
+        },
+        {
+          "estacion": "PH-03",
+          "filas": 11506,
+          "proporcion": 0.22
+        },
+        {
+          "estacion": "PH-04",
+          "filas": 10460,
+          "proporcion": 0.2
+        },
+        {
+          "estacion": "PH-05",
+          "filas": 7322,
+          "proporcion": 0.14
+        },
+        {
+          "estacion": "PH-06",
+          "filas": 15690,
+          "proporcion": 0.3
+        }
+      ]
+    },
+    {
+      "cluster": 3,
+      "nombre": "Combustión en calma",
+      "tamano": 38100,
+      "proporcion": 0.142,
+      "perfil": {
+        "pm2_5": 48.1,
+        "pm10": 72.9,
+        "fraccion_fina": 0.66,
+        "viento": 1.14,
+        "humedad": 79.3,
+        "temperatura": 15.2
+      },
+      "etiqueta_eca": "no excede",
+      "banda_inca": "moderada",
+      "por_hora": [
+        0.0712,
+        0.0515,
+        0.0352,
+        0.0237,
+        0.0167,
+        0.013,
+        0.0112,
+        0.0105,
+        0.0102,
+        0.0101,
+        0.0102,
+        0.0105,
+        0.0112,
+        0.013,
+        0.0167,
+        0.0237,
+        0.0352,
+        0.0515,
+        0.0712,
+        0.0908,
+        0.1054,
+        0.1109,
+        0.1054,
+        0.0908
+      ],
+      "por_estacion": [
+        {
+          "estacion": "PH-01",
+          "filas": 14478,
+          "proporcion": 0.38
+        },
+        {
+          "estacion": "PH-02",
+          "filas": 12954,
+          "proporcion": 0.34
+        },
+        {
+          "estacion": "PH-03",
+          "filas": 2286,
+          "proporcion": 0.06
+        },
+        {
+          "estacion": "PH-04",
+          "filas": 2286,
+          "proporcion": 0.06
+        },
+        {
+          "estacion": "PH-05",
+          "filas": 3048,
+          "proporcion": 0.08
+        },
+        {
+          "estacion": "PH-06",
+          "filas": 3048,
+          "proporcion": 0.08
+        }
+      ]
+    },
+    {
+      "cluster": 4,
+      "nombre": "Episodio de polvo",
+      "tamano": 14500,
+      "proporcion": 0.054,
+      "perfil": {
+        "pm2_5": 31.4,
+        "pm10": 120.6,
+        "fraccion_fina": 0.26,
+        "viento": 2.63,
+        "humedad": 58.4,
+        "temperatura": 22.7
+      },
+      "etiqueta_eca": "excede PM10",
+      "banda_inca": "moderada",
+      "por_hora": [
+        0.0067,
+        0.0067,
+        0.0067,
+        0.0067,
+        0.0069,
+        0.0075,
+        0.0094,
+        0.0142,
+        0.0248,
+        0.0439,
+        0.0719,
+        0.104,
+        0.1303,
+        0.1406,
+        0.1303,
+        0.104,
+        0.0719,
+        0.0439,
+        0.0248,
+        0.0142,
+        0.0094,
+        0.0075,
+        0.0069,
+        0.0067
+      ],
+      "por_estacion": [
+        {
+          "estacion": "PH-01",
+          "filas": 580,
+          "proporcion": 0.04
+        },
+        {
+          "estacion": "PH-02",
+          "filas": 435,
+          "proporcion": 0.03
+        },
+        {
+          "estacion": "PH-03",
+          "filas": 4350,
+          "proporcion": 0.3
+        },
+        {
+          "estacion": "PH-04",
+          "filas": 5220,
+          "proporcion": 0.36
+        },
+        {
+          "estacion": "PH-05",
+          "filas": 1015,
+          "proporcion": 0.07
+        },
+        {
+          "estacion": "PH-06",
+          "filas": 2900,
+          "proporcion": 0.2
+        }
+      ]
+    }
+  ]
+}

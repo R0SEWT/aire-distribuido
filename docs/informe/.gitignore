@@ -1,0 +1,11 @@
+# Salidas del render y del empaquetado: se regeneran con render.sh y empaquetar-pc3.sh.
+salida/
+.quarto/
+*_files/
+# Ningún .docx se versiona salvo la plantilla de estilos (la plantilla oficial del curso es del
+# docente y no entra al repo).
+*.docx
+!recursos/plantilla.docx
+
+/.quarto/
+**/*.quarto_ipynb

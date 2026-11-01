@@ -1,0 +1,101 @@
+<!-- f.4) Paralelización del cálculo: justificación, técnicas y patrones en Go. -->
+
+## Paralelización del cálculo en Go {#sec-paralelizacion}
+
+### Justificación del planteamiento
+
+Las dos etapas pesadas son **paralelas por datos**. En la carga, cada fila larga se parsea y se
+valida sin mirar las demás, y el pivot es una agregación por clave (estación, fecha-hora) que se
+puede hacer por partes y fusionar. En el K-Means, la asignación de cada punto es independiente y la
+actualización solo necesita sumas y conteos por cluster, que también se fusionan. En las dos, el
+trabajo se reparte en bloques y lo único secuencial es la fusión en orden y, en el K-Means, la
+actualización de $k$ centroides, que cuesta $O(k \cdot D)$ frente al $O(n \cdot k \cdot D)$ de la
+asignación. La ley de Amdahl acota el speedup por esa fracción secuencial [@amdahl1967]; la de
+Gustafson recuerda que con más datos la fracción paralela crece [@gustafson1988], que es el caso de
+este dataset.
+
+Se descartaron dos alternativas. Un `sync.Mutex` sobre un acumulador compartido serializaría el
+bucle caliente: cada punto tomaría el candado. Y repartir filas sueltas por un canal haría que el
+costo de la comunicación superara al del cálculo por fila. Por eso se reparten **bloques** y cada
+goroutine acumula en su propia memoria.
+
+### Parte A: cargador concurrente
+
+```
+lector ─ índices de bloques (B bytes, alineados a salto de línea) ─▶ canal
+                                                                       │
+              W workers: parsear, validar, acumular por clave  ◀───────┘
+                │  (índice de bloque, mapa parcial, conteos por regla)
+                ▼
+recolector: fusiona los mapas en orden de bloque ─▶ tabla ancha
+                │
+                ▼
+estandarización: Welford por chunk, fusión de Chan en orden ─▶ Dataset
+```
+
+- **Lector.** Parte el archivo en bloques de B = 64 MB alineados al siguiente salto de línea y
+  reparte sus índices por un canal. Cada worker lee su rango con `ReadAt` sobre el mismo `*os.File`,
+  que es seguro para uso concurrente: no hay una lectura secuencial compartida.
+- **Workers.** W goroutines. Cada una parsea sus filas, aplica las reglas 1 a 6 y acumula en **su
+  propio mapa** (estación, fecha-hora) → vector parcial, sin estado compartido. Entrega el mapa, los
+  conteos por regla y el índice del bloque.
+- **Recolector.** Fusiona los mapas **en orden de índice de bloque**: la misma clave puede aparecer en
+  varios bloques porque el CSV no viene ordenado por estación, y fusionar en orden hace que «el
+  primero» de un duplicado esté bien definido y que el resultado no dependa de W. Es el *reduce* del
+  pivot.
+- **Orden de salida.** El `Dataset` se vuelca ordenado por (estación, fecha-hora), nunca iterando el
+  mapa: la iteración de mapas en Go es aleatoria y rompería el determinismo aguas abajo.
+
+::: {.callout-warning title="PENDIENTE"}
+Confirmar contra el paquete `datos/` cuando se fusione (rama del cargador): tamaño de bloque,
+nombres de tipos y funciones, y si hubo que cambiar la partición por campos entrecomillados con
+saltos de línea (supuesto a verificar en el primer megabyte del CSV).
+:::
+
+### Parte B: K-Means paralelo
+
+Un **worker pool persistente**: las goroutines se crean una vez y atienden todas las iteraciones.
+En cada iteración, los centroides son de solo lectura y cada worker escribe solo el parcial (sumas
+$k \times D$, conteos $k$ e inercia) **del chunk que le tocó**; no hay `Mutex` en el bucle caliente.
+La única sincronización es la **barrera** al final de cada iteración (`sync.WaitGroup`). La
+reducción suma los parciales **en orden de chunk**, no de worker; por eso el resultado es idéntico
+bit a bit para cualquier número de workers con el chunk fijo.
+
+### Técnicas y patrones de Go
+
+La @tbl-patrones reúne los patrones que usa el sistema, dónde y por qué [@donovan2015; @benari2006].
+
+::: {#tbl-patrones tbl-colwidths="[20,25,33,22]"}
+| Patrón | Dónde | Por qué | Primitivas de Go |
+|:---|:---|:---|:---|
+| Pipeline (productor, canal, consumidores) | Cargador: lector → workers → recolector | Separa la lectura del cálculo y de la fusión | goroutines, `chan` |
+| Worker pool | Cargador y K-Means | Acota la concurrencia a W y reutiliza las goroutines entre iteraciones | goroutines, canal de trabajos |
+| Fan-out / fan-in en orden | Recolector y reducción del K-Means | Determinismo: el resultado no depende del orden de llegada | canal de resultados con índice de bloque o de chunk |
+| MapReduce | Pivot de la carga y sumas parciales del K-Means | La agregación es asociativa: se calcula por partes y se fusiona | mapas y arreglos por worker |
+| Confinamiento (acumuladores privados) | Cada worker | Sin estado compartido no hay carrera ni candado en el bucle caliente | memoria propia de cada goroutine |
+| Barrera | Fin de cada iteración del K-Means | Ningún centroide se actualiza mientras alguien lo lee | `sync.WaitGroup` |
+| Lectura posicional concurrente | Lector del CSV | Varias goroutines leen el mismo archivo sin un cursor compartido | `(*os.File).ReadAt` |
+| Reducción numéricamente estable | Estandarización | Media y varianza por chunk, fusionables y exactas al redondeo | Welford y Chan |
+| Coordinador y trabajadores por mensajes | Diseño distribuido (PC4) | Los nodos no comparten memoria: solo intercambian centroides y parciales | `net` (TCP), `encoding/json` |
+
+Patrones de concurrencia del sistema y dónde se usan
+:::
+
+### Ausencia de condiciones de carrera y determinismo
+
+Toda prueba corre con `go test -race`, en la laptop y en la integración continua: sin el detector,
+un test que pasa no dice nada sobre una sección crítica. Además del detector, el diseño hace que las
+carreras no puedan existir (cada goroutine escribe solo en su memoria y los datos compartidos son de
+solo lectura durante la fase paralela), y las pruebas fijan tres equivalencias:
+
+- **Bit a bit para cualquier W**, con el bloque y el chunk fijos: el mismo archivo con W = 1 y W = 8
+  da un `Dataset` idéntico, y el K-Means da los mismos centroides.
+- **Con tolerancia** contra la versión secuencial y entre distinto número de nodos, porque ahí cambia
+  el árbol de suma.
+- **Conservación**: filas leídas = procesadas + descartadas por regla, en la muestra versionada.
+
+::: {.callout-warning title="PENDIENTE"}
+Los nombres reales de esas pruebas en `datos/` y `kmeans/` (del TP vienen
+`TestConcurrenteDaElMismoResultadoParaCualquierP` y
+`TestConcurrenteEquivaleAlSecuencialConTolerancia`), en la tabla de la @sec-evidencias.
+:::

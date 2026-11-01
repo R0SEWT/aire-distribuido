@@ -1,0 +1,128 @@
+<!-- d) Descripción del problema y motivación. -->
+
+# Descripción del problema y motivación
+
+## La calidad del aire como problema de salud
+
+El material particulado se clasifica por el diámetro de sus partículas: PM10 (menos de 10 µm) y
+PM2,5 (menos de 2,5 µm), la fracción fina, que llega más hondo en el sistema respiratorio. En el
+Perú, el Decreto Supremo N.° 003-2017-MINAM fija los Estándares de Calidad Ambiental (ECA) para
+aire: 50 µg/m³ de PM2,5 y 100 µg/m³ de PM10 como promedio de 24 horas, que no deben excederse más de
+siete veces al año [@minam2017eca]. La Resolución Ministerial N.° 181-2016-MINAM define el Índice de
+Calidad del Aire (INCA), que traduce las concentraciones a cuatro bandas (buena, moderada, mala y
+umbral de cuidado) para comunicarlas a la población [@minam2016inca]. Ver la @sec-eca-inca.
+
+::: {.callout-warning title="PENDIENTE"}
+Un párrafo sobre el efecto en la salud (enfermedad respiratoria, población vulnerable) con una
+fuente citable: OMS o MINSA, agregada a `referencias.bib` con su DOI o URL oficial. Sin cifras de
+salud que no tengan fuente.
+:::
+
+## El dato: la red de vigilancia de OEFA
+
+OEFA publica en la Plataforma Nacional de Datos Abiertos la vigilancia continua de la calidad del
+aire de sus estaciones, con licencia Open Data Commons Attribution [@oefa2026aire]. Cada estación
+mide meteorología (presión, precipitación, temperatura, humedad, viento, radiación), material
+particulado y gases. El archivo viene en **formato largo**: cada fila es un parámetro de una
+estación en una fecha y hora, con su valor y su periodo, de modo que una hora de una estación con
+doce parámetros ocupa doce filas.
+
+Ese formato decide dos cosas del informe. La carga de más de un millón de registros que pide el
+enunciado se cumple sobre las filas largas; el modelo, en cambio, trabaja sobre filas anchas (una
+por estación y hora), que son menos. Por eso se reportan siempre los dos números (@sec-limpieza).
+
+Las estaciones de OEFA acompañan su función de fiscalización: están donde hay una actividad que
+vigilar, no repartidas para describir el aire de todo el país. El dato describe el aire **alrededor
+de lo que OEFA vigila**, y cualquier respuesta que salga de aquí hereda esa condición.
+
+::: {.callout-warning title="PENDIENTE"}
+Confirmar con el EDA (notebook 01) cuántas estaciones trae el CSV, dónde están y junto a qué
+actividad, y el rango de fechas. Sale de `reports/eda_criba.md` y de
+`generado/tablas/limpieza_estaciones.md`. La ficha del portal habla de 34 estaciones: decir si el
+archivo coincide.
+:::
+
+## La pregunta de impacto social {#sec-pregunta}
+
+### Cómo se eligió: una criba con el EDA
+
+El enunciado pide una pregunta que importe a personas fuera de la universidad, documentada desde el
+inicio. No se fijó a ciegas: antes de abrir el dato se listaron nueve preguntas candidatas, cada una
+con lo que exige del dato para ser respondible, y el análisis exploratorio funcionó como **criba**.
+La @tbl-candidatas las resume; las mediciones de la criba están en `reports/eda_criba.md`.
+
+::: {#tbl-candidatas tbl-colwidths="[6,40,34,20]"}
+| N.º | Pregunta candidata | Qué exige del dato | Resultado de la criba |
+|:---|:---|:---|:---|
+| Q1 | ¿Cuándo y dónde se concentran los episodios que exceden el ECA, y con qué meteorología llegan? | PM2,5 o PM10 horarios con buena completitud y meteorología en las mismas estaciones; al menos un año | PENDIENTE |
+| Q2 | ¿De qué está hecho cada episodio: combustión o polvo (fracción fina PM2,5/PM10)? | PM2,5 y PM10 simultáneos en la misma estación y hora | PENDIENTE |
+| Q3 | ¿Con cuánta anticipación se puede avisar? | Series continuas por estación y suficientes episodios para estimar proporciones | PENDIENTE |
+| Q4 | ¿Cuánto del año respira fuera del ECA la población cercana a cada estación? | Completitud alta y parecida entre estaciones | PENDIENTE |
+| Q5 | ¿Los episodios son regionales o locales? | Varias estaciones cercanas entre sí con datos simultáneos | PENDIENTE |
+| Q6 | ¿Los gases tienen la firma horaria de una fuente industrial? | SO2, NO2 o CO con completitud en las estaciones industriales | PENDIENTE |
+| Q7 | ¿Qué parte del país tiene una estación cerca? | Coordenadas de las estaciones | Entra siempre, como advertencia (@sec-cobertura) |
+| Q8 | ¿Las estaciones de OEFA ven lo mismo que las de SENAMHI en Lima? | Estaciones de ambas redes a pocos kilómetros, mismo periodo | Se difiere al TB2 |
+| Q9 | ¿Los huecos del dato coinciden con los episodios? | Marcas de tiempo completas para contar huecos | PENDIENTE |
+
+Preguntas candidatas y lo que cada una exige del dato
+:::
+
+::: {.callout-warning title="PENDIENTE"}
+Llenar la última columna con el resultado de cada medición de la criba (completitud estación ×
+parámetro, huecos, frecuencia de horas sobre el ECA, simultaneidad PM2,5/PM10, distancias entre
+estaciones, ciclos horarios), citando la cifra desde `reports/eda_criba.md`. Lo hace quien haga el
+EDA (lun 02/11).
+:::
+
+### La pregunta elegida
+
+::: {.callout-warning title="PENDIENTE"}
+La pregunta elegida el mar 03/11 (spec de la PC3, §12, abierta 1), en una sola frase que nombre la
+**base** y el **diferencial**, con la medición que la sostiene al lado. Propuesta de la spec: base =
+Q3 apoyada en Q1; diferencial = Q5 o Q2, la que el dato permita; Q7 y Q9 como advertencias. El
+borrador de abajo es el de `CLAUDE.md` y se reemplaza.
+:::
+
+> ¿En qué estaciones y a qué horas se concentran los episodios de PM2,5 y PM10 que superan el ECA
+> de aire, y con cuánta anticipación se podría avisar a la población cercana?
+
+La pregunta se responde por partes, una por entregable. Esta PC3 responde **dónde, cuándo y de qué
+tipo** son los episodios: los regímenes del K-Means, su etiqueta frente al ECA y su distribución por
+estación y hora (@sec-resultados-kmeans). **Con cuánta anticipación y con qué acierto** se puede
+avisar es la evaluación experimental del TB2: aquí solo se diseña (@sec-eca-inca).
+
+### Lo que este dato no puede responder
+
+::: {.callout-warning title="PENDIENTE"}
+Las candidatas que no pasaron la criba, cada una con la medición que la descartó. También es un
+hallazgo: dice qué no se puede preguntarle a este dato.
+:::
+
+## Advertencia de cobertura {#sec-cobertura}
+
+::: {.callout-important title="Una zona sin estación no es una zona con aire limpio"}
+El dato tiene {{< meta cifras.limpieza.n_estaciones >}} estaciones en
+{{< meta cifras.limpieza.n_departamentos >}} departamentos. Donde no hay estación no hay dato, y la
+ausencia de dato no dice nada sobre el aire. Ningún mapa, tabla o alerta de este sistema puede
+leerse como «aquí el aire es bueno» fuera del entorno de una estación.
+:::
+
+{{< include generado/tablas/cobertura.md >}}
+
+Esta advertencia no es un pie de página: es la responsabilidad ética del caso (ABET SO4). Un sistema
+de alertas que solo ve {{< meta cifras.limpieza.n_estaciones >}} puntos y no lo dice puede dejar sin aviso, con apariencia de normalidad, a
+la mayoría del territorio. Por eso acompaña a cualquier resultado de este informe y al mapa del TB2.
+
+## Motivación del enfoque
+
+El caso 10 sugiere K-Means o redes neuronales para «clustering y predicción masiva de PM2,5/PM10
+para alertas tempranas». Se eligió el K-Means paralelo porque el grupo ya tiene uno probado: el del
+Trabajo Parcial, en Go, con equivalencia bit a bit entre workers probada con `-race`
+[@vilchez2026tp]. Y porque su versión distribuida es exactamente el patrón que pide el enunciado:
+cada nodo calcula sumas parciales de su partición y el coordinador recalcula los centroides en cada
+iteración.
+
+Hay que decir con honestidad qué puede y qué no puede hacer: el K-Means **no pronostica**, clasifica
+el régimen en que está una estación ahora. Llamar «alerta temprana» a esa clasificación sin decir qué
+anticipa ni con qué tasa de acierto sería engañoso. La alerta sale del régimen más los umbrales del
+ECA, y cuánto anticipa cada régimen se mide en el TB2.

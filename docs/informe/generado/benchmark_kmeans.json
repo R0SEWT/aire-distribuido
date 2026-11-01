@@ -1,0 +1,277 @@
+{
+  "placeholder": true,
+  "_nota": "PLACEHOLDER: cifras inventadas con el esquema que escribe cmd/benchmark -parte kmeans. No describen los datos de OEFA y no se citan. Se reemplaza el archivo entero cuando cmd/benchmark -parte kmeans escriba el real (ver docs/informe/README.md, «Contrato de los JSON»).",
+  "generado_por": "cmd/benchmark -parte kmeans",
+  "metadatos": {
+    "momento": "2026-11-04T12:00:00-05:00",
+    "commit": "PLACEHOLDER",
+    "maquina": "PLACEHOLDER",
+    "version_go": "go1.26.x",
+    "gomaxprocs": 11,
+    "cpus_logicas": 11,
+    "arbol_sucio": false
+  },
+  "protocolo": {
+    "repeticiones": 5,
+    "calentamiento": 1,
+    "estadistico": "mediana",
+    "referencia": "secuencial",
+    "unidad_chunk": "filas",
+    "iteraciones_fijas": 10,
+    "k": 5,
+    "semilla_kmeanspp": 2024,
+    "replicas_bootstrap": 2000,
+    "nivel_ic": 0.95,
+    "semilla": 7
+  },
+  "datos": {
+    "ruta": "data/gold/PLACEHOLDER.csv",
+    "n": 268400,
+    "d": 4,
+    "sha256": "PLACEHOLDER"
+  },
+  "resultados": [
+    {
+      "modo": "secuencial",
+      "workers": 1,
+      "chunk": null,
+      "repeticiones": 5,
+      "tiempos_s": [
+        2.7974,
+        2.8286,
+        2.84,
+        2.8599,
+        2.8996
+      ],
+      "mediana_s": 2.84,
+      "speedup": {
+        "punto": 1.0,
+        "ic_inferior": 0.982,
+        "ic_superior": 1.017,
+        "nivel": 0.95
+      },
+      "eficiencia": 1.0,
+      "ms_por_iteracion": 284.0
+    },
+    {
+      "modo": "concurrente",
+      "workers": 1,
+      "chunk": 1000,
+      "repeticiones": 5,
+      "tiempos_s": [
+        2.9747,
+        3.0079,
+        3.02,
+        3.0411,
+        3.0834
+      ],
+      "mediana_s": 3.02,
+      "speedup": {
+        "punto": 0.9404,
+        "ic_inferior": 0.9235,
+        "ic_superior": 0.9564,
+        "nivel": 0.95
+      },
+      "eficiencia": 0.9404,
+      "ms_por_iteracion": 302.0
+    },
+    {
+      "modo": "concurrente",
+      "workers": 2,
+      "chunk": 1000,
+      "repeticiones": 5,
+      "tiempos_s": [
+        1.5563,
+        1.5737,
+        1.58,
+        1.5911,
+        1.6132
+      ],
+      "mediana_s": 1.58,
+      "speedup": {
+        "punto": 1.7975,
+        "ic_inferior": 1.7651,
+        "ic_superior": 1.828,
+        "nivel": 0.95
+      },
+      "eficiencia": 0.8987,
+      "ms_por_iteracion": 158.0
+    },
+    {
+      "modo": "concurrente",
+      "workers": 4,
+      "chunk": 1000,
+      "repeticiones": 5,
+      "tiempos_s": [
+        0.8471,
+        0.8566,
+        0.86,
+        0.866,
+        0.8781
+      ],
+      "mediana_s": 0.86,
+      "speedup": {
+        "punto": 3.3023,
+        "ic_inferior": 3.2429,
+        "ic_superior": 3.3585,
+        "nivel": 0.95
+      },
+      "eficiencia": 0.8256,
+      "ms_por_iteracion": 86.0
+    },
+    {
+      "modo": "concurrente",
+      "workers": 8,
+      "chunk": 1000,
+      "repeticiones": 5,
+      "tiempos_s": [
+        0.5122,
+        0.5179,
+        0.52,
+        0.5236,
+        0.5309
+      ],
+      "mediana_s": 0.52,
+      "speedup": {
+        "punto": 5.4615,
+        "ic_inferior": 5.3632,
+        "ic_superior": 5.5544,
+        "nivel": 0.95
+      },
+      "eficiencia": 0.6827,
+      "ms_por_iteracion": 52.0
+    },
+    {
+      "modo": "concurrente",
+      "workers": 11,
+      "chunk": 1000,
+      "repeticiones": 5,
+      "tiempos_s": [
+        0.4629,
+        0.4681,
+        0.47,
+        0.4733,
+        0.4799
+      ],
+      "mediana_s": 0.47,
+      "speedup": {
+        "punto": 6.0426,
+        "ic_inferior": 5.9338,
+        "ic_superior": 6.1453,
+        "nivel": 0.95
+      },
+      "eficiencia": 0.5493,
+      "ms_por_iteracion": 47.0
+    },
+    {
+      "modo": "concurrente",
+      "workers": 1,
+      "chunk": 10000,
+      "repeticiones": 5,
+      "tiempos_s": [
+        2.8664,
+        2.8984,
+        2.91,
+        2.9304,
+        2.9711
+      ],
+      "mediana_s": 2.91,
+      "speedup": {
+        "punto": 0.9759,
+        "ic_inferior": 0.9584,
+        "ic_superior": 0.9925,
+        "nivel": 0.95
+      },
+      "eficiencia": 0.9759,
+      "ms_por_iteracion": 291.0
+    },
+    {
+      "modo": "concurrente",
+      "workers": 2,
+      "chunk": 10000,
+      "repeticiones": 5,
+      "tiempos_s": [
+        1.4676,
+        1.484,
+        1.49,
+        1.5004,
+        1.5213
+      ],
+      "mediana_s": 1.49,
+      "speedup": {
+        "punto": 1.906,
+        "ic_inferior": 1.8717,
+        "ic_superior": 1.9384,
+        "nivel": 0.95
+      },
+      "eficiencia": 0.953,
+      "ms_por_iteracion": 149.0
+    },
+    {
+      "modo": "concurrente",
+      "workers": 4,
+      "chunk": 10000,
+      "repeticiones": 5,
+      "tiempos_s": [
+        0.7782,
+        0.7868,
+        0.79,
+        0.7955,
+        0.8066
+      ],
+      "mediana_s": 0.79,
+      "speedup": {
+        "punto": 3.5949,
+        "ic_inferior": 3.5302,
+        "ic_superior": 3.6561,
+        "nivel": 0.95
+      },
+      "eficiencia": 0.8987,
+      "ms_por_iteracion": 79.0
+    },
+    {
+      "modo": "concurrente",
+      "workers": 8,
+      "chunk": 10000,
+      "repeticiones": 5,
+      "tiempos_s": [
+        0.4531,
+        0.4582,
+        0.46,
+        0.4632,
+        0.4697
+      ],
+      "mediana_s": 0.46,
+      "speedup": {
+        "punto": 6.1739,
+        "ic_inferior": 6.0628,
+        "ic_superior": 6.2789,
+        "nivel": 0.95
+      },
+      "eficiencia": 0.7717,
+      "ms_por_iteracion": 46.0
+    },
+    {
+      "modo": "concurrente",
+      "workers": 11,
+      "chunk": 10000,
+      "repeticiones": 5,
+      "tiempos_s": [
+        0.4038,
+        0.4084,
+        0.41,
+        0.4129,
+        0.4186
+      ],
+      "mediana_s": 0.41,
+      "speedup": {
+        "punto": 6.9268,
+        "ic_inferior": 6.8021,
+        "ic_superior": 7.0446,
+        "nivel": 0.95
+      },
+      "eficiencia": 0.6297,
+      "ms_por_iteracion": 41.0
+    }
+  ]
+}

@@ -1,0 +1,38 @@
+{
+  "placeholder": true,
+  "_nota": "PLACEHOLDER: cifras inventadas con el esquema que escribe cmd/cargar. No describen los datos de OEFA y no se citan. Se reemplaza el archivo entero cuando cmd/cargar escriba el real (ver docs/informe/README.md, «Contrato de los JSON»).",
+  "generado_por": "cmd/cargar",
+  "momento": "2026-11-04T12:00:00-05:00",
+  "commit": "PLACEHOLDER",
+  "maquina": "PLACEHOLDER",
+  "version_go": "go1.26.x",
+  "receta": "configs/kmeans.json",
+  "nivel": "absoluto",
+  "n": 268400,
+  "features": [
+    {
+      "feature": "pm10",
+      "log1p": true,
+      "media": 3.62,
+      "desv": 0.71
+    },
+    {
+      "feature": "fraccion_fina",
+      "log1p": false,
+      "media": 0.47,
+      "desv": 0.16
+    },
+    {
+      "feature": "viento",
+      "log1p": false,
+      "media": 2.35,
+      "desv": 1.42
+    },
+    {
+      "feature": "humedad",
+      "log1p": false,
+      "media": 74.8,
+      "desv": 14.9
+    }
+  ]
+}

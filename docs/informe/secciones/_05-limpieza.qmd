@@ -1,0 +1,122 @@
+<!-- f.2) Limpieza y análisis de datos: procedimiento y evidencias. -->
+
+## Limpieza y análisis de datos {#sec-limpieza}
+
+### Procedimiento
+
+La limpieza la hace el cargador concurrente de Go (parte A, @sec-paralelizacion) en una sola
+pasada sobre el CSV: cada worker aplica las reglas 1 a 6 a las filas largas de su bloque, el
+recolector pivota a filas anchas (regla 7) y la completitud (regla 8) decide qué horas-estación
+entran al modelo. Cada regla cuenta lo que descarta o marca, y esos conteos son la evidencia de esta
+sección. La @tbl-reglas da el criterio de cada regla; los umbrales (unidades, centinelas y rangos
+físicos de las reglas 3, 4 y 6) no están en el código sino en `configs/limpieza.json`, para cerrarlos
+con el EDA sin tocar las pruebas.
+
+::: {#tbl-reglas tbl-colwidths="[6,60,34]"}
+| N.º | Regla | Motivo |
+|:---|:---|:---|
+| 1 | Solo filas con `Periodo` horario; los promedios diarios o mensuales se descartan | La unidad de análisis es la lectura horaria |
+| 2 | Fecha y hora parseables, en hora local de Lima (UTC−5); fuera del rango del dataset, se descarta | Evitar basura histórica |
+| 3 | Valor numérico; negativos (salvo temperatura) y centinelas del equipo se descartan | Lectura inválida del sensor |
+| 4 | Fuera del rango físico del parámetro, se descarta y se cuenta por parámetro | Rango del equipo |
+| 5 | Duplicados exactos (estación, parámetro, fecha-hora): se conserva el primero en orden de archivo; con valor distinto, se marcan | Reenvíos del sistema de captura |
+| 6 | Una sola unidad por parámetro; lo que venga en otra se convierte | Comparabilidad entre estaciones |
+| 7 | Pivot: una fila ancha por (estación, fecha-hora); parámetro faltante, NaN | Es la unidad del modelo |
+| 8 | Completitud: una fila ancha entra al modelo solo si tiene todas las features de la receta | El K-Means no admite NaN |
+| 9 | Coordenadas UTM a latitud y longitud, una vez por estación; no son features | Va en el TB2, con el mapa |
+
+Reglas de limpieza y su motivo
+:::
+
+::: {.callout-warning title="PENDIENTE"}
+Los umbrales concretos de las reglas 3, 4 y 6 (centinelas, rango físico y unidad de cada
+parámetro), citados desde `configs/limpieza.json` cuando el EDA los cierre (mar 03/11). Lo ideal es
+que `tablas.py` los lea de ahí y genere la tabla, igual que las demás.
+:::
+
+### Evidencias de la limpieza
+
+La conservación se verifica en filas largas: de las {{< meta cifras.limpieza.filas_largas_leidas >}}
+filas leídas, {{< meta cifras.limpieza.filas_largas_procesadas >}} pasaron las reglas y
+{{< meta cifras.limpieza.filas_largas_descartadas >}} ({{< meta cifras.limpieza.pct_descartadas >}})
+se descartaron (@tbl-limpieza-resumen). El pivot dejó {{< meta cifras.limpieza.filas_anchas >}}
+filas anchas, de las cuales {{< meta cifras.limpieza.filas_completas >}}
+({{< meta cifras.limpieza.pct_completas >}}) tienen todas las features y entran al modelo. La
+@tbl-limpieza-reglas desglosa los descartes por regla y la @tbl-limpieza-estaciones, por estación.
+
+{{< include generado/tablas/limpieza_resumen.md >}}
+
+{{< include generado/tablas/limpieza_reglas.md >}}
+
+{{< include generado/tablas/limpieza_estaciones.md >}}
+
+![Ejecución de `cmd/cargar` sobre el CSV completo: conteos por regla y conservación](capturas/cargar.png){#fig-captura-cargar width=16cm}
+
+:::: {si-falta="capturas/cargar.png"}
+::: {.callout-warning title="PENDIENTE"}
+Captura real de la terminal con `go run ./cmd/cargar` sobre el CSV completo (en gorgo), con el
+comando a la vista y la salida de conteos. Va en `docs/informe/capturas/cargar.png`. Ajustar el
+comando al que tenga `cmd/cargar` cuando se fusione.
+:::
+::::
+
+::: {.callout-warning title="PENDIENTE"}
+Un párrafo que interprete los conteos: qué regla pesa más y por qué (¿promedios no horarios?,
+¿centinelas de un equipo?), qué estaciones quedan con pocas horas completas y qué significa eso para
+la pregunta. Con las cifras de `generado/cifras.yml`.
+:::
+
+### Análisis exploratorio
+
+El análisis exploratorio se hizo en el notebook 01 (Colab) sobre la capa silver. Su primer objetivo
+fue la criba de preguntas (@sec-pregunta); el segundo, decidir las features: se prefiere **menos
+features con más estaciones** a más features con pocas estaciones.
+
+![Completitud por estación y parámetro: proporción de horas con dato](generado/figuras/completitud.png){#fig-completitud width=16cm}
+
+:::: {si-falta="generado/figuras/completitud.png"}
+::: {.callout-warning title="PENDIENTE"}
+Heatmap estación × parámetro de completitud. Lo dibuja el notebook 01 en
+`docs/informe/generado/figuras/completitud.png`.
+:::
+::::
+
+![Distribución de PM2,5 y PM10 por estación, en escala logarítmica](generado/figuras/distribuciones.png){#fig-distribuciones width=16cm}
+
+:::: {si-falta="generado/figuras/distribuciones.png"}
+::: {.callout-warning title="PENDIENTE"}
+Distribuciones de PM2,5 y PM10 (escala log, con las líneas del ECA). Las dibuja el notebook 01 en
+`docs/informe/generado/figuras/distribuciones.png`.
+:::
+::::
+
+::: {.callout-warning title="PENDIENTE"}
+Hallazgos del EDA en prosa, con cifras de `reports/eda_criba.md`: rango de fechas y años completos,
+huecos, frecuencia de horas sobre el ECA, proporción de lecturas con PM2,5 > PM10
+({{< meta cifras.limpieza.violaciones_pm >}} en la carga), ciclo diario. Y el conjunto de features
+que deja la completitud.
+:::
+
+### Estandarización
+
+Las features de la receta se estandarizan con z-score antes del K-Means, para que ninguna domine la
+distancia euclídea por su escala. Los contaminantes pasan antes por log1p: PM2,5 y PM10 tienen colas
+largas y, sin el logaritmo, una lectura extrema pesa más que mil normales; con él, la distancia
+compara razones y no diferencias. La media y la desviación se calculan sobre la tabla ancha ya
+deduplicada y filtrada por completitud, para que sean las de la matriz que ve el modelo. No se usa
+la fórmula $\sum x^2 - (\sum x)^2/n$, que cancela cuando la media es grande frente a la desviación
+(la presión, unos 1000 hPa con pocos hPa de variación): se usa el algoritmo de Welford por chunk
+[@welford1962] y la fusión de Chan, Golub y LeVeque en orden de chunk [@chan1983], que es estable,
+concurrente y determinista. La @tbl-estandarizacion da los valores usados
+(nivel {{< meta cifras.estandarizacion.nivel >}}, n = {{< meta cifras.estandarizacion.n >}}).
+
+{{< include generado/tablas/estandarizacion.md >}}
+
+### Auditoría de la limpieza
+
+::: {.callout-warning title="PENDIENTE"}
+Resultado de la auditoría cruzada (patrón del TP: dos implementaciones, si discrepan hay un bug): el
+notebook recalcula gold desde silver con la misma receta y lo compara con el gold de Go (tolerancia
+1e-9 tras el z-score), y compara el prototipo de silver en Polars con el de Go. Una tabla o una
+captura con la diferencia máxima. Sale del notebook 01/03.
+:::

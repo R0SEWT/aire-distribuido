@@ -1,0 +1,130 @@
+{
+  "placeholder": true,
+  "_nota": "PLACEHOLDER: cifras inventadas con el esquema que escribe cmd/cargar. No describen los datos de OEFA y no se citan. Se reemplaza el archivo entero cuando cmd/cargar escriba el real (ver docs/informe/README.md, «Contrato de los JSON»).",
+  "generado_por": "cmd/cargar",
+  "momento": "2026-11-04T12:00:00-05:00",
+  "commit": "PLACEHOLDER",
+  "maquina": "PLACEHOLDER",
+  "version_go": "go1.26.x",
+  "fuente": {
+    "archivo": "1a_Vigilancia y Seguimiento ambiental en la calidad del aire.csv",
+    "bytes": 1317949839,
+    "sha256": "PLACEHOLDER"
+  },
+  "parametros": {
+    "workers": 8,
+    "bloque_bytes": 67108864,
+    "config": "configs/limpieza.json"
+  },
+  "duracion_s": 38.4,
+  "filas_largas": {
+    "leidas": 3600000,
+    "procesadas": 3327400,
+    "descartadas": 272600
+  },
+  "reglas": [
+    {
+      "regla": 1,
+      "nombre": "periodo_horario",
+      "descripcion": "Solo lecturas con Periodo horario",
+      "descartadas": 240000,
+      "marcadas": 0
+    },
+    {
+      "regla": 2,
+      "nombre": "fecha_valida",
+      "descripcion": "Fecha y hora parseables y dentro del rango del dataset",
+      "descartadas": 1200,
+      "marcadas": 0
+    },
+    {
+      "regla": 3,
+      "nombre": "valor_invalido",
+      "descripcion": "Valor numérico; sin negativos (salvo temperatura) ni centinelas",
+      "descartadas": 18500,
+      "marcadas": 0
+    },
+    {
+      "regla": 4,
+      "nombre": "rango_fisico",
+      "descripcion": "Dentro del rango físico del parámetro (configs/limpieza.json)",
+      "descartadas": 3100,
+      "marcadas": 0
+    },
+    {
+      "regla": 5,
+      "nombre": "duplicados",
+      "descripcion": "Duplicados por (estación, parámetro, fecha-hora): exactos se descartan, con valor distinto se marcan y se conserva el primero",
+      "descartadas": 9800,
+      "marcadas": 450
+    },
+    {
+      "regla": 6,
+      "nombre": "unidades",
+      "descripcion": "Una sola unidad por parámetro: las filas convertidas se cuentan como marcadas",
+      "descartadas": 0,
+      "marcadas": 120000
+    }
+  ],
+  "filas_anchas": {
+    "total": 331200,
+    "completas": 268400
+  },
+  "violaciones_pm2_5_mayor_pm10": 2150,
+  "estaciones": [
+    {
+      "estacion": "PH-01",
+      "nombre": "Estación de ejemplo 1",
+      "departamento": "Lima",
+      "desde": "2019-01-01T00:00",
+      "hasta": "2024-06-30T23:00",
+      "filas_anchas": 66000,
+      "completas": 58100
+    },
+    {
+      "estacion": "PH-02",
+      "nombre": "Estación de ejemplo 2",
+      "departamento": "Callao",
+      "desde": "2019-03-15T00:00",
+      "hasta": "2024-06-30T23:00",
+      "filas_anchas": 62500,
+      "completas": 55200
+    },
+    {
+      "estacion": "PH-03",
+      "nombre": "Estación de ejemplo 3",
+      "departamento": "Junín",
+      "desde": "2020-01-01T00:00",
+      "hasta": "2024-06-30T23:00",
+      "filas_anchas": 55800,
+      "completas": 40300
+    },
+    {
+      "estacion": "PH-04",
+      "nombre": "Estación de ejemplo 4",
+      "departamento": "Pasco",
+      "desde": "2020-06-01T00:00",
+      "hasta": "2024-06-30T23:00",
+      "filas_anchas": 48900,
+      "completas": 39800
+    },
+    {
+      "estacion": "PH-05",
+      "nombre": "Estación de ejemplo 5",
+      "departamento": "Moquegua",
+      "desde": "2018-07-01T00:00",
+      "hasta": "2024-06-30T23:00",
+      "filas_anchas": 52000,
+      "completas": 44000
+    },
+    {
+      "estacion": "PH-06",
+      "nombre": "Estación de ejemplo 6",
+      "departamento": "Arequipa",
+      "desde": "2021-01-01T00:00",
+      "hasta": "2024-06-30T23:00",
+      "filas_anchas": 46000,
+      "completas": 31000
+    }
+  ]
+}

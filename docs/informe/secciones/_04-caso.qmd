@@ -1,0 +1,82 @@
+<!-- f.1) Presentación del caso a resolver. -->
+
+## Presentación del caso {#sec-caso}
+
+### Caso 10 y fuentes de datos
+
+El profesor asignó al grupo el caso 10 del enunciado, *Monitoreo de Calidad del Aire y Sensores
+Ambientales*, con datos de SENAMHI y OEFA. La @tbl-fuentes resume el papel de cada fuente: en la
+PC3 el modelo se alimenta solo de OEFA, que es la que pasa el millón de filas; SENAMHI queda como
+contraste entre redes en Lima para el TB2.
+
+::: {#tbl-fuentes tbl-colwidths="[30,42,28]"}
+| Fuente | Qué es | Uso en el Trabajo Final |
+|:---|:---|:---|
+| OEFA, *Vigilancia y seguimiento ambiental en la calidad del aire* [@oefa2026aire] | Monitoreo continuo de estaciones con meteorología, material particulado y gases. CSV de 1,3 GB en formato largo, licencia ODC-By. | Alimenta el modelo y es la carga de más de un millón de filas (PC3) |
+| SENAMHI, *Monitoreo de los contaminantes del aire en Lima Metropolitana* | PM10, PM2,5 y NO2 de la red automática de Lima | Contraste entre redes en Lima (TB2) |
+
+Fuentes de datos del Trabajo Final
+:::
+
+::: {.callout-warning title="PENDIENTE"}
+Del archivo descargado (bead de datos, lun 02/11): nombre, tamaño, sha256 y fecha del CSV y del
+diccionario; columnas y nombres exactos de los parámetros, unidades y valores de `Periodo`;
+delimitador, codificación y si hay campos entrecomillados con saltos de línea. Sale de
+`data/README.md` y de `reports/eda_criba.md`.
+:::
+
+### Arquitectura de la solución
+
+El sistema tiene las cuatro partes del enunciado, encadenadas (@fig-arquitectura). Cada una tiene
+su entregable; la PC3 construye las partes A y B en una sola máquina y deja diseñada la
+distribución de la parte B.
+
+![Arquitectura de la solución: cargador concurrente, K-Means distribuido, API coordinadora y frontend, desplegados con Docker Compose](../diagramas/arquitectura.png){#fig-arquitectura width=16cm}
+
+:::: {si-falta="../diagramas/arquitectura.png"}
+::: {.callout-warning title="PENDIENTE"}
+Falta `docs/diagramas/arquitectura.png`. Lo produce el diagrama de arquitectura en
+`docs/diagramas/` (rama del diseño); este aviso desaparece solo cuando el PNG existe.
+:::
+::::
+
+::: {#tbl-partes tbl-colwidths="[22,52,26]"}
+| Parte | Qué hace | Entregable |
+|:---|:---|:---|
+| A. Cargador concurrente | Lee el CSV de OEFA por bloques con goroutines y canales, lo pivota, limpia y estandariza | PC3 |
+| B. K-Means distribuido | Cada nodo calcula sumas parciales por cluster de su partición; el coordinador recalcula los centroides | PC3 (paralelo en una máquina y diseño), PC4 (clúster TCP) |
+| C. API coordinadora | REST y WebSocket en Go, menos de 100 ms por respuesta, MongoDB y Redis | PC4 |
+| D. Frontend SPA | Mapa de estaciones con su régimen y las alertas en tiempo real | TB2 |
+
+Las cuatro partes del sistema y el entregable de cada una
+:::
+
+**Qué es concurrente y qué es distribuido.** La PC3 es concurrente: goroutines en una máquina, en
+las partes A y B. La PC4 es distribuida: nodos de cómputo que hablan con el coordinador por TCP. La
+entrega oficial corre en Docker Compose en una sola máquina; un clúster real de máquinas del grupo
+queda como medición adicional, y nada del entregable depende de él.
+
+**Dónde corre cada cosa.** Go es el sistema y un notebook es el laboratorio. La carga, la limpieza y
+el entrenamiento son en Go, como exige el enunciado; Python (en Colab) solo explora, calibra, audita
+y dibuja las figuras de este informe. Los datos se organizan en capas (@tbl-capas).
+
+::: {#tbl-capas tbl-colwidths="[12,58,30]"}
+| Capa | Qué contiene | Quién la produce |
+|:---|:---|:---|
+| bronze | El CSV largo de OEFA tal cual, con su sha256 y fecha | Descarga desde el portal |
+| silver | Tabla ancha limpia (estación, fecha-hora, parámetros) y los conteos por regla | Go, `cmd/cargar` |
+| gold | Las features de la receta, estandarizadas | Go, `cmd/cargar` |
+| reports | Conteos, medias y desviaciones, benchmarks, calibración y centroides | Go y los notebooks |
+
+Capas de datos (medallón) y quién produce cada una
+:::
+
+### Restricciones del trabajo
+
+- **Todo el sistema en Go** 1.26, solo con la biblioteca estándar, y contenerizado en Docker.
+- **Pruebas primero y siempre con `go test -race`**: un test que pasa sin `-race` no demuestra nada
+  sobre una sección crítica. La integración continua corre `go test -race`, `go vet` y `gofmt`.
+- **Git Flow**: ramas `feature/*` con PR a `develop`; la entrega sale de `release/pc3` hacia `main`.
+- **Los datos no se versionan**: el CSV pesa 1,3 GB; el repositorio lleva solo una muestra pequeña
+  en `data/sample/` para las pruebas y la integración continua.
+- **Capturas reales** de la terminal para cada ejecución que cita el informe.
