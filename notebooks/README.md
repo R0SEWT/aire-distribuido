@@ -12,8 +12,8 @@ después de leer la tabla de decisión.
 | # | Notebook | Cuándo | Qué hace | Qué produce |
 |---|---|---|---|---|
 | 1 | `01_eda_criba.ipynb` | con el bronze en Drive | Primer MB y sha256; lectura con `configs/limpieza.json` y la **cascada de reglas de Go**; valores vistos; **cada medición de la criba** (Q1–Q9) | `reports/eda_criba.md`, `eda_limpieza_prototipo.json` (esquema de `limpieza.json`), `eda_completitud.csv`, `eda_estaciones.csv`, `eda_bronze.json`, `figuras_eda/`; `data/silver/oefa_ancho_prototipo.csv`; figuras del informe `completitud.png` y `distribuciones.png` |
-| 2 | `02_calibracion.ipynb` | antes de congelar la receta | Grilla de la spec de calibración §3 (24 variantes × k 2–10 × 5 semillas) y regla de elección en su orden | `reports/calibracion.csv`, `calibracion_resumen.csv`, `calibracion_decision.md`, `kmeans_propuesto.json` (esquema de `configs/kmeans.json`), `centroides_sklearn.json`, `figuras_calibracion/` |
-| 3 | `03_auditoria_figuras.ipynb` | cuando Go ya corrió | Recalcula limpieza, silver y gold desde el bronze y los compara con Go; audita `kmeans.json`, asignaciones, `regimenes.json`, `codo.json` y los benchmarks; dibuja las figuras | `reports/auditoria.md` y `.json`; figuras del informe `perfiles.png`, `regimen-hora.png`, `regimen-estacion.png`, `episodio.png`, `codo.png`, `speedup.png` (y `cobertura.png`) |
+| 2 | `02_calibracion.ipynb` | antes de congelar la receta | Grilla de la spec de calibración §3 (24 variantes × k 2–10 × 5 semillas) y regla de elección en su orden; §8, la **decisión del equipo** (se corre sola, sin la grilla) | `reports/calibracion.csv`, `calibracion_resumen.csv`, `calibracion_decision.md` (con la sección «Decisión del equipo»), `kmeans_propuesto.json` (esquema de `configs/kmeans.json`), `centroides_sklearn.json`, `descriptores_regimen.csv`, `figuras_calibracion/` |
+| 3 | `03_auditoria_figuras.ipynb` | cuando Go ya corrió | Recalcula limpieza, silver y gold desde el bronze y los compara con Go; audita `kmeans.json` (y sus semillas, desde `centroides_iniciales.json`), asignaciones, `regimenes.json`, `codo.json` y los benchmarks (que sean del gold y la receta auditados); dibuja las figuras y las muestra | `reports/auditoria.md` y `.json`; figuras del informe `perfiles.png`, `niveles.png`, `regimen-hora.png`, `regimen-estacion.png`, `episodio.png`, `codo.png`, `speedup.png` (y `cobertura.png`) |
 
 Los nombres de las figuras son los que esperan `docs/informe/secciones/*.qmd`. Cada figura queda
 anotada en `origen.json` (en la misma carpeta) con su fuente y si los datos son sintéticos; con datos
@@ -49,8 +49,10 @@ Specs: `docs/specs/2026-10-31-preguntas-candidatas.md` (01), `docs/specs/2026-10
 Lo que se toca está arriba de cada notebook: `RAIZ_DRIVE`, `RAMAS`; en el 01, `AJUSTES` (para probar
 un cambio de `configs/limpieza.json` antes de llevarlo al JSON) y los umbrales de la criba `U`; en
 el 02, `N_SUBMUESTRA`, `UMBRALES`, `K_DESDE_CODO`, `GASES_EN_FEATURES`; en el 03, las tolerancias y
-`ESTACION_EPISODIO`. Variables de entorno: `AIRE_RAIZ` (raíz de las capas), `AIRE_BRONZE` (el CSV),
-`AIRE_FIGURAS` (dónde van las figuras del informe).
+`ESTACION_EPISODIO` (por defecto, la estación con más horas en el régimen más alto). Variables de
+entorno: `AIRE_RAIZ` (raíz de las capas), `AIRE_BRONZE` (el CSV; vacío = sin bronze, la auditoría de la
+limpieza queda OMITIDA y lo demás corre), `AIRE_FIGURAS` (dónde van las figuras del informe),
+`AIRE_EPISODIO` (la estación de `episodio.png`).
 
 **Tiempos** (medidos con un sintético de 1.5 M filas largas y 210 000 anchas): el 02 hace 1 080
 corridas de unos 6 s cada una (≈ 105 min de CPU: 15–20 min con 8 núcleos, más de una hora con 2;
@@ -66,7 +68,8 @@ go run ./cmd/cargar -entrada data/sample/oefa_muestra.csv -silver $R/data/silver
    -gold $R/data/gold/oefa_features.csv -reports $R/reports -workers 1,2,4 -bench 3
 go run ./cmd/entrenar -gold $R/data/gold/oefa_features.csv -estandarizacion $R/reports/estandarizacion.json \
    -salida $R/reports/kmeans.json -asignaciones $R/data/gold/asignaciones.csv \
-   -regimenes $R/reports/regimenes.json -codo 2:8 -codo-salida $R/reports/codo.json
+   -regimenes $R/reports/regimenes.json -centroides $R/reports/centroides_iniciales.json \
+   -codo 2:8 -codo-salida $R/reports/codo.json
 go run ./cmd/benchmark -gold $R/data/gold/oefa_features.csv -workers 1,2,4 -chunk 100 -repes 3 \
    -salida $R/reports/benchmark_kmeans.json
 
@@ -82,9 +85,12 @@ Sin `AIRE_RAIZ`, fuera de Colab la raíz es **el repo** (sus `data/` están en `
 `reports/` es la carpeta versionada de salidas chicas).
 
 **A escala**, `python notebooks/sintetico.py /tmp/aire-sin --dias 1500 --go` genera un bronze
-sintético en el formato de `configs/limpieza.json` (6 estaciones `SIN-` en 3 departamentos, cinco
-regímenes plantados, huecos tras los episodios, suciedad de cada regla) y corre `cmd/cargar` y
-`cmd/entrenar` sobre él. El script no imita a Go: con `--go`, las salidas son las de Go.
+sintético en el **formato real de OEFA** que describe `configs/limpieza.json` (36 columnas, `;`, CRLF,
+una columna por parámetro; días completos en bloques de 24 filas sin hora y días con huecos con la hora
+explícita; 6 estaciones `SIN-` en 3 departamentos, cinco regímenes plantados, huecos tras los episodios,
+suciedad de cada regla de la cascada) y corre `cmd/cargar` y `cmd/entrenar` sobre él, con todas las
+salidas (también `centroides_iniciales.json`) dentro de la raíz que se le pasa. El script no imita a
+Go: con `--go`, las salidas son las de Go (la variable `GO` elige el binario).
 
 Dependencias: `pandas`, `numpy`, `matplotlib`, `scikit-learn`; `scipy` (asignación húngara; sin
 ella, fuerza bruta para k chico) y `joblib` (sin ella la grilla corre en serie). Colab las trae; la
@@ -97,7 +103,7 @@ matplotlib 3.10.0 (lo de Colab).
 | Archivo | Qué es |
 |---|---|
 | `aire_lab.py` | Código compartido. El prototipo de limpieza replica `datos/bloque.go` (cascada), `datos/recolector.go` (regla 5), `datos/reporte.go` (esquema de `limpieza.json`), `datos/salida.go` (silver byte a byte, `FormatFloat 'g' -1`), `datos/estandarizar.go` (gold) y `kmeans/regimenes.go` (perfil y ECA). Además: criba, UTM → lat/lon, huecos, ECA, métricas y estilo de figuras. |
-| `sintetico.py` | Bronze sintético en el formato de Go y, con `--go`, las salidas del sistema real. |
+| `sintetico.py` | Bronze sintético en el formato real de OEFA y, con `--go`, las salidas del sistema real. |
 | `0X_*.ipynb` | Los notebooks, **guardados sin salidas**. |
 
 ## Contrato con Go (esquema real)
@@ -177,9 +183,18 @@ como propuesta aún no están en Go):
 - `kmeans_propuesto.json` copia de `configs/kmeans.json` lo que la grilla no calibra (`semilla`,
   `semillas`, `tolerancia`, `max_iter`, `workers`, `chunk`).
 
-`sintetico.py` todavía escribe el formato del primer borrador (parámetro y valor); el cargador de Go
-ya no lo lee, así que su opción `--go` queda pendiente de actualizar. Para probar contra Go están las
-dos muestras de `data/sample/` (formato real).
+- **Decisión del equipo (§8 del 02)**: la regla automática eligió `F2-M0-T1-N2` con k = 4 (PM10 y
+  fracción fina por estación); el equipo congeló `F1-M0-T1-N1` con k = 3 (PM2.5 y PM10 absolutos, sin
+  log), que está bajo el codo de su variante pero cumple los otros criterios aplicados y es un solo
+  K-Means de niveles de aire. La §8 lo compara con las cifras de `calibracion_resumen.csv`, describe
+  los regímenes de Go con la fracción fina y la meteorología (medias y anomalía dentro de cada estación)
+  y deja `kmeans_propuesto.json` y `centroides_sklearn.json` con la receta final. Se corre sola: celda
+  de entorno, importaciones y las celdas de la §8.
+
+`sintetico.py` escribe el formato real (el que lee el cargador de Go). Con `--dias 60 --go`, los
+descartes por regla de Go coinciden con lo que el script siembra y cada celda del silver coincide con
+la verdad del generador, en valor y en hora (convención `fin`). Para probar contra Go están además las
+dos muestras de `data/sample/`.
 
 ## Lo que hay que confirmar con el CSV real
 
