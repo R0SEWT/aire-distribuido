@@ -12,10 +12,10 @@ import (
 // reparten bien entre 1 y 11 workers.
 const BloquePorDefecto = 64 << 20
 
-// Opciones del paralelismo de una carga. Ninguna cambia el resultado: con el
-// mismo Bloque y el mismo Chunk, cualquier Workers da lo mismo bit a bit.
-// Bloque y Chunk sí lo pueden cambiar en el último bit de la media y la
-// desviación (otro árbol de suma), nunca en el silver.
+// Opciones del paralelismo de una carga. Workers y Bloque no cambian el
+// resultado: con el mismo Chunk, cualquier combinación da el mismo silver, el
+// mismo gold y los mismos conteos, bit a bit. El Chunk sí puede mover el último
+// bit de la media y la desviación (otro árbol de suma), nunca el silver.
 type Opciones struct {
 	Workers int   // goroutines; 0 = runtime.NumCPU()
 	Bloque  int64 // bytes por bloque; 0 = BloquePorDefecto

@@ -6,23 +6,25 @@
 //
 // # Pipeline
 //
-//		lector ──índices de bloque──▶ canal ──▶ W workers ──parciales──▶ recolector ──▶ tabla ancha ──▶ gold
+//	lector ──índices de bloque──▶ canal ──▶ W workers ──parciales──▶ recolector ──▶ tabla ancha ──▶ gold
 //
-//	  - Lector: la cabecera se lee una vez (quitando el BOM). El resto del archivo
-//	    se parte en bloques de B bytes (64 MB por defecto) alineados al siguiente
-//	    salto de línea; los índices de bloque van por un canal.
-//	  - Workers: cada goroutine lee su bloque con ReadAt sobre el mismo *os.File
-//	    (seguro para uso concurrente), parsea las filas, aplica las reglas 1 a 6 y
-//	    acumula en su propio mapa (estación, fecha-hora) → vector de parámetros.
-//	    Sin estado compartido y sin Mutex: cada worker tiene su búfer y sus cachés.
-//	  - Recolector: recibe los parciales en cualquier orden y los fusiona en orden
-//	    de índice de bloque (reglas 5 y 7). Por eso «el primero» de un duplicado es
-//	    el primero del archivo y el resultado es el mismo para cualquier W.
-//	  - Tabla ancha (silver): se vuelca ordenada por (estación, fecha-hora), nunca
-//	    iterando el mapa, cuyo orden en Go es aleatorio.
-//	  - Gold: features derivadas y log1p, filas completas (regla 8), media y
-//	    desviación con Welford por chunk y fusión de Chan en orden de chunk, y
-//	    z-score; las tres fases, por chunks en paralelo.
+// Cada pieza:
+//
+//   - Lector: la cabecera se lee una vez (quitando el BOM). El resto del archivo
+//     se parte en bloques de B bytes (64 MB por defecto) alineados al siguiente
+//     salto de línea; los índices de bloque van por un canal.
+//   - Workers: cada goroutine lee su bloque con ReadAt sobre el mismo *os.File
+//     (seguro para uso concurrente), parsea las filas, aplica las reglas 1 a 6 y
+//     acumula en su propio mapa (estación, fecha-hora) → vector de parámetros.
+//     Sin estado compartido y sin Mutex: cada worker tiene su búfer y sus cachés.
+//   - Recolector: recibe los parciales en cualquier orden y los fusiona en orden
+//     de índice de bloque (reglas 5 y 7). Por eso «el primero» de un duplicado es
+//     el primero del archivo y el resultado es el mismo para cualquier W.
+//   - Tabla ancha (silver): se vuelca ordenada por (estación, fecha-hora), nunca
+//     iterando el mapa, cuyo orden en Go es aleatorio.
+//   - Gold: features derivadas y log1p, filas completas (regla 8), media y
+//     desviación con Welford por chunk y fusión de Chan en orden de chunk, y
+//     z-score; las tres fases, por chunks en paralelo.
 //
 // # Determinismo
 //
