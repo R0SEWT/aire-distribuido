@@ -37,7 +37,8 @@ type Resultado struct {
 	Inercias     []float64 // una por iteración, con los centroides que produjeron esa asignación
 	Iteraciones  int
 	Paro         string
-	Vacios       int // clusters sin puntos en la última iteración
+	Movimiento   float64 // desplazamiento máximo de los centroides en la última iteración
+	Vacios       int     // clusters sin puntos en la última iteración
 	K            int
 	D            int
 }
@@ -50,66 +51,65 @@ func (r *Resultado) Centroide(j int) []float64 {
 // Secuencial corre Lloyd en un solo hilo. Es el T_secuencial del speedup: la
 // referencia es el mismo algoritmo sin goroutines, no una versión degradada.
 //
+// Está escrito sobre las mismas tres piezas que la versión concurrente y la
+// distribuida: cada iteración es Parciales sobre un solo tramo, [0, N), y
+// Actualizar. No hay Fusionar porque hay un solo parcial.
+//
 // No modifica ni d ni centroidesIniciales.
 func Secuencial(d *Datos, centroidesIniciales []float64, op Opciones) (*Resultado, error) {
 	if err := validar(d, centroidesIniciales, op); err != nil {
 		return nil, err
 	}
-	k, dim, n := op.K, d.D, d.N
-
 	cent := append([]float64(nil), centroidesIniciales...)
-	previos := make([]float64, len(cent))
-	asign := make([]int, n)
-	sumas := make([]float64, k*dim)
-	conteos := make([]int, k)
-
-	r := &Resultado{K: k, D: dim, Paro: ParoMaxIter}
+	r := &Resultado{K: op.K, D: d.D, Paro: ParoMaxIter}
 
 	for it := 1; it <= op.MaxIter; it++ {
-		for i := range sumas {
-			sumas[i] = 0
-		}
-		for j := range conteos {
-			conteos[j] = 0
-		}
-		inercia := 0.0
-
 		// Asignación: los centroides son de solo lectura.
-		for i := 0; i < n; i++ {
-			x := d.X[i*dim : (i+1)*dim]
-			j, dist2 := masCercano(x, cent, k, dim)
-			asign[i] = j
-			inercia += dist2
-			acumular(sumas, conteos, x, j, dim)
-		}
-
-		copy(previos, cent)
-		r.Vacios = actualizar(cent, sumas, conteos, k, dim)
-		r.Inercias = append(r.Inercias, inercia)
-		r.Iteraciones = it
-		if op.AlIterar != nil {
-			op.AlIterar(it, inercia)
-		}
-
-		if converge(cent, previos, op) {
-			r.Paro = ParoTolerancia
+		if cerrarIteracion(r, cent, Parciales(d, cent, 0, d.N), it, op) {
 			break
 		}
 	}
 
 	// Pasada final: asignaciones e inercia contra los centroides finales.
-	inerciaFinal := 0.0
-	for i := 0; i < n; i++ {
-		x := d.X[i*dim : (i+1)*dim]
-		j, dist2 := masCercano(x, cent, k, dim)
-		asign[i] = j
-		inerciaFinal += dist2
-	}
-
+	asign := make([]int, d.N)
+	r.Inercia = Asignar(d, cent, 0, d.N, asign).Inercia
 	r.Centroides = cent
 	r.Asignaciones = asign
-	r.Inercia = inerciaFinal
 	return r, nil
+}
+
+// cerrarIteracion es lo que el coordinador hace al final de cada iteración,
+// igual en la versión secuencial y en la concurrente: actualiza los centroides
+// con el parcial ya fusionado, registra la inercia y aplica el criterio de
+// parada. Devuelve true si convergió.
+//
+// El umbral se calcula con los centroides ANTES de actualizarlos, como en el TP:
+// max_j ||mu_j(t) - mu_j(t-1)||inf <= TolAbs + TolRel * max_j ||mu_j(t-1)||inf.
+func cerrarIteracion(r *Resultado, cent []float64, p Parcial, it int, op Opciones) bool {
+	umbral := op.TolAbs + op.TolRel*maxAbs(cent)
+	mov := Actualizar(cent, p)
+	r.Vacios = p.Vacios()
+	r.Movimiento = mov
+	r.Inercias = append(r.Inercias, p.Inercia)
+	r.Iteraciones = it
+	if op.AlIterar != nil {
+		op.AlIterar(it, p.Inercia)
+	}
+	if mov <= umbral {
+		r.Paro = ParoTolerancia
+		return true
+	}
+	return false
+}
+
+func maxAbs(xs []float64) float64 {
+	m := 0.0
+	for _, x := range xs {
+		if a := math.Abs(x); a > m {
+			m = a
+		}
+	}
+	return m
 }
 
 // masCercano devuelve el índice del centroide más cercano y la distancia
@@ -136,41 +136,6 @@ func acumular(sumas []float64, conteos []int, x []float64, j, dim int) {
 		s[f] += x[f]
 	}
 	conteos[j]++
-}
-
-// actualizar reemplaza cada centroide por la media de sus puntos y devuelve
-// cuántos clusters quedaron vacíos. Un cluster vacío conserva su centroide
-// anterior: re-sembrarlo con el punto más lejano haría que el resultado
-// dependiera del orden de recorrido.
-func actualizar(cent, sumas []float64, conteos []int, k, dim int) int {
-	vacios := 0
-	for j := 0; j < k; j++ {
-		if conteos[j] == 0 {
-			vacios++
-			continue
-		}
-		c := cent[j*dim : (j+1)*dim]
-		s := sumas[j*dim : (j+1)*dim]
-		inv := 1 / float64(conteos[j])
-		for f := 0; f < dim; f++ {
-			c[f] = s[f] * inv
-		}
-	}
-	return vacios
-}
-
-// converge aplica el criterio de parada sobre el desplazamiento de los centroides.
-func converge(cent, previos []float64, op Opciones) bool {
-	desp, escala := 0.0, 0.0
-	for i := range cent {
-		if delta := math.Abs(cent[i] - previos[i]); delta > desp {
-			desp = delta
-		}
-		if mag := math.Abs(previos[i]); mag > escala {
-			escala = mag
-		}
-	}
-	return desp <= op.TolAbs+op.TolRel*escala
 }
 
 func validar(d *Datos, cent []float64, op Opciones) error {

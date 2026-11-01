@@ -15,15 +15,18 @@ type OpcionesConc struct {
 	Chunk   int
 }
 
-// parcial son los acumuladores de UN chunk: sumas y conteos por cluster más su
-// inercia. Cada chunk tiene el suyo, y lo escribe un solo worker por iteración.
-type parcial struct {
-	sumas   []float64 // k*D
-	conteos []int     // k
-	inercia float64
+// trabajo es un chunk que el pool tiene que procesar. En las iteraciones basta
+// el parcial; en la pasada final además se escriben las asignaciones.
+type trabajo struct {
+	chunk   int
+	asignar bool
 }
 
-// Concurrente corre Lloyd con un worker pool persistente.
+// Concurrente corre Lloyd con un worker pool persistente, escrito sobre las
+// tres piezas que la PC4 distribuye: cada worker llama a Parciales sobre el
+// chunk que le tocó, el coordinador fusiona los parciales con Fusionar en orden
+// de chunk y cierra la iteración con Actualizar. La versión distribuida corre el
+// mismo código; solo cambia quién llama a Parciales.
 //
 // El reparto es por chunks a través de un canal: las goroutines se crean una
 // vez y viven toda la corrida. Durante la asignación los centroides son de solo
@@ -48,21 +51,11 @@ func Concurrente(d *Datos, centroidesIniciales []float64, op OpcionesConc) (*Res
 	k, dim, n := op.K, d.D, d.N
 
 	cantChunks := (n + op.Chunk - 1) / op.Chunk
-	parciales := make([]parcial, cantChunks)
-	sumasBase := make([]float64, cantChunks*k*dim)
-	conteosBase := make([]int, cantChunks*k)
-	for c := range parciales {
-		parciales[c].sumas = sumasBase[c*k*dim : (c+1)*k*dim]
-		parciales[c].conteos = conteosBase[c*k : (c+1)*k]
-	}
-
+	parciales := make([]Parcial, cantChunks)
 	cent := append([]float64(nil), centroidesIniciales...)
-	previos := make([]float64, len(cent))
 	asign := make([]int, n)
-	sumas := make([]float64, k*dim)
-	conteos := make([]int, k)
 
-	trabajos := make(chan int, cantChunks)
+	trabajos := make(chan trabajo, cantChunks)
 	var barrera sync.WaitGroup
 	var pool sync.WaitGroup
 
@@ -70,13 +63,14 @@ func Concurrente(d *Datos, centroidesIniciales []float64, op OpcionesConc) (*Res
 	for w := 0; w < op.Workers; w++ {
 		go func() {
 			defer pool.Done()
-			for c := range trabajos {
-				ini := c * op.Chunk
-				fin := ini + op.Chunk
-				if fin > n {
-					fin = n
+			for t := range trabajos {
+				ini := t.chunk * op.Chunk
+				fin := min(ini+op.Chunk, n)
+				if t.asignar {
+					parciales[t.chunk] = Asignar(d, cent, ini, fin, asign)
+				} else {
+					parciales[t.chunk] = Parciales(d, cent, ini, fin)
 				}
-				procesarChunk(d, cent, k, dim, ini, fin, &parciales[c], asign)
 				barrera.Done()
 			}
 		}()
@@ -89,27 +83,16 @@ func Concurrente(d *Datos, centroidesIniciales []float64, op OpcionesConc) (*Res
 	r := &Resultado{K: k, D: dim, Paro: ParoMaxIter}
 
 	for it := 1; it <= op.MaxIter; it++ {
-		repartir(trabajos, &barrera, cantChunks)
-
-		inercia := reducir(parciales, sumas, conteos, k, dim)
-		copy(previos, cent)
-		r.Vacios = actualizar(cent, sumas, conteos, k, dim)
-		r.Inercias = append(r.Inercias, inercia)
-		r.Iteraciones = it
-		if op.AlIterar != nil {
-			op.AlIterar(it, inercia)
-		}
-
-		if converge(cent, previos, op.Opciones) {
-			r.Paro = ParoTolerancia
+		repartir(trabajos, &barrera, cantChunks, false)
+		if cerrarIteracion(r, cent, Fusionar(parciales, k, dim), it, op.Opciones) {
 			break
 		}
 	}
 
 	// Pasada final con los centroides finales, también en paralelo: el tiempo
 	// que se mide tiene que incluir todo lo que la versión concurrente hace.
-	repartir(trabajos, &barrera, cantChunks)
-	r.Inercia = reducir(parciales, sumas, conteos, k, dim)
+	repartir(trabajos, &barrera, cantChunks, true)
+	r.Inercia = Fusionar(parciales, k, dim).Inercia
 
 	r.Centroides = cent
 	r.Asignaciones = asign
@@ -117,50 +100,10 @@ func Concurrente(d *Datos, centroidesIniciales []float64, op OpcionesConc) (*Res
 }
 
 // repartir manda los chunks al pool y espera la barrera.
-func repartir(trabajos chan<- int, barrera *sync.WaitGroup, cantChunks int) {
+func repartir(trabajos chan<- trabajo, barrera *sync.WaitGroup, cantChunks int, asignar bool) {
 	barrera.Add(cantChunks)
 	for c := 0; c < cantChunks; c++ {
-		trabajos <- c
+		trabajos <- trabajo{chunk: c, asignar: asignar}
 	}
 	barrera.Wait()
-}
-
-func procesarChunk(d *Datos, cent []float64, k, dim, ini, fin int, p *parcial, asign []int) {
-	for i := range p.sumas {
-		p.sumas[i] = 0
-	}
-	for j := range p.conteos {
-		p.conteos[j] = 0
-	}
-	inercia := 0.0
-	for i := ini; i < fin; i++ {
-		x := d.X[i*dim : (i+1)*dim]
-		j, dist2 := masCercano(x, cent, k, dim)
-		asign[i] = j
-		inercia += dist2
-		acumular(p.sumas, p.conteos, x, j, dim)
-	}
-	p.inercia = inercia
-}
-
-// reducir suma los parciales en orden de chunk y devuelve la inercia total.
-func reducir(parciales []parcial, sumas []float64, conteos []int, k, dim int) float64 {
-	for i := range sumas {
-		sumas[i] = 0
-	}
-	for j := range conteos {
-		conteos[j] = 0
-	}
-	inercia := 0.0
-	for c := range parciales {
-		p := &parciales[c]
-		for i := range sumas {
-			sumas[i] += p.sumas[i]
-		}
-		for j := range conteos {
-			conteos[j] += p.conteos[j]
-		}
-		inercia += p.inercia
-	}
-	return inercia
 }
