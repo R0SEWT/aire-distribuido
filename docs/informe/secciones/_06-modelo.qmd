@@ -1,0 +1,206 @@
+<!-- f.3) Diseño del modelo ML distribuido: explicación del algoritmo. -->
+
+## Diseño del modelo de ML distribuido {#sec-modelo}
+
+### K-Means y su contrato numérico
+
+El modelo es el K-Means de Lloyd [@lloyd1982]. Dados $n$ puntos $x_i \in \mathbb{R}^D$ (las
+horas-estación estandarizadas) y $k$ centroides $c_1, \dots, c_k$, cada iteración tiene dos pasos:
+
+1. **Asignación**: cada punto va al centroide más cercano,
+   $a_i = \arg\min_j \lVert x_i - c_j \rVert^2$.
+2. **Actualización**: cada centroide pasa a ser la media de sus puntos,
+   $c_j = \frac{1}{|S_j|} \sum_{i \in S_j} x_i$, con $S_j = \{ i : a_i = j \}$.
+
+Se repite hasta que los centroides se muevan menos que una tolerancia o se llegue a un máximo de
+iteraciones; el objetivo que decrece es la inercia, $\sum_i \lVert x_i - c_{a_i} \rVert^2$. Los
+centroides iniciales salen de k-means++ [@arthur2007], que elige cada centroide nuevo con
+probabilidad proporcional al cuadrado de su distancia al más cercano de los ya elegidos.
+
+El código se porta del K-Means del Trabajo Parcial [@vilchez2026tp], con su autoría declarada y
+sus pruebas como red de seguridad del port, y conserva su **contrato numérico**: distancia euclídea
+al cuadrado; empate resuelto por el menor índice; k-means++ con semilla fija, ejecutado una sola
+vez; paro por tolerancia o por máximo de iteraciones; un cluster vacío conserva su centroide.
+Cambian la entrada (ya no viajes de taxi) y la interfaz de sumas parciales de la @sec-distribuido.
+
+### Receta: features y número de clusters
+
+Un K-Means sobre lecturas horarias de calidad del aire «sale bien» con mucha facilidad y no dice
+nada: con PM2,5 y PM10 crudas, los clusters son rodajas de una sola dimensión; con toda la
+meteorología, son el día y la noche; con estaciones de ciudades distintas, son las estaciones. Por
+eso la receta (features, transformación, nivel y $k$) se calibró en Colab antes de escribirla en Go,
+con una grilla que mide cuatro criterios además de la inercia: que el régimen separe las lecturas
+que exceden el ECA, que no sea la estación o la hora disfrazadas, que sea estable entre semillas y
+entre remuestreos por bloques de días, y que sus perfiles sean distinguibles.
+
+::: {#tbl-grilla tbl-colwidths="[20,80]"}
+| Eje | Variantes |
+|:---|:---|
+| Features | F1 = {PM2,5, PM10}; F2 = {PM10, fracción fina PM2,5/PM10} |
+| Meteorología | M0 ninguna; M1 viento y humedad; M2 M1 más temperatura y presión |
+| Transformación | T1 crudo; T2 log1p en contaminantes |
+| Nivel | N1 absoluto (todas las estaciones juntas); N2 relativo a cada estación |
+| $k$ | 2 a 10, con 5 semillas de k-means++ |
+
+Ejes de la grilla de calibración del K-Means
+:::
+
+La receta elegida quedó congelada en `configs/kmeans.json`, que Go lee sin decidir nada: features
+{{< meta cifras.kmeans.features >}}, $k$ = {{< meta cifras.kmeans.k >}}, semilla
+{{< meta cifras.kmeans.semilla >}}. La hora, la estación y el mes **no son features** en ninguna
+variante: se usan después, para decir dónde y cuándo aparece cada régimen.
+
+::: {.callout-warning title="PENDIENTE"}
+La tabla de decisión de la calibración (variante elegida, por qué, qué perdió frente a la segunda),
+con las métricas de `reports/calibracion.csv` (notebook 02, mar 03/11): ARI entre semillas y por
+días, pureza y recall de la etiqueta ECA, NMI con estación y hora, tamaño del cluster más chico. Si
+no cerró a tiempo, decir que se usó la receta provisional (F2, M1, T2, N1, $k$ = 5) y por qué.
+Conviene que `tablas.py` la genere desde el CSV.
+:::
+
+{{< include generado/tablas/codo.md >}}
+
+![Método del codo: inercia por número de clusters](generado/figuras/codo.png){#fig-codo width=13cm}
+
+:::: {si-falta="generado/figuras/codo.png"}
+::: {.callout-warning title="PENDIENTE"}
+Curva del codo desde `generado/codo.json`. La dibuja el notebook 03 (o 02) en
+`docs/informe/generado/figuras/codo.png`. La silueta en Go queda para la PC4; aquí la silueta es la
+de la calibración en Colab.
+:::
+::::
+
+### Del K-Means paralelo al distribuido {#sec-distribuido}
+
+El paso de asignación es independiente por punto, y la actualización solo necesita, por cluster, la
+suma de sus puntos y cuántos son. Esas dos cantidades se pueden calcular por partes y sumar: la
+reducción es exacta. Es la idea de las versiones de K-Means para memoria distribuida
+[@dhillon2000] y sobre MapReduce [@zhao2009], y es lo que pide el enunciado: cada nodo calcula sumas
+parciales de su partición y el coordinador recalcula los centroides en cada iteración. El código
+expone esa división en tres funciones:
+
+```go
+// Parciales asigna las filas [desde, hasta) de d a los centroides y devuelve sumas k×D,
+// conteos k e inercia. Es lo que un nodo calcula sobre su partición en cada iteración.
+func Parciales(d *Datos, centroides []float64, desde, hasta int) Parcial
+
+// Fusionar suma parciales en el orden dado. Reducción exacta: el orden fija el resultado bit a bit.
+func Fusionar(ps []Parcial, k, dim int) Parcial
+
+// Actualizar recalcula los centroides a partir de un parcial fusionado y dice cuánto se movieron.
+func Actualizar(cent []float64, p Parcial) (movimiento float64)
+```
+
+La versión de una máquina (PC3) y la distribuida (PC4) ejecutan **el mismo código**: solo cambia
+quién llama a `Parciales`, un worker sobre un chunk o un nodo sobre su partición.
+
+::: {.callout-warning title="PENDIENTE"}
+Confirmar las firmas contra `kmeans/` cuando se fusione (rama del K-Means) y citar el archivo y las
+líneas.
+:::
+
+**Topología.** Estrella: el coordinador (la API de la parte C) y $K$ nodos de cómputo, cada uno en
+su contenedor. **El nodo se conecta al coordinador, nunca al revés**: así puede unirse un nodo que no
+acepta conexiones entrantes (una sesión de Colab, un teléfono), y un nodo que desaparece es el caso
+normal del timeout, no una excepción.
+
+**Particionado.** Rangos contiguos de filas de la tabla ancha, repartidos por el coordinador al
+inicio. Cada nodo carga su partición **una sola vez** y la mantiene en memoria; por la red solo
+viajan centroides y parciales.
+
+**Iteración.** El coordinador manda los centroides a los $K$ nodos; cada nodo corre `Parciales` con
+su propio worker pool y responde; el coordinador espera a los $K$, fusiona **en orden de nodo** y
+actualiza. Es una **barrera por iteración a través de la red**: a diferencia de un bosque aleatorio
+distribuido, con un solo *reduce* al final, aquí la sincronización se paga en cada vuelta y es el
+costo dominante. Medirla es el experimento central de la PC4.
+
+::: {#tbl-protocolo tbl-colwidths="[13,20,33,34]"}
+| Mensaje | Sentido | Contenido | Para qué |
+|:---|:---|:---|:---|
+| `HOLA` | nodo → coordinador | identificador y capacidad del nodo | El nodo se registra (se conecta él) |
+| `CARGAR` | coordinador → nodo | rango de filas | Asigna la partición, una sola vez |
+| `LISTO` | nodo → coordinador | filas cargadas | Confirma la carga |
+| `ITERAR` | coordinador → nodo | número de iteración, centroides | Abre la iteración |
+| `PARCIAL` | nodo → coordinador | número de iteración, sumas, conteos, inercia | Resultado de `Parciales` |
+| `FIN` | coordinador → nodo | centroides finales | Cierra la corrida |
+| `PING` / `PONG` | ambos | — | Vida del nodo |
+| `ERROR` | ambos | motivo | Falla explícita |
+
+Protocolo entre el coordinador y los nodos: JSON delimitado por saltos de línea sobre TCP
+:::
+
+El campo de iteración es obligatorio en `ITERAR` y `PARCIAL`: sirve para descartar un parcial
+rezagado de una iteración abortada. Por ronda viajan unos $2 \cdot K \cdot k \cdot D \cdot 8$ bytes
+(centroides de ida y sumas de vuelta, en `float64`) más los conteos: el costo está en la latencia, no
+en el ancho de banda. **Fallas**: timeout por iteración y error claro; el operador relanza. Sin
+timeout, un nodo caído bloquea la barrera para siempre. Reasignar el rango a otro nodo y repetir la
+iteración queda descrito como extensión, no se implementa. La inicialización k-means++ corre una vez
+en el coordinador; su versión distribuida, k-means‖ [@bahmani2012], no hace falta a esta escala.
+
+**Determinismo entre nodos.** Fusionar por nodo es otro árbol de suma que fusionar por chunk en una
+máquina, y la suma en coma flotante no es asociativa: 1 nodo y 2 nodos coinciden **con tolerancia**,
+no bit a bit. Dentro de una máquina, con el chunk fijo, sí son idénticos para cualquier número de
+workers (@sec-paralelizacion).
+
+**Qué se mide en la PC4.** Dos paralelismos sobre el mismo clúster: por datos (cada nodo una
+partición y una barrera por iteración, lo que pide el enunciado) y por semillas (cada nodo un K-Means
+entero con su semilla; el coordinador se queda con la menor inercia, sin sincronización). La
+diferencia entre los dos es el costo de coordinar. El protocolo de la barrera (nodos, coordinador,
+timeout y un nodo que puede caerse) se modela en Promela y se verifica con Spin en la PC4: que no
+haya deadlock y que toda iteración termine o aborte.
+
+::: {.callout-warning title="PENDIENTE"}
+Diagrama de secuencia de una iteración (coordinador, dos nodos, `ITERAR`/`PARCIAL`, barrera,
+timeout), si `docs/diagramas/` produce uno. Se incluye como figura con su aviso `si-falta`, igual
+que la arquitectura.
+:::
+
+### Regímenes frente al ECA y al INCA {#sec-eca-inca}
+
+Cada cluster es un **régimen**: una combinación típica de material particulado y meteorología. Su
+perfil es el centroide des-estandarizado (la media de cada parámetro en su unidad) y se etiqueta
+frente al ECA para aire (@tbl-eca): un régimen «excede el ECA» si su PM2,5 medio supera 50 µg/m³ o
+su PM10 medio supera 100 µg/m³. El ECA es un promedio de 24 horas; una lectura horaria alta no es un
+incumplimiento por sí sola, y el informe no la presenta así.
+
+::: {#tbl-eca tbl-colwidths="[18,16,16,50]"}
+| Parámetro | Periodo | Valor (µg/m³) | Criterio de evaluación |
+|:---|:---|---:|:---|
+| PM2,5 | 24 horas | 50 | No exceder más de 7 veces al año |
+| PM2,5 | Anual | 25 | Media aritmética anual |
+| PM10 | 24 horas | 100 | No exceder más de 7 veces al año |
+| PM10 | Anual | 50 | Media aritmética anual |
+
+Estándares de Calidad Ambiental para aire, material particulado (DS 003-2017-MINAM)
+:::
+
+Para nombrar los regímenes ante la población se usan las bandas del INCA (@tbl-inca), que la
+norma define sobre promedios de 24 horas [@minam2016inca]. Hay un desfase que el informe tiene que
+decir: el INCA de PM2,5 se calcula como $I = [\mathrm{PM}_{2,5}] \cdot 100 / 25$, es decir, toma
+25 µg/m³ como su valor 100, mientras que el ECA de 24 horas vigente desde 2017 es 50 µg/m³. Una
+concentración de 30 µg/m³ es «mala» para el INCA y cumple el ECA. Por eso la etiqueta ECA y la banda
+INCA se reportan por separado y no se mezclan.
+
+::: {#tbl-inca tbl-colwidths="[40,30,30]"}
+| Banda | PM10, 24 h (µg/m³) | PM2,5, 24 h (µg/m³) |
+|:---|:---|:---|
+| Buena (INCA 0–50) | 0–75 | 0–12,5 |
+| Moderada (INCA 51–100) | 76–150 | 12,6–25 |
+| Mala (INCA 101 al umbral de cuidado) | 151–250 | 25,1–125 |
+| Umbral de cuidado (VUEC) | > 250 | > 125 |
+
+Bandas del Índice de Calidad del Aire para material particulado (RM 181-2016-MINAM, tabla 3)
+:::
+
+::: {.callout-warning title="PENDIENTE"}
+Las tablas del ECA y del INCA se transcribieron de los PDF oficiales el 31/10. Que alguien las
+coteje una vez más contra `DS-003-2017-MINAM.pdf` y `RM-N°-181-2016-MINAM.pdf` (enlaces en la
+bibliografía) antes de entregar.
+:::
+
+**Anticipación (diseñada aquí, medida en el TB2).** Para cada régimen, en una parte temporal de
+evaluación, se medirá la proporción de veces en que el promedio móvil de 24 horas de PM2,5 o PM10
+que sigue a la lectura terminó superando el ECA: un número por régimen («cuando una estación entra
+al régimen 4, el promedio de las 24 horas siguientes superó el ECA el X % de las veces»). Se compara
+con dos referencias ingenuas: la misma proporción sin condicionar al régimen, y «la lectura actual ya
+supera el ECA». Eso es lo que el sistema puede avisar, y es la segunda mitad de la pregunta.

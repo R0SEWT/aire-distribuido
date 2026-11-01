@@ -1,0 +1,205 @@
+% Bibliografía del informe de la PC3 (aire-distribuido). Formato BibLaTeX: Pandoc lee .bib como
+% BibLaTeX y lo cita en APA 7 con apa.csl.
+%
+% Verificación (2026-10-31):
+%   - Entradas con DOI: BibTeX del editor por content negotiation
+%       curl -LH "Accept: application/x-bibtex" https://doi.org/<DOI>
+%     Dhillon & Modha: Crossref dice 2002 (fecha en línea), pero el volumen LNCS 1759 es de 2000;
+%     se cita 2000, como el libro.
+%   - Normas peruanas: el PDF oficial en minam.gob.pe, leído (fecha, número y valores del ECA y del
+%     INCA). Las páginas de gob.pe/normas-legales no se usan: sus identificadores no se pudieron
+%     confirmar.
+%   - Dataset de OEFA: ficha en datosabiertos.gob.pe (API CKAN, id 1cb938b1-...). Lanzamiento
+%     2024-04-30, «Fecha modificada» 2026-06-15, licencia Open Data Commons Attribution (ODC-By).
+%     data/README.md registra el CSV con fecha 2024-07-17: confirmar al bajarlo y, si el archivo es
+%     de otra versión, cambiar el año.
+%   - Arthur & Vassilvitskii 2007 no tiene DOI de Crossref (10.5555 es el identificador interno de
+%     la ACM DL); se cita con la URL de la ACM DL.
+%
+% PENDIENTE: dos o tres trabajos de clustering de calidad del aire con K-Means (spec §9). No se
+% agregan sin haberlos leído.
+%
+% Las notas internas van en comentarios como este, no en campos note: apa.csl imprime note.
+
+% ---------------------------------------------------------------------------
+% K-Means: algoritmo, inicialización y versiones paralelas o distribuidas
+% ---------------------------------------------------------------------------
+
+@article{lloyd1982,
+  title     = {Least squares quantization in {PCM}},
+  author    = {Lloyd, Stuart P.},
+  journal   = {IEEE Transactions on Information Theory},
+  volume    = {28},
+  number    = {2},
+  pages     = {129--137},
+  year      = {1982},
+  doi       = {10.1109/TIT.1982.1056489}
+}
+
+@inproceedings{arthur2007,
+  title     = {k-means++: The advantages of careful seeding},
+  author    = {Arthur, David and Vassilvitskii, Sergei},
+  booktitle = {Proceedings of the Eighteenth Annual {ACM-SIAM} Symposium on Discrete Algorithms ({SODA} '07)},
+  pages     = {1027--1035},
+  year      = {2007},
+  publisher = {Society for Industrial and Applied Mathematics},
+  location  = {New Orleans, LA},
+  url       = {https://dl.acm.org/doi/10.5555/1283383.1283494}
+}
+
+@incollection{dhillon2000,
+  title     = {A data-clustering algorithm on distributed memory multiprocessors},
+  author    = {Dhillon, Inderjit S. and Modha, Dharmendra S.},
+  editor    = {Zaki, Mohammed J. and Ho, Ching-Tien},
+  booktitle = {Large-Scale Parallel Data Mining},
+  series    = {Lecture Notes in Computer Science},
+  volume    = {1759},
+  pages     = {245--260},
+  year      = {2000},
+  publisher = {Springer},
+  doi       = {10.1007/3-540-46502-2_13}
+}
+
+@incollection{zhao2009,
+  title     = {Parallel {K}-Means clustering based on {MapReduce}},
+  author    = {Zhao, Weizhong and Ma, Huifang and He, Qing},
+  editor    = {Jaatun, Martin Gilje and Zhao, Gansen and Rong, Chunming},
+  booktitle = {Cloud Computing ({CloudCom} 2009)},
+  series    = {Lecture Notes in Computer Science},
+  volume    = {5931},
+  pages     = {674--679},
+  year      = {2009},
+  publisher = {Springer},
+  doi       = {10.1007/978-3-642-10665-1_71}
+}
+
+% Reutilizada del TP (../concurrente/tp/docs/referencias.bib): k-means|| como inicialización
+% distribuida, la alternativa a k-means++ secuencial que se menciona en el diseño.
+@article{bahmani2012,
+  title     = {Scalable {K}-Means++},
+  author    = {Bahmani, Bahman and Moseley, Benjamin and Vattani, Andrea and Kumar, Ravi and
+               Vassilvitskii, Sergei},
+  journal   = {Proceedings of the VLDB Endowment},
+  volume    = {5},
+  number    = {7},
+  pages     = {622--633},
+  year      = {2012},
+  doi       = {10.14778/2180912.2180915}
+}
+
+% ---------------------------------------------------------------------------
+% Estadística numérica: media y varianza estables y fusionables (estandarización)
+% ---------------------------------------------------------------------------
+
+@article{welford1962,
+  title     = {Note on a method for calculating corrected sums of squares and products},
+  author    = {Welford, B. P.},
+  journal   = {Technometrics},
+  volume    = {4},
+  number    = {3},
+  pages     = {419--420},
+  year      = {1962},
+  doi       = {10.1080/00401706.1962.10490022}
+}
+
+@article{chan1983,
+  title     = {Algorithms for computing the sample variance: Analysis and recommendations},
+  author    = {Chan, Tony F. and Golub, Gene H. and LeVeque, Randall J.},
+  journal   = {The American Statistician},
+  volume    = {37},
+  number    = {3},
+  pages     = {242--247},
+  year      = {1983},
+  doi       = {10.1080/00031305.1983.10483115}
+}
+
+% ---------------------------------------------------------------------------
+% Concurrencia, Go y rendimiento paralelo
+% ---------------------------------------------------------------------------
+
+@book{donovan2015,
+  title     = {The {Go} Programming Language},
+  author    = {Donovan, Alan A. A. and Kernighan, Brian W.},
+  year      = {2015},
+  publisher = {Addison-Wesley},
+  isbn      = {978-0-13-419044-0}
+}
+
+% Reutilizadas del TP.
+@book{benari2006,
+  title     = {Principles of Concurrent and Distributed Programming},
+  author    = {Ben-Ari, Mordechai},
+  edition   = {2},
+  year      = {2006},
+  publisher = {Addison-Wesley},
+  isbn      = {978-0-321-31283-9}
+}
+
+@inproceedings{amdahl1967,
+  title     = {Validity of the single processor approach to achieving large scale computing
+               capabilities},
+  author    = {Amdahl, Gene M.},
+  booktitle = {Proceedings of the April 18-20, 1967, Spring Joint Computer Conference ({AFIPS} '67
+               Spring)},
+  pages     = {483--485},
+  year      = {1967},
+  publisher = {ACM},
+  doi       = {10.1145/1465482.1465560}
+}
+
+@article{gustafson1988,
+  title     = {Reevaluating {Amdahl's} law},
+  author    = {Gustafson, John L.},
+  journal   = {Communications of the ACM},
+  volume    = {31},
+  number    = {5},
+  pages     = {532--533},
+  year      = {1988},
+  doi       = {10.1145/42411.42415}
+}
+
+% El K-Means del sistema se porta del TP; el informe declara su autoría con esta entrada.
+@online{vilchez2026tp,
+  title   = {K-means concurrente sobre viajes de taxi de Nueva York: Trabajo Parcial de
+             Programación Concurrente y Distribuida},
+  author  = {Vilchez Marin, Rody Sebastian and Gómez Rodriguez, Dayana Kety and
+             Meza Alfaro, Julio Cesar},
+  year    = {2026},
+  url     = {https://github.com/R0SEWT/concurrente},
+  urldate = {2026-10-31}
+}
+
+% ---------------------------------------------------------------------------
+% Datos y normas peruanas
+% ---------------------------------------------------------------------------
+
+@dataset{oefa2026aire,
+  title        = {Vigilancia y seguimiento ambiental en la calidad del aire},
+  author       = {{Organismo de Evaluación y Fiscalización Ambiental}},
+  type         = {Conjunto de datos},
+  year         = {2026},
+  publisher    = {Plataforma Nacional de Datos Abiertos},
+  url          = {https://www.datosabiertos.gob.pe/dataset/vigilancia-y-seguimiento-ambiental-en-la-calidad-del-aire-organismo-de-evaluaci%C3%B3n-y},
+  urldate      = {2026-10-31}
+}
+
+@report{minam2017eca,
+  title       = {Aprueban Estándares de Calidad Ambiental ({ECA}) para Aire y establecen
+                 disposiciones complementarias},
+  author      = {{Ministerio del Ambiente}},
+  type        = {Decreto Supremo N.° },
+  number      = {003-2017-MINAM},
+  institution = {Diario Oficial El Peruano},
+  date        = {2017-06-07},
+  url         = {https://www.minam.gob.pe/wp-content/uploads/2017/06/DS-003-2017-MINAM.pdf}
+}
+
+@report{minam2016inca,
+  title       = {Aprueban el Índice de Calidad del Aire ({INCA})},
+  author      = {{Ministerio del Ambiente}},
+  type        = {Resolución Ministerial N.° },
+  number      = {181-2016-MINAM},
+  institution = {Ministerio del Ambiente},
+  date        = {2016-07-14},
+  url         = {https://www.minam.gob.pe/wp-content/uploads/2016/07/RM-N%C2%B0-181-2016-MINAM.pdf}
+}

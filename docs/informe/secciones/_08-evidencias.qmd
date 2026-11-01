@@ -1,0 +1,215 @@
+<!-- f.5) Evidencias de la implementación: código en Go, pruebas, benchmarks y capturas reales. -->
+
+## Evidencias de la implementación {#sec-evidencias}
+
+Cada ejecución que cita esta sección tiene su captura real de la terminal, con el comando a la
+vista, en `docs/informe/capturas/`.
+
+### Código
+
+::: {#tbl-repo tbl-colwidths="[28,72]"}
+| Ruta | Contenido |
+|:---|:---|
+| `cmd/cargar/` | Parte A: CSV largo → tabla ancha estandarizada, capa silver y conteos de limpieza |
+| `cmd/entrenar/` | Parte B: K-Means con la receta, centroides, regímenes y su distribución |
+| `cmd/benchmark/` | Speedup del cargador y del K-Means con W workers |
+| `datos/` | Paquete del cargador: bloques, reglas, pivot, estandarización |
+| `kmeans/` | Portado del TP: secuencial, concurrente, parciales, k-means++, codo |
+| `configs/limpieza.json` | Unidades, centinelas y rangos por parámetro |
+| `configs/kmeans.json` | Receta congelada por la calibración |
+| `notebooks/` | EDA, calibración y auditoría (Colab): laboratorio, no sistema |
+| `data/sample/` | Muestra versionada del CSV para las pruebas y la integración continua |
+| `Dockerfile` | Imagen de `cmd/cargar` y `cmd/entrenar` |
+| `docs/informe/` | Este informe (Quarto → Word) |
+
+Estructura del repositorio
+:::
+
+::: {.callout-warning title="PENDIENTE"}
+Revisar la tabla contra el árbol real del repositorio en `release/pc3`, y agregar los fragmentos de
+código que sostienen la @sec-paralelizacion: el lector de bloques y el recolector (`datos/`), y
+`Parciales`/`Fusionar` con el worker pool (`kmeans/`). Cada fragmento con su archivo y líneas, como
+bloque de código Go.
+:::
+
+### Pruebas
+
+::: {#tbl-pruebas tbl-colwidths="[42,43,15]"}
+| Prueba | Qué demuestra | Paquete |
+|:---|:---|:---|
+| PENDIENTE | Mismo `Dataset` con W = 1 y W = 8 (bit a bit) | `datos/` |
+| PENDIENTE | Cada regla de limpieza tiene su caso en `data/sample/` | `datos/` |
+| PENDIENTE | Leídas = procesadas + descartadas | `datos/` |
+| `TestConcurrenteDaElMismoResultadoParaCualquierP` (TP) | Mismos centroides para cualquier número de workers | `kmeans/` |
+| `TestConcurrenteEquivaleAlSecuencialConTolerancia` (TP) | El concurrente coincide con el secuencial con tolerancia | `kmeans/` |
+| PENDIENTE | `Fusionar` de parciales por nodo coincide con una máquina, con tolerancia | `kmeans/` |
+
+Pruebas que sostienen la corrección de la concurrencia
+:::
+
+![`go test -race ./...` sobre todo el módulo](capturas/go-test-race.png){#fig-captura-tests width=16cm}
+
+:::: {si-falta="capturas/go-test-race.png"}
+::: {.callout-warning title="PENDIENTE"}
+Captura real de `go test -race -v ./...` (o `-short` si el completo no cabe en una pantalla; en ese
+caso, dos capturas). Va en `docs/informe/capturas/go-test-race.png`.
+:::
+::::
+
+![Integración continua en GitHub Actions: `go test -race`, `go vet` y `gofmt`](capturas/ci.png){#fig-captura-ci width=16cm}
+
+:::: {si-falta="capturas/ci.png"}
+::: {.callout-warning title="PENDIENTE"}
+Captura de los checks de GitHub Actions en verde sobre la PR de `release/pc3` a `main`. Va en
+`docs/informe/capturas/ci.png`.
+:::
+::::
+
+### Rendimiento
+
+El cargador se midió sobre el CSV completo con el bloque fijo de
+{{< meta cifras.benchmark_cargador.chunks >}} y con {{< meta cifras.benchmark_cargador.workers >}}
+workers (@tbl-bench-cargador). El mejor speedup fue {{< meta cifras.benchmark_cargador.speedup_max >}}
+(IC 95 % {{< meta cifras.benchmark_cargador.speedup_max_ic >}}) con
+{{< meta cifras.benchmark_cargador.workers_max >}} workers: de
+{{< meta cifras.benchmark_cargador.mediana_referencia_s >}} s a
+{{< meta cifras.benchmark_cargador.mediana_mejor_s >}} s, con una eficiencia de
+{{< meta cifras.benchmark_cargador.eficiencia_max >}}.
+
+{{< include generado/tablas/benchmark_cargador.md >}}
+
+El K-Means se midió con {{< meta cifras.benchmark_kmeans.workers >}} workers y chunks de
+{{< meta cifras.benchmark_kmeans.chunks >}} filas, contra la versión secuencial
+(@tbl-bench-kmeans). El mejor speedup fue {{< meta cifras.benchmark_kmeans.speedup_max >}}
+(IC 95 % {{< meta cifras.benchmark_kmeans.speedup_max_ic >}}) con
+{{< meta cifras.benchmark_kmeans.workers_max >}} workers y chunks de
+{{< meta cifras.benchmark_kmeans.chunk_max >}} filas.
+
+{{< include generado/tablas/benchmark_kmeans.md >}}
+
+![Speedup del cargador y del K-Means por número de workers, con su intervalo de confianza](generado/figuras/speedup.png){#fig-speedup width=15cm}
+
+:::: {si-falta="generado/figuras/speedup.png"}
+::: {.callout-warning title="PENDIENTE"}
+Speedup contra workers, con la diagonal ideal y las barras del IC, desde
+`generado/benchmark_*.json`. La dibuja el notebook 03 en `docs/informe/generado/figuras/speedup.png`.
+:::
+::::
+
+![Ejecución de `cmd/benchmark` en gorgo](capturas/benchmark.png){#fig-captura-benchmark width=16cm}
+
+:::: {si-falta="capturas/benchmark.png"}
+::: {.callout-warning title="PENDIENTE"}
+Captura real de `go run ./cmd/benchmark` en gorgo (puede ser una corrida reducida si la completa no
+cabe), con el comando a la vista. Va en `docs/informe/capturas/benchmark.png`.
+:::
+::::
+
+::: {.callout-warning title="PENDIENTE"}
+El análisis del speedup, con las cifras de arriba: dónde se aleja de la diagonal y por qué (lectura
+del disco y ancho de banda de memoria en el cargador; fusión en orden y barrera en el K-Means; efecto
+del tamaño de chunk), qué dice Amdahl de la fracción secuencial y si alguna configuración concurrente
+resultó más lenta que la secuencial, explicando por qué.
+:::
+
+### Resultados del K-Means {#sec-resultados-kmeans}
+
+El K-Means {{< meta cifras.kmeans.paro >}} sobre
+{{< meta cifras.kmeans.n >}} horas-estación, con inercia {{< meta cifras.kmeans.inercia >}}. La
+@tbl-centroides da el perfil de cada cluster en las unidades originales y la @tbl-regimenes lo
+interpreta como régimen, con su etiqueta frente al ECA. Exceden el ECA
+{{< meta cifras.regimenes.n_excede >}} de {{< meta cifras.regimenes.n >}} regímenes
+({{< meta cifras.regimenes.excede >}}), que reúnen el {{< meta cifras.regimenes.pct_filas_excede >}}
+de las horas-estación.
+
+{{< include generado/tablas/kmeans_centroides.md >}}
+
+{{< include generado/tablas/kmeans_centroides_z.md >}}
+
+{{< include generado/tablas/regimenes.md >}}
+
+**Dónde y cuándo.** La @tbl-regimenes-hora reparte cada régimen por franja horaria y la
+@tbl-regimenes-estacion dice en qué estaciones aparece más. Es la primera mitad de la pregunta de
+impacto (@sec-pregunta).
+
+{{< include generado/tablas/regimenes_hora.md >}}
+
+{{< include generado/tablas/regimenes_estacion.md >}}
+
+![Perfil de cada régimen: media de cada parámetro, estandarizada](generado/figuras/perfiles.png){#fig-perfiles width=15cm}
+
+:::: {si-falta="generado/figuras/perfiles.png"}
+::: {.callout-warning title="PENDIENTE"}
+Perfiles de los regímenes desde `generado/kmeans.json`. Notebook 03, en
+`docs/informe/generado/figuras/perfiles.png`.
+:::
+::::
+
+![Régimen por hora del día: proporción de las horas de cada régimen](generado/figuras/regimen-hora.png){#fig-regimen-hora width=15cm}
+
+:::: {si-falta="generado/figuras/regimen-hora.png"}
+::: {.callout-warning title="PENDIENTE"}
+Heatmap régimen × hora desde `generado/regimenes.json` (`por_hora`). Notebook 03, en
+`docs/informe/generado/figuras/regimen-hora.png`.
+:::
+::::
+
+![Régimen por estación: proporción de las horas de cada estación en cada régimen](generado/figuras/regimen-estacion.png){#fig-regimen-estacion width=15cm}
+
+:::: {si-falta="generado/figuras/regimen-estacion.png"}
+::: {.callout-warning title="PENDIENTE"}
+Heatmap régimen × estación desde `generado/regimenes.json` (`por_estacion`). Notebook 03, en
+`docs/informe/generado/figuras/regimen-estacion.png`.
+:::
+::::
+
+![Un episodio: PM2,5 y PM10 horarios de una estación, coloreados por régimen, con las líneas del ECA](generado/figuras/episodio.png){#fig-episodio width=16cm}
+
+:::: {si-falta="generado/figuras/episodio.png"}
+::: {.callout-warning title="PENDIENTE"}
+La figura estrella: unos días de una estación con un episodio, cada hora coloreada por su régimen.
+Notebook 03, en `docs/informe/generado/figuras/episodio.png`. Elegir el episodio con el EDA y decir
+por qué ese.
+:::
+::::
+
+![Ejecución de `cmd/entrenar`: iteraciones, inercia y regímenes](capturas/entrenar.png){#fig-captura-entrenar width=16cm}
+
+:::: {si-falta="capturas/entrenar.png"}
+::: {.callout-warning title="PENDIENTE"}
+Captura real de `go run ./cmd/entrenar` con la receta de `configs/kmeans.json`. Va en
+`docs/informe/capturas/entrenar.png`.
+:::
+::::
+
+::: {.callout-warning title="PENDIENTE"}
+Interpretación de los regímenes (nombre de cada uno a partir de su perfil: combustión, polvo,
+calma nocturna, fondo limpio; la meteorología que los acompaña) y la respuesta a la primera mitad de
+la pregunta: en qué estaciones y a qué horas se concentran los regímenes que exceden el ECA. Con la
+advertencia de cobertura. También el resultado de la auditoría de centroides: Go contra
+scikit-learn, con correspondencia de etiquetas y la diferencia máxima.
+:::
+
+### Despliegue con Docker
+
+![Construcción y ejecución de la imagen de `cmd/cargar` y `cmd/entrenar`](capturas/docker.png){#fig-captura-docker width=16cm}
+
+:::: {si-falta="capturas/docker.png"}
+::: {.callout-warning title="PENDIENTE"}
+Captura real de `docker build` y `docker run` de la imagen (el `Dockerfile` de la PC3 cubre
+`cmd/cargar` y `cmd/entrenar`; Compose entero llega en la PC4). Va en
+`docs/informe/capturas/docker.png`.
+:::
+::::
+
+::: {.callout-warning title="PENDIENTE"}
+Un párrafo sobre el `Dockerfile`: imagen base, compilación en dos etapas si la hay, cómo se monta el
+CSV (no entra en la imagen) y el comando que corre.
+:::
+
+### Gestión del proyecto
+
+El repositorio sigue Git Flow: `develop` es la rama por defecto, cada cambio entra por una rama
+`feature/*` con su PR, y la entrega sale de `release/pc3` hacia `main`. Las tareas se siguen en un
+tablero Kanban de GitHub Projects desde el inicio de la semana de la entrega (Anexo B), y el
+historial de commits por integrante está en el Anexo C.

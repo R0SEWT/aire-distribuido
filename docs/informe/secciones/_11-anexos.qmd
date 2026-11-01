@@ -1,0 +1,65 @@
+<!-- j) Anexos: repositorio y video, Kanban, historial de git, participación, uso de IA. -->
+
+# Anexos {.unnumbered}
+
+## Anexo A. Repositorio, video y datos {.unnumbered}
+
+- **Repositorio (público):** <https://github.com/R0SEWT/aire-distribuido>. La versión que se
+  entrega es la rama `main` en el tag `pc3`, a la que se llega por `release/pc3`.
+- **Video:** PENDIENTE.
+- **Datos:** no se versionan (1,3 GB). Ficha y descarga en la Plataforma Nacional de Datos Abiertos
+  [@oefa2026aire]; instrucciones en `data/README.md`.
+
+::: {.callout-warning title="PENDIENTE"}
+Crear el tag `pc3` en `main` después del release. Enlace del video si la PC3 lo lleva (se pregunta
+al docente el lun 02/11; si sí, participan los tres). Nombre, tamaño y sha256 del CSV de OEFA que
+produjo los resultados (de `generado/limpieza.json`, campo `fuente`).
+:::
+
+## Anexo B. Tablero Kanban {.unnumbered}
+
+El seguimiento de las tareas de la PC3 se hizo en un tablero Kanban de GitHub Projects, creado al
+inicio de la semana de la entrega y actualizado durante ella.
+
+![Tablero Kanban del proyecto en GitHub Projects](capturas/kanban.png){#fig-kanban width=16cm}
+
+:::: {si-falta="capturas/kanban.png"}
+::: {.callout-warning title="PENDIENTE"}
+Enlace al tablero (GitHub Projects del repositorio) y captura del tablero el día de la entrega, con
+las tarjetas de la PC3 en «Hecho». Va en `docs/informe/capturas/kanban.png`. El tablero se crea el
+lun 02/11: uno armado la noche de la entrega no muestra seguimiento.
+:::
+::::
+
+## Anexo C. Historial de versiones por integrante {.unnumbered}
+
+{{< include generado/historial.md >}}
+
+## Anexo D. Reporte de participación {.unnumbered}
+
+{{< include _participacion.md >}}
+
+## Anexo E. Declaración de uso de inteligencia artificial {.unnumbered}
+
+El sílabo del curso incorpora la ingeniería de prompts como herramienta, siempre contrastada con la
+teoría. En este entregable se usó IA generativa en las tareas de la @tbl-uso-ia. Todo lo producido
+con ella fue revisado por el grupo y validado contra el código, las pruebas y los datos, que son la
+fuente de las cifras de este informe: ninguna cifra sale de la redacción.
+
+::: {#tbl-uso-ia tbl-colwidths="[30,22,48]"}
+| Tarea | Herramienta | Cómo se verificó |
+|:---|:---|:---|
+| Specs de diseño de la PC3, de la calibración y de las preguntas candidatas (`docs/superpowers/specs/`) | Claude Code (Anthropic), modelo Claude Opus 5.5 | Revisión de Rody; las decisiones del redactor quedaron marcadas como tales en las specs y se aceptaron o revirtieron una por una |
+| Esqueleto de este informe en Quarto, `tablas.py`, `render.sh`, `generar-historial.sh`, `empaquetar-pc3.sh` y la plantilla de Word | Claude Code, mismo modelo | El render produce los tres `.docx`; las cifras salen de los JSON que escriben los comandos de Go; las referencias se verificaron por DOI o en el documento oficial |
+| Código Go (cargador, K-Means, comandos) | PENDIENTE | `go test -race`, la muestra con un caso por regla y la integración continua |
+| Notebooks (EDA, calibración, auditoría) | PENDIENTE | Auditoría cruzada: Go contra Polars y scikit-learn |
+| Redacción del informe | PENDIENTE | Revisión del grupo |
+
+Uso de IA generativa en la PC3
+:::
+
+::: {.callout-warning title="PENDIENTE"}
+Completar las filas marcadas y que cada integrante declare su propio uso (herramienta, para qué y
+qué verificó), como en el TP. Los commits no llevan la marca de IA (convención del repositorio): el
+uso se declara solo aquí, así que el historial del Anexo C no basta para rastrearlo.
+:::

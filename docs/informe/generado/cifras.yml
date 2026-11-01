@@ -1,0 +1,62 @@
+# Generado por tablas.py desde generado/*.json. No editar a mano.
+# Uso en el .qmd: {{< meta cifras.limpieza.filas_largas_leidas >}}
+cifras:
+  estado:
+    placeholders: "limpieza.json, estandarizacion.json, benchmark_cargador.json, benchmark_kmeans.json, kmeans.json, regimenes.json, codo.json"
+  limpieza:
+    filas_largas_leidas: "3 600 000 [PLACEHOLDER]"
+    filas_largas_procesadas: "3 327 400 [PLACEHOLDER]"
+    filas_largas_descartadas: "272 600 [PLACEHOLDER]"
+    pct_descartadas: "7,6 % [PLACEHOLDER]"
+    filas_anchas: "331 200 [PLACEHOLDER]"
+    filas_completas: "268 400 [PLACEHOLDER]"
+    pct_completas: "81,0 % [PLACEHOLDER]"
+    violaciones_pm: "2 150 [PLACEHOLDER]"
+    n_estaciones: "6 [PLACEHOLDER]"
+    n_departamentos: "6 [PLACEHOLDER]"
+    fecha_min: "2018-07-01 [PLACEHOLDER]"
+    fecha_max: "2024-06-30 [PLACEHOLDER]"
+    duracion_s: "38,4 [PLACEHOLDER]"
+    workers: "8 [PLACEHOLDER]"
+  estandarizacion:
+    n: "268 400 [PLACEHOLDER]"
+    n_features: "4 [PLACEHOLDER]"
+    nivel: "absoluto [PLACEHOLDER]"
+    features: "PM10 (µg/m³), Fracción fina PM2,5/PM10, Viento (m/s), Humedad relativa (%) [PLACEHOLDER]"
+  benchmark_cargador:
+    speedup_max: "6,89 [PLACEHOLDER]"
+    speedup_max_ic: "[6,77; 7,01] [PLACEHOLDER]"
+    workers_max: "11 [PLACEHOLDER]"
+    chunk_max: "64 MiB [PLACEHOLDER]"
+    mediana_referencia_s: "182,00 [PLACEHOLDER]"
+    mediana_mejor_s: "26,40 [PLACEHOLDER]"
+    eficiencia_max: "63 % [PLACEHOLDER]"
+    maquina: "PLACEHOLDER [PLACEHOLDER]"
+    workers: "1, 2, 4, 8 y 11 [PLACEHOLDER]"
+    chunks: "64 MiB [PLACEHOLDER]"
+  benchmark_kmeans:
+    speedup_max: "6,93 [PLACEHOLDER]"
+    speedup_max_ic: "[6,80; 7,04] [PLACEHOLDER]"
+    workers_max: "11 [PLACEHOLDER]"
+    chunk_max: "10 000 [PLACEHOLDER]"
+    mediana_referencia_s: "2,84 [PLACEHOLDER]"
+    mediana_mejor_s: "0,41 [PLACEHOLDER]"
+    eficiencia_max: "63 % [PLACEHOLDER]"
+    maquina: "PLACEHOLDER [PLACEHOLDER]"
+    workers: "1, 2, 4, 8 y 11 [PLACEHOLDER]"
+    chunks: "1 000 y 10 000 [PLACEHOLDER]"
+  kmeans:
+    k: "5 [PLACEHOLDER]"
+    semilla: "2024 [PLACEHOLDER]"
+    iteraciones: "23 [PLACEHOLDER]"
+    paro: "convergió en 23 iteraciones [PLACEHOLDER]"
+    inercia: "412 345,6 [PLACEHOLDER]"
+    n: "268 400 [PLACEHOLDER]"
+    features: "PM10 (µg/m³), Fracción fina PM2,5/PM10, Viento (m/s), Humedad relativa (%) [PLACEHOLDER]"
+  regimenes:
+    n: "5 [PLACEHOLDER]"
+    n_excede: "1 [PLACEHOLDER]"
+    excede: "4. Episodio de polvo [PLACEHOLDER]"
+    pct_filas_excede: "5,4 % [PLACEHOLDER]"
+  codo:
+    k_elegido: "5 [PLACEHOLDER]"

@@ -1,0 +1,53 @@
+{
+  "placeholder": true,
+  "_nota": "PLACEHOLDER: cifras inventadas con el esquema que escribe cmd/entrenar -codo. No describen los datos de OEFA y no se citan. Se reemplaza el archivo entero cuando cmd/entrenar -codo escriba el real (ver docs/informe/README.md, «Contrato de los JSON»).",
+  "generado_por": "cmd/entrenar -codo",
+  "momento": "2026-11-04T12:00:00-05:00",
+  "commit": "PLACEHOLDER",
+  "maquina": "PLACEHOLDER",
+  "version_go": "go1.26.x",
+  "submuestra": {
+    "n": 200000,
+    "metodo": "sistemática (cada n-ésima fila ancha ordenada por estación y fecha-hora)"
+  },
+  "semilla": 2024,
+  "k_elegido": 5,
+  "puntos": [
+    {
+      "k": 2,
+      "inercia": 512000.0
+    },
+    {
+      "k": 3,
+      "inercia": 371000.0
+    },
+    {
+      "k": 4,
+      "inercia": 298000.0
+    },
+    {
+      "k": 5,
+      "inercia": 249000.0
+    },
+    {
+      "k": 6,
+      "inercia": 228000.0
+    },
+    {
+      "k": 7,
+      "inercia": 211000.0
+    },
+    {
+      "k": 8,
+      "inercia": 198500.0
+    },
+    {
+      "k": 9,
+      "inercia": 188000.0
+    },
+    {
+      "k": 10,
+      "inercia": 179500.0
+    }
+  ]
+}

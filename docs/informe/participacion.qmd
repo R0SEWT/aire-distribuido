@@ -1,0 +1,8 @@
+---
+# Reporte de participación suelto: el archivo que sube el coordinador junto con su informe.
+# El contenido es el mismo del Anexo D (_participacion.md); se edita allí.
+lang: es
+number-sections: false
+---
+
+{{< include _participacion.md >}}
