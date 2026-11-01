@@ -17,7 +17,8 @@ con el EDA sin tocar las pruebas.
 |:---|:---|:---|
 | 1 | Solo filas con `Periodo` horario; los promedios diarios o mensuales se descartan | La unidad de análisis es la lectura horaria |
 | 2 | Fecha y hora parseables, en hora local de Lima (UTC−5); fuera del rango del dataset, se descarta | Evitar basura histórica |
-| 2′ | Hora: si falta, se reconstruye por posición en los grupos de 24 filas contiguas (hora final) y se marca como inferida; si el grupo no tiene 24 filas, se descarta (@sec-hora) | La hora falta en el {{< meta cifras.csv.pct_sin_hora >}} del archivo |
+| 2′ | Hora: si falta, se reconstruye por posición en los días de 24 filas contiguas (hora final) y se marca como inferida; si el día no está completo, se descarta (@sec-hora) | El {{< meta cifras.limpieza.pct_hora_inferida >}} de las lecturas no trae hora |
+| 3′ | Un día entero de un parámetro en 0 exacto se descarta: el equipo no midió | Un cero de relleno no es aire limpio |
 | 3 | Valor numérico; negativos (salvo temperatura) y centinelas del equipo se descartan | Lectura inválida del sensor |
 | 4 | Fuera del rango físico del parámetro, se descarta y se cuenta por parámetro | Rango del equipo |
 | 5 | Duplicados exactos (estación, parámetro, fecha-hora): se conserva el primero en orden de archivo; con valor distinto, se marcan | Reenvíos del sistema de captura |
@@ -37,32 +38,53 @@ que `tablas.py` los lea de ahí y genere la tabla, igual que las demás.
 
 ### La hora, reconstruida por posición {#sec-hora}
 
-El archivo no trae la hora en el {{< meta cifras.csv.pct_sin_hora >}} de sus filas (@sec-csv). Sin
-hora no hay lectura horaria, y sin lectura horaria no hay ni pivot ni régimen. La decisión del 01/11
-es reconstruirla por **posición**: dentro de cada grupo de un mismo día, estación, parámetro, unidad
-y periodo, la fila *i* (contando desde cero) es la hora *i* + 1, en hora final (la lectura «1» cubre
-de 00:00 a 01:00 y la «24» corresponde a las 00:00 del día siguiente). Solo se aplica cuando el
-grupo tiene exactamente 24 filas contiguas, que es el caso del
-{{< meta cifras.csv.pct_grupos_de_24 >}} de los grupos sin hora; si no, la fila se descarta por la
-regla de la hora. Cada hora reconstruida se marca como inferida y se cuenta.
+El {{< meta cifras.limpieza.pct_hora_inferida >}} de las lecturas que llegan al silver no trae hora
+(@sec-csv). Sin hora no hay lectura horaria, y sin lectura horaria no hay ni pivot ni régimen. La
+decisión del 01/11 fue reconstruirla por **posición**: dentro de cada día de una misma estación,
+parámetro, unidad y periodo, la fila *i* (contando desde cero) es la hora que empieza a las *i*:00 y
+se fecha al final de su hora, a las *i* + 1. Solo se aplica cuando el día tiene exactamente 24 filas
+contiguas en el archivo; si no, la fila se descarta por la regla `hora`
+({{< meta cifras.limpieza.descartadas_hora >}} lecturas). Cada hora reconstruida se marca como
+inferida y se cuenta (@tbl-limpieza-hora).
 
-**La evidencia del control.** La regla se probó donde se puede comprobar: en las
-{{< meta cifras.csv.filas_con_hora >}} filas que sí traen hora, la hora coincide con la posición
-dentro del día más uno en el {{< meta cifras.csv.control_hora >}} de los casos.
+**La evidencia del control.** La regla se probó donde se puede comprobar. En los
+{{< meta cifras.eda.control_dias >}} días completos que traen la hora explícita, la hora de inicio
+coincide con la posición de la fila en el {{< meta cifras.eda.control_hora >}} de las
+{{< meta cifras.eda.control_filas >}} filas; contando también los días incompletos, en el
+{{< meta cifras.eda.control_pct_todas >}} de las {{< meta cifras.eda.control_filas_con_hora >}}
+filas con hora (notebook 01, `reports/eda_criba.md`).
 
 **Esto es un supuesto fuerte, y el informe lo dice con esas palabras.** Que la hora sea la posición
-en las filas con hora no prueba que lo sea en las que no la traen: si OEFA ordenara distinto los
-grupos sin hora, o si faltara una lectura dentro de un bloque de 24, las horas se correrían sin que
-nada lo delate. Por eso se exige el bloque completo y se marca cada hora inferida: cualquier
-resultado que dependa de la hora del día (el ciclo diario de un régimen, la hora pico) hereda este
-supuesto.
+en los días que traen hora no prueba que lo sea en los que no la traen: si OEFA ordenara distinto
+esos días, o si faltara una lectura dentro de un bloque de 24, las horas se correrían sin que nada lo
+delate. Por eso se exige el día completo y se marca cada hora inferida: el
+{{< meta cifras.limpieza.pct_anchas_hora_inferida >}} de las filas anchas tiene alguna celda con hora
+inferida, y cualquier resultado que dependa de la hora del día (el ciclo diario de un régimen, su
+hora pico) hereda este supuesto.
 
-::: {.callout-warning title="PENDIENTE"}
-Los conteos de la regla de la hora (horas inferidas y filas descartadas por grupo incompleto) los
-escribe `cmd/cargar` cuando implemente la reconstrucción: van en la tabla de reglas
-(`generado/limpieza.json`) y en la prosa con el shortcode meta. Hoy el cargador todavía espera la
-columna de hora, y las cifras de esta sección vienen de la inspección del 01/11 (@tbl-csv-oefa).
-:::
+{{< include generado/tablas/limpieza_hora.md >}}
+
+### Días en cero, gases gemelos y conversiones
+
+**Días enteros en cero.** {{< meta cifras.limpieza.bloque_en_cero >}} lecturas
+({{< meta cifras.limpieza.pct_bloque_en_cero >}} del archivo, @tbl-limpieza-ceros) pertenecen a días
+en que un parámetro marcó 0 exacto las 24 horas. Ningún contaminante ni variable meteorológica vale
+exactamente cero un día entero: es un equipo que no midió y rellenó con ceros. Contarlos como
+medición haría pasar un equipo apagado por aire limpio, que es justo el error que la advertencia de
+cobertura quiere evitar; por eso se descartan enteros (regla `bloque_en_cero`). Solo en PM10 son
+{{< meta cifras.limpieza.bloque_en_cero_pm10 >}} lecturas.
+
+{{< include generado/tablas/limpieza_ceros.md >}}
+
+**Gases gemelos y conversiones.** SO2, CO, O3 y H2S llegan dos veces, en ppb y en µg/m³, para la
+misma estación y hora. Se conserva la lectura en µg/m³ y su gemela en ppb se descarta por la regla
+`duplicado_unidad` ({{< meta cifras.limpieza.duplicado_unidad >}} lecturas,
+{{< meta cifras.limpieza.pct_duplicado_unidad >}} del archivo); si un gas solo viene en ppb, se
+convierte con el factor a 25 °C y 1 atm. La presión llega en mmHg y en hPa y se lleva a hPa. En
+total, {{< meta cifras.limpieza.unidad_convertida >}} lecturas se convirtieron a la unidad canónica
+y quedan marcadas (@tbl-limpieza-marcas).
+
+{{< include generado/tablas/limpieza_marcas.md >}}
 
 ### Evidencias de la limpieza
 
@@ -95,16 +117,29 @@ real. Parámetros sin mapeo en esta corrida: {{< meta cifras.limpieza.no_mapeado
 
 :::: {si-falta="capturas/cargar.png"}
 ::: {.callout-warning title="PENDIENTE"}
-Captura real de la terminal con `go run ./cmd/cargar` sobre el CSV completo (en gorgo), con el
-comando a la vista y la salida de conteos. Va en `docs/informe/capturas/cargar.png`. Ajustar el
-comando al que tenga `cmd/cargar` cuando se fusione.
+Captura real de la terminal con `go run ./cmd/cargar -entrada data/bronze/<CSV>` sobre el CSV
+completo, con el comando a la vista y la salida de conteos. Va en `docs/informe/capturas/cargar.png`.
 :::
 ::::
 
+**Qué dicen los conteos.** Se descarta la mitad del archivo
+({{< meta cifras.limpieza.pct_descartadas >}}), y casi todo por tres razones que no son ruido de
+medición sino forma del dato: los días en cero ({{< meta cifras.limpieza.pct_bloque_en_cero >}} de
+las filas leídas), las filas sin un único parámetro con valor
+({{< meta cifras.limpieza.pct_descartadas_parametro >}}) y los periodos que no son horarios
+({{< meta cifras.limpieza.pct_descartadas_periodo >}}: promedios de 24 horas y medias móviles que
+el archivo mezcla con las horarias). Las gemelas en otra unidad suman otro
+{{< meta cifras.limpieza.pct_duplicado_unidad >}}. De las {{< meta cifras.limpieza.fuera_de_rango >}}
+lecturas fuera de rango, {{< meta cifras.limpieza.fuera_de_rango_presion >}} son de presión, lo que
+apunta más a un problema de unidad o de rango configurado que a lecturas malas: hay que revisarlo
+en `configs/limpieza.json`. Al final, de {{< meta cifras.limpieza.n_estaciones_con_datos >}}
+estaciones con datos, solo {{< meta cifras.limpieza.n_estaciones_gold >}} tienen horas completas en
+las cuatro features de la receta (@tbl-limpieza-estaciones): el modelo ve una parte chica de la red,
+y la advertencia de cobertura (@sec-cobertura) vale con más razón.
+
 ::: {.callout-warning title="PENDIENTE"}
-Un párrafo que interprete los conteos: qué regla pesa más y por qué (¿promedios no horarios?,
-¿centinelas de un equipo?), qué estaciones quedan con pocas horas completas y qué significa eso para
-la pregunta. Con las cifras de `generado/cifras.yml`.
+Confirmar si las {{< meta cifras.limpieza.fuera_de_rango_presion >}} lecturas de presión fuera de
+rango son un problema de unidad (mmHg frente a hPa) o del rango de `configs/limpieza.json`.
 :::
 
 ### Análisis exploratorio
@@ -131,12 +166,18 @@ Distribuciones de PM2,5 y PM10 (escala log, con las líneas del ECA). Las dibuja
 :::
 ::::
 
-::: {.callout-warning title="PENDIENTE"}
-Hallazgos del EDA en prosa, con cifras de `reports/eda_criba.md`: rango de fechas y años completos,
-huecos, frecuencia de horas sobre el ECA, proporción de lecturas con PM2,5 > PM10
-({{< meta cifras.limpieza.violaciones_pm >}} en la carga), ciclo diario. Y el conjunto de features
-que deja la completitud.
-:::
+**Lo que mostró el EDA** (notebook 01 sobre el bronze, `reports/eda_criba.md`). Los episodios
+sobre el ECA existen pero son raros: {{< meta cifras.eda.episodios_24h >}} episodios de 24 horas en
+{{< meta cifras.eda.estaciones_episodios >}} estaciones. PM2,5 y PM10 son coherentes entre sí: solo
+{{< meta cifras.limpieza.violaciones_pm >}} filas anchas tienen PM2,5 > PM10. Algunas estaciones no
+sirven para todo: el complejo de La Oroya (CA-CC-01) no trae PM en el dataset, solo SO2 y
+meteorología, y en CA-03 y CA-TA-01 el ciclo diario de la temperatura no es creíble (máximo de la
+temperatura antes del mediodía o mínimo cerca de la medianoche), así que su meteorología no se usa como feature tal como viene. Además,
+{{< meta cifras.limpieza.n_ubicaciones_distintas >}} estaciones aparecen con más de una ubicación
+({{< meta cifras.limpieza.estaciones_ubicaciones_distintas >}}) y se cargan como una sola. La
+completitud decide las features: con PM10, la fracción fina, el viento y la humedad (la receta
+provisional) quedan {{< meta cifras.limpieza.n_estaciones_gold >}} estaciones con horas completas,
+y la calibración (@sec-modelo) puede cambiar ese equilibrio entre features y estaciones.
 
 ### Estandarización
 

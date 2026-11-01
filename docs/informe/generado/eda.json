@@ -1,0 +1,16 @@
+{
+  "transcrito": "reports/eda_criba.md",
+  "_fuente": "reports/eda_criba.md, generado por notebooks/01_eda_criba.ipynb el 2026-11-01 sobre el bronze real (sha256 1f09a806…f26d92); los 4 691 días, de datos/doc.go. El notebook no los escribe en JSON: si se vuelve a correr, actualizar este archivo desde el .md.",
+  "multilinea": 100,
+  "control_hora": {
+    "filas_con_hora_inicio": 118596,
+    "filas_posicion": 116558,
+    "filas_en_bloques_completos": 112584,
+    "filas_en_bloques_completos_posicion": 112584,
+    "dias_en_bloques_completos": 4691
+  },
+  "episodios": {
+    "estaciones_con_episodios_24h": 9,
+    "episodios_24h": 108
+  }
+}

@@ -107,18 +107,19 @@ ellos, nunca al revés. Se copian desde `reports/` (o `python3 tablas.py --entra
 
 | Archivo | Lo escribe | Esquema en | Qué toma el informe |
 |---|---|---|---|
-| `limpieza.json` | `cmd/cargar` | `datos/reporte.go` | `metadatos` (commit, fecha, máquina), `sha256` del CSV y de las `configs`, filas largas (leídas, procesadas, descartadas y marcadas por regla, fuera de rango por parámetro), filas anchas (total, completas del gold, PM2.5 > PM10), por estación (leídas, procesadas, anchas, gold, desde, hasta, departamento), parámetros, periodos y unidades vistos, workers, bloques, duración |
+| `limpieza.json` | `cmd/cargar` | `datos/reporte.go`, reglas en `datos/doc.go` | `metadatos`, `sha256` del CSV y de las `configs`, `convencion_hora`; filas largas (leídas, procesadas, descartadas por regla en el orden de la cascada, marcadas: hora inferida, unidad convertida; hora explícita e inferida; días en cero y fuera de rango por parámetro; conversiones por parámetro); filas anchas (total, completas del gold, PM2.5 > PM10, con hora inferida); por estación (leídas, procesadas, anchas, gold, desde, hasta, ubicación y ubicaciones distintas); parámetros, periodos y unidades vistos; avisos; workers, bloques, duración y `fases_s` (para Amdahl) |
 | `estandarizacion.json` | `cmd/cargar` | `datos/estandarizar.go` | `metadatos`, features, log1p, nivel, n, media, desv, ddof, chunk |
-| `benchmark_cargador.json` | `cmd/cargar -bench` | `datos/medicion.go` | `metadatos`, `protocolo`; por W: tiempos, mediana, media recortada, speedup con IC bootstrap (`speedup_ic`, cociente de medias recortadas) y cociente de medianas (`speedup`), sha256 del silver y del gold; `identicos` |
+| `benchmark_cargador.json` | `cmd/cargar -bench` | `datos/medicion.go` | `metadatos`, `protocolo` (con `nota_recorte` si las repeticiones no alcanzan para el recorte); por W: tiempos, mediana, media recortada, speedup con IC bootstrap (`speedup_ic`, cociente de medias recortadas) y cociente de medianas (`speedup`), sha256 del silver y del gold; `identicos` |
 | `benchmark_kmeans.json` | `cmd/benchmark` | `cmd/benchmark/main.go` | `resumen` por experimento (iteraciones fijas y hasta converger), modo, W y chunk: mediana, media recortada, ms por iteración, speedup con IC bootstrap, eficiencia; `determinismo` |
-| `kmeans.json` | `cmd/entrenar` | `cmd/entrenar/main.go`, `kmeans/semillas.go` | k, semilla elegida, `arranques` (una corrida por semilla: inercia, iteraciones, workers, tiempos), `arranque_elegido`, corridas a la vez, iteraciones, paro, inercia, tamaños, centroides estandarizados |
+| `kmeans.json` | `cmd/entrenar` | `cmd/entrenar/main.go`, `kmeans/semillas.go`, `kmeans/doc.go` | k, semilla elegida, `arranques` (una corrida por semilla), `arranque_elegido`, corridas a la vez, `centroides_iniciales` (archivo, origen, sha256) y `nota_tiempos_arranques`, iteraciones, paro, inercia, tamaños, centroides estandarizados |
 | `regimenes.json` | `cmd/entrenar` | `kmeans/regimenes.go` | por régimen: perfil (media aritmética de las lecturas), PM2.5 medio (derivado si no es feature), PM10 medio, etiqueta ECA, conteos por hora y por estación |
 | `codo.json` | `cmd/entrenar -codo` | `kmeans/codo.go` | inercia, semilla, iteraciones y paro por k; el k elegido es el de la receta |
-| `csv_oefa.json` | nadie todavía (transcrito) | — | los hechos del CSV real de la spec §4.1 (estructura, hora faltante y su control, unidades duplicadas); sale con aviso PENDIENTE hasta que el notebook 01 o `cmd/cargar` los escriban |
+| `eda.json` | transcrito de `reports/eda_criba.md` (notebook 01) | — | lo que solo mide el EDA: el control de la hora por posición (días completos con hora explícita), los registros multilínea y los episodios de 24 h sobre el ECA. Si el notebook 01 vuelve a correr, se actualiza desde el `.md` |
 
-Hoy los siete de Go son **PLACEHOLDER**: salidas reales de Go sobre la muestra sintética
-`data/sample/oefa_muestra.csv`, con `"placeholder": true` y una `_nota` agregadas a mano. Al
-correr los comandos sobre el CSV de OEFA se reemplaza cada archivo entero (sin `placeholder`).
+Los siete de Go son copias de `reports/` de la **corrida sobre el CSV completo de OEFA** (01/11).
+Para actualizarlos, se vuelven a copiar desde `reports/` después de correr los comandos. Si alguna
+vez se prueba con la muestra sintética, se marca `"placeholder": true` y las guardas de `--final`
+la detectan igual.
 
 `tablas.py` comprueba los invariantes de Go (leídas = procesadas + descartadas = procesadas + Σ por
 regla; las sumas por estación, por cluster y por hora; los dos speedups del cargador; el arranque
@@ -129,10 +130,10 @@ Con `--estricto` falla si falta un JSON o un invariante no cuadra. Con `--final`
 sintética en `generado/figuras/origen.json`. Go no marca sus salidas como sintéticas: estas guardas
 son las que impiden entregar la muestra como si fueran los datos.
 
-**Lo que el informe querría y no sale de Go** (está como PENDIENTE en el informe, no inventado): los
-conteos de la hora reconstruida por posición (el cargador todavía espera la columna de hora), el
-nombre interpretativo y la banda INCA de cada régimen (`regimenes.json` trae el perfil y la etiqueta
-ECA), y la tabla de decisión de la calibración, que sale de los notebooks.
+**Lo que el informe querría y no sale de Go** (no se inventa): la banda INCA de cada régimen
+(`regimenes.json` trae el perfil y la etiqueta ECA; los nombres de los regímenes son una lectura de
+sus perfiles, escrita en la prosa); la tabla de decisión de la calibración (notebook 02); y lo que
+solo mide el EDA (`generado/eda.json`, transcrito).
 
 ## Antes de entregar
 

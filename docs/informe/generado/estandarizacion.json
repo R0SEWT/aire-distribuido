@@ -1,6 +1,4 @@
 {
-  "placeholder": true,
-  "_nota": "sale de correr los comandos de Go sobre la muestra sintética data/sample/oefa_muestra.csv (estaciones SINT-*, una semana), no sobre el CSV de OEFA.",
   "features": [
     "pm10",
     "fraccion_fina",
@@ -11,39 +9,39 @@
     "pm10"
   ],
   "nivel": "absoluto",
-  "n": 617,
+  "n": 41991,
   "media": [
-    3.910429122949119,
-    0.5249383837294184,
-    2.5064829821717955,
-    69.98897893030795
+    3.1351240137748935,
+    0.5653417692427812,
+    2.013991093329524,
+    64.07720463908935
   ],
   "desv": [
-    0.4624112049191426,
-    0.1062450314088282,
-    1.151824757678368,
-    17.873844107280206
+    0.8907562067600253,
+    0.2300388179844095,
+    1.307648013315814,
+    20.91395477495912
   ],
   "ddof": 0,
   "chunk": 10000,
   "metadatos": {
-    "momento": "2026-11-01T00:37:56.746861744-05:00",
+    "momento": "2026-11-01T13:21:40.748603503-05:00",
     "maquina": "A019803",
     "version_go": "go1.27.3",
     "gomaxprocs": 14,
     "cpus_logicas": 14,
-    "commit": "e1cef10dadb7c94434417634a7145a3ff89b0ba4",
-    "arbol_sucio": false
+    "commit": "53858a093a60e88822c4c46fbbc3a5b2b0e89457",
+    "arbol_sucio": true
   },
   "configs": {
     "kmeans": {
       "ruta": "configs/kmeans.json",
-      "sha256": "6e688a8351e4c674f9c87218d5aba9f393e265355565d305afff0e78a6eab4dd",
+      "sha256": "4fdeea524a470ea788548522ce3cbb5fc74965270c3b520f326c858c57f97129",
       "existe": true
     },
     "limpieza": {
       "ruta": "configs/limpieza.json",
-      "sha256": "584164758e4ba6feeb83559a322b3273b3241882cb2166ec919e160b9de7ddfe",
+      "sha256": "61800952b5c9a56327c7be7c77d03654a643024abf444724591b208970d86651",
       "existe": true
     }
   }

@@ -105,7 +105,7 @@ if [ "$#" -eq 0 ]; then
 fi
 
 n_pendiente="$(cat informe.qmd secciones/*.qmd _participacion.md | grep -c 'title="PENDIENTE' || true)"
-n_placeholder="$(grep -l '"placeholder": *true' generado/*.json 2>/dev/null | wc -l)"
+n_placeholder="$( (grep -l '"placeholder": *true' generado/*.json 2>/dev/null || true) | wc -l)"
 echo
 echo "listo: salida/"
 ls -1 salida/*.docx
