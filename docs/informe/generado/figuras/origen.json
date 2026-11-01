@@ -3,13 +3,13 @@
     "sintetico": false,
     "fuente": "limpieza.json (estaciones) y silver",
     "notebook": "03_auditoria_figuras",
-    "fecha": "2026-11-01T14:05:32"
+    "fecha": "2026-11-01T15:01:22"
   },
   "codo.png": {
     "sintetico": false,
     "fuente": "codo.json (Go)",
     "notebook": "03_auditoria_figuras",
-    "fecha": "2026-11-01T14:05:31"
+    "fecha": "2026-11-01T15:01:20"
   },
   "completitud.png": {
     "sintetico": false,
@@ -25,32 +25,38 @@
   },
   "episodio.png": {
     "sintetico": false,
-    "fuente": "silver y asignaciones (Go), CA-RZC-02",
+    "fuente": "silver y asignaciones (Go), CA-CP-01, 2020-09-22 a 2020-09-28",
     "notebook": "03_auditoria_figuras",
-    "fecha": "2026-11-01T14:05:15"
+    "fecha": "2026-11-01T15:01:03"
+  },
+  "niveles.png": {
+    "sintetico": false,
+    "fuente": "asignaciones, silver, kmeans.json y estandarizacion.json (Go)",
+    "notebook": "03_auditoria_figuras",
+    "fecha": "2026-11-01T15:01:00"
   },
   "perfiles.png": {
     "sintetico": false,
     "fuente": "regimenes.json y kmeans.json (Go)",
     "notebook": "03_auditoria_figuras",
-    "fecha": "2026-11-01T14:05:12"
+    "fecha": "2026-11-01T15:00:58"
   },
   "regimen-estacion.png": {
     "sintetico": false,
     "fuente": "regimenes.json, por_estacion (Go)",
     "notebook": "03_auditoria_figuras",
-    "fecha": "2026-11-01T14:05:14"
+    "fecha": "2026-11-01T15:01:02"
   },
   "regimen-hora.png": {
     "sintetico": false,
     "fuente": "regimenes.json, por_hora (Go)",
     "notebook": "03_auditoria_figuras",
-    "fecha": "2026-11-01T14:05:13"
+    "fecha": "2026-11-01T15:01:01"
   },
   "speedup.png": {
     "sintetico": false,
     "fuente": "benchmark_cargador.json y benchmark_kmeans.json",
     "notebook": "03_auditoria_figuras",
-    "fecha": "2026-11-01T14:05:31"
+    "fecha": "2026-11-01T15:01:21"
   }
 }
