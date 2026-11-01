@@ -192,6 +192,10 @@ CONFIG_OEFA_REAL = {
     "periodos_horarios": ["1 hora"],
     "periodos_horarios_por_grupo": ["-"],                    # propuesta: horario solo con hora o grupo de 24
     "hora_prefijo_ignorar": "1899-12-31",
+    "formatos_hora": ["15:04:05", "15:04"],
+    "hora_solo_prefijo": "medianoche",     # el prefijo solo es las 00:00 («sin_hora»: falta la hora)
+    "hora_explicita": "inicio",            # HORA_INICIO marca el inicio de la hora («fin»: el fin)
+    "hora_no_en_punto": "descartar",       # o «truncar»
     "hora_por_posicion": {"activar": True, "filas_por_dia": 24, "convencion": "fin"},
     # PROPUESTA (no está en Go): el 95-99.8 % de los ceros de PM, gases y meteorología vienen en
     # bloques de un día entero en 0, que son equipo apagado; la precipitación queda fuera (un día seco).
@@ -217,11 +221,14 @@ CONFIG_OEFA_REAL = {
         "precipitacion": {"mm": 1}, "radiacion": {"w/m2": 1},
     },
 }
+CONFIG_MUESTRA_ANTIGUA = CONFIG_DEFECTO   # formato del primer borrador (parámetro/valor): Go ya no lo lee
+CONFIG_DEFECTO = CONFIG_OEFA_REAL         # = datos.ConfigPorDefecto(): el formato real y el de data/sample/
 CLAVES_CONFIG = ["_supuestos", "delimitador", "codificacion", "separador_decimal", "zona_horaria",
                  "columnas", "parametros", "periodos_horarios", "formatos_fecha", "fecha_desde",
                  "fecha_hasta", "centinelas", "admiten_negativos", "rangos", "unidades",
                  "parametros_en_columnas", "valores_vacios", "periodos_horarios_por_grupo",
-                 "hora_prefijo_ignorar", "hora_por_posicion", "bloques_en_cero_como_faltante"]
+                 "hora_prefijo_ignorar", "hora_por_posicion", "bloques_en_cero_como_faltante",
+                 "formatos_hora", "hora_solo_prefijo", "hora_explicita", "hora_no_en_punto"]
 COLUMNAS_LOGICAS = ["estacion", "fecha", "hora", "parametro", "valor", "periodo", "unidad",
                     "departamento", "provincia", "distrito", "ubigeo", "este", "norte", "altitud",
                     "zona", "datum"]
@@ -236,15 +243,16 @@ REGLAS = [
     ("estacion", "Estación vacía"),
     ("periodo", "Regla 1: el periodo no es horario"),
     ("parametro", "El parámetro no está en el mapeo a canónicos"),
-    ("fecha", "Regla 2: fecha y hora no parseables con ningún formato"),
-    ("hora", "Regla 2: sin hora y su grupo no tiene las filas_por_dia contiguas (no se puede inferir)"),
+    ("fecha", "Regla 2: fecha no parseable con ningún formato"),
     ("fecha_fuera_de_rango", "Regla 2: fuera de [fecha_desde, fecha_hasta)"),
+    ("hora_no_en_punto", "Regla 2: hora explícita con minutos o segundos (política descartar)"),
+    ("hora", "Regla 2: hora ilegible, o sin hora y su bloque no tiene las filas_por_dia contiguas"),
     ("valor_no_numerico", "Regla 3: vacío, texto, NaN o infinito"),
     ("centinela", "Regla 3: código del equipo (sobre el valor crudo)"),
     ("unidad", "Regla 6: unidad que no figura para ese parámetro"),
     ("negativo", "Regla 3: negativo en un parámetro que no los admite"),
     ("fuera_de_rango", "Regla 4: fuera del rango físico, ya en la unidad canónica"),
-    ("bloque_en_cero", "PROPUESTA: un bloque del día entero en 0 exacto es un equipo sin medir, no una medición"),
+    ("bloque_en_cero", "Un bloque del día entero en 0 exacto es un equipo sin medir, no una medición"),
     ("duplicado_unidad", "Regla 6: la misma lectura en otra unidad (ppb, mmHg); se conserva la canónica"),
     ("duplicado_exacto", "Regla 5: misma (estación, parámetro, fecha-hora) y mismo valor"),
     ("duplicado_valor_distinto", "Regla 5: misma clave y otro valor; se conserva el primero del archivo"),
@@ -462,6 +470,9 @@ def compilar(cfg: dict) -> dict:
         "hora_prefijo": str(cfg.get("hora_prefijo_ignorar") or ""),
         "hpp": dict(cfg.get("hora_por_posicion") or {}),
         "bloques_en_cero": set(cfg.get("bloques_en_cero_como_faltante") or []),
+        "solo_prefijo_sin_hora": (cfg.get("hora_solo_prefijo") or "medianoche") == "sin_hora",
+        "explicita_inicio": (cfg.get("hora_explicita") or "inicio") == "inicio",
+        "truncar": (cfg.get("hora_no_en_punto") or "descartar") == "truncar",
     }
 
 
@@ -670,23 +681,28 @@ def _por_categoria(serie: pd.Series, funcion, relleno=None) -> np.ndarray:
 _RE_HORA_TXT = re.compile(r"(\d{1,2}):(\d{2})(?::(\d{2}))?")
 
 
-def _segundos_hora(txt: str, prefijo: str, vacios) -> float:
-    """Hora explícita en segundos desde la medianoche; NaN si falta. Con prefijo (p. ej. el
-    «1899-12-31» que deja Excel), el texto que queda vacío es las 00:00."""
+def _segundos_hora(txt: str, prefijo: str, vacios, solo_prefijo_sin_hora=False, truncar=False) -> float:
+    """= datos.parsearHora: segundos desde la medianoche; NaN si falta la hora (vacío, o el prefijo
+    solo con hora_solo_prefijo = sin_hora), -1 si es ilegible, -2 si no está en punto y la política
+    es descartar (con truncar se lleva a la hora en punto). El prefijo (p. ej. el «1899-12-31» que
+    deja Excel) se quita; el prefijo solo es las 00:00 por defecto."""
     t = txt.strip()
     if t in vacios:
         return math.nan
     if prefijo and t.startswith(prefijo):
         t = t[len(prefijo):].strip()
         if not t:
-            return 0.0
+            return math.nan if solo_prefijo_sin_hora else 0.0
     m = _RE_HORA_TXT.fullmatch(t)
     if not m:
-        return -1.0  # presente pero ilegible
+        return -1.0
     h, mi, se = int(m.group(1)), int(m.group(2)), int(m.group(3) or 0)
     if h > 23 or mi > 59 or se > 59:
         return -1.0
-    return float(h * 3600 + mi * 60 + se)
+    seg = h * 3600 + mi * 60 + se
+    if seg % 3600:
+        return float(seg - seg % 3600) if truncar else -2.0
+    return float(seg)
 
 
 def limpiar(largo: pd.DataFrame, cfg: dict, info: dict) -> tuple[pd.DataFrame, dict]:
@@ -710,7 +726,8 @@ def limpiar(largo: pd.DataFrame, cfg: dict, info: dict) -> tuple[pd.DataFrame, d
     desc["columnas"] = int((~ok).sum()) + int(info.get("lineas_blancas", 0))
     vivo = ok.copy()
 
-    est = _por_categoria(largo["estacion"], lambda c: [x.strip() for x in c], "")
+    # = datos.nombreEstacion: espacios colapsados y en mayúsculas («sint-d» es «SINT-D»)
+    est = _por_categoria(largo["estacion"], lambda c: [" ".join(x.split()).upper() for x in c], "")
     vacia = vivo & (est == "")
     desc["estacion"] = int(vacia.sum())
     vivo &= ~vacia
@@ -772,18 +789,18 @@ def limpiar(largo: pd.DataFrame, cfg: dict, info: dict) -> tuple[pd.DataFrame, d
         f_unidad = np.array([r[1] for r in res], dtype=float)
 
     # «Vistos», como Go: sobre todas las filas que llegan a la cascada (las registradas).
+    if reg["en_columnas"]:  # = Go: la primera columna con valor, aunque haya más de una
+        primera_col = np.where(cuantos >= 1, np.asarray(reales, dtype=object)[cual], None)
+        vistos_param = pd.Series(primera_col[registrada & (cuantos >= 1)]).value_counts().to_dict()
+    else:
+        vistos_param = pd.Series(param[registrada]).value_counts().to_dict()
     vistos = {
-        "parametros": pd.Series(param[registrada]).value_counts().to_dict(),
-        "parametros_no_mapeados": pd.Series(param[registrada & pd.isna(canon)]).value_counts().to_dict(),
+        "parametros": vistos_param,
+        "parametros_no_mapeados": ({} if reg["en_columnas"] else
+                                   pd.Series(param[registrada & pd.isna(canon)]).value_counts().to_dict()),
         "periodos": pd.Series(periodo[registrada]).value_counts().to_dict() if periodo is not None else {},
         "unidades": {},
     }
-    if unidad is not None:
-        m = registrada & ~pd.isna(canon)
-        vc = pd.DataFrame({"p": canon[m], "u": unidad[m]}).value_counts()
-        for (p, u), c in vc.items():
-            vistos["unidades"].setdefault(p, {})[u] = int(c)
-    vistos = {k: ({kk: (int(vv) if not isinstance(vv, dict) else vv) for kk, vv in v.items()}) for k, v in vistos.items()}
 
     # Hora explícita y grupos de posición (sobre las filas físicas con parámetro: una fila con valor
     # ilegible igual ocupa su hora en el bloque).
@@ -793,10 +810,14 @@ def limpiar(largo: pd.DataFrame, cfg: dict, info: dict) -> tuple[pd.DataFrame, d
     desfase = 3600.0 if hpp.get("convencion", "fin") == "fin" else 0.0
     evidencia = {}
     if "hora" in largo:
-        h_seg = _por_categoria(largo["hora"], lambda c: [_segundos_hora(x, reg["hora_prefijo"], vacios) for x in c],
-                               math.nan).astype(float)
+        h_seg = _por_categoria(largo["hora"], lambda c: [_segundos_hora(x, reg["hora_prefijo"], vacios, reg["solo_prefijo_sin_hora"],
+                                                                       reg["truncar"]) for x in c], math.nan).astype(float)
+        no_en_punto_truncadas = int((registrada & _por_categoria(
+            largo["hora"], lambda c: [bool(reg["truncar"]) and _segundos_hora(x, reg["hora_prefijo"], vacios) == -2.0 for x in c],
+            False).astype(bool)).sum()) if reg["truncar"] else 0
     else:
         h_seg = None
+        no_en_punto_truncadas = 0
     completo = np.zeros(n, dtype=bool)
     posicion = np.full(n, -1, dtype=np.int64)
     bloque_id = np.full(n, -1, dtype=np.int64)
@@ -838,10 +859,21 @@ def limpiar(largo: pd.DataFrame, cfg: dict, info: dict) -> tuple[pd.DataFrame, d
         vivo[m] = False
         return m
 
+    def ver_unidades(mascara):
+        """= Go: la unidad se cuenta en «vistos» para las filas que llegan con día (formato real) o
+        para todas las registradas con parámetro (formato de la muestra)."""
+        if unidad is None:
+            return
+        vc = pd.DataFrame({"p": canon[mascara], "u": unidad[mascara]}).value_counts()
+        for (p, u), c in vc.items():
+            vistos["unidades"].setdefault(p, {})[u] = int(c)
+
     # periodo: horario si está en periodos_horarios; los de periodos_horarios_por_grupo solo si la
     # fila trae hora o su grupo está completo.
     horario = np.isin(periodo_n, list(reg["periodos"])) if periodo is not None else np.ones(n, dtype=bool)
     if periodo is not None and reg["periodos_por_grupo"]:
+        # = Go (flag regCondicional): un periodo «por grupo» («-») es horario si la fila trae una hora
+        # explícita válida o su bloque está completo; si no, la fila cae en periodo (no en hora).
         por_grupo = np.isin(periodo_n, list(reg["periodos_por_grupo"]))
         con_hora_expl = (~np.isnan(h_seg) & (h_seg >= 0)) if h_seg is not None else np.zeros(n, dtype=bool)
         horario |= por_grupo & (con_hora_expl | completo)
@@ -865,27 +897,41 @@ def limpiar(largo: pd.DataFrame, cfg: dict, info: dict) -> tuple[pd.DataFrame, d
     m = descartar("fecha", nat)
     detalle["fecha"] = (pd.Series(_por_categoria(largo["fecha"], lambda c: c, "")[m]).value_counts().head(10).to_dict()
                         if m.any() else {})
+    desde, hasta = np.datetime64(reg["desde"]), np.datetime64(reg["hasta"])
+    if por_posicion:  # = Go: el rango se mira sobre el día, antes de la hora
+        descartar("fecha_fuera_de_rango", ~nat & ((fh < desde) | (fh >= hasta)))
+        # = Go: la unidad se cuenta en «vistos» al llegar con día, y los «-» de un bloque incompleto
+        # llegan ahí (Go los manda a periodo después, al resolver el bloque).
+        por_nombre = np.isin(periodo_n, list(reg["periodos"]) + list(reg["periodos_por_grupo"])) if periodo is not None else True
+        ver_unidades(registrada & ~pd.isna(canon) & por_nombre & ~nat & (fh >= desde) & (fh < hasta))
+    else:
+        ver_unidades(registrada & ~pd.isna(canon))
     inferida = np.zeros(n, dtype=bool)
     if por_posicion:
         explicita = ~np.isnan(h_seg) & (h_seg >= 0)
-        ilegible = h_seg < 0
+        descartar("hora_no_en_punto", h_seg == -2.0)
+        ilegible = h_seg == -1.0
         inferida = ~explicita & ~ilegible & completo
-        seg = np.where(explicita, h_seg, np.where(inferida, posicion * 3600.0, np.nan))
+        # Explícita: inicio o fin según hora_explicita, llevada a la convención (como ajusteExplicita).
+        ajuste = (0.0 if reg["explicita_inicio"] else -3600.0) + desfase
+        seg = np.where(explicita, h_seg + ajuste, np.where(inferida, posicion * 3600.0 + desfase, np.nan))
         m = descartar("hora", np.isnan(seg))
         detalle["hora"] = {"sin_hora_y_grupo_incompleto": int((m & ~ilegible).sum()), "hora_ilegible": int((m & ilegible).sum())}
-        fh = fh + (np.nan_to_num(seg) + desfase).astype("timedelta64[s]").astype("timedelta64[ns]")
+        fh = fh + np.nan_to_num(seg).astype("timedelta64[s]").astype("timedelta64[ns]")
         evidencia["filas_hora_inferida"] = int((vivo & inferida).sum())
         evidencia["filas_hora_explicita"] = int((vivo & explicita).sum())
         evidencia["filas_descartadas_por_hora"] = int(m.sum())
         evidencia["descartadas_por_hora_por_estacion"] = pd.Series(est[m]).value_counts().to_dict()
         evidencia["descartadas_por_hora_por_parametro"] = pd.Series(canon[m]).value_counts().to_dict()
         evidencia["convencion"] = hpp.get("convencion", "fin")
-    desde, hasta = np.datetime64(reg["desde"]), np.datetime64(reg["hasta"])
-    descartar("fecha_fuera_de_rango", ~nat & ((fh < desde) | (fh >= hasta)))
+    if not por_posicion:
+        descartar("fecha_fuera_de_rango", ~nat & ((fh < desde) | (fh >= hasta)))
 
     valor = np.asarray([parsear_valor_go(x, reg["decimal"]) for x in valor_txt], dtype=float) if reg["en_columnas"] else \
         _por_categoria(largo["valor"], lambda c: [parsear_valor_go(x, reg["decimal"]) for x in c], math.nan).astype(float)
     m = descartar("valor_no_numerico", np.isnan(valor))
+    if reg["en_columnas"]:
+        vistos["valores_no_numericos"] = {str(k): int(v) for k, v in pd.Series(valor_txt[m]).value_counts().head(1000).items()}
     detalle["valor_no_numerico"] = pd.Series(valor_txt[m]).value_counts().head(10).to_dict() if m.any() else {}
     descartar("centinela", np.isin(valor, np.asarray(reg["centinelas"], dtype=float)))
     m = descartar("unidad", ~unidad_ok)
@@ -959,24 +1005,34 @@ def limpiar(largo: pd.DataFrame, cfg: dict, info: dict) -> tuple[pd.DataFrame, d
         estaciones[e] = {"largas_leidas": int(c), "largas_procesadas": 0, "anchas": 0, "completas_gold": 0}
     for e, c in conservados["estacion"].value_counts().items():
         estaciones[e]["largas_procesadas"] = int(c)
-    primera = pd.Series(np.flatnonzero(registrada), index=reg_est.to_numpy()).groupby(level=0).min()
-    for logica in COLUMNAS_UBICACION:
-        if logica in largo:
-            vals = _por_categoria(largo[logica], lambda c: [x.strip() for x in c], "")
-            for e, fila in primera.items():  # como Go: la de la primera fila de la estación
-                if vals[fila]:
-                    estaciones[e].setdefault("ubicacion", {})[logica] = vals[fila]
-            # además, para el EDA: el valor más frecuente que no sea vacío («NA» no es un departamento)
-            moda = (pd.DataFrame({"e": est[registrada], "v": vals[registrada]}).query("v not in @vacios")
-                    .groupby("e")["v"].agg(lambda x: x.value_counts().index[0]))
-            for e, v in moda.items():
-                estaciones[e].setdefault("_ubicacion_frecuente", {})[logica] = v
+    # Ubicación (= datos.verUbicacion y armarReporte): la combinación más frecuente de las columnas de
+    # ubicación de la estación, sin los campos vacíos («NA»), con el UBIGEO a seis dígitos; si hubo
+    # más de una, se listan todas en ubicaciones_distintas.
+    cols_u = [c for c in COLUMNAS_UBICACION if c in largo]
+    if cols_u:
+        u = {"_e": est[registrada]}
+        for c in cols_u:
+            vals = _por_categoria(largo[c], lambda cc: [x.strip() for x in cc], "")[registrada]
+            vals = np.where(np.isin(vals, list(vacios)), None, vals)
+            if c == "ubigeo":
+                vals = np.array([v.zfill(6) if isinstance(v, str) and v.isdigit() and len(v) < 6 else v for v in vals], dtype=object)
+            u[c] = vals
+        conteo = pd.DataFrame(u).groupby(["_e"] + cols_u, dropna=False, sort=False).size()
+        for e, g in conteo.groupby(level=0, sort=False):
+            vistas = [({c: v for c, v in zip(cols_u, clave[1:]) if isinstance(v, str)}, int(f)) for clave, f in g.items()]
+            mas = max(range(len(vistas)), key=lambda i: (vistas[i][1], -i))
+            if vistas[mas][0]:
+                estaciones[e]["ubicacion"] = dict(sorted(vistas[mas][0].items()))
+                estaciones[e]["_ubicacion_frecuente"] = estaciones[e]["ubicacion"]
+            if len(vistas) > 1:
+                estaciones[e]["ubicaciones_distintas"] = [{"campos": c, "filas": f} for c, f in vistas]
 
     marcas = {"duplicado_valor_distinto": marcadas}
     convertidas = conservados.loc[~conservados["canonica"], "parametro"].value_counts().to_dict()
     if por_posicion:
         marcas["hora_inferida"] = int(conservados["inferida"].sum())
-    if (conservados["canonica"] == False).any():  # noqa: E712
+        marcas["hora_no_en_punto"] = int(no_en_punto_truncadas)
+    if reg["en_columnas"] or (conservados["canonica"] == False).any():  # noqa: E712
         marcas["unidad_convertida"] = int((~conservados["canonica"]).sum())
     conservados = conservados.drop(columns="canonica")
     conservados["estacion"] = conservados["estacion"].astype("category")
@@ -1023,6 +1079,8 @@ def pivotar(validos: pd.DataFrame, reporte: dict | None = None) -> pd.DataFrame:
         fa = reporte["filas_anchas"]
         fa["total"] = int(len(ancho))
         fa["pm2_5_mayor_pm10"] = int((ancho["pm2_5"] > ancho["pm10"]).sum()) if {"pm2_5", "pm10"} <= set(ancho) else 0
+        if "hora_inferida" in ancho:
+            fa["hora_inferida"] = int(ancho["hora_inferida"].sum())
         for e, g in ancho.groupby("estacion", sort=True):
             r = reporte["estaciones"].setdefault(e, {"largas_leidas": 0, "largas_procesadas": 0, "anchas": 0, "completas_gold": 0})
             r["anchas"] = int(len(g))
