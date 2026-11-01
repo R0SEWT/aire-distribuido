@@ -1,24 +1,29 @@
 {
   "_supuestos": [
-    "SUPUESTOS del 31/10, sin el CSV en disco: se verifican con el primer megabyte del archivo.",
-    "Delimitador ';', UTF-8 (con o sin BOM), punto decimal, sin campos entrecomillados con saltos de línea.",
-    "Formato largo: una fila por (estación, parámetro, fecha-hora); la estación es NOMBRE_PUNTO.",
-    "Fecha y hora en una sola columna, dd/mm/aaaa HH:MM[:SS], hora local de Lima (UTC-5, sin horario de verano).",
-    "Unidades en columna aparte; CO puede venir en mg/m3 y se lleva a ug/m3.",
+    "Formato verificado el 01/11 sobre el CSV completo: 36 columnas, ';', textos entre comillas, UTF-8 sin BOM, punto decimal.",
+    "Una columna por parámetro y cada fila con un solo valor; '-' y 'NA' son vacíos.",
+    "HORA_INICIO es el inicio del intervalo: 1899-12-31 HH:00:00 (artefacto de Excel); 1899-12-31 solo es la medianoche (posición 0 del día, verificado en 4,691 días).",
+    "Sin hora (NA, 94 %): la hora es la posición dentro del (estación, parámetro, fecha, unidad, periodo) si tiene 24 filas; en los días con hora explícita, hora = posición en el 100 %.",
+    "fecha_hora del silver es el fin del intervalo (convención de OEFA): la lectura de 00:00 a 01:00 se fecha a las 01:00.",
+    "Gases en ppb y ug/m3 a la vez: se prefiere ug/m3; ppb se convierte a 25 °C y 1 atm si es la única. Presión: mmHg a hPa. DIRECCION_VIENTO trae unidad '°c' por error: no se chequea.",
+    "Un día entero en 0 exacto es equipo sin medir, no una medición (EDA: 95-99.8 % de los ceros vienen así); la precipitación queda fuera: un día seco es 0.",
     "Centinelas, rangos físicos y rango de fechas son provisionales hasta el EDA."
   ],
   "delimitador": ";",
   "codificacion": "utf-8",
   "separador_decimal": ".",
   "zona_horaria": "America/Lima",
+  "valores_vacios": [
+    "-",
+    "NA",
+    ""
+  ],
   "columnas": {
     "estacion": "NOMBRE_PUNTO",
-    "fecha": "FECHA",
-    "hora": "",
-    "parametro": "PARAMETRO",
-    "valor": "VALOR",
+    "fecha": "FECHA_INICIO",
+    "hora": "HORA_INICIO",
     "periodo": "PERIODO",
-    "unidad": "UNIDAD",
+    "unidad": "UNIDAD_MEDIDA",
     "departamento": "DEPARTAMENTO",
     "provincia": "PROVINCIA",
     "distrito": "DISTRITO",
@@ -29,49 +34,43 @@
     "zona": "ZONA",
     "datum": "DATUM"
   },
-  "parametros": {
-    "CO": "co",
-    "Direccion de Viento": "viento_direccion",
-    "Dirección del Viento": "viento_direccion",
-    "Humedad": "humedad",
-    "Humedad Relativa": "humedad",
-    "Humedad Relativa del Aire": "humedad",
-    "NO2": "no2",
-    "O3": "o3",
-    "PM 10": "pm10",
-    "PM 2.5": "pm2_5",
+  "parametros_en_columnas": {
+    "DIOXIDO_AZUFRE": "so2",
+    "DIRECCION_VIENTO": "viento_direccion",
+    "HUMEDAD_RELATIVA": "humedad",
+    "MONOXIDO_CARBONO": "co",
+    "OZONO": "o3",
     "PM10": "pm10",
-    "PM2,5": "pm2_5",
     "PM2.5": "pm2_5",
-    "Precipitación": "precipitacion",
-    "Presion Barometrica": "presion",
-    "Presión": "presion",
-    "Presión Atmosférica": "presion",
-    "Radiación Solar": "radiacion",
-    "Radiación Solar Global": "radiacion",
-    "SO2": "so2",
-    "Temperatura": "temperatura",
-    "Temperatura Ambiente": "temperatura",
-    "Temperatura del aire": "temperatura",
-    "Velocidad de Viento": "viento_velocidad",
-    "Velocidad del Viento": "viento_velocidad"
+    "PRECIPITACION": "precipitacion",
+    "PRESION_BAROMETRICA": "presion",
+    "RADIACION_SOLAR": "radiacion",
+    "SULFURO_HIDROGENO": "h2s",
+    "TEMPERATURA": "temperatura",
+    "VELOCIDAD_VIENTO": "viento_velocidad"
   },
   "periodos_horarios": [
-    "Horario",
-    "Hora",
-    "1 h",
-    "1h",
-    "1 hora",
-    "60 min"
+    "1 hora"
+  ],
+  "periodos_horarios_por_grupo": [
+    "-"
   ],
   "formatos_fecha": [
-    "02/01/2006 15:04",
-    "02/01/2006 15:04:05",
-    "2/1/2006 15:04",
-    "2006-01-02 15:04:05",
-    "2006-01-02 15:04",
-    "2006-01-02T15:04:05"
+    "2006-01-02"
   ],
+  "formatos_hora": [
+    "15:04:05",
+    "15:04"
+  ],
+  "hora_prefijo_ignorar": "1899-12-31",
+  "hora_solo_prefijo": "medianoche",
+  "hora_explicita": "inicio",
+  "hora_no_en_punto": "descartar",
+  "hora_por_posicion": {
+    "activar": true,
+    "filas_por_dia": 24,
+    "convencion": "fin"
+  },
   "fecha_desde": "2000-01-01",
   "fecha_hasta": "2026-07-01",
   "centinelas": [
@@ -87,6 +86,10 @@
     "co": [
       0,
       50000
+    ],
+    "h2s": [
+      0,
+      5000
     ],
     "humedad": [
       0,
@@ -140,15 +143,22 @@
   "unidades": {
     "co": {
       "mg/m3": 1000,
+      "ppb": 1.145,
+      "ug/m3": 1
+    },
+    "h2s": {
+      "ppb": 1.39,
       "ug/m3": 1
     },
     "humedad": {
       "%": 1
     },
     "no2": {
+      "ppb": 1.88,
       "ug/m3": 1
     },
     "o3": {
+      "ppb": 1.96,
       "ug/m3": 1
     },
     "pm10": {
@@ -162,25 +172,37 @@
     },
     "presion": {
       "hpa": 1,
-      "mb": 1,
-      "mbar": 1
+      "mbar": 1,
+      "mmhg": 1.33322
     },
     "radiacion": {
       "w/m2": 1
     },
     "so2": {
+      "ppb": 2.62,
       "ug/m3": 1
     },
     "temperatura": {
       "c": 1,
       "°c": 1
     },
-    "viento_direccion": {
-      "grados": 1,
-      "°": 1
-    },
     "viento_velocidad": {
       "m/s": 1
     }
-  }
+  },
+  "bloques_en_cero_como_faltante": [
+    "pm10",
+    "pm2_5",
+    "no2",
+    "so2",
+    "co",
+    "o3",
+    "h2s",
+    "temperatura",
+    "humedad",
+    "viento_velocidad",
+    "viento_direccion",
+    "presion",
+    "radiacion"
+  ]
 }

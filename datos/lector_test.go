@@ -167,36 +167,44 @@ func TestLeerCabeceraArchivoVacio(t *testing.T) {
 
 func TestResolverColumnas(t *testing.T) {
 	reg, _ := ConfigPorDefecto().compilar()
-	nombres := strings.Split(cabeceraMuestra, ";")
-	cols, avisos, err := resolverColumnas(nombres, reg.columnas)
+	nombres := columnasOEFA
+	cols, avisos, err := resolverColumnas(nombres, reg)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if len(avisos) != 0 {
-		t.Errorf("la cabecera de la muestra tiene todas las columnas: avisos %v", avisos)
+		t.Errorf("la cabecera real tiene todas las columnas: avisos %v", avisos)
 	}
-	if nombres[cols.estacion] != "NOMBRE_PUNTO" || nombres[cols.valor] != "VALOR" || cols.hora != -1 {
+	if nombres[cols.estacion] != "NOMBRE_PUNTO" || nombres[cols.hora] != "HORA_INICIO" || len(cols.params) != 13 {
 		t.Errorf("columnas mal resueltas: %+v", cols)
 	}
 
 	// Mayúsculas, tildes y espacios no importan al resolver.
-	cols, _, err = resolverColumnas([]string{"nombre_punto", " Fecha ", "parámetro", "valor"},
-		Columnas{Estacion: "NOMBRE_PUNTO", Fecha: "FECHA", Parametro: "PARAMETRO", Valor: "VALOR"})
-	if err != nil || cols.parametro != 2 {
+	cfg := ConfigPorDefecto()
+	cfg.Columnas = Columnas{Estacion: "NOMBRE_PUNTO", Fecha: "FECHA_INICIO"}
+	reg2, _ := cfg.compilar()
+	cols, _, err = resolverColumnas([]string{"nombre_punto", " Fecha_Inicio ", "pm10"}, reg2)
+	if err != nil || cols.fecha != 1 || len(cols.params) != 1 || cols.params[0].param != idxPM10 {
 		t.Fatalf("resolución tolerante: %+v, %v", cols, err)
 	}
 
 	// Una obligatoria que falta es un error que lista la cabecera real.
-	_, _, err = resolverColumnas([]string{"ESTACION", "FECHA"}, reg.columnas)
+	_, _, err = resolverColumnas([]string{"ESTACION", "FECHA", "PM10"}, reg)
 	if err == nil || !strings.Contains(err.Error(), "ESTACION") {
 		t.Fatalf("tiene que fallar y mostrar la cabecera real: %v", err)
 	}
+	// Ninguna columna de parámetro: error.
+	if _, _, err = resolverColumnas([]string{"NOMBRE_PUNTO", "FECHA_INICIO", "HORA_INICIO", "PERIODO", "UNIDAD_MEDIDA"}, reg); err == nil {
+		t.Fatal("sin columnas de parámetro tiene que fallar")
+	}
 
-	// Una de ubicación que falta solo se avisa.
-	sinZona := strings.Replace(cabeceraMuestra, ";ZONA", ";ZONA_UTM", 1)
-	_, avisos, err = resolverColumnas(strings.Split(sinZona, ";"), reg.columnas)
-	if err != nil || len(avisos) != 1 {
-		t.Fatalf("una columna de ubicación faltante es un aviso: %v, %v", avisos, err)
+	// Una de ubicación o de parámetro que falta solo se avisa.
+	sinZona := slices.Clone(columnasOEFA)
+	sinZona[slices.Index(sinZona, "ZONA")] = "ZONA_UTM"
+	sinZona[slices.Index(sinZona, "OZONO")] = "O3"
+	_, avisos, err = resolverColumnas(sinZona, reg)
+	if err != nil || len(avisos) != 2 {
+		t.Fatalf("una columna de ubicación o de parámetro faltante es un aviso: %v, %v", avisos, err)
 	}
 }
 

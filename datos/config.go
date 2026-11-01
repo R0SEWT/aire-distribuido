@@ -18,7 +18,7 @@ import (
 // bytes: es el orden de las columnas del silver. El índice de un parámetro en
 // este arreglo es su posición en el vector de cada fila ancha.
 var ParametrosCanonicos = [...]string{
-	"co", "humedad", "no2", "o3", "pm10", "pm2_5", "precipitacion", "presion",
+	"co", "h2s", "humedad", "no2", "o3", "pm10", "pm2_5", "precipitacion", "presion",
 	"radiacion", "so2", "temperatura", "viento_direccion", "viento_velocidad",
 }
 
@@ -47,32 +47,50 @@ var (
 // del CSV de OEFA y de los umbrales de las reglas. La semántica de cada campo
 // está en doc.go.
 type ConfigLimpieza struct {
-	Supuestos        []string                      `json:"_supuestos,omitempty"`
-	Delimitador      string                        `json:"delimitador"`
-	Codificacion     string                        `json:"codificacion"`
-	SeparadorDecimal string                        `json:"separador_decimal"`
-	ZonaHoraria      string                        `json:"zona_horaria"`
-	Columnas         Columnas                      `json:"columnas"`
-	Parametros       map[string]MapeoParametro     `json:"parametros"`
-	PeriodosHorarios []string                      `json:"periodos_horarios"`
-	FormatosFecha    []string                      `json:"formatos_fecha"`
-	FechaDesde       string                        `json:"fecha_desde"`
-	FechaHasta       string                        `json:"fecha_hasta"`
-	Centinelas       []float64                     `json:"centinelas"`
-	AdmitenNegativos []string                      `json:"admiten_negativos"`
-	Rangos           map[string][2]float64         `json:"rangos"`
-	Unidades         map[string]map[string]float64 `json:"unidades"`
+	Supuestos            []string                      `json:"_supuestos,omitempty"`
+	Delimitador          string                        `json:"delimitador"`
+	Codificacion         string                        `json:"codificacion"`
+	SeparadorDecimal     string                        `json:"separador_decimal"`
+	ZonaHoraria          string                        `json:"zona_horaria"`
+	ValoresVacios        []string                      `json:"valores_vacios"`
+	Columnas             Columnas                      `json:"columnas"`
+	ParametrosEnColumnas map[string]string             `json:"parametros_en_columnas"`
+	PeriodosHorarios     []string                      `json:"periodos_horarios"`
+	PeriodosPorGrupo     []string                      `json:"periodos_horarios_por_grupo"`
+	FormatosFecha        []string                      `json:"formatos_fecha"`
+	FormatosHora         []string                      `json:"formatos_hora"`
+	HoraPrefijoIgnorar   string                        `json:"hora_prefijo_ignorar"`
+	HoraSoloPrefijo      string                        `json:"hora_solo_prefijo"`
+	HoraExplicita        string                        `json:"hora_explicita"`
+	HoraNoEnPunto        string                        `json:"hora_no_en_punto"`
+	HoraPorPosicion      HoraPorPosicion               `json:"hora_por_posicion"`
+	FechaDesde           string                        `json:"fecha_desde"`
+	FechaHasta           string                        `json:"fecha_hasta"`
+	Centinelas           []float64                     `json:"centinelas"`
+	AdmitenNegativos     []string                      `json:"admiten_negativos"`
+	Rangos               map[string][2]float64         `json:"rangos"`
+	Unidades             map[string]map[string]float64 `json:"unidades"`
+	BloquesEnCero        []string                      `json:"bloques_en_cero_como_faltante"`
+}
+
+// HoraPorPosicion reconstruye la hora cuando la fila no la trae: las filas de un
+// mismo (estación, parámetro, fecha, unidad, periodo) son las horas del día en
+// orden, si son exactamente FilasPorDia. Convencion dice qué instante del
+// intervalo horario se escribe en fecha_hora: "fin" (OEFA) o "inicio"; vale
+// también para las horas explícitas.
+type HoraPorPosicion struct {
+	Activar     bool   `json:"activar"`
+	FilasPorDia int    `json:"filas_por_dia"`
+	Convencion  string `json:"convencion"`
 }
 
 // Columnas mapea cada columna lógica al nombre real de la cabecera. Vacío
-// significa «el CSV no la tiene». Estación, fecha, parámetro y valor son
-// obligatorias.
+// significa «el CSV no la tiene». Estación y fecha son obligatorias; los
+// parámetros van en parametros_en_columnas.
 type Columnas struct {
 	Estacion     string `json:"estacion"`
 	Fecha        string `json:"fecha"`
 	Hora         string `json:"hora"`
-	Parametro    string `json:"parametro"`
-	Valor        string `json:"valor"`
 	Periodo      string `json:"periodo"`
 	Unidad       string `json:"unidad"`
 	Departamento string `json:"departamento"`
@@ -86,8 +104,8 @@ type Columnas struct {
 	Datum        string `json:"datum"`
 }
 
-// columnasUbicacion son las columnas que solo se guardan una vez por estación
-// (regla 9, TB2). Que falten no impide cargar: se avisa en el reporte.
+// ubicacion son las columnas que describen dónde está la estación (regla 9,
+// TB2). Que falten no impide cargar: se avisa en el reporte.
 func (c Columnas) ubicacion() [][2]string {
 	return [][2]string{
 		{"departamento", c.Departamento}, {"provincia", c.Provincia}, {"distrito", c.Distrito},
@@ -96,64 +114,33 @@ func (c Columnas) ubicacion() [][2]string {
 	}
 }
 
-// MapeoParametro lleva un nombre real de parámetro a su canónico, con un factor
-// opcional para cuando la unidad viene en el nombre («CO (mg/m3)»). En el JSON
-// se escribe como texto ("pm10") o como objeto ({"canonico": "co", "factor": 1000}).
-type MapeoParametro struct {
-	Canonico string  `json:"canonico"`
-	Factor   float64 `json:"factor"`
-}
-
-func (m *MapeoParametro) UnmarshalJSON(b []byte) error {
-	b = bytes.TrimSpace(b)
-	if len(b) > 0 && b[0] == '"' {
-		m.Factor = 1
-		return json.Unmarshal(b, &m.Canonico)
-	}
-	type plano MapeoParametro
-	p := plano{Factor: 1}
-	dec := json.NewDecoder(bytes.NewReader(b))
-	dec.DisallowUnknownFields()
-	if err := dec.Decode(&p); err != nil {
-		return err
-	}
-	*m = MapeoParametro(p)
-	return nil
-}
-
-func (m MapeoParametro) MarshalJSON() ([]byte, error) {
-	if m.Factor == 1 {
-		return json.Marshal(m.Canonico)
-	}
-	type plano MapeoParametro
-	return json.Marshal(plano(m))
-}
-
-// ConfigPorDefecto son los supuestos del 31/10 sobre el formato del CSV de
-// OEFA, que nadie ha visto todavía. Describen exactamente el formato de la
-// muestra sintética de data/sample/, y configs/limpieza.json arranca igual.
-// Lo primero que se ajusta el lunes con el archivo en disco es el JSON, no esto.
+// ConfigPorDefecto es el formato real del CSV de OEFA, verificado el 01/11 sobre
+// el archivo completo (spec §4.1), y es exactamente el de las dos muestras de
+// data/sample/. configs/limpieza.json arranca igual; los umbrales (centinelas,
+// rangos, fechas) siguen siendo provisionales hasta el EDA.
 func ConfigPorDefecto() ConfigLimpieza {
 	return ConfigLimpieza{
 		Supuestos: []string{
-			"SUPUESTOS del 31/10, sin el CSV en disco: se verifican con el primer megabyte del archivo.",
-			"Delimitador ';', UTF-8 (con o sin BOM), punto decimal, sin campos entrecomillados con saltos de línea.",
-			"Formato largo: una fila por (estación, parámetro, fecha-hora); la estación es NOMBRE_PUNTO.",
-			"Fecha y hora en una sola columna, dd/mm/aaaa HH:MM[:SS], hora local de Lima (UTC-5, sin horario de verano).",
-			"Unidades en columna aparte; CO puede venir en mg/m3 y se lleva a ug/m3.",
+			"Formato verificado el 01/11 sobre el CSV completo: 36 columnas, ';', textos entre comillas, UTF-8 sin BOM, punto decimal.",
+			"Una columna por parámetro y cada fila con un solo valor; '-' y 'NA' son vacíos.",
+			"HORA_INICIO es el inicio del intervalo: 1899-12-31 HH:00:00 (artefacto de Excel); 1899-12-31 solo es la medianoche (posición 0 del día, verificado en 4,691 días).",
+			"Sin hora (NA, 94 %): la hora es la posición dentro del (estación, parámetro, fecha, unidad, periodo) si tiene 24 filas; en los días con hora explícita, hora = posición en el 100 %.",
+			"fecha_hora del silver es el fin del intervalo (convención de OEFA): la lectura de 00:00 a 01:00 se fecha a las 01:00.",
+			"Gases en ppb y ug/m3 a la vez: se prefiere ug/m3; ppb se convierte a 25 °C y 1 atm si es la única. Presión: mmHg a hPa. DIRECCION_VIENTO trae unidad '°c' por error: no se chequea.",
+			"Un día entero en 0 exacto es equipo sin medir, no una medición (EDA: 95-99.8 % de los ceros vienen así); la precipitación queda fuera: un día seco es 0.",
 			"Centinelas, rangos físicos y rango de fechas son provisionales hasta el EDA.",
 		},
 		Delimitador:      ";",
 		Codificacion:     "utf-8",
 		SeparadorDecimal: ".",
 		ZonaHoraria:      "America/Lima",
+		ValoresVacios:    []string{"-", "NA", ""},
 		Columnas: Columnas{
 			Estacion:     "NOMBRE_PUNTO",
-			Fecha:        "FECHA",
-			Parametro:    "PARAMETRO",
-			Valor:        "VALOR",
+			Fecha:        "FECHA_INICIO",
+			Hora:         "HORA_INICIO",
 			Periodo:      "PERIODO",
-			Unidad:       "UNIDAD",
+			Unidad:       "UNIDAD_MEDIDA",
 			Departamento: "DEPARTAMENTO",
 			Provincia:    "PROVINCIA",
 			Distrito:     "DISTRITO",
@@ -164,46 +151,34 @@ func ConfigPorDefecto() ConfigLimpieza {
 			Zona:         "ZONA",
 			Datum:        "DATUM",
 		},
-		Parametros: map[string]MapeoParametro{
-			"PM2.5":                     {"pm2_5", 1},
-			"PM 2.5":                    {"pm2_5", 1},
-			"PM2,5":                     {"pm2_5", 1},
-			"PM10":                      {"pm10", 1},
-			"PM 10":                     {"pm10", 1},
-			"NO2":                       {"no2", 1},
-			"SO2":                       {"so2", 1},
-			"CO":                        {"co", 1},
-			"O3":                        {"o3", 1},
-			"Temperatura":               {"temperatura", 1},
-			"Temperatura del aire":      {"temperatura", 1},
-			"Humedad Relativa":          {"humedad", 1},
-			"Humedad":                   {"humedad", 1},
-			"Velocidad del Viento":      {"viento_velocidad", 1},
-			"Dirección del Viento":      {"viento_direccion", 1},
-			"Presión Atmosférica":       {"presion", 1},
-			"Presión":                   {"presion", 1},
-			"Precipitación":             {"precipitacion", 1},
-			"Radiación Solar":           {"radiacion", 1},
-			"Radiación Solar Global":    {"radiacion", 1},
-			"Velocidad de Viento":       {"viento_velocidad", 1},
-			"Direccion de Viento":       {"viento_direccion", 1},
-			"Presion Barometrica":       {"presion", 1},
-			"Temperatura Ambiente":      {"temperatura", 1},
-			"Humedad Relativa del Aire": {"humedad", 1},
+		ParametrosEnColumnas: map[string]string{
+			"PM10":                "pm10",
+			"PM2.5":               "pm2_5",
+			"DIOXIDO_AZUFRE":      "so2",
+			"MONOXIDO_CARBONO":    "co",
+			"OZONO":               "o3",
+			"SULFURO_HIDROGENO":   "h2s",
+			"TEMPERATURA":         "temperatura",
+			"HUMEDAD_RELATIVA":    "humedad",
+			"VELOCIDAD_VIENTO":    "viento_velocidad",
+			"DIRECCION_VIENTO":    "viento_direccion",
+			"PRESION_BAROMETRICA": "presion",
+			"PRECIPITACION":       "precipitacion",
+			"RADIACION_SOLAR":     "radiacion",
 		},
-		PeriodosHorarios: []string{"Horario", "Hora", "1 h", "1h", "1 hora", "60 min"},
-		FormatosFecha: []string{
-			"02/01/2006 15:04",
-			"02/01/2006 15:04:05",
-			"2/1/2006 15:04",
-			"2006-01-02 15:04:05",
-			"2006-01-02 15:04",
-			"2006-01-02T15:04:05",
-		},
-		FechaDesde:       "2000-01-01",
-		FechaHasta:       "2026-07-01",
-		Centinelas:       []float64{-999, -9999, 9999, 99999},
-		AdmitenNegativos: []string{"temperatura"},
+		PeriodosHorarios:   []string{"1 hora"},
+		PeriodosPorGrupo:   []string{"-"},
+		FormatosFecha:      []string{"2006-01-02"},
+		FormatosHora:       []string{"15:04:05", "15:04"},
+		HoraPrefijoIgnorar: "1899-12-31",
+		HoraSoloPrefijo:    HoraMedianoche,
+		HoraExplicita:      HoraInicio,
+		HoraNoEnPunto:      HoraDescartar,
+		HoraPorPosicion:    HoraPorPosicion{Activar: true, FilasPorDia: 24, Convencion: HoraFin},
+		FechaDesde:         "2000-01-01",
+		FechaHasta:         "2026-07-01",
+		Centinelas:         []float64{-999, -9999, 9999, 99999},
+		AdmitenNegativos:   []string{"temperatura"},
 		Rangos: map[string][2]float64{
 			"pm2_5":            {0, 1000},
 			"pm10":             {0, 2000},
@@ -211,6 +186,7 @@ func ConfigPorDefecto() ConfigLimpieza {
 			"so2":              {0, 10000},
 			"co":               {0, 50000},
 			"o3":               {0, 1000},
+			"h2s":              {0, 5000},
 			"temperatura":      {-30, 50},
 			"humedad":          {0, 100},
 			"viento_velocidad": {0, 60},
@@ -219,23 +195,37 @@ func ConfigPorDefecto() ConfigLimpieza {
 			"precipitacion":    {0, 200},
 			"radiacion":        {0, 1500},
 		},
+		// La unidad con factor 1 es la canónica y se prefiere; las demás se
+		// convierten (gases: µg/m³ por ppb a 25 °C y 1 atm).
 		Unidades: map[string]map[string]float64{
 			"pm2_5":            {"ug/m3": 1},
 			"pm10":             {"ug/m3": 1},
-			"no2":              {"ug/m3": 1},
-			"so2":              {"ug/m3": 1},
-			"o3":               {"ug/m3": 1},
-			"co":               {"ug/m3": 1, "mg/m3": 1000},
+			"no2":              {"ug/m3": 1, "ppb": 1.88},
+			"so2":              {"ug/m3": 1, "ppb": 2.62},
+			"co":               {"ug/m3": 1, "ppb": 1.145, "mg/m3": 1000},
+			"o3":               {"ug/m3": 1, "ppb": 1.96},
+			"h2s":              {"ug/m3": 1, "ppb": 1.39},
 			"temperatura":      {"°c": 1, "c": 1},
 			"humedad":          {"%": 1},
 			"viento_velocidad": {"m/s": 1},
-			"viento_direccion": {"°": 1, "grados": 1},
-			"presion":          {"hpa": 1, "mbar": 1, "mb": 1},
+			"presion":          {"hpa": 1, "mbar": 1, "mmhg": 1.33322},
 			"precipitacion":    {"mm": 1},
 			"radiacion":        {"w/m2": 1},
 		},
+		BloquesEnCero: []string{"pm10", "pm2_5", "no2", "so2", "co", "o3", "h2s", "temperatura", "humedad",
+			"viento_velocidad", "viento_direccion", "presion", "radiacion"},
 	}
 }
+
+// Valores de las opciones de hora.
+const (
+	HoraMedianoche = "medianoche" // hora_solo_prefijo: el prefijo solo es 00:00
+	HoraSinHora    = "sin_hora"   // hora_solo_prefijo: el prefijo solo es «sin hora»
+	HoraInicio     = "inicio"     // la hora marca el inicio del intervalo
+	HoraFin        = "fin"        // la hora marca el fin del intervalo
+	HoraDescartar  = "descartar"  // hora_no_en_punto: regla hora_no_en_punto
+	HoraTruncar    = "truncar"    // hora_no_en_punto: se lleva a la hora en punto y se marca
+)
 
 // LeerConfigLimpieza lee configs/limpieza.json. Un campo desconocido es un
 // error: un umbral mal escrito no puede quedar en silencio con su valor cero.
@@ -274,27 +264,45 @@ const (
 	codWindows1252
 )
 
+// Clases de periodo.
+const (
+	periodoDescartado  uint8 = iota // regla periodo
+	periodoHorario                  // cuenta como horario
+	periodoCondicional              // horario solo con hora explícita o con su día completo
+)
+
 // reglas es la config ya validada y lista para el camino caliente: búsquedas
 // por índice de parámetro en vez de mapas por nombre.
 type reglas struct {
-	delimitador  byte // 0 = detectar en la cabecera
-	cod          codificacion
-	decimal      byte
-	zona         *time.Location
-	columnas     Columnas
-	parametros   map[string]MapeoParametro // nombre normalizado → canónico
-	periodos     map[string]bool           // valores normalizados que cuentan como horario
-	formatos     []string
-	desde, hasta int64 // [desde, hasta) en segundos Unix
-	centinelas   []float64
-	negativos    [numParametros]bool
-	conRango     [numParametros]bool
-	rango        [numParametros][2]float64
-	unidades     [numParametros]map[string]float64 // nil = sin chequeo de unidad
+	delimitador   byte // 0 = detectar en la cabecera
+	cod           codificacion
+	decimal       byte
+	zona          *time.Location
+	nulos         map[string]bool // valores crudos (recortados) que son «vacío» (valores_vacios)
+	columnas      Columnas
+	paramColumnas map[string]int      // nombre de columna normalizado → índice canónico
+	periodos      map[string]uint8    // periodo normalizado → clase
+	enCero        [numParametros]bool // bloques_en_cero_como_faltante
+	formatosFecha []string
+	formatosHora  []string
+	horaPrefijo   string
+	soloPrefijoEs uint8 // 0 = medianoche, 1 = sin hora
+	horaInicio    bool  // la hora explícita marca el inicio del intervalo
+	horaTruncar   bool  // hora_no_en_punto = truncar
+	posicion      bool  // hora_por_posicion.activar
+	filasPorDia   int
+	convFin       bool // fecha_hora = fin del intervalo
+	desde, hasta  int64
+	centinelas    []float64
+	negativos     [numParametros]bool
+	conRango      [numParametros]bool
+	rango         [numParametros][2]float64
+	unidades      [numParametros]map[string]float64 // nil = sin chequeo de unidad
 }
 
 func (c ConfigLimpieza) compilar() (*reglas, error) {
-	r := &reglas{columnas: c.Columnas, formatos: c.FormatosFecha}
+	r := &reglas{columnas: c.Columnas, formatosFecha: c.FormatosFecha, formatosHora: c.FormatosHora,
+		horaPrefijo: c.HoraPrefijoIgnorar}
 	var errs []error
 	mal := func(formato string, a ...any) { errs = append(errs, fmt.Errorf(formato, a...)) }
 
@@ -340,54 +348,108 @@ func (c ConfigLimpieza) compilar() (*reglas, error) {
 	}
 	r.zona = loc
 
-	for nombre, valor := range map[string]string{
-		"estacion": c.Columnas.Estacion, "fecha": c.Columnas.Fecha,
-		"parametro": c.Columnas.Parametro, "valor": c.Columnas.Valor,
-	} {
-		if strings.TrimSpace(valor) == "" {
-			mal("columnas.%s es obligatoria", nombre)
-		}
+	r.nulos = map[string]bool{"": true}
+	for _, v := range c.ValoresVacios {
+		r.nulos[strings.TrimSpace(v)] = true
 	}
 
-	r.parametros = make(map[string]MapeoParametro, len(c.Parametros))
-	nombres := make([]string, 0, len(c.Parametros))
-	for real := range c.Parametros {
-		nombres = append(nombres, real)
+	if strings.TrimSpace(c.Columnas.Estacion) == "" {
+		mal("columnas.estacion es obligatoria")
+	}
+	if strings.TrimSpace(c.Columnas.Fecha) == "" {
+		mal("columnas.fecha es obligatoria")
+	}
+
+	r.paramColumnas = make(map[string]int, len(c.ParametrosEnColumnas))
+	nombres := make([]string, 0, len(c.ParametrosEnColumnas))
+	for col := range c.ParametrosEnColumnas {
+		nombres = append(nombres, col)
 	}
 	slices.Sort(nombres) // mensajes de error deterministas
-	for _, real := range nombres {
-		m := c.Parametros[real]
-		if indiceParametro(m.Canonico) < 0 {
-			mal("parametros[%q] = %q: no es un parámetro canónico (%s)", real, m.Canonico,
+	for _, col := range nombres {
+		canon := c.ParametrosEnColumnas[col]
+		i := indiceParametro(canon)
+		if i < 0 {
+			mal("parametros_en_columnas[%q] = %q: no es un parámetro canónico (%s)", col, canon,
 				strings.Join(ParametrosCanonicos[:], ", "))
 			continue
 		}
-		if !(m.Factor > 0) || math.IsInf(m.Factor, 0) {
-			mal("parametros[%q]: el factor tiene que ser positivo, es %v", real, m.Factor)
+		clave := normalizar(col)
+		if previo, ok := r.paramColumnas[clave]; ok && previo != i {
+			mal("parametros_en_columnas: %q colisiona con otra columna que normaliza a %q", col, clave)
 			continue
 		}
-		clave := normalizar(real)
-		if previo, ok := r.parametros[clave]; ok && previo != m {
-			mal("parametros: %q colisiona con otro nombre que normaliza a %q y va a otro canónico", real, clave)
-			continue
-		}
-		r.parametros[clave] = m
+		r.paramColumnas[clave] = i
 	}
-	if len(r.parametros) == 0 {
-		mal("parametros está vacío: ninguna fila pasaría la regla de parámetro")
+	if len(r.paramColumnas) == 0 {
+		mal("parametros_en_columnas está vacío: ninguna fila tendría parámetro")
 	}
 
-	r.periodos = make(map[string]bool, len(c.PeriodosHorarios))
+	r.periodos = map[string]uint8{}
 	for _, p := range c.PeriodosHorarios {
-		r.periodos[normalizar(p)] = true
+		r.periodos[normalizar(p)] = periodoHorario
+	}
+	for _, p := range c.PeriodosPorGrupo {
+		if _, ok := r.periodos[normalizar(p)]; ok {
+			mal("el periodo %q está en periodos_horarios y en periodos_horarios_por_grupo", p)
+		}
+		r.periodos[normalizar(p)] = periodoCondicional
 	}
 	if c.Columnas.Periodo != "" && len(r.periodos) == 0 {
-		mal("periodos_horarios está vacío y hay columna de periodo: se descartaría todo")
+		mal("no hay periodos horarios y hay columna de periodo: se descartaría todo")
 	}
 
 	if len(c.FormatosFecha) == 0 {
 		mal("formatos_fecha está vacío")
 	}
+	if c.Columnas.Hora != "" && len(c.FormatosHora) == 0 {
+		mal("formatos_hora está vacío y hay columna de hora")
+	}
+	switch c.HoraSoloPrefijo {
+	case "", HoraMedianoche:
+	case HoraSinHora:
+		r.soloPrefijoEs = 1
+	default:
+		mal("hora_solo_prefijo %q: tiene que ser %q o %q", c.HoraSoloPrefijo, HoraMedianoche, HoraSinHora)
+	}
+	switch c.HoraExplicita {
+	case "", HoraInicio:
+		r.horaInicio = true
+	case HoraFin:
+	default:
+		mal("hora_explicita %q: tiene que ser %q o %q", c.HoraExplicita, HoraInicio, HoraFin)
+	}
+	switch c.HoraNoEnPunto {
+	case "", HoraDescartar:
+	case HoraTruncar:
+		r.horaTruncar = true
+	default:
+		mal("hora_no_en_punto %q: tiene que ser %q o %q", c.HoraNoEnPunto, HoraDescartar, HoraTruncar)
+	}
+	hp := c.HoraPorPosicion
+	r.posicion, r.filasPorDia = hp.Activar, hp.FilasPorDia
+	if hp.Activar && hp.FilasPorDia < 1 {
+		mal("hora_por_posicion.filas_por_dia = %d: tiene que ser positivo", hp.FilasPorDia)
+	}
+	switch hp.Convencion {
+	case "", HoraFin:
+		r.convFin = true
+	case HoraInicio:
+	default:
+		mal("hora_por_posicion.convencion %q: tiene que ser %q o %q", hp.Convencion, HoraFin, HoraInicio)
+	}
+	if len(c.PeriodosPorGrupo) > 0 && r.filasPorDia < 1 {
+		mal("periodos_horarios_por_grupo necesita hora_por_posicion.filas_por_dia")
+	}
+	for _, p := range c.BloquesEnCero {
+		i := indiceParametro(p)
+		if i < 0 {
+			mal("bloques_en_cero_como_faltante: %q no es un parámetro canónico", p)
+			continue
+		}
+		r.enCero[i] = true
+	}
+
 	desde, err1 := parsearLimite(c.FechaDesde, loc)
 	hasta, err2 := parsearLimite(c.FechaHasta, loc)
 	switch {
@@ -485,6 +547,8 @@ func normalizar(s string) string {
 			r = 'u'
 		case 'ñ':
 			r = 'n'
+		case 'º': // ordinal, que a veces se usa por el signo de grado
+			r = '°'
 		case '³':
 			r = '3'
 		case '²':

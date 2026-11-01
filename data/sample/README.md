@@ -1,49 +1,51 @@
-# Muestra sintética de OEFA (formato largo)
+# Muestras del CSV de OEFA
 
-`oefa_muestra.csv` **no son datos reales**: la genera `datos/muestra_test.go` con semilla fija
-para los tests y el CI, porque el CSV de OEFA (1.3 GB) todavía no está en disco. Las estaciones
-se llaman `SINT-A` a `SINT-D` para que nadie las confunda con estaciones de la red.
+Dos muestras pequeñas, versionadas, para los tests y el CI. Las dos tienen el **esquema real** del
+CSV de OEFA (spec §4.1): 36 columnas, `;`, textos entre comillas, UTF-8 sin BOM, fin de línea CRLF,
+una columna por parámetro con un solo valor por fila, `-` y `NA` como vacíos.
 
-Regenerarla (y comprobar que la versionada está al día):
+## `oefa_real_muestra.csv`: recorte del CSV real
+
+**Datos reales**, sin modificar: 4,491 registros copiados byte a byte del archivo completo
+(sha256 `1f09a806…f26d92`), en su orden original. Fuente: OEFA, *Vigilancia y Seguimiento ambiental
+en la calidad del aire*, Portal de Datos Abiertos del Perú (datosabiertos.gob.pe), licencia ODC-By:
+el uso exige citar a OEFA como fuente.
+
+| Estación | Días | Por qué |
+|---|---|---|
+| CA-TA-01 | 2018-03-27 a 2018-04-02 | gases en ppb y µg/m³, presión en mmHg, meteorología con periodo `-`, móviles, 24 horas; presión, CO y meteorología en 0 (días sin medir) |
+| CA-HUA-01 | 2021-12-09 y 10 | hora explícita (`1899-12-31 HH:00:00`, medianoche como `1899-12-31`) |
+| CA-MAC-01 | 2021-12-20 | hora explícita |
+| CA-JUPR-01 | 2022-06-07, 08 y 11 | filas sin valor intercaladas, presión en hPa y mmHg, días incompletos |
+| CA-VMP-1 | 2019-01-25 y 26 | dos registros con saltos de línea dentro de un campo |
+| CA-VMP-2 | todos (202 filas) | la misma estación con tres combinaciones de coordenadas y altitud |
+
+`TestMuestraReal` la carga y verifica conservación, hora explícita e inferida, unidades duplicadas,
+registros multilínea, ubicaciones distintas y determinismo con W = 8 y bloques de 3 KB.
+
+## `oefa_muestra.csv`: sintética
+
+**No son datos reales**: la genera `datos/muestra_test.go` con semilla fija, con estaciones
+`SINT-A` a `SINT-D` para que nadie las confunda con la red. El generador devuelve además la
+verdad (la hora que quiso darle a cada fila, su valor canónico y qué regla la descarta), contra la
+que se prueban las reglas, el silver y el determinismo.
 
 ```bash
 go test ./datos -run TestMuestraVersionadaAlDia -actualizar   # regenera
 go test ./datos -run TestMuestraVersionadaAlDia               # falla si difiere
 ```
 
-## Qué supone sobre el formato real
+3,321 registros, cinco días (4–8 de marzo de 2024), en bloques de 24 filas por día:
 
-Son los supuestos de `datos.ConfigPorDefecto()` y de `configs/limpieza.json` al 31/10. Se
-verifican con el primer megabyte del archivo real y, si no se cumplen, se cambia el JSON; la
-muestra puede seguir con este formato porque los tests usan la config por defecto, no el JSON.
+| Estación | Contenido |
+|---|---|
+| SINT-A | PM10, PM2.5, SO2 en ppb y µg/m³, SO2 en «3 horas móviles», meteorología con periodo `-`, presión en mmHg, dirección del viento con unidad `°c` |
+| SINT-B | PM10 y PM2.5 con hora explícita (medianoche como `1899-12-31`), CO solo en ppb, O3 en las dos unidades, presión en hPa |
+| SINT-C | H2S en las dos unidades (un día en 0 en µg/m³: queda el de ppb), temperaturas bajo cero, un día de filas sin valor, un día de PM10 con 23 filas y uno de temperatura `-` con 23 |
+| SINT-D | PM10 y PM2.5, «Media móvil de 8 horas», «24 horas» y «24 Horas» (este, multilínea), un día de PM2.5 partido en dos tramos (no contiguo), un día con otras coordenadas, una fila con el nombre en minúsculas |
 
-- UTF-8 **con BOM**, delimitador `;`, punto decimal, fin de línea `\n`.
-- Formato largo: una fila por (estación, parámetro, fecha-hora), con la ubicación de la estación
-  repetida en cada fila.
-- Cabecera (nombres supuestos): `ID_INFORME;PROCEDENCIA_MUESTRA;NOMBRE_PUNTO;DEPARTAMENTO;PROVINCIA;DISTRITO;UBIGEO;ESTE;NORTE;ALTITUD;ZONA;DATUM;PARAMETRO;UNIDAD;FECHA;VALOR;PERIODO`.
-  La estación es `NOMBRE_PUNTO`.
-- Fecha y hora en una sola columna, `dd/mm/aaaa HH:MM` (la estación D usa `dd/mm/aaaa HH:MM:SS`),
-  hora local de Lima.
-- Unidad en columna aparte (`ug/m3`, `mg/m3`, `°C`, `%`, `m/s`); periodo `Horario`, `Diario` o
-  `Mensual`.
-- Ningún campo entrecomillado contiene saltos de línea.
-- El archivo no viene ordenado: las filas están mezcladas, así que una misma (estación,
-  fecha-hora) aparece repartida en muchos bloques.
-
-## Qué contiene
-
-Cuatro estaciones, una semana de horas (4–10 de marzo de 2024), 4 236 filas largas:
-
-| Estación | Parámetros | Particularidad |
-|---|---|---|
-| SINT-A Lima Norte | PM2.5, PM10, NO2, SO2, CO, temperatura, humedad, viento | parámetro no mapeado (Benceno), periodos diarios y mensual |
-| SINT-B Arequipa | PM2.5, PM10, NO2, CO **en mg/m3**, temperatura, humedad, viento | CO se lleva a µg/m³ (×1000) |
-| SINT-C Junín | PM2.5, PM10, SO2, temperatura, humedad, viento | altura: temperaturas bajo cero válidas; un día apagada y 12 h sin viento |
-| SINT-D Ucayali | PM2.5, PM10, temperatura, humedad, viento | fecha con segundos; 11 h sin PM2.5 |
-
-Casos sembrados de cada regla (los conteos exactos los fija el generador y los verifica
-`TestReglasCuentanLoSembrado`): periodo no horario, parámetro no mapeado, estación vacía, filas
-con columnas de menos o de más, fecha inválida, fecha fuera de rango, valor vacío / `ND` /
-`NaN`, centinelas `-999`, `9999` y `-9999`, negativos, fuera de rango físico, unidad desconocida
-(`ppb`, `ppm`), duplicados exactos y con valor distinto (junto al original y al final del
-archivo), y horas con PM2.5 > PM10.
+Casos sembrados de cada regla: fila con columnas de menos, estación vacía, filas sin valor, fila
+con dos valores, periodos no horarios, fecha `NA` e imposible, fecha fuera de rango, hora no en
+punto, días incompletos o no contiguos, `<LD` y `ND`, centinela, negativo, fuera de rango, unidad
+desconocida, día en 0, gases duplicados en dos unidades, duplicados exactos y con otro valor (con
+hora explícita) y horas con PM2.5 > PM10.

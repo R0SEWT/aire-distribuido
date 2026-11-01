@@ -20,6 +20,8 @@ type Opciones struct {
 	Workers int   // goroutines; 0 = runtime.NumCPU()
 	Bloque  int64 // bytes por bloque; 0 = BloquePorDefecto
 	Chunk   int   // filas por chunk de la estandarización; 0 = receta.Chunk o ChunkPorDefecto
+
+	secuencial bool // tests: procesar y fusionar sin goroutines ni canales (oráculo)
 }
 
 func (op Opciones) completar(rec Receta) Opciones {
@@ -78,7 +80,7 @@ func CargarDesde(r io.ReaderAt, tam int64, nombre string, cfg ConfigLimpieza, re
 	if err != nil {
 		return nil, fmt.Errorf("%s: %w", nombre, err)
 	}
-	cols, avisos, err := resolverColumnas(cab.nombres, reg.columnas)
+	cols, avisos, err := resolverColumnas(cab.nombres, reg)
 	if err != nil {
 		return nil, fmt.Errorf("%s: %w", nombre, err)
 	}
@@ -86,41 +88,67 @@ func CargarDesde(r io.ReaderAt, tam int64, nombre string, cfg ConfigLimpieza, re
 	if err != nil {
 		return nil, fmt.Errorf("%s: %w", nombre, err)
 	}
-	acum, err := leerBloques(r, rangos, reg, cols, cab.delimitador, op.Workers)
+	var acum *acumulador
+	if op.secuencial {
+		acum, err = leerBloquesSecuencial(r, rangos, reg, cols, cab.delimitador)
+	} else {
+		acum, err = leerBloques(r, rangos, reg, cols, cab.delimitador, op.Workers)
+	}
 	if err != nil {
 		return nil, fmt.Errorf("%s: %w", nombre, err)
 	}
 	tLectura := time.Now()
-
-	ancha, st, err := acum.tabla(reg.zona)
+	acum.resolverHoras(reg)
+	tHoras := time.Now()
+	pivotes := acum.pivotar(op.Workers)
+	tPivot := time.Now()
+	ancha, st, err := acum.tabla(pivotes, reg.zona)
 	if err != nil {
 		return nil, fmt.Errorf("%s: %w", nombre, err)
 	}
+	rep, avisosEst := armarReporte(acum, ancha, st, rec)
+	tFusion, bloques := acum.tFusion, acum.bloques
+	acum, pivotes = nil, nil // los registros ya no hacen falta: se sueltan antes del gold
 	tTabla := time.Now()
 
 	ds, est, err := construirGold(ancha, rec, op.Workers, op.Chunk)
 	if err != nil {
 		return nil, err
 	}
+	contarGold(rep, ds)
 	fin := time.Now()
 
+	avisos = append(avisos, avisosEst...)
 	avisos = append(avisos, avisosFeatures(ancha, rec)...)
-	rep := armarReporte(acum, ancha, ds, st, rec)
 	rep.Entrada = nombre
 	rep.Bytes = tam
 	rep.Cabecera = cab.nombres
 	rep.BOM = cab.bom
 	rep.Delimitador = string(cab.delimitador)
+	rep.ConvencionHora = HoraInicio
+	if reg.convFin {
+		rep.ConvencionHora = HoraFin
+	}
 	rep.Avisos = avisos
 	rep.Workers = op.Workers
 	rep.BloqueBytes = op.Bloque
-	rep.Bloques = len(rangos)
+	rep.Bloques = bloques
 	rep.Chunk = op.Chunk
 	rep.DuracionS = fin.Sub(inicio).Seconds()
+	// fases_s permite el análisis de Amdahl: lectura_parseo es paralela (W
+	// workers) y contiene a fusion, que es serial pero se solapa con ella;
+	// horas y tabla son seriales; pivot es paralelo por estación;
+	// gold_estandarizacion es paralelo por chunks. Las tres claves del primer
+	// esquema se conservan como sumas.
 	rep.FasesS = map[string]float64{
-		"lectura_limpieza_pivot": tLectura.Sub(inicio).Seconds(),
-		"orden_tabla_ancha":      tTabla.Sub(tLectura).Seconds(),
+		"lectura_parseo":         tLectura.Sub(inicio).Seconds(),
+		"fusion":                 tFusion.Seconds(),
+		"horas":                  tHoras.Sub(tLectura).Seconds(),
+		"pivot":                  tPivot.Sub(tHoras).Seconds(),
+		"tabla":                  tTabla.Sub(tPivot).Seconds(),
 		"gold_estandarizacion":   fin.Sub(tTabla).Seconds(),
+		"lectura_limpieza_pivot": tPivot.Sub(inicio).Seconds(),
+		"orden_tabla_ancha":      tTabla.Sub(tPivot).Seconds(),
 	}
 	return &Resultado{Ancha: ancha, Dataset: ds, Limpieza: rep, Estandarizacion: est}, nil
 }

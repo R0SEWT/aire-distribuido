@@ -12,22 +12,25 @@ import (
 )
 
 // EscribirSilver escribe data/silver/oefa_ancho.csv: cabecera
-// estacion,fecha_hora seguida de los parámetros presentes en orden alfabético,
-// coma como delimitador, vacío = faltante, fecha_hora en RFC3339 con su
-// desfase (-05:00) y valores con FormatFloat(x, 'g', -1, 64), que se leen de
-// vuelta al mismo float64.
+// estacion,fecha_hora seguida de los parámetros presentes en orden alfabético
+// y, al final, hora_inferida (1 si alguna celda de la fila tiene la hora
+// reconstruida por posición, 0 si no); coma como delimitador, vacío = faltante,
+// fecha_hora en RFC3339 con su desfase (-05:00) y valores con
+// FormatFloat(x, 'g', -1, 64), que se leen de vuelta al mismo float64.
 func (t *TablaAncha) EscribirSilver(w io.Writer) error {
-	return escribirFilas(w, t.Parametros, t.N, len(t.Parametros), t.Valores, t.Estaciones, t.Estacion, t.Hora, t.Zona)
+	return escribirFilas(w, t.Parametros, t.N, len(t.Parametros), t.Valores, t.Estaciones, t.Estacion, t.Hora, t.Zona, t.HoraInferida)
 }
 
 // EscribirGold escribe data/gold/oefa_features.csv con el mismo formato que el
 // silver y las features de la receta ya transformadas y estandarizadas.
 func (d *Dataset) EscribirGold(w io.Writer) error {
-	return escribirFilas(w, d.Features, d.N, d.D, d.X, d.Estaciones, d.Estacion, d.Hora, d.Zona)
+	return escribirFilas(w, d.Features, d.N, d.D, d.X, d.Estaciones, d.Estacion, d.Hora, d.Zona, nil)
 }
 
+// escribirFilas escribe el formato común del silver y el gold. inferida, si no
+// es nil, agrega la columna hora_inferida al final.
 func escribirFilas(w io.Writer, columnas []string, n, d int, x []float64, estaciones []string,
-	estacion []uint16, hora []int64, zona *time.Location) error {
+	estacion []uint16, hora []int64, zona *time.Location, inferida []bool) error {
 	if zona == nil {
 		zona = time.UTC
 	}
@@ -36,6 +39,9 @@ func escribirFilas(w io.Writer, columnas []string, n, d int, x []float64, estaci
 	for _, c := range columnas {
 		bw.WriteByte(',')
 		bw.WriteString(c)
+	}
+	if inferida != nil {
+		bw.WriteString(",hora_inferida")
 	}
 	bw.WriteByte('\n')
 	var buf []byte
@@ -47,6 +53,13 @@ func escribirFilas(w io.Writer, columnas []string, n, d int, x []float64, estaci
 			buf = append(buf, ',')
 			if !math.IsNaN(v) {
 				buf = strconv.AppendFloat(buf, v, 'g', -1, 64)
+			}
+		}
+		if inferida != nil {
+			if inferida[i] {
+				buf = append(buf, ",1"...)
+			} else {
+				buf = append(buf, ",0"...)
 			}
 		}
 		buf = append(buf, '\n')

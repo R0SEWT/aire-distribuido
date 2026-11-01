@@ -21,6 +21,7 @@ import (
 	"strconv"
 	"strings"
 	"text/tabwriter"
+	"time"
 
 	"github.com/R0SEWT/aire-distribuido/datos"
 	"github.com/R0SEWT/aire-distribuido/kmeans"
@@ -129,18 +130,26 @@ func escribirSalidas(r rutas, res *datos.Resultado, bm *datos.Benchmark) ([]stri
 	}
 	limpieza := filepath.Join(r.reports, "limpieza.json")
 	estand := filepath.Join(r.reports, "estandarizacion.json")
-	salidas := []salida{
+	// Primero los CSV, cronometrados: su tiempo va a fases_s.salida de
+	// limpieza.json, que se escribe después.
+	inicio := time.Now()
+	csvs := []salida{
 		{r.silver, func() error { return datos.EscribirArchivo(r.silver, res.Ancha.EscribirSilver) }},
 		{r.gold, func() error { return datos.EscribirArchivo(r.gold, res.Dataset.EscribirGold) }},
+	}
+	jsons := []salida{
 		{limpieza, func() error { return datos.GuardarJSON(limpieza, res.Limpieza) }},
 		{estand, func() error { return datos.GuardarJSON(estand, res.Estandarizacion) }},
 	}
 	if bm != nil {
 		ruta := filepath.Join(r.reports, "benchmark_cargador.json")
-		salidas = append(salidas, salida{ruta, func() error { return datos.GuardarJSON(ruta, bm) }})
+		jsons = append(jsons, salida{ruta, func() error { return datos.GuardarJSON(ruta, bm) }})
 	}
 	var escritos []string
-	for _, s := range salidas {
+	for i, s := range append(csvs, jsons...) {
+		if i == len(csvs) {
+			res.Limpieza.FasesS["salida"] = time.Since(inicio).Seconds()
+		}
 		if err := s.f(); err != nil {
 			return nil, fmt.Errorf("escribir %s: %w", s.ruta, err)
 		}
@@ -226,8 +235,11 @@ func imprimirResumen(out io.Writer, r rutas, provisional bool, res *datos.Result
 	}
 	fmt.Fprintf(tw, "paralelismo\t%d workers, %d bloques de %s bytes, chunk de %s filas\n",
 		l.Workers, l.Bloques, miles(l.BloqueBytes), miles(int64(l.Chunk)))
-	fmt.Fprintf(tw, "duración\t%.3f s (lectura, limpieza y pivot %.3f s; orden %.3f s; gold %.3f s)\n", l.DuracionS,
-		l.FasesS["lectura_limpieza_pivot"], l.FasesS["orden_tabla_ancha"], l.FasesS["gold_estandarizacion"])
+	f := l.FasesS
+	fmt.Fprintf(tw, "duración\t%.3f s: lectura y parseo %.3f s (fusión serial %.3f s, solapada), horas %.3f s, "+
+		"pivot %.3f s, tabla %.3f s, gold %.3f s\n", l.DuracionS, f["lectura_parseo"], f["fusion"], f["horas"],
+		f["pivot"], f["tabla"], f["gold_estandarizacion"])
+	fmt.Fprintf(tw, "hora\tfecha_hora = %s del intervalo horario\n", l.ConvencionHora)
 	tw.Flush()
 
 	fl := l.FilasLargas
@@ -247,16 +259,22 @@ func imprimirResumen(out io.Writer, r rutas, provisional bool, res *datos.Result
 	for _, f := range filas {
 		fmt.Fprintf(out, "  %s%s %14s\n", f[0], strings.Repeat(" ", ancho-len([]rune(f[0]))), f[1])
 	}
-	fmt.Fprintf(out, "  marcadas (se conservan): duplicado_valor_distinto %s celdas\n",
-		miles(fl.MarcadasPorRegla["duplicado_valor_distinto"]))
+	fmt.Fprintf(out, "  procesadas con hora explícita %s · con hora inferida por posición %s\n",
+		miles(fl.HoraExplicita), miles(fl.HoraInferida))
+	fmt.Fprintf(out, "  marcadas (se conservan): duplicado_valor_distinto %s · unidad_convertida %s · hora_no_en_punto %s celdas\n",
+		miles(fl.MarcadasPorRegla["duplicado_valor_distinto"]), miles(fl.MarcadasPorRegla["unidad_convertida"]),
+		miles(fl.MarcadasPorRegla["hora_no_en_punto"]))
+	if len(fl.UnidadConvertidaPorParametro) > 0 {
+		fmt.Fprintf(out, "  convertidas por parámetro: %s\n", conteos(fl.UnidadConvertidaPorParametro))
+	}
 	if len(fl.FueraDeRangoPorParametro) > 0 {
 		fmt.Fprintf(out, "  fuera de rango por parámetro: %s\n", conteos(fl.FueraDeRangoPorParametro))
 	}
 
 	fa := l.FilasAnchas
 	fmt.Fprintf(out, "\nFilas anchas (estación × fecha-hora)\n")
-	fmt.Fprintf(out, "  total %s · completas para el gold %s · pm2_5 > pm10 %s\n",
-		miles(int64(fa.Total)), miles(int64(fa.CompletasGold)), miles(int64(fa.Pm25MayorPm10)))
+	fmt.Fprintf(out, "  total %s · completas para el gold %s · pm2_5 > pm10 %s · con hora inferida %s\n",
+		miles(int64(fa.Total)), miles(int64(fa.CompletasGold)), miles(int64(fa.Pm25MayorPm10)), miles(int64(fa.HoraInferida)))
 	fmt.Fprintf(out, "  parámetros presentes: %s\n", strings.Join(l.ParametrosPresentes, ", "))
 	feats := make([]string, len(e.Features))
 	for i, f := range e.Features {
@@ -288,6 +306,9 @@ func imprimirResumen(out io.Writer, r rutas, provisional bool, res *datos.Result
 	}
 	if len(v.Periodos) > 0 {
 		fmt.Fprintf(out, "Periodos vistos: %s\n", conteos(v.Periodos))
+	}
+	if len(v.ValoresNoNumericos) > 0 {
+		fmt.Fprintf(out, "Valores no numéricos (se descartan, no se imputan): %s\n", conteos(v.ValoresNoNumericos))
 	}
 	if len(l.Avisos) > 0 {
 		fmt.Fprintf(out, "\nAvisos\n")

@@ -2,317 +2,476 @@ package datos
 
 import (
 	"cmp"
+	"errors"
 	"fmt"
-	"io"
 	"math"
 	"math/bits"
 	"slices"
-	"sync"
+	"strings"
 	"time"
 )
 
-// claveGlobal es (estación, fecha-hora) con la estación como índice global.
-type claveGlobal struct {
-	est int32
-	t   int64
-}
-
 type estacionGlobal struct {
-	nombre             string
-	ubicacion          map[string]string
-	leidas, procesadas int64
+	nombre      string
+	leidas      int64
+	ubicaciones []ubicacionVista
+	porClave    map[string]int
 }
 
-// acumulador es el estado del recolector. Solo lo toca la goroutine que llama
-// a leerBloques: los workers le pasan sus parciales por un canal.
+// acumulador es el estado del recolector. Solo lo toca la goroutine que corre
+// leerBloques: los workers le pasan sus parciales por un canal. Guarda todos
+// los registros en orden de archivo, porque la hora por posición solo se puede
+// decidir cuando se conoce el día completo, y un día puede cruzar bloques.
 type acumulador struct {
-	porNombre  map[string]int32
-	estaciones []*estacionGlobal
-	filas      map[claveGlobal]int32
-	claves     []claveGlobal
-	valores    []float64
-	conflicto  []uint16
-
-	leidas, procesadas int64
-	descartadas        [numReglas]int64
-	fueraDeRango       [numParametros]int64
-	periodos           map[string]int64
-	parametros         map[string]int64
-	noMapeados         map[string]int64
-	unidades           [numParametros]map[string]int64
-	bloques            int
+	porNombre    map[string]uint16
+	estaciones   []*estacionGlobal
+	porUnidad    map[string]uint16
+	porPeriodo   map[string]uint16
+	grupos       map[claveGrupo]int32
+	tamGrupo     []int32
+	primera      []int64 // número de registro (en el archivo) de la primera fila de cada día
+	ultima       []int64 // y de la última: el día es contiguo si ultima-primera+1 == tamGrupo
+	registros    []registro
+	desbordadas  bool // más estaciones o textos de los que caben en un uint16
+	leidas       int64
+	descartadas  [numReglas]int64
+	fueraDeRango [numParametros]int64
+	enCero       [numParametros]int64
+	horaTruncada int64
+	periodos     map[string]int64
+	parametros   map[string]int64
+	unidades     [numParametros]map[string]int64
+	noNumericos  map[string]int64
+	bloques      int
+	tFusion      time.Duration
 }
 
 func nuevoAcumulador() *acumulador {
 	return &acumulador{
-		porNombre:  map[string]int32{},
-		filas:      map[claveGlobal]int32{},
-		periodos:   map[string]int64{},
-		parametros: map[string]int64{},
-		noMapeados: map[string]int64{},
+		porNombre:   map[string]uint16{},
+		porUnidad:   map[string]uint16{},
+		porPeriodo:  map[string]uint16{},
+		grupos:      map[claveGrupo]int32{},
+		periodos:    map[string]int64{},
+		parametros:  map[string]int64{},
+		noNumericos: map[string]int64{},
 	}
 }
 
-// leerBloques es el pipeline de la parte A: un productor reparte los índices de
-// bloque por un canal, W workers los procesan con su propio estado, y esta
-// goroutine recolecta. Los parciales llegan en cualquier orden; el recolector
-// los guarda hasta que llega el siguiente en orden de índice y los fusiona así,
-// de modo que «el primero» de un duplicado es el primero del archivo y el
-// resultado no depende de W ni del planificador.
-func leerBloques(r io.ReaderAt, rangos []rango, reg *reglas, cols indicesColumnas, delim byte, workers int) (*acumulador, error) {
-	trabajos := make(chan int)
-	resultados := make(chan *parcial)
-	fin := make(chan struct{}) // se cierra ante el primer error: corta al productor y a los workers
-
-	var wg sync.WaitGroup
-	for range min(workers, max(len(rangos), 1)) {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			w := nuevoTrabajador(reg, cols, delim)
-			for i := range trabajos {
-				select {
-				case resultados <- w.procesar(r, i, rangos[i]):
-				case <-fin:
-					return
-				}
-			}
-		}()
+// indiceGlobal devuelve el índice de un texto en una tabla global, creándolo.
+func (a *acumulador) indiceGlobal(m map[string]uint16, texto string) uint16 {
+	if i, ok := m[texto]; ok {
+		return i
 	}
-	go func() {
-		defer close(trabajos)
-		for i := range rangos {
-			select {
-			case trabajos <- i:
-			case <-fin:
-				return
-			}
-		}
-	}()
-	go func() {
-		wg.Wait()
-		close(resultados)
-	}()
-
-	a := nuevoAcumulador()
-	pendientes := map[int]*parcial{}
-	siguiente := 0
-	var primerErr error
-	for p := range resultados {
-		if primerErr != nil {
-			continue // se drena el canal para que los workers terminen
-		}
-		if p.err != nil {
-			primerErr = p.err
-			close(fin)
-			continue
-		}
-		pendientes[p.indice] = p
-		for q, ok := pendientes[siguiente]; ok; q, ok = pendientes[siguiente] {
-			delete(pendientes, siguiente)
-			a.fusionar(q)
-			siguiente++
-		}
+	if len(m) > math.MaxUint16 {
+		a.desbordadas = true
+		return 0
 	}
-	if primerErr != nil {
-		return nil, primerErr
-	}
-	if siguiente != len(rangos) {
-		return nil, fmt.Errorf("se fusionaron %d de %d bloques", siguiente, len(rangos))
-	}
-	return a, nil
+	i := uint16(len(m))
+	m[texto] = i
+	return i
 }
 
-// fusionar incorpora un parcial (regla 5 y regla 7, el pivot). Una celda que
-// ya tiene valor se queda con él: el parcial actual viene después en el
-// archivo. La primera lectura de una celda en el bloque que resulta duplicado
-// de un bloque anterior pasa de procesada a descartada.
+// fusionar incorpora un parcial: traduce sus índices locales (estaciones,
+// textos, días) a globales y agrega sus registros al final, que es su lugar en
+// el orden del archivo porque los parciales llegan en orden de bloque.
 func (a *acumulador) fusionar(p *parcial) {
-	mapa := make([]int32, len(p.estaciones))
+	estaciones := make([]uint16, len(p.estaciones))
 	for i, e := range p.estaciones {
 		g, ok := a.porNombre[e.nombre]
 		if !ok {
-			g = int32(len(a.estaciones))
+			if len(a.estaciones) > math.MaxUint16 {
+				a.desbordadas = true
+			}
+			g = uint16(len(a.estaciones))
 			a.porNombre[e.nombre] = g
-			a.estaciones = append(a.estaciones, &estacionGlobal{nombre: e.nombre, ubicacion: e.ubicacion})
+			a.estaciones = append(a.estaciones, &estacionGlobal{nombre: e.nombre, porClave: map[string]int{}})
 		}
-		a.estaciones[g].leidas += e.leidas
-		a.estaciones[g].procesadas += e.procesadas
-		mapa[i] = g
+		eg := a.estaciones[g]
+		eg.leidas += e.leidas
+		for _, u := range e.ubicaciones {
+			clave := claveUbicacion(u.Campos)
+			j, ok := eg.porClave[clave]
+			if !ok {
+				j = len(eg.ubicaciones)
+				eg.porClave[clave] = j
+				eg.ubicaciones = append(eg.ubicaciones, ubicacionVista{Campos: u.Campos})
+			}
+			eg.ubicaciones[j].Filas += u.Filas
+		}
+		estaciones[i] = g
 	}
+	unidades := make([]uint16, len(p.unidades))
+	for i, t := range p.unidades {
+		unidades[i] = a.indiceGlobal(a.porUnidad, t)
+	}
+	periodos := make([]uint16, max(len(p.periodos), 1)) // sin columna de periodo, todo es el índice 0
+	for i, t := range p.periodos {
+		periodos[i] = a.indiceGlobal(a.porPeriodo, t)
+	}
+	// Los números de registro del bloque se vuelven del archivo sumando los
+	// registros de los bloques anteriores, que ya se fusionaron (en orden).
+	base := a.leidas
+	grupos := make([]int32, len(p.grupos))
+	for i, g := range p.grupos {
+		k := g.clave
+		k.est, k.unidad, k.periodo = estaciones[k.est], unidades[k.unidad], periodos[k.periodo]
+		id, ok := a.grupos[k]
+		if !ok {
+			id = int32(len(a.tamGrupo))
+			a.grupos[k] = id
+			a.tamGrupo = append(a.tamGrupo, 0)
+			a.primera = append(a.primera, base+g.primera)
+			a.ultima = append(a.ultima, 0)
+		}
+		a.tamGrupo[id] += g.n
+		a.ultima[id] = base + g.ultima
+		grupos[i] = id
+	}
+	desde := len(a.registros)
+	a.registros = append(a.registros, p.registros...)
+	for i := desde; i < len(a.registros); i++ {
+		r := &a.registros[i]
+		r.est, r.grupo = estaciones[r.est], grupos[r.grupo]
+	}
+
 	a.leidas += p.leidas
-	a.procesadas += p.procesadas
+	a.horaTruncada += p.horaTruncada
 	for r, n := range p.descartadas {
 		a.descartadas[r] += n
 	}
-	for q, n := range p.fueraDeRango {
-		a.fueraDeRango[q] += n
+	for k, n := range p.vistosPeriodos {
+		a.periodos[k] += n
 	}
-	for _, e := range p.periodos {
-		a.periodos[e.nombre] += e.n
+	for k, n := range p.vistosParametros {
+		a.parametros[k] += n
 	}
-	for _, e := range p.parametros {
-		a.parametros[e.nombre] += e.n
-		if e.param < 0 {
-			a.noMapeados[e.nombre] += e.n
-		}
+	for k, n := range p.vistosNoNumericos {
+		a.noNumericos[k] += n
 	}
-	for q, es := range p.unidades {
-		for _, e := range es {
+	for q, m := range p.vistosUnidades {
+		for k, n := range m {
 			if a.unidades[q] == nil {
 				a.unidades[q] = map[string]int64{}
 			}
-			a.unidades[q][e.nombre] += e.n
+			a.unidades[q][k] += n
 		}
-	}
-
-	// Primero las primeras lecturas de cada celda del bloque; después sus
-	// repetidas, que en el archivo vienen detrás. Así cada duplicado se compara
-	// contra el valor que de verdad se conserva: el primero en orden de archivo.
-	globales := make([]int32, len(p.claves))
-	for li, k := range p.claves {
-		gk := claveGlobal{mapa[k.est], k.t}
-		vals := p.valores[li*numParametros : (li+1)*numParametros]
-		gi, ok := a.filas[gk]
-		globales[li] = gi
-		if !ok {
-			globales[li] = int32(len(a.claves))
-			a.filas[gk] = globales[li]
-			a.claves = append(a.claves, gk)
-			a.valores = append(a.valores, vals...)
-			a.conflicto = append(a.conflicto, 0)
-			continue
-		}
-		for q, v := range vals {
-			if math.IsNaN(v) {
-				continue
-			}
-			if a.duplicado(gi, q, v) {
-				a.procesadas--
-				a.estaciones[gk.est].procesadas--
-			}
-		}
-	}
-	for _, r := range p.repetidas {
-		a.duplicado(globales[r.fila], r.param, r.v)
 	}
 	a.bloques++
 }
 
-// duplicado compara una lectura con la celda (fila, q). Si la celda está vacía
-// la ocupa y devuelve false; si no, cuenta el duplicado (exacto o con otro
-// valor, que además marca la celda) y devuelve true.
-func (a *acumulador) duplicado(fila int32, q int, v float64) bool {
-	celda := &a.valores[int(fila)*numParametros+q]
-	switch {
-	case math.IsNaN(*celda):
-		*celda = v
-		return false
-	case *celda == v:
-		a.descartadas[reglaDuplicadoExacto]++
-	default:
-		a.descartadas[reglaDuplicadoValorDistinto]++
-		a.conflicto[fila] |= 1 << q
+// claveUbicacion identifica una combinación de columnas de ubicación.
+func claveUbicacion(campos map[string]string) string {
+	claves := make([]string, 0, len(campos))
+	for k := range campos {
+		claves = append(claves, k)
 	}
-	return true
+	slices.Sort(claves)
+	var b strings.Builder
+	for _, k := range claves {
+		b.WriteString(k + "=" + campos[k] + "\x1f")
+	}
+	return b.String()
+}
+
+// resolverHoras recorre los registros en orden de archivo, que es el orden
+// dentro de cada día, y aplica la parte de la cascada que necesita el día
+// completo. Un día (estación, parámetro, fecha, unidad, periodo) está completo
+// si tiene exactamente filas_por_dia filas contiguas en el archivo. Para cada
+// fila, la primera regla que falla:
+//
+//   - periodo: periodo «-» (por grupo) sin hora explícita y con el día incompleto;
+//   - hora_no_en_punto u hora ilegible, anotadas por el worker;
+//   - hora: sin hora y con el día incompleto (o sin hora por posición);
+//   - las reglas de valor anotadas por el worker (3, 4 y 6).
+//
+// Las que pasan reciben su hora: la explícita ya está en t; la que falta es la
+// posición en el día (0 a 23, hora de inicio) y fecha_hora es el fin (o el
+// inicio) de ese intervalo. Las filas descartadas siguen ocupando su posición:
+// son una hora del día con una lectura inválida, no una hora que falta.
+//
+// Después, bloque_en_cero: si todas las lecturas válidas de un día de un
+// parámetro de bloques_en_cero_como_faltante son 0 exacto, el día es un equipo
+// sin medir y se descarta entero.
+func (a *acumulador) resolverHoras(reg *reglas) {
+	pos := make([]int32, len(a.tamGrupo))
+	validas := make([]int32, len(a.tamGrupo))
+	ceros := make([]int32, len(a.tamGrupo))
+	sello := int64(0)
+	if reg.convFin {
+		sello = 1
+	}
+	for i := range a.registros {
+		r := &a.registros[i]
+		g := r.grupo
+		p := pos[g]
+		pos[g]++
+		completo := reg.filasPorDia > 0 && a.tamGrupo[g] == int32(reg.filasPorDia) &&
+			a.ultima[g]-a.primera[g]+1 == int64(reg.filasPorDia)
+		explicita := r.flags&regExplicita != 0
+		var motivo regla = -1
+		switch {
+		case r.flags&regCondicional != 0 && !explicita && !completo:
+			motivo = reglaPeriodo
+		case r.motivo != 0 && (regla(r.motivo-1) == reglaHora || regla(r.motivo-1) == reglaHoraNoEnPunto):
+			motivo = regla(r.motivo - 1)
+		case !explicita && (!reg.posicion || !completo):
+			motivo = reglaHora
+		case r.motivo != 0:
+			motivo = regla(r.motivo - 1)
+		}
+		if motivo >= 0 {
+			a.descartadas[motivo]++
+			if motivo == reglaFueraDeRango {
+				a.fueraDeRango[r.param]++
+			}
+			r.flags |= regDescartada
+			continue
+		}
+		if !explicita {
+			r.t += (int64(p) + sello) * 3600
+			r.flags |= regInferida
+		}
+		if reg.enCero[r.param] {
+			validas[g]++
+			if r.valor == 0 {
+				ceros[g]++
+			}
+		}
+	}
+	for i := range a.registros {
+		r := &a.registros[i]
+		if g := r.grupo; r.flags&regDescartada == 0 && reg.enCero[r.param] && ceros[g] == validas[g] {
+			a.descartadas[reglaBloqueEnCero]++
+			a.enCero[r.param]++
+			r.flags |= regDescartada
+		}
+	}
+}
+
+var filaVacia = func() (f [numParametros]float64) {
+	for i := range f {
+		f[i] = math.NaN()
+	}
+	return f
+}()
+
+// pivoteEstacion es la parte de la tabla ancha de una estación, ya ordenada
+// por fecha_hora, con sus conteos de duplicados.
+type pivoteEstacion struct {
+	horas      []int64
+	valores    []float64 // filas × numParametros
+	inferida   []uint16  // por fila: bits de celdas con hora reconstruida
+	convertida []uint16  // por fila: bits de celdas convertidas desde otra unidad
+	conflicto  []uint16  // por fila: bits de celdas con un duplicado de otro valor
+	dup        [3]int64  // duplicado_unidad, duplicado_exacto, duplicado_valor_distinto
+}
+
+// pivotar arma la tabla ancha por estación, en paralelo (regla 7). Las celdas
+// de dos estaciones nunca chocan, así que cada estación es una tarea
+// independiente; dentro de ella los registros se aplican en orden de archivo
+// y el resultado no depende de W. Las estaciones grandes se reparten primero.
+func (a *acumulador) pivotar(workers int) []*pivoteEstacion {
+	inicio := make([]int, len(a.estaciones)+1)
+	for _, r := range a.registros {
+		if r.flags&regDescartada == 0 {
+			inicio[r.est+1]++
+		}
+	}
+	for e := range a.estaciones {
+		inicio[e+1] += inicio[e]
+	}
+	idx := make([]int32, inicio[len(a.estaciones)])
+	llenar := slices.Clone(inicio)
+	for i, r := range a.registros {
+		if r.flags&regDescartada == 0 {
+			idx[llenar[r.est]] = int32(i)
+			llenar[r.est]++
+		}
+	}
+	orden := make([]int, len(a.estaciones))
+	for e := range orden {
+		orden[e] = e
+	}
+	slices.SortStableFunc(orden, func(x, y int) int {
+		return cmp.Compare(inicio[y+1]-inicio[y], inicio[x+1]-inicio[x])
+	})
+	out := make([]*pivoteEstacion, len(a.estaciones))
+	enParalelo(workers, len(orden), func(k int) {
+		e := orden[k]
+		out[e] = pivotarEstacion(a.registros, idx[inicio[e]:inicio[e+1]])
+	})
+	return out
+}
+
+// pivotarEstacion aplica las reglas de duplicado de una estación. Una celda
+// ocupada se queda con su valor, salvo que llegue la misma lectura en la unidad
+// canónica (el valor convertido cede: duplicado_unidad). Entre lecturas de la
+// misma prioridad gana la primera del archivo: exacto si el valor es igual,
+// valor_distinto (y se marca la celda) si no.
+func pivotarEstacion(regs []registro, idx []int32) *pivoteEstacion {
+	pe := &pivoteEstacion{}
+	filas := map[int64]int32{}
+	var prio []uint8
+	poner := func(c, f int, bit uint16, r *registro, pr uint8) {
+		pe.valores[c], prio[c] = r.valor, pr
+		pe.inferida[f] &^= bit
+		pe.convertida[f] &^= bit
+		if r.flags&regInferida != 0 {
+			pe.inferida[f] |= bit
+		}
+		if r.flags&regConvertida != 0 {
+			pe.convertida[f] |= bit
+		}
+	}
+	for _, ri := range idx {
+		r := &regs[ri]
+		f, ok := filas[r.t]
+		if !ok {
+			f = int32(len(pe.horas))
+			filas[r.t] = f
+			pe.horas = append(pe.horas, r.t)
+			pe.valores = append(pe.valores, filaVacia[:]...)
+			prio = append(prio, make([]uint8, numParametros)...)
+			pe.inferida = append(pe.inferida, 0)
+			pe.convertida = append(pe.convertida, 0)
+			pe.conflicto = append(pe.conflicto, 0)
+		}
+		c, bit := int(f)*numParametros+int(r.param), uint16(1)<<r.param
+		var pr uint8
+		if r.flags&regConvertida != 0 {
+			pr = 1
+		}
+		switch {
+		case math.IsNaN(pe.valores[c]):
+			poner(c, int(f), bit, r, pr)
+		case pr < prio[c]:
+			pe.dup[0]++
+			poner(c, int(f), bit, r, pr)
+			pe.conflicto[f] &^= bit
+		case pr > prio[c]:
+			pe.dup[0]++
+		case pe.valores[c] == r.valor:
+			pe.dup[1]++
+		default:
+			pe.dup[2]++
+			pe.conflicto[f] |= bit
+		}
+	}
+	// Ordenar por fecha_hora: las claves son únicas, así que el orden es total.
+	orden := make([]int32, len(pe.horas))
+	for i := range orden {
+		orden[i] = int32(i)
+	}
+	slices.SortFunc(orden, func(x, y int32) int { return cmp.Compare(pe.horas[x], pe.horas[y]) })
+	ord := &pivoteEstacion{dup: pe.dup,
+		horas: make([]int64, len(orden)), valores: make([]float64, len(pe.valores)),
+		inferida: make([]uint16, len(orden)), convertida: make([]uint16, len(orden)), conflicto: make([]uint16, len(orden))}
+	for i, o := range orden {
+		ord.horas[i] = pe.horas[o]
+		copy(ord.valores[i*numParametros:(i+1)*numParametros], pe.valores[int(o)*numParametros:(int(o)+1)*numParametros])
+		ord.inferida[i], ord.convertida[i], ord.conflicto[i] = pe.inferida[o], pe.convertida[o], pe.conflicto[o]
+	}
+	return ord
 }
 
 // TablaAncha es el silver en memoria: una fila por (estación, fecha-hora),
 // ordenada por estación y luego por fecha-hora, con los parámetros canónicos
 // presentes en orden alfabético. NaN es «sin lectura».
 type TablaAncha struct {
-	Parametros []string       // canónicos con al menos un valor, en orden alfabético
-	Estaciones []string       // estaciones con al menos una fila, en orden alfabético
-	Estacion   []uint16       // por fila, índice en Estaciones
-	Hora       []int64        // por fila, segundos Unix
-	Valores    []float64      // N × len(Parametros), por filas
-	N          int            // filas
-	Zona       *time.Location // zona en que se escribe fecha_hora
+	Parametros   []string       // canónicos con al menos un valor, en orden alfabético
+	Estaciones   []string       // estaciones con al menos una fila, en orden alfabético
+	Estacion     []uint16       // por fila, índice en Estaciones
+	Hora         []int64        // por fila, segundos Unix del instante de fecha_hora
+	Valores      []float64      // N × len(Parametros), por filas
+	HoraInferida []bool         // por fila: alguna celda tiene hora reconstruida por posición
+	N            int            // filas
+	Zona         *time.Location // zona en que se escribe fecha_hora
 }
 
 // estadoTabla son los conteos que salen al armar la tabla.
 type estadoTabla struct {
-	celdasEnConflicto int64
-	pm25MayorPm10     int
+	procesadas            int64 // celdas con valor: filas largas que llegaron al silver
+	inferidas             int64 // de ellas, con hora reconstruida
+	convertidas           [numParametros]int64
+	celdasEnConflicto     int64
+	pm25MayorPm10         int
+	filasInferidas        int
+	procesadasPorEstacion map[string]int64
 }
 
-// tabla vuelca el mapa ordenando las claves por (estación, fecha-hora). Nunca
-// itera el mapa: su orden en Go es aleatorio y rompería el determinismo.
-func (a *acumulador) tabla(zona *time.Location) (*TablaAncha, estadoTabla, error) {
-	var st estadoTabla
-	conFilas := make([]bool, len(a.estaciones))
-	for _, k := range a.claves {
-		conFilas[k.est] = true
+// tabla concatena los pivotes por estación en orden alfabético y deja solo
+// los parámetros presentes. También suma los duplicados al acumulador.
+func (a *acumulador) tabla(pivotes []*pivoteEstacion, zona *time.Location) (*TablaAncha, estadoTabla, error) {
+	st := estadoTabla{procesadasPorEstacion: map[string]int64{}}
+	if a.desbordadas {
+		return nil, st, errors.New("más estaciones, unidades o periodos distintos de los que caben en un uint16")
 	}
-	var nombres []string
-	for g, ok := range conFilas {
-		if ok {
-			nombres = append(nombres, a.estaciones[g].nombre)
+	var conFilas []int
+	var presentes [numParametros]bool
+	for e, pe := range pivotes {
+		a.descartadas[reglaDuplicadoUnidad] += pe.dup[0]
+		a.descartadas[reglaDuplicadoExacto] += pe.dup[1]
+		a.descartadas[reglaDuplicadoValorDistinto] += pe.dup[2]
+		if len(pe.horas) > 0 {
+			conFilas = append(conFilas, e)
 		}
-	}
-	slices.Sort(nombres)
-	if len(nombres) > math.MaxUint16+1 {
-		return nil, st, fmt.Errorf("%d estaciones no caben en un uint16", len(nombres))
-	}
-	posicion := make([]int32, len(a.estaciones))
-	for g, e := range a.estaciones {
-		i, ok := slices.BinarySearch(nombres, e.nombre)
-		posicion[g] = int32(i)
-		if !ok {
-			posicion[g] = -1
-		}
-	}
-
-	orden := make([]int32, len(a.claves))
-	for i := range orden {
-		orden[i] = int32(i)
-	}
-	// Las claves son únicas, así que el orden es total y el resultado no
-	// depende de que SortFunc sea inestable.
-	slices.SortFunc(orden, func(i, j int32) int {
-		ki, kj := a.claves[i], a.claves[j]
-		if c := cmp.Compare(posicion[ki.est], posicion[kj.est]); c != 0 {
-			return c
-		}
-		return cmp.Compare(ki.t, kj.t)
-	})
-
-	var presentes []int
-	for q := range numParametros {
-		for i := range a.claves {
-			if !math.IsNaN(a.valores[i*numParametros+q]) {
-				presentes = append(presentes, q)
-				break
+		for i, v := range pe.valores {
+			if !math.IsNaN(v) {
+				presentes[i%numParametros] = true
 			}
 		}
 	}
-
-	t := &TablaAncha{
-		Estaciones: nombres,
-		Estacion:   make([]uint16, len(orden)),
-		Hora:       make([]int64, len(orden)),
-		Valores:    make([]float64, len(orden)*len(presentes)),
-		N:          len(orden),
-		Zona:       zona,
-	}
-	for _, q := range presentes {
-		t.Parametros = append(t.Parametros, ParametrosCanonicos[q])
-	}
-	pa := len(presentes)
-	for i, o := range orden {
-		k := a.claves[o]
-		t.Estacion[i] = uint16(posicion[k.est])
-		t.Hora[i] = k.t
-		fila := a.valores[int(o)*numParametros : (int(o)+1)*numParametros]
-		for j, q := range presentes {
-			t.Valores[i*pa+j] = fila[q]
-		}
-		if pm25, pm10 := fila[idxPM25], fila[idxPM10]; pm25 > pm10 { // NaN compara falso
-			st.pm25MayorPm10++
+	slices.SortFunc(conFilas, func(x, y int) int { return strings.Compare(a.estaciones[x].nombre, a.estaciones[y].nombre) })
+	var cols []int
+	t := &TablaAncha{Zona: zona}
+	for q, ok := range presentes {
+		if ok {
+			cols = append(cols, q)
+			t.Parametros = append(t.Parametros, ParametrosCanonicos[q])
 		}
 	}
-	for _, c := range a.conflicto {
-		st.celdasEnConflicto += int64(bits.OnesCount16(c))
+	for _, e := range conFilas {
+		t.N += len(pivotes[e].horas)
+	}
+	t.Estacion = make([]uint16, 0, t.N)
+	t.Hora = make([]int64, 0, t.N)
+	t.HoraInferida = make([]bool, 0, t.N)
+	t.Valores = make([]float64, 0, t.N*len(cols))
+	for k, e := range conFilas {
+		pe, nombre := pivotes[e], a.estaciones[e].nombre
+		t.Estaciones = append(t.Estaciones, nombre)
+		for f := range pe.horas {
+			fila := pe.valores[f*numParametros : (f+1)*numParametros]
+			for _, q := range cols {
+				t.Valores = append(t.Valores, fila[q])
+			}
+			t.Estacion = append(t.Estacion, uint16(k))
+			t.Hora = append(t.Hora, pe.horas[f])
+			t.HoraInferida = append(t.HoraInferida, pe.inferida[f] != 0)
+			llenas := 0
+			for q, v := range fila {
+				if !math.IsNaN(v) {
+					llenas++
+					if pe.convertida[f]&(1<<q) != 0 {
+						st.convertidas[q]++
+					}
+				}
+			}
+			st.procesadas += int64(llenas)
+			st.procesadasPorEstacion[nombre] += int64(llenas)
+			st.inferidas += int64(bits.OnesCount16(pe.inferida[f]))
+			st.celdasEnConflicto += int64(bits.OnesCount16(pe.conflicto[f]))
+			if pe.inferida[f] != 0 {
+				st.filasInferidas++
+			}
+			if pm25, pm10 := fila[idxPM25], fila[idxPM10]; pm25 > pm10 { // NaN compara falso
+				st.pm25MayorPm10++
+			}
+		}
+	}
+	if len(t.Estaciones) > math.MaxUint16+1 {
+		return nil, st, fmt.Errorf("%d estaciones no caben en un uint16", len(t.Estaciones))
 	}
 	return t, st, nil
 }

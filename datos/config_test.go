@@ -13,7 +13,7 @@ func TestParametrosCanonicosEnOrdenAlfabetico(t *testing.T) {
 	if !slices.IsSorted(ParametrosCanonicos[:]) {
 		t.Fatalf("los parámetros canónicos tienen que estar en orden de bytes: %v", ParametrosCanonicos)
 	}
-	quiero := []string{"pm2_5", "pm10", "no2", "so2", "co", "o3", "temperatura", "humedad",
+	quiero := []string{"pm2_5", "pm10", "no2", "so2", "co", "o3", "h2s", "temperatura", "humedad",
 		"viento_velocidad", "viento_direccion", "presion", "precipitacion", "radiacion"}
 	if len(quiero) != len(ParametrosCanonicos) {
 		t.Fatalf("hay %d canónicos, el contrato dice %d", len(ParametrosCanonicos), len(quiero))
@@ -58,16 +58,29 @@ func TestConfigInvalida(t *testing.T) {
 		"codificación desconocida":      func(c *ConfigLimpieza) { c.Codificacion = "ebcdic" },
 		"separador decimal raro":        func(c *ConfigLimpieza) { c.SeparadorDecimal = ";" },
 		"zona horaria inexistente":      func(c *ConfigLimpieza) { c.ZonaHoraria = "Marte/Olympus" },
-		"falta la columna de valor":     func(c *ConfigLimpieza) { c.Columnas.Valor = "" },
-		"canónico inexistente":          func(c *ConfigLimpieza) { c.Parametros["Benceno"] = MapeoParametro{Canonico: "benceno", Factor: 1} },
-		"factor no positivo":            func(c *ConfigLimpieza) { c.Parametros["PM10"] = MapeoParametro{Canonico: "pm10", Factor: 0} },
-		"nombres que colisionan":        func(c *ConfigLimpieza) { c.Parametros["pm 10"] = MapeoParametro{Canonico: "pm2_5", Factor: 1} },
+		"falta la columna de estación":  func(c *ConfigLimpieza) { c.Columnas.Estacion = "" },
+		"falta la columna de fecha":     func(c *ConfigLimpieza) { c.Columnas.Fecha = "" },
+		"canónico inexistente":          func(c *ConfigLimpieza) { c.ParametrosEnColumnas["BENCENO"] = "benceno" },
+		"sin columnas de parámetro":     func(c *ConfigLimpieza) { c.ParametrosEnColumnas = nil },
+		"columnas que colisionan": func(c *ConfigLimpieza) {
+			c.ParametrosEnColumnas["pm 10"] = "pm2_5"
+			c.ParametrosEnColumnas["PM 10"] = "pm10"
+		},
+		"periodo en las dos listas":     func(c *ConfigLimpieza) { c.PeriodosPorGrupo = []string{"1 Hora"} },
+		"sin periodos horarios":         func(c *ConfigLimpieza) { c.PeriodosHorarios, c.PeriodosPorGrupo = nil, nil },
 		"sin formatos de fecha":         func(c *ConfigLimpieza) { c.FormatosFecha = nil },
+		"sin formatos de hora":          func(c *ConfigLimpieza) { c.FormatosHora = nil },
+		"hora_solo_prefijo desconocida": func(c *ConfigLimpieza) { c.HoraSoloPrefijo = "mediodia" },
+		"hora_explicita desconocida":    func(c *ConfigLimpieza) { c.HoraExplicita = "medio" },
+		"hora_no_en_punto desconocida":  func(c *ConfigLimpieza) { c.HoraNoEnPunto = "redondear" },
+		"convención desconocida":        func(c *ConfigLimpieza) { c.HoraPorPosicion.Convencion = "medio" },
+		"filas por día cero":            func(c *ConfigLimpieza) { c.HoraPorPosicion.FilasPorDia = 0 },
 		"rango de fechas al revés":      func(c *ConfigLimpieza) { c.FechaDesde, c.FechaHasta = c.FechaHasta, c.FechaDesde },
 		"rango físico al revés":         func(c *ConfigLimpieza) { c.Rangos["pm10"] = [2]float64{10, 0} },
 		"rango de un no canónico":       func(c *ConfigLimpieza) { c.Rangos["benceno"] = [2]float64{0, 1} },
-		"unidad con factor cero":        func(c *ConfigLimpieza) { c.Unidades["co"]["mg/m3"] = 0 },
+		"unidad con factor cero":        func(c *ConfigLimpieza) { c.Unidades["co"]["ppb"] = 0 },
 		"negativo de un no canónico":    func(c *ConfigLimpieza) { c.AdmitenNegativos = []string{"benceno"} },
+		"bloque en cero no canónico":    func(c *ConfigLimpieza) { c.BloquesEnCero = []string{"benceno"} },
 	}
 	for nombre, romper := range casos {
 		t.Run(nombre, func(t *testing.T) {
@@ -80,34 +93,6 @@ func TestConfigInvalida(t *testing.T) {
 	}
 }
 
-func TestMapeoParametroAceptaTextoUObjeto(t *testing.T) {
-	ruta := filepath.Join(t.TempDir(), "c.json")
-	cfg := ConfigPorDefecto()
-	cfg.Parametros = nil
-	if err := GuardarJSON(ruta, cfg); err != nil {
-		t.Fatal(err)
-	}
-	crudo, err := os.ReadFile(ruta)
-	if err != nil {
-		t.Fatal(err)
-	}
-	reemplazo := `"parametros": {"PM10": "pm10", "CO (mg/m3)": {"canonico": "co", "factor": 1000}}`
-	texto := strings.Replace(string(crudo), `"parametros": null`, reemplazo, 1)
-	if err := os.WriteFile(ruta, []byte(texto), 0o644); err != nil {
-		t.Fatal(err)
-	}
-	leida, err := LeerConfigLimpieza(ruta)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if m := leida.Parametros["PM10"]; m.Canonico != "pm10" || m.Factor != 1 {
-		t.Errorf("PM10: %+v", m)
-	}
-	if m := leida.Parametros["CO (mg/m3)"]; m.Canonico != "co" || m.Factor != 1000 {
-		t.Errorf("CO: %+v", m)
-	}
-}
-
 func TestNormalizar(t *testing.T) {
 	casos := map[string]string{
 		"  Humedad   Relativa ": "humedad relativa",
@@ -117,6 +102,7 @@ func TestNormalizar(t *testing.T) {
 		"W/m²":                  "w/m2",
 		"PM2.5":                 "pm2.5",
 		"AÑO":                   "ano",
+		"ºC":                    "°c",
 	}
 	for entrada, quiero := range casos {
 		if got := normalizar(entrada); got != quiero {

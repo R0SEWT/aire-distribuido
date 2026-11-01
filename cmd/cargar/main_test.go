@@ -17,7 +17,7 @@ import (
 
 const (
 	muestra       = "../../data/sample/oefa_muestra.csv"
-	sha256Muestra = "38fdecc55cb180f57665614326543b74db6ece281682728e6d146c68901c5b89"
+	sha256Muestra = "cdc4d447233ac240a007a74daac1e99ce6b88d590d19b96ffa3653730e464406"
 )
 
 func sha256De(t *testing.T, ruta string) string {
@@ -76,7 +76,7 @@ func TestCargarLaMuestra(t *testing.T) {
 	}
 	var lim datos.ReporteLimpieza
 	leerJSON(t, filepath.Join(dir, "reports", "limpieza.json"), &lim)
-	if lim.FilasLargas.Leidas != 4236 || lim.Workers != 4 || lim.BloqueBytes != 16<<10 {
+	if lim.FilasLargas.Leidas != 3321 || lim.Workers != 4 || lim.BloqueBytes != 16<<10 {
 		t.Errorf("reporte de limpieza: leídas %d, workers %d, bloque %d", lim.FilasLargas.Leidas, lim.Workers, lim.BloqueBytes)
 	}
 	var est datos.ReporteEstandarizacion
@@ -114,7 +114,8 @@ func TestCargarLaMuestra(t *testing.T) {
 		t.Errorf("cabecera del gold: %q", strings.SplitN(string(gold), "\n", 2)[0])
 	}
 	resumen := out.String()
-	for _, s := range []string{"leídas", "4,236", "duplicado_valor_distinto", "SINT-C Junín", "receta provisional", "Benceno", sha256Muestra} {
+	for _, s := range []string{"leídas", "3,321", "duplicado_unidad", "SINT-C", "receta provisional", "<LD", "hora inferida",
+		"SINT-D aparece con 2 ubicaciones", sha256Muestra} {
 		if !strings.Contains(resumen, s) {
 			t.Errorf("el resumen no menciona %q:\n%s", s, resumen)
 		}

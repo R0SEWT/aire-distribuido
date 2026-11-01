@@ -166,8 +166,12 @@ func TestNivelEstacionEstandarizaCadaEstacionPorSeparado(t *testing.T) {
 	res := cargarBytes(t, m.csv, ConfigPorDefecto(), rec, opMuestra)
 	abs := cargarBytes(t, m.csv, ConfigPorDefecto(), RecetaProvisional(), opMuestra)
 	ds, est := res.Dataset, res.Estandarizacion
-	if len(est.PorEstacion) != len(ds.Estaciones) {
-		t.Fatalf("por_estacion tiene %d estaciones, el gold %d", len(est.PorEstacion), len(ds.Estaciones))
+	conFilas := map[uint16]bool{}
+	for _, e := range ds.Estacion {
+		conFilas[e] = true
+	}
+	if len(est.PorEstacion) != len(conFilas) || len(conFilas) < 2 {
+		t.Fatalf("por_estacion tiene %d estaciones, el gold tiene filas de %d", len(est.PorEstacion), len(conFilas))
 	}
 	// Las features sin estandarizar se recuperan del gold absoluto (misma
 	// selección de filas) deshaciendo su z-score global.
@@ -181,6 +185,9 @@ func TestNivelEstacionEstandarizaCadaEstacionPorSeparado(t *testing.T) {
 		hasta := desde
 		for hasta < ds.N && int(ds.Estacion[hasta]) == e {
 			hasta++
+		}
+		if hasta == desde {
+			continue // una estación sin filas completas (SINT-D no mide viento) no se estandariza
 		}
 		nombre := ds.Estaciones[e]
 		pe, ok := est.PorEstacion[nombre]
@@ -205,7 +212,7 @@ func TestNivelEstacionEstandarizaCadaEstacionPorSeparado(t *testing.T) {
 		t.Fatal("las filas del gold no quedaron agrupadas por estación")
 	}
 	// Las medias por estación tienen que diferir: si no, no se estandarizó por separado.
-	a, b := est.PorEstacion[ds.Estaciones[0]], est.PorEstacion[ds.Estaciones[3]]
+	a, b := est.PorEstacion[ds.Estaciones[ds.Estacion[0]]], est.PorEstacion[ds.Estaciones[ds.Estacion[ds.N-1]]]
 	if a.Media[0] == b.Media[0] {
 		t.Error("dos estaciones con la misma media de pm10: sospechoso")
 	}
@@ -217,19 +224,19 @@ func TestNivelEstacionEstandarizaCadaEstacionPorSeparado(t *testing.T) {
 func TestFeatureAusenteDejaElGoldVacio(t *testing.T) {
 	m := generarMuestra()
 	rec := RecetaProvisional()
-	rec.Features = []string{"pm10", "o3"} // nadie mide O3 en la muestra
+	rec.Features = []string{"pm10", "no2"} // nadie mide NO2 en la muestra
 	rec.Log1p = nil
 	res := cargarBytes(t, m.csv, ConfigPorDefecto(), rec, opMuestra)
 	if res.Dataset.N != 0 {
-		t.Errorf("sin O3 no hay filas completas, hay %d", res.Dataset.N)
+		t.Errorf("sin NO2 no hay filas completas, hay %d", res.Dataset.N)
 	}
 	avisa := false
 	for _, a := range res.Limpieza.Avisos {
-		if strings.Contains(a, "o3") {
+		if strings.Contains(a, "no2") {
 			avisa = true
 		}
 	}
 	if !avisa {
-		t.Errorf("tiene que avisar que la feature o3 no está en el silver: %v", res.Limpieza.Avisos)
+		t.Errorf("tiene que avisar que la feature no2 no está en el silver: %v", res.Limpieza.Avisos)
 	}
 }

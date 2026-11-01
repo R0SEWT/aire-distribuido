@@ -18,9 +18,8 @@ type rango struct{ desde, hasta int64 }
 // al siguiente salto de línea. Lee solo unos pocos bytes alrededor de cada
 // corte: con 1.3 GB y 64 MB son unas 21 lecturas pequeñas.
 //
-// Supone que ningún campo entrecomillado contiene un salto de línea. Si lo
-// hubiera, un corte podría caer dentro del campo; el divisor de campos lo
-// detecta (comilla sin cerrar) y la carga falla con un mensaje claro.
+// Un campo entrecomillado puede contener saltos de línea (el CSV de OEFA tiene
+// 100): si un corte cae dentro de uno, el recolector lo cose (ver cosedora).
 func particionar(r io.ReaderAt, tam, ini, bloque int64) ([]rango, error) {
 	if bloque < 1 {
 		return nil, fmt.Errorf("el bloque tiene que tener al menos 1 byte, tiene %d", bloque)
@@ -133,9 +132,16 @@ func detectarDelimitador(linea []byte) byte {
 // indicesColumnas son las posiciones de cada columna lógica en la fila, o -1
 // si el CSV no la tiene.
 type indicesColumnas struct {
-	estacion, fecha, hora, parametro, valor, periodo, unidad int
-	ubicacion                                                []columnaUbicacion
-	total                                                    int
+	estacion, fecha, hora, periodo, unidad int
+	params                                 []columnaParametro
+	ubicacion                              []columnaUbicacion
+	total                                  int
+}
+
+type columnaParametro struct {
+	indice int    // en la fila
+	param  int    // canónico
+	nombre string // como viene en la cabecera
 }
 
 type columnaUbicacion struct {
@@ -145,8 +151,10 @@ type columnaUbicacion struct {
 
 // resolverColumnas busca cada columna configurada en la cabecera, comparando
 // nombres normalizados. Faltar una de las que deciden reglas es un error que
-// muestra la cabecera real; faltar una de ubicación es solo un aviso.
-func resolverColumnas(nombres []string, c Columnas) (indicesColumnas, []string, error) {
+// muestra la cabecera real; faltar una de ubicación o una de parámetro (si
+// queda al menos una) es solo un aviso.
+func resolverColumnas(nombres []string, reg *reglas) (indicesColumnas, []string, error) {
+	c := reg.columnas
 	pos := make(map[string]int, len(nombres))
 	for i, n := range nombres {
 		clave := normalizar(n)
@@ -154,7 +162,6 @@ func resolverColumnas(nombres []string, c Columnas) (indicesColumnas, []string, 
 			pos[clave] = i
 		}
 	}
-	real := strings.Join(nombres, ", ")
 	cols := indicesColumnas{total: len(nombres)}
 	var errs []error
 	var avisos []string
@@ -174,11 +181,20 @@ func resolverColumnas(nombres []string, c Columnas) (indicesColumnas, []string, 
 	}
 	cols.estacion = buscar("estacion", c.Estacion, true)
 	cols.fecha = buscar("fecha", c.Fecha, true)
-	cols.parametro = buscar("parametro", c.Parametro, true)
-	cols.valor = buscar("valor", c.Valor, true)
 	cols.hora = buscar("hora", c.Hora, false)
 	cols.periodo = buscar("periodo", c.Periodo, false)
 	cols.unidad = buscar("unidad", c.Unidad, false)
+	for i, n := range nombres {
+		if q, ok := reg.paramColumnas[normalizar(n)]; ok {
+			cols.params = append(cols.params, columnaParametro{indice: i, param: q, nombre: n})
+		}
+	}
+	if len(cols.params) == 0 {
+		errs = append(errs, errors.New("la cabecera no tiene ninguna de las columnas de parametros_en_columnas"))
+	} else if len(cols.params) < len(reg.paramColumnas) {
+		avisos = append(avisos, fmt.Sprintf("la cabecera tiene %d de las %d columnas de parametros_en_columnas",
+			len(cols.params), len(reg.paramColumnas)))
+	}
 	for _, u := range c.ubicacion() {
 		if strings.TrimSpace(u[1]) == "" {
 			continue
@@ -191,16 +207,17 @@ func resolverColumnas(nombres []string, c Columnas) (indicesColumnas, []string, 
 		cols.ubicacion = append(cols.ubicacion, columnaUbicacion{u[0], i})
 	}
 	if len(errs) > 0 {
-		return cols, nil, fmt.Errorf("%w\ncabecera real (%d columnas): %s", errors.Join(errs...), len(nombres), real)
+		return cols, nil, fmt.Errorf("%w\ncabecera real (%d columnas): %s", errors.Join(errs...), len(nombres),
+			strings.Join(nombres, ", "))
 	}
 	return cols, avisos, nil
 }
 
-// errComillaAbierta indica un campo entrecomillado que no se cierra en la misma
-// línea: casi seguro un salto de línea dentro de un campo, que rompe la
-// partición por bloques.
-var errComillaAbierta = errors.New("campo entrecomillado sin cerrar en la misma línea " +
-	"(¿salto de línea dentro de un campo?): la partición por bloques alineados a salto de línea no sirve para este archivo")
+// errComillaAbierta indica un campo entrecomillado que no se cierra en la
+// línea: o tiene saltos de línea dentro (el worker une la línea siguiente) o
+// el archivo está roto (error, si no cierra en maxLineasPorRegistro líneas o
+// antes del fin del archivo).
+var errComillaAbierta = errors.New("campo entrecomillado sin cerrar")
 
 // divisor parte líneas en campos sin asignar memoria por línea: los campos son
 // subslices de la línea (o de aux, si hubo que quitar comillas dobles).

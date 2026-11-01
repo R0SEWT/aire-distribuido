@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"math"
 	"os"
 	"runtime"
 	"slices"
@@ -46,6 +47,8 @@ type Benchmark struct {
 // ProtocoloSpeedup dice cómo se calcularon los dos speedups de cada medición,
 // con los nombres de campo del protocolo de cmd/benchmark.
 type ProtocoloSpeedup struct {
+	Calentamiento     int     `json:"calentamiento"`
+	NotaRecorte       string  `json:"nota_recorte,omitempty"`
 	Speedup           string  `json:"speedup"`
 	SpeedupIC         string  `json:"speedup_ic"`
 	RecortePorExtremo float64 `json:"recorte_por_extremo"`
@@ -120,6 +123,14 @@ func MedirCarga(ruta string, cfg ConfigLimpieza, rec Receta, workers []int, reps
 		Identicos:    true,
 	}
 	bm.Mediciones = make([]Medicion, len(ws))
+	// Calentamiento: una corrida descartada con el W más alto, que trae el
+	// archivo a la caché de páginas y hace crecer el heap antes de medir.
+	runtime.GC()
+	cal := op
+	cal.Workers = slices.Max(ws)
+	if _, err := CargarDesde(f, info.Size(), ruta, cfg, rec, cal); err != nil {
+		return nil, nil, err
+	}
 	var ultimo *Resultado
 	var referencia [2]string
 	for rep := range reps {
@@ -155,11 +166,16 @@ func MedirCarga(ruta string, cfg ConfigLimpieza, rec Receta, workers []int, reps
 	}
 	b := BootstrapPorDefecto
 	bm.Protocolo = ProtocoloSpeedup{
+		Calentamiento:     1,
 		Speedup:           "mediana con la base / mediana con W (cociente de medianas)",
 		SpeedupIC:         "media recortada con la base / media recortada con W, IC bootstrap 95 % (kmeans.ICBootstrapCociente)",
 		RecortePorExtremo: b.Recorte,
 		ReplicasBootstrap: b.Replicas,
 		SemillaBootstrap:  b.Semilla,
+	}
+	if int(float64(reps)*b.Recorte) == 0 {
+		bm.Protocolo.NotaRecorte = fmt.Sprintf("con %d repeticiones el recorte del %.0f %% no descarta ninguna: "+
+			"la media recortada es la media; hacen falta al menos %d", reps, 100*b.Recorte, int(math.Ceil(1/b.Recorte)))
 	}
 	for i := range bm.Mediciones {
 		m := &bm.Mediciones[i]

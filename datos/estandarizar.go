@@ -97,9 +97,12 @@ func welford(x []float64, d int, p parte) momentos {
 		m.n++
 		inv := 1 / float64(m.n)
 		for j, v := range x[i*d : (i+1)*d] {
+			// float64(...) obliga a redondear el producto antes de sumar: sin
+			// esto arm64 los funde en un FMA y el resultado cambia en el último
+			// bit respecto de amd64 (lo mismo que se hizo en kmeans/).
 			delta := v - m.media[j]
-			m.media[j] += delta * inv
-			m.m2[j] += delta * (v - m.media[j])
+			m.media[j] += float64(delta * inv)
+			m.m2[j] += float64(delta * (v - m.media[j]))
 		}
 	}
 	return m
@@ -120,8 +123,8 @@ func fusionarMomentos(a, b momentos) momentos {
 	out := momentos{n: n, media: make([]float64, len(a.media)), m2: make([]float64, len(a.m2))}
 	for j := range a.media {
 		delta := b.media[j] - a.media[j]
-		out.media[j] = a.media[j] + delta*nb/nn
-		out.m2[j] = a.m2[j] + b.m2[j] + delta*delta*na*nb/nn
+		out.media[j] = a.media[j] + float64(delta*nb/nn)
+		out.m2[j] = a.m2[j] + b.m2[j] + float64(delta*delta*na*nb/nn)
 	}
 	return out
 }

@@ -13,346 +13,465 @@ import (
 	"time"
 )
 
-// La muestra sintética de data/sample/ sale de aquí. Es reproducible (semilla
-// fija, PCG y un Fisher-Yates propio, que no dependen de la versión de Go) y
-// TestMuestraVersionadaAlDia exige que el archivo versionado sea byte a byte lo
-// que genera este código. Para regenerarla:
+// La muestra sintética de data/sample/oefa_muestra.csv sale de aquí, con el
+// esquema real del CSV de OEFA (spec §4.1). Es reproducible (semilla fija y
+// PCG, que no depende de la versión de Go) y TestMuestraVersionadaAlDia exige
+// que el archivo versionado sea byte a byte lo que genera este código:
 //
 //	go test ./datos -run TestMuestraVersionadaAlDia -actualizar
 //
-// Además del CSV, el generador devuelve la verdad: cuántas filas debe descartar
-// cada regla y qué valor debe quedar en cada celda del silver. Así los tests
-// comparan contra lo que se sembró, no contra lo que el cargador produjo ayer.
+// Además del CSV, el generador devuelve la verdad: la hora que quiso darle a
+// cada fila (no la que se deduce por posición), su valor en la unidad canónica
+// y qué regla debe descartarla. Los tests comparan contra eso.
 
 var actualizar = flag.Bool("actualizar", false, "regenera data/sample/oefa_muestra.csv")
 
 const (
 	rutaMuestra     = "../data/sample/oefa_muestra.csv"
-	semillaMuestra  = 20261031
-	horasMuestra    = 7 * 24
-	cabeceraMuestra = "ID_INFORME;PROCEDENCIA_MUESTRA;NOMBRE_PUNTO;DEPARTAMENTO;PROVINCIA;DISTRITO;UBIGEO;" +
-		"ESTE;NORTE;ALTITUD;ZONA;DATUM;PARAMETRO;UNIDAD;FECHA;VALOR;PERIODO"
+	rutaMuestraReal = "../data/sample/oefa_real_muestra.csv"
+	semillaMuestra  = 20261101
+	diasMuestra     = 5
 )
+
+// columnasOEFA es la cabecera real, en orden.
+var columnasOEFA = []string{
+	"NOMBRE_EVALUACION", "COMPONENTE_AMBIENTAL", "PROCEDENCIA_MUESTRA", "NOMBRE_PUNTO", "ESTE", "NORTE",
+	"ALTITUD", "ZONA", "DATUM", "DEPARTAMENTO", "PROVINCIA", "DISTRITO", "UBIGEO", "DESCRIPCION_UBICACION",
+	"TIPO_MUESTRA", "TIPO_ANALISIS", "PERIODO", "FECHA_INICIO", "HORA_INICIO", "FECHA_FIN", "HORA_FIN",
+	"UNIDAD_MEDIDA", "DIOXIDO_AZUFRE", "DIRECCION_VIENTO", "HUMEDAD_RELATIVA", "PM10", "PM2.5",
+	"MONOXIDO_CARBONO", "OZONO", "PRECIPITACION", "PRESION_BAROMETRICA", "RADIACION_SOLAR",
+	"SULFURO_HIDROGENO", "TEMPERATURA", "VELOCIDAD_VIENTO", "FECHA_CORTE",
+}
+
+// sinComillas son las columnas que el CSV real escribe sin comillas.
+var sinComillas = map[string]bool{"ESTE": true, "NORTE": true, "ALTITUD": true, "ZONA": true, "UBIGEO": true,
+	"FECHA_INICIO": true, "HORA_INICIO": true, "FECHA_FIN": true, "HORA_FIN": true, "FECHA_CORTE": true}
+
+var cabeceraMuestra = func() string {
+	var b strings.Builder
+	for i, c := range columnasOEFA {
+		if i > 0 {
+			b.WriteByte(';')
+		}
+		b.WriteString(`"` + c + `"`)
+	}
+	return b.String()
+}()
 
 var inicioMuestra = time.Date(2024, 3, 4, 0, 0, 0, 0, time.FixedZone("-05", -5*3600))
 
-type paramSint struct {
-	real, unidad, canon string
-	factor              float64 // de la unidad de la muestra a la canónica
-	decimales           int
-}
-
 type estacionSint struct {
-	nombre, informe, depto, prov, dist, ubigeo, este, norte, altitud, zona string
-	formatoFecha                                                           string
-	params                                                                 []paramSint
-	pm10Base, tempBase, tempAmp                                            float64
-	// falta dice si la estación no reporta ese parámetro a esa hora (huecos).
-	falta func(canon string, h int) bool
+	nombre, evaluacion, este, norte, altitud, zona, depto, prov, dist, ubigeo, descripcion string
 }
 
-var (
-	pPM25   = paramSint{"PM2.5", "ug/m3", "pm2_5", 1, 1}
-	pPM10   = paramSint{"PM10", "ug/m3", "pm10", 1, 1}
-	pNO2    = paramSint{"NO2", "ug/m3", "no2", 1, 1}
-	pSO2    = paramSint{"SO2", "ug/m3", "so2", 1, 1}
-	pCOug   = paramSint{"CO", "ug/m3", "co", 1, 1}
-	pCOmg   = paramSint{"CO", "mg/m3", "co", 1000, 2}
-	pTemp   = paramSint{"Temperatura", "°C", "temperatura", 1, 1}
-	pHum    = paramSint{"Humedad Relativa", "%", "humedad", 1, 1}
-	pViento = paramSint{"Velocidad del Viento", "m/s", "viento_velocidad", 1, 1}
-)
+var estacionesSint = []estacionSint{
+	{"SINT-A", "Vigilancia sintética A", "276500", "8682300", "150", "18", "LIMA", "LIMA", "COMAS", "150110", "Punto sintético A, Lima."},
+	{"SINT-B", "Vigilancia sintética B", "226000", "8187000", "2400", "19", "AREQUIPA", "AREQUIPA", "CERRO COLORADO", "40104", "Punto sintético B, Arequipa."},
+	{"SINT-C", "Vigilancia sintética C", "401000", "8724000", "3750", "18", "JUNÍN", "YAULI", "LA OROYA", "120801", "Punto sintético C, Junín."},
+	{"SINT-D", "Vigilancia sintética D", "552000", "9073000", "155", "18", "UCAYALI", "CORONEL PORTILLO", "CALLERIA", "250101", "Punto sintético D, Ucayali."},
+}
 
-func estacionesMuestra() []estacionSint {
-	nunca := func(string, int) bool { return false }
-	return []estacionSint{
-		{
-			nombre: "SINT-A Lima Norte", informe: "INF-SINT-001", depto: "LIMA", prov: "LIMA", dist: "COMAS",
-			ubigeo: "150110", este: "276500", norte: "8682300", altitud: "150", zona: "18L",
-			formatoFecha: "02/01/2006 15:04",
-			params:       []paramSint{pPM25, pPM10, pNO2, pSO2, pCOug, pTemp, pHum, pViento},
-			pm10Base:     80, tempBase: 19, tempAmp: 4, falta: nunca,
-		},
-		{
-			nombre: "SINT-B Arequipa", informe: "INF-SINT-002", depto: "AREQUIPA", prov: "AREQUIPA", dist: "CERRO COLORADO",
-			ubigeo: "040104", este: "226000", norte: "8187000", altitud: "2400", zona: "19K",
-			formatoFecha: "02/01/2006 15:04",
-			params:       []paramSint{pPM25, pPM10, pNO2, pCOmg, pTemp, pHum, pViento},
-			pm10Base:     55, tempBase: 14, tempAmp: 7, falta: nunca,
-		},
-		{
-			// Estación de altura: temperaturas bajo cero de noche (válidas) y huecos:
-			// un día entero apagada (horas 40-63) y sin viento las horas 100-111.
-			nombre: "SINT-C Junín", informe: "INF-SINT-003", depto: "JUNÍN", prov: "YAULI", dist: "LA OROYA",
-			ubigeo: "120801", este: "401000", norte: "8724000", altitud: "3750", zona: "18L",
-			formatoFecha: "02/01/2006 15:04",
-			params:       []paramSint{pPM25, pPM10, pSO2, pTemp, pHum, pViento},
-			pm10Base:     45, tempBase: 3, tempAmp: 8,
-			falta: func(canon string, h int) bool {
-				return (h >= 40 && h < 64) || (canon == "viento_velocidad" && h >= 100 && h < 112)
-			},
-		},
-		{
-			// Fecha con segundos (segundo formato de la config) y sin PM2.5 las horas 120-130.
-			nombre: "SINT-D Ucayali", informe: "INF-SINT-004", depto: "UCAYALI", prov: "CORONEL PORTILLO", dist: "CALLERIA",
-			ubigeo: "250101", este: "552000", norte: "9073000", altitud: "155", zona: "18L",
-			formatoFecha: "02/01/2006 15:04:05",
-			params:       []paramSint{pPM25, pPM10, pTemp, pHum, pViento},
-			pm10Base:     30, tempBase: 26, tempAmp: 5,
-			falta: func(canon string, h int) bool {
-				return canon == "pm2_5" && h >= 120 && h <= 130
-			},
-		},
+// filaSint es una fila del CSV más lo que se sabe de ella.
+type filaSint struct {
+	campos map[string]string // columna → texto (sin comillas)
+	// Verdad:
+	regla    string // regla que la descarta antes del pivot, "" si llega al pivot
+	est      string
+	canon    string
+	instante int64   // fecha_hora (fin del intervalo), si llega al pivot
+	valor    float64 // en la unidad canónica, si llega al pivot
+	prio     int     // 0 canónica, 1 convertida
+	inferida bool
+	truncada bool // fila malformada: se escribe con menos columnas
+}
+
+func (f filaSint) texto() string {
+	cols := columnasOEFA
+	if f.truncada {
+		cols = cols[:10]
 	}
+	var b strings.Builder
+	for i, c := range cols {
+		if i > 0 {
+			b.WriteByte(';')
+		}
+		v := f.campos[c]
+		if sinComillas[c] {
+			b.WriteString(v)
+		} else {
+			b.WriteString(`"` + v + `"`)
+		}
+	}
+	return b.String()
 }
 
-// celdaSint identifica una lectura sembrada: (estación, parámetro canónico, hora).
-type celdaSint struct {
-	est   int
-	canon string
-	h     int
+// serie es (estación, parámetro, unidad, periodo) durante varios días: un
+// bloque de 24 filas por día, como en el CSV real.
+type serie struct {
+	est      int
+	columna  string
+	canon    string
+	unidad   string
+	factor   float64 // a la canónica
+	periodo  string
+	tipo     string
+	explicit bool // HORA_INICIO con la hora; si no, NA
+	dias     []int
+	valor    func(d, h int) float64
 }
 
-// Anomalías que reemplazan el valor (o la unidad) de una lectura normal: la
-// fila sigue en el archivo pero su valor no debe llegar al silver.
-var reemplazosMuestra = []struct {
-	celda         celdaSint
-	valor, unidad string
-	regla         string
-}{
-	{celdaSint{0, "pm10", 10}, "-999", "", "centinela"},
-	{celdaSint{1, "humedad", 20}, "9999", "", "centinela"},
-	{celdaSint{3, "temperatura", 30}, "-9999", "", "centinela"},
-	{celdaSint{0, "no2", 11}, "", "", "valor_no_numerico"},
-	{celdaSint{2, "so2", 12}, "ND", "", "valor_no_numerico"},
-	{celdaSint{3, "pm10", 13}, "NaN", "", "valor_no_numerico"},
-	{celdaSint{0, "pm2_5", 14}, "-5.0", "", "negativo"},
-	{celdaSint{1, "viento_velocidad", 15}, "-0.4", "", "negativo"},
-	{celdaSint{0, "pm2_5", 16}, "1500", "", "fuera_de_rango"},
-	{celdaSint{2, "humedad", 17}, "120.5", "", "fuera_de_rango"},
-	{celdaSint{3, "viento_velocidad", 18}, "80", "", "fuera_de_rango"},
-	{celdaSint{0, "no2", 19}, "", "ppb", "unidad"},
-	{celdaSint{1, "co", 21}, "", "ppm", "unidad"},
-}
-
-// Duplicados: los exactos copian la línea; los de valor distinto cambian el
-// valor. «junto» los pone justo después del original; si no, al final.
-var duplicadosMuestra = []struct {
-	celda    celdaSint
-	distinto bool
-	junto    bool
-}{
-	{celdaSint{0, "pm10", 50}, false, true},
-	{celdaSint{1, "temperatura", 60}, false, true},
-	{celdaSint{2, "pm2_5", 70}, false, false},
-	{celdaSint{3, "humedad", 80}, false, false},
-	{celdaSint{0, "humedad", 90}, true, true},
-	{celdaSint{1, "pm10", 91}, true, false},
-	{celdaSint{3, "temperatura", 92}, true, false},
-}
-
-// Horas en que PM2.5 supera a PM10 (error de medición que se marca, no se descarta).
-var violacionesMuestra = []celdaSint{{0, "", 100}, {0, "", 101}, {3, "", 102}, {1, "", 103}}
-
-// muestraGenerada es el CSV más la verdad que permite verificar el cargador.
 type muestraGenerada struct {
 	csv        []byte
+	filas      []filaSint
 	leidas     int64
-	descartes  map[string]int64 // regla → filas largas que debe descartar
-	conflictos int64            // celdas marcadas por duplicado con valor distinto
-	violac     int              // filas anchas con pm2_5 > pm10
-	estaciones []string
-	verdad     map[claveVerdad]*[numParametros]float64
+	descartes  map[string]int64
+	conflictos int64
+	convertida int64
+	violac     int
+	verdad     map[claveVerdad]*celdaVerdad
 }
 
 type claveVerdad struct {
 	est string
-	h   int
+	t   int64
 }
 
-// pcg envuelve el generador para tener uniformes y enteros sin depender de
-// cómo rand/v2 implementa Float64 o Shuffle en cada versión de Go.
+type celdaVerdad struct {
+	v          [numParametros]float64
+	prio       [numParametros]int
+	inferida   [numParametros]bool
+	convertida [numParametros]bool
+}
+
+// pcg da uniformes sin depender de cómo rand/v2 implementa Float64 en cada versión.
 type pcg struct{ *rand.PCG }
 
 func (p pcg) unif() float64 { return float64(p.Uint64()>>11) / (1 << 53) }
-func (p pcg) entero(n int) int {
-	return int(p.Uint64() % uint64(n))
-}
 
 func generarMuestra() *muestraGenerada {
 	rng := pcg{rand.NewPCG(semillaMuestra, semillaMuestra^0x9E3779B97F4A7C15)}
-	ests := estacionesMuestra()
-	m := &muestraGenerada{
-		descartes: map[string]int64{},
-		verdad:    map[claveVerdad]*[numParametros]float64{},
-	}
+	m := &muestraGenerada{descartes: map[string]int64{}, verdad: map[claveVerdad]*celdaVerdad{}}
 	for _, r := range Reglas() {
 		m.descartes[r] = 0
 	}
-	for _, e := range ests {
-		m.estaciones = append(m.estaciones, e.nombre)
-	}
-
-	reemplazo := map[celdaSint]int{}
-	for i, r := range reemplazosMuestra {
-		reemplazo[r.celda] = i
-	}
-	violacion := map[[2]int]bool{}
-	for _, v := range violacionesMuestra {
-		violacion[[2]int{v.est, v.h}] = true
-	}
-
-	linea := func(e estacionSint, p paramSint, fecha, valor, periodo string) string {
-		return strings.Join([]string{e.informe, "Vigilancia ambiental (sintético)", e.nombre, e.depto, e.prov,
-			e.dist, e.ubigeo, e.este, e.norte, e.altitud, e.zona, "WGS84", p.real, p.unidad, fecha, valor, periodo}, ";")
-	}
-	fijar := func(est string, h int, canon string, v float64) {
-		k := claveVerdad{est, h}
-		fila := m.verdad[k]
-		if fila == nil {
-			fila = new([numParametros]float64)
-			for i := range fila {
-				fila[i] = math.NaN()
-			}
-			m.verdad[k] = fila
-		}
-		fila[indiceParametro(canon)] = v
-	}
-
-	var lineas []string
-	original := map[celdaSint]string{}
-	for ei, e := range ests {
-		for h := 0; h < horasMuestra; h++ {
-			hd := float64(h % 24)
-			ciclo := math.Sin(2 * math.Pi * (hd - 9) / 24) // máximo a las 15 h
-			pm10 := e.pm10Base * (0.7 + 0.6*rng.unif() + 0.3*math.Sin(2*math.Pi*(hd-4)/24))
-			pm10 = math.Round(pm10*10) / 10
-			frac := 0.35 + 0.35*rng.unif()
-			pm25 := math.Round(frac*pm10*10) / 10
-			if violacion[[2]int{ei, h}] {
-				pm25 = pm10 + 3
-			}
-			valores := map[string]float64{
-				"pm10":             pm10,
-				"pm2_5":            pm25,
-				"no2":              20 + 40*rng.unif(),
-				"so2":              10 + 20*rng.unif() + 300*rng.unif()*b2f(ei == 2),
-				"co":               400 + 800*rng.unif(),
-				"temperatura":      e.tempBase + e.tempAmp*ciclo + rng.unif() - 0.5,
-				"humedad":          math.Min(99, math.Max(5, 65-25*ciclo+10*rng.unif())),
-				"viento_velocidad": 0.5 + 4*rng.unif(),
-			}
-			fecha := inicioMuestra.Add(time.Duration(h) * time.Hour).Format(e.formatoFecha)
-			for _, p := range e.params {
-				if e.falta(p.canon, h) {
-					continue
-				}
-				v := valores[p.canon] / p.factor
-				texto := strconv.FormatFloat(v, 'f', p.decimales, 64)
-				unidad := p.unidad
-				celda := celdaSint{ei, p.canon, h}
-				if i, ok := reemplazo[celda]; ok {
-					r := reemplazosMuestra[i]
-					if r.unidad != "" {
-						unidad = r.unidad
-					} else {
-						texto = r.valor
-					}
-					m.descartes[r.regla]++
-				} else {
-					parseado, _ := strconv.ParseFloat(texto, 64)
-					fijar(e.nombre, h, p.canon, parseado*p.factor)
-				}
-				pp := p
-				pp.unidad = unidad
-				l := linea(e, pp, fecha, texto, "Horario")
-				original[celda] = l
-				lineas = append(lineas, l)
-			}
+	todos := []int{0, 1, 2, 3, 4}
+	ciclo := func(h int) float64 { return math.Sin(2 * math.Pi * (float64(h) - 9) / 24) }
+	r1 := func(x float64) float64 { return math.Round(x*10) / 10 }
+	pm10 := map[[3]int]float64{} // (est, día, hora) → PM10, para que PM2.5 quede por debajo
+	valPM10 := func(base float64, e int) func(d, h int) float64 {
+		return func(d, h int) float64 {
+			v := r1(base * (0.7 + 0.6*rng.unif() + 0.3*math.Sin(2*math.Pi*(float64(h)-4)/24)))
+			pm10[[3]int{e, d, h}] = v
+			return v
 		}
 	}
+	valPM25 := func(e int) func(d, h int) float64 {
+		return func(d, h int) float64 { return r1(pm10[[3]int{e, d, h}] * (0.35 + 0.35*rng.unif())) }
+	}
+	so2ppb := map[[2]int]float64{}
+	gasPPB := func(base, amp float64, guardar map[[2]int]float64) func(d, h int) float64 {
+		return func(d, h int) float64 {
+			v := r1(base + amp*rng.unif())
+			if guardar != nil {
+				guardar[[2]int{d, h}] = v
+			}
+			return v
+		}
+	}
+	gasUG := func(fuente map[[2]int]float64, f float64) func(d, h int) float64 {
+		return func(d, h int) float64 { return r1(fuente[[2]int{d, h}] * f) }
+	}
+	o3ug, h2sppb := map[[2]int]float64{}, map[[2]int]float64{}
+	meteo := func(base, amp, ruido float64) func(d, h int) float64 {
+		return func(d, h int) float64 { return r1(base + amp*ciclo(h) + ruido*(rng.unif()-0.5)) }
+	}
+	hum := func(d, h int) float64 { return r1(math.Min(99, math.Max(5, 65-25*ciclo(h)+10*rng.unif()))) }
+	viento := func(d, h int) float64 { return r1(0.5 + 4*rng.unif()) }
+	dir := func(d, h int) float64 { return math.Round(360 * rng.unif()) }
+	pm := "Concentración de partículas en "
+	met := "Datos Meteorológicos"
+	series := []serie{
+		{0, "PM10", "pm10", "ug/m3", 1, "1 hora", pm + "PM10", false, todos, valPM10(80, 0)},
+		{0, "PM2.5", "pm2_5", "ug/m3", 1, "1 hora", pm + "PM2.5", false, todos, valPM25(0)},
+		{0, "DIOXIDO_AZUFRE", "so2", "ppb", 2.62, "1 hora", "-", false, todos, gasPPB(4, 8, so2ppb)},
+		{0, "DIOXIDO_AZUFRE", "so2", "ug/m3", 1, "1 hora", "-", false, todos, gasUG(so2ppb, 2.62)},
+		{0, "DIOXIDO_AZUFRE", "so2", "ug/m3", 1, "3 horas móviles", "-", false, []int{0}, gasPPB(10, 20, nil)},
+		{0, "TEMPERATURA", "temperatura", "°c", 1, "-", met, false, todos, meteo(19, 4, 1)},
+		{0, "HUMEDAD_RELATIVA", "humedad", "%", 1, "-", met, false, todos, hum},
+		{0, "VELOCIDAD_VIENTO", "viento_velocidad", "m/s", 1, "-", met, false, todos, viento},
+		{0, "DIRECCION_VIENTO", "viento_direccion", "°c", 1, "-", met, false, todos, dir},
+		{0, "PRESION_BAROMETRICA", "presion", "mmHg", 1.33322, "-", met, false, todos, meteo(755, 1.5, 0.5)},
+		{1, "PM10", "pm10", "ug/m3", 1, "1 hora", pm + "PM10", true, todos, valPM10(55, 1)},
+		{1, "PM2.5", "pm2_5", "ug/m3", 1, "1 hora", pm + "PM2.5", true, todos, valPM25(1)},
+		{1, "MONOXIDO_CARBONO", "co", "ppb", 1.145, "1 hora", "-", false, todos, gasPPB(300, 600, nil)},
+		{1, "OZONO", "o3", "ug/m3", 1, "1 hora", "-", false, todos, gasPPB(20, 60, o3ug)},
+		{1, "OZONO", "o3", "ppb", 1.96, "1 hora", "-", false, todos, gasUG(o3ug, 1/1.96)},
+		{1, "TEMPERATURA", "temperatura", "°c", 1, "1 hora", met, false, todos, meteo(14, 7, 1)},
+		{1, "HUMEDAD_RELATIVA", "humedad", "%", 1, "1 hora", met, false, todos, hum},
+		{1, "VELOCIDAD_VIENTO", "viento_velocidad", "m/s", 1, "1 hora", met, false, todos, viento},
+		{1, "PRESION_BAROMETRICA", "presion", "hPa", 1, "1 hora", met, false, todos, meteo(752, 2, 0.5)},
+		{2, "PM10", "pm10", "ug/m3", 1, "1 hora", pm + "PM10", false, todos, valPM10(45, 2)},
+		{2, "PM2.5", "pm2_5", "ug/m3", 1, "1 hora", pm + "PM2.5", false, todos, valPM25(2)},
+		{2, "SULFURO_HIDROGENO", "h2s", "ppb", 1.39, "1 hora", "-", false, todos, gasPPB(1, 6, h2sppb)},
+		{2, "SULFURO_HIDROGENO", "h2s", "ug/m3", 1, "1 hora", "-", false, todos, gasUG(h2sppb, 1.39)},
+		{2, "TEMPERATURA", "temperatura", "°c", 1, "-", met, false, todos, meteo(3, 8, 1)},
+		{2, "HUMEDAD_RELATIVA", "humedad", "%", 1, "-", met, false, todos, hum},
+		{2, "VELOCIDAD_VIENTO", "viento_velocidad", "m/s", 1, "-", met, false, todos, viento},
+		{3, "PM10", "pm10", "ug/m3", 1, "1 hora", pm + "PM10", false, todos, valPM10(30, 3)},
+		{3, "PM2.5", "pm2_5", "ug/m3", 1, "1 hora", pm + "PM2.5", false, []int{0, 1, 2, 3, 4}, valPM25(3)},
+		{3, "PM10", "pm10", "ug/m3", 1, "Media móvil de 8 horas", pm + "PM10", false, []int{0}, valPM10(30, 9)},
+	}
 
-	// Filas extra que no tocan el silver.
-	a, d := ests[0], ests[3]
-	dia := func(n int) string {
-		return inicioMuestra.Add(time.Duration(n) * 24 * time.Hour).Format("02/01/2006 15:04")
+	// Anomalías de valor, en su lugar dentro del día (la fila conserva su posición).
+	type celdaSint struct {
+		serie, d, h int
 	}
-	for n := 0; n < 7; n++ {
-		lineas = append(lineas, linea(a, pPM10, dia(n), "61.2", "Diario"))
-		lineas = append(lineas, linea(d, pPM25, dia(n), "12.4", "Diario"))
-		m.descartes["periodo"] += 2
+	reemplazos := map[celdaSint][2]string{ // texto, regla
+		{0, 1, 5}:   {"<LD", "valor_no_numerico"},
+		{20, 0, 7}:  {"ND", "valor_no_numerico"},
+		{3, 2, 4}:   {"<LD", "valor_no_numerico"}, // SO2 en ug: queda el de ppb, convertido
+		{16, 2, 3}:  {"-999", "centinela"},
+		{1, 2, 9}:   {"-3.5", "negativo"},
+		{24, 1, 12}: {"120.5", "fuera_de_rango"},
+		{0, 3, 1}:   {"2500", "fuera_de_rango"},
 	}
-	lineas = append(lineas, linea(a, pPM10, dia(0), "58.0", "Mensual"))
-	m.descartes["periodo"]++
-	for _, f := range []string{"31/02/2024 10:00", "2024/03/04 25:00", ""} {
-		lineas = append(lineas, linea(a, pPM10, f, "40.1", "Horario"))
-		m.descartes["fecha"]++
-	}
-	for _, f := range []string{"01/01/1999 00:00", "15/03/2030 12:00"} {
-		lineas = append(lineas, linea(a, pPM10, f, "40.1", "Horario"))
-		m.descartes["fecha_fuera_de_rango"]++
-	}
-	benceno := paramSint{"Benceno", "ug/m3", "", 1, 1}
-	for h := 0; h < 5; h++ {
-		lineas = append(lineas, linea(a, benceno, inicioMuestra.Add(time.Duration(h)*time.Hour).Format(a.formatoFecha), "1.2", "Horario"))
-		m.descartes["parametro"]++
-	}
-	sinNombre := a
-	sinNombre.nombre = "   "
-	lineas = append(lineas, linea(sinNombre, pPM10, dia(1), "40.1", "Horario"))
-	m.descartes["estacion"]++
-	lineas = append(lineas, "INF-SINT-001;Vigilancia ambiental (sintético);SINT-A Lima Norte;LIMA")
-	lineas = append(lineas, linea(a, pPM10, dia(2), "40.1", "Horario")+";sobra")
-	m.descartes["columnas"] += 2
+	violaciones := map[[3]int]bool{{0, 0, 5}: true, {0, 0, 6}: true} // A, día 0: PM2.5 > PM10
+	faltaUltima := map[[2]int]bool{{19, 2}: true, {23, 3}: true}     // (serie, día) con 23 filas: hora, o periodo si es «-»
+	enCero := map[[2]int]bool{{22, 4}: true}                         // H2S en ug/m3 de C, día 4: todo en 0 (queda el de ppb)
+	partido := map[[2]int]bool{{27, 2}: true}                        // PM2.5 de D, día 2: 24 filas en dos tramos, no contiguas
 
-	// Orden del archivo: mezclado, como un CSV que no viene ordenado por estación.
-	for i := len(lineas) - 1; i > 0; i-- {
-		j := rng.entero(i + 1)
-		lineas[i], lineas[j] = lineas[j], lineas[i]
+	var filas []filaSint
+	base := func(e int) map[string]string {
+		s := estacionesSint[e]
+		c := map[string]string{
+			"NOMBRE_EVALUACION": s.evaluacion, "COMPONENTE_AMBIENTAL": "Aire", "PROCEDENCIA_MUESTRA": "Aire ambiental",
+			"NOMBRE_PUNTO": s.nombre, "ESTE": s.este, "NORTE": s.norte, "ALTITUD": s.altitud, "ZONA": s.zona,
+			"DATUM": "WGS84", "DEPARTAMENTO": s.depto, "PROVINCIA": s.prov, "DISTRITO": s.dist, "UBIGEO": s.ubigeo,
+			"DESCRIPCION_UBICACION": s.descripcion, "TIPO_MUESTRA": "Simple", "FECHA_FIN": "NA", "HORA_FIN": "NA",
+			"FECHA_CORTE": "20240429",
+		}
+		for _, p := range columnasOEFA[22:35] {
+			c[p] = "-"
+		}
+		return c
+	}
+	fechaDia := func(d int) string { return inicioMuestra.AddDate(0, 0, d).Format("2006-01-02") }
+	instante := func(d, h int) int64 { return inicioMuestra.AddDate(0, 0, d).Add(time.Duration(h+1) * time.Hour).Unix() }
+	horaTexto := func(h int) string {
+		if h == 0 {
+			return "1899-12-31"
+		}
+		return "1899-12-31 " + time.Date(0, 1, 1, h, 0, 0, 0, time.UTC).Format("15:04:05")
+	}
+	fila := func(si, d, h int) filaSint {
+		s := series[si]
+		c := base(s.est)
+		c["TIPO_ANALISIS"], c["PERIODO"], c["UNIDAD_MEDIDA"] = s.tipo, s.periodo, s.unidad
+		c["FECHA_INICIO"] = fechaDia(d)
+		c["HORA_INICIO"] = "NA"
+		if s.explicit {
+			c["HORA_INICIO"] = horaTexto(h)
+		}
+		v := s.valor(d, h)
+		if si == 1 && violaciones[[3]int{0, d, h}] {
+			v = pm10[[3]int{0, d, h}] + 2
+		}
+		texto := strconv.FormatFloat(v, 'f', -1, 64)
+		f := filaSint{campos: c, est: estacionesSint[s.est].nombre, canon: s.canon, instante: instante(d, h),
+			inferida: !s.explicit}
+		if s.factor != 1 {
+			f.prio = 1
+		}
+		if s.periodo != "1 hora" && s.periodo != "-" {
+			f.regla = "periodo"
+		}
+		if r, ok := reemplazos[celdaSint{si, d, h}]; ok {
+			texto, f.regla = r[0], r[1]
+		}
+		if enCero[[2]int{si, d}] {
+			texto, f.regla = "0", "bloque_en_cero"
+		}
+		c[s.columna] = texto
+		if f.regla == "" {
+			crudo, _ := strconv.ParseFloat(texto, 64)
+			f.valor = crudo
+			if s.factor != 1 {
+				f.valor = float64(crudo * s.factor)
+			}
+		}
+		return f
+	}
+	dia := func(si, d int) []filaSint {
+		s := series[si]
+		var out []filaSint
+		for h := 0; h < 24; h++ {
+			if faltaUltima[[2]int{si, d}] && h == 23 {
+				continue
+			}
+			f := fila(si, d, h)
+			// La hora (y antes, el periodo «-») va primero en la cascada que
+			// las reglas de valor: un día incompleto o partido se descarta entero.
+			switch {
+			case faltaUltima[[2]int{si, d}] && s.periodo == "-":
+				f.regla = "periodo"
+			case faltaUltima[[2]int{si, d}] || partido[[2]int{si, d}]:
+				f.regla = "hora"
+			}
+			out = append(out, f)
+		}
+		return out
 	}
 
-	var alFinal []string
-	for _, dup := range duplicadosMuestra {
-		orig := original[dup.celda]
-		copia := orig
-		if dup.distinto {
-			campos := strings.Split(orig, ";")
-			v, _ := strconv.ParseFloat(campos[15], 64)
-			campos[15] = strconv.FormatFloat(v+1, 'f', 1, 64)
-			copia = strings.Join(campos, ";")
+	for si, s := range series {
+		for _, d := range s.dias {
+			switch {
+			case si == 27 && d == 2: // PM2.5 de D, día 2, partido en dos tramos de 12 filas
+				dos := dia(si, 2)
+				filas = append(filas, dos[:12]...)
+				filas = append(filas, dia(si, 3)...)
+				filas = append(filas, dos[12:]...)
+			case si == 27 && d == 3:
+				// ya va dentro del día 2
+			default:
+				filas = append(filas, dia(si, d)...)
+			}
+			if si == 21 && d == 0 { // C: un día de meteorología vacía (sin_valor)
+				for h := 0; h < 24; h++ {
+					c := base(2)
+					c["TIPO_ANALISIS"], c["PERIODO"], c["UNIDAD_MEDIDA"] = met, "1 hora", "°c"
+					c["FECHA_INICIO"], c["HORA_INICIO"] = fechaDia(1), "NA"
+					filas = append(filas, filaSint{campos: c, regla: "sin_valor"})
+				}
+			}
+		}
+	}
+	// B: duplicados explícitos (exacto y con otro valor) y una unidad desconocida.
+	for i := range filas {
+		f := filas[i]
+		if f.est == "SINT-B" && f.canon == "pm10" && f.instante == instante(3, 10) {
+			dup := f
+			dup.campos = clonar(f.campos)
+			filas = slices.Insert(filas, i+1, dup)
+			break
+		}
+	}
+	for i := range filas {
+		f := filas[i]
+		if f.est == "SINT-B" && f.canon == "pm2_5" && f.instante == instante(3, 11) {
+			dup := f
+			dup.campos = clonar(f.campos)
+			dup.valor = f.valor + 1
+			dup.campos["PM2.5"] = strconv.FormatFloat(dup.valor, 'f', -1, 64)
+			filas = slices.Insert(filas, i+1, dup)
+			break
+		}
+	}
+	// B: una hora que no está en punto (se descarta y su celda queda vacía).
+	for i := range filas {
+		f := &filas[i]
+		if f.est == "SINT-B" && f.canon == "pm2_5" && f.instante == instante(1, 6) {
+			f.campos["HORA_INICIO"] = "1899-12-31 06:30:00"
+			f.regla = "hora_no_en_punto"
+		}
+	}
+	// D: una fila con el nombre en minúsculas (misma estación) y un día con otras coordenadas.
+	for i := range filas {
+		f := &filas[i]
+		if f.est == "SINT-D" && f.canon == "pm10" && f.instante == instante(1, 3) && f.regla == "" {
+			f.campos["NOMBRE_PUNTO"] = "sint-d"
+		}
+		if f.est == "SINT-D" && f.canon == "pm10" && f.campos["FECHA_INICIO"] == fechaDia(4) {
+			f.campos["NORTE"] = "9073100"
+		}
+	}
+	extra := func(e int, mod func(c map[string]string), regla string) filaSint {
+		c := base(e)
+		c["TIPO_ANALISIS"], c["PERIODO"], c["UNIDAD_MEDIDA"] = pm+"PM10", "1 hora", "ug/m3"
+		c["FECHA_INICIO"], c["HORA_INICIO"], c["PM10"] = fechaDia(0), "NA", "40.1"
+		mod(c)
+		return filaSint{campos: c, regla: regla}
+	}
+	filas = append(filas,
+		extra(1, func(c map[string]string) {
+			c["UNIDAD_MEDIDA"], c["HORA_INICIO"], c["FECHA_INICIO"] = "ppm", horaTexto(10), fechaDia(4)
+		}, "unidad"),
+		extra(3, func(c map[string]string) { c["PERIODO"] = "24 horas" }, "periodo"),
+		extra(3, func(c map[string]string) {
+			c["PERIODO"], c["FECHA_INICIO"] = "24 Horas", fechaDia(1)
+			c["DESCRIPCION_UBICACION"] = "Punto sintético D, Ucayali,\r\r\nsegunda línea del campo."
+		}, "periodo"),
+		extra(0, func(c map[string]string) { c["NOMBRE_PUNTO"] = "" }, "estacion"),
+		extra(0, func(c map[string]string) { c["PM2.5"] = "20.0" }, "parametro"),
+		extra(0, func(c map[string]string) { c["FECHA_INICIO"] = "NA" }, "fecha"),
+		extra(0, func(c map[string]string) { c["FECHA_INICIO"] = "2024-02-30" }, "fecha"),
+		extra(0, func(c map[string]string) { c["FECHA_INICIO"] = "1999-12-31" }, "fecha_fuera_de_rango"),
+	)
+	trunca := extra(0, func(map[string]string) {}, "columnas")
+	trunca.truncada = true
+	filas = append(filas, trunca)
+
+	// Verdad: lo que llega al pivot, aplicado en orden de archivo.
+	for _, f := range filas {
+		if f.regla != "" {
+			m.descartes[f.regla]++
+			continue
+		}
+		k := claveVerdad{f.est, f.instante}
+		c := m.verdad[k]
+		if c == nil {
+			c = &celdaVerdad{}
+			for i := range c.v {
+				c.v[i] = math.NaN()
+			}
+			m.verdad[k] = c
+		}
+		q := indiceParametro(f.canon)
+		poner := func() {
+			c.v[q], c.prio[q], c.inferida[q], c.convertida[q] = f.valor, f.prio, f.inferida, f.prio == 1
+		}
+		switch {
+		case math.IsNaN(c.v[q]):
+			poner()
+		case f.prio < c.prio[q]:
+			m.descartes["duplicado_unidad"]++
+			poner()
+		case f.prio > c.prio[q]:
+			m.descartes["duplicado_unidad"]++
+		case f.valor == c.v[q]:
+			m.descartes["duplicado_exacto"]++
+		default:
 			m.descartes["duplicado_valor_distinto"]++
 			m.conflictos++
-		} else {
-			m.descartes["duplicado_exacto"]++
-		}
-		if dup.junto {
-			i := slices.Index(lineas, orig)
-			lineas = slices.Insert(lineas, i+1, copia)
-		} else {
-			alFinal = append(alFinal, copia)
 		}
 	}
-	lineas = append(lineas, alFinal...)
-	m.violac = len(violacionesMuestra)
-	m.leidas = int64(len(lineas))
+	for _, c := range m.verdad {
+		for q := range c.v {
+			if !math.IsNaN(c.v[q]) && c.convertida[q] {
+				m.convertida++
+			}
+		}
+		if c.v[idxPM25] > c.v[idxPM10] {
+			m.violac++
+		}
+	}
+	m.filas = filas
+	m.leidas = int64(len(filas))
 
 	var b bytes.Buffer
-	b.Write(bomUTF8)
-	b.WriteString(cabeceraMuestra)
-	b.WriteByte('\n')
-	for _, l := range lineas {
-		b.WriteString(l)
-		b.WriteByte('\n')
+	b.WriteString(cabeceraMuestra + "\r\n")
+	for _, f := range filas {
+		b.WriteString(f.texto() + "\r\n")
 	}
 	m.csv = b.Bytes()
 	return m
 }
 
-func b2f(b bool) float64 {
-	if b {
-		return 1
+func clonar(m map[string]string) map[string]string {
+	c := make(map[string]string, len(m))
+	for k, v := range m {
+		c[k] = v
 	}
-	return 0
+	return c
 }
 
 // silverEsperado arma el silver que debe salir de la verdad sembrada, con el
@@ -360,11 +479,11 @@ func b2f(b bool) float64 {
 func (m *muestraGenerada) silverEsperado() []byte {
 	claves := make([]claveVerdad, 0, len(m.verdad))
 	var presentes [numParametros]bool
-	for k, fila := range m.verdad {
+	for k, c := range m.verdad {
 		claves = append(claves, k)
-		for p, v := range fila {
+		for q, v := range c.v {
 			if !math.IsNaN(v) {
-				presentes[p] = true
+				presentes[q] = true
 			}
 		}
 	}
@@ -372,30 +491,35 @@ func (m *muestraGenerada) silverEsperado() []byte {
 		if c := strings.Compare(a.est, b.est); c != 0 {
 			return c
 		}
-		return a.h - b.h
+		return int(a.t - b.t)
 	})
 	var b bytes.Buffer
 	b.WriteString("estacion,fecha_hora")
-	for p, ok := range presentes {
+	for q, ok := range presentes {
 		if ok {
-			b.WriteString("," + ParametrosCanonicos[p])
+			b.WriteString("," + ParametrosCanonicos[q])
 		}
 	}
-	b.WriteByte('\n')
+	b.WriteString(",hora_inferida\n")
 	for _, k := range claves {
-		b.WriteString(k.est)
-		b.WriteByte(',')
-		b.WriteString(inicioMuestra.Add(time.Duration(k.h) * time.Hour).Format(time.RFC3339))
-		for p, ok := range presentes {
+		c := m.verdad[k]
+		b.WriteString(k.est + "," + time.Unix(k.t, 0).In(inicioMuestra.Location()).Format(time.RFC3339))
+		inferida := false
+		for q, ok := range presentes {
 			if !ok {
 				continue
 			}
 			b.WriteByte(',')
-			if v := m.verdad[k][p]; !math.IsNaN(v) {
+			if v := c.v[q]; !math.IsNaN(v) {
 				b.WriteString(strconv.FormatFloat(v, 'g', -1, 64))
+				inferida = inferida || c.inferida[q]
 			}
 		}
-		b.WriteByte('\n')
+		if inferida {
+			b.WriteString(",1\n")
+		} else {
+			b.WriteString(",0\n")
+		}
 	}
 	return b.Bytes()
 }
@@ -424,16 +548,17 @@ func TestMuestraVersionadaAlDia(t *testing.T) {
 func TestMuestraSiembraCadaRegla(t *testing.T) {
 	m := generarMuestra()
 	for _, r := range Reglas() {
-		if m.descartes[r] == 0 {
-			t.Errorf("la muestra no tiene ningún caso de la regla %q", r)
+		if r == "hora_no_en_punto" || m.descartes[r] > 0 {
+			continue
 		}
+		t.Errorf("la muestra no tiene ningún caso de la regla %q", r)
 	}
-	if m.conflictos == 0 || m.violac == 0 {
-		t.Error("la muestra tiene que tener duplicados con valor distinto y violaciones pm2_5 > pm10")
+	if m.descartes["hora_no_en_punto"] != 1 || m.conflictos == 0 || m.violac == 0 || m.convertida == 0 {
+		t.Errorf("faltan casos: %+v, conflictos %d, violaciones %d, convertidas %d", m.descartes, m.conflictos, m.violac, m.convertida)
 	}
 	negativas := 0
-	for _, fila := range m.verdad {
-		if fila[indiceParametro("temperatura")] < 0 {
+	for _, c := range m.verdad {
+		if c.v[indiceParametro("temperatura")] < 0 {
 			negativas++
 		}
 	}
