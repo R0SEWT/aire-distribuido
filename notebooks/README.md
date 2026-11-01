@@ -40,7 +40,7 @@ Specs: `docs/specs/2026-10-31-preguntas-candidatas.md` (01), `docs/specs/2026-10
    ```
 2. **Entorno de ejecución**: *Entorno de ejecución → Cambiar tipo de entorno* → CPU con **RAM alta**.
    El 01 y el 03 leen el CSV de 1.3 GB entero; el 02 usa todos los núcleos con `joblib`. Sin GPU.
-3. **Abrir**: *Archivo → Abrir cuaderno → GitHub* → `R0SEWT/aire-distribuido`, rama `develop`
+3. **Abrir**: *Archivo → Abrir cuaderno → GitHub* → `R0SEWT/aire-distribuido`, rama `feature/spec-pc3` (hasta que se fusione a `develop`)
    (o la rama donde estén) → `notebooks/0X_….ipynb`.
 4. **Ejecutar todo**. La celda de entorno monta Drive y clona el repo en `/content/aire-distribuido`
    para importar `aire_lab.py` y leer `configs/`. Prueba las ramas de `RAMAS` en orden;
