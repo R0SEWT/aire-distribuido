@@ -37,6 +37,7 @@ type Receta struct {
 	Nivel      string   `json:"nivel"`
 	K          int      `json:"k"`
 	Semilla    int64    `json:"semilla"`
+	Semillas   int      `json:"semillas"`
 	Tolerancia float64  `json:"tolerancia"`
 	MaxIter    int      `json:"max_iter"`
 	Workers    int      `json:"workers"`
@@ -72,6 +73,9 @@ func DecodificarReceta(rd io.Reader) (Receta, error) {
 	}
 	if err := r.Validar(); err != nil {
 		return Receta{}, err
+	}
+	if r.Semillas == 0 {
+		r.Semillas = 1 // ausente: una sola semilla, como antes de que existiera el campo
 	}
 	return r, nil
 }
@@ -110,6 +114,9 @@ func (r Receta) Validar() error {
 	}
 	if r.K <= 0 {
 		return fmt.Errorf("receta: k debe ser positivo, es %d", r.K)
+	}
+	if r.Semillas < 0 {
+		return fmt.Errorf("receta: semillas no puede ser negativo (0 o ausente = 1), es %d", r.Semillas)
 	}
 	if r.MaxIter <= 0 {
 		return fmt.Errorf("receta: max_iter debe ser positivo, es %d", r.MaxIter)

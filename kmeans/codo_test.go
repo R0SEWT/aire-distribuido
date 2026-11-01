@@ -17,7 +17,7 @@ func seisNubes() *Datos {
 func TestCodoDaInerciasDecrecientesEnK(t *testing.T) {
 	d := seisNubes()
 	op := OpcionesConc{Opciones: Opciones{MaxIter: 100, TolAbs: 1e-9, TolRel: 1e-9}, Workers: 4, Chunk: 50}
-	puntos, err := Codo(d, 1, 8, 300, 42, op)
+	puntos, err := Codo(d, 1, 8, 300, 42, 1, op)
 	if err != nil {
 		t.Fatalf("Codo: %v", err)
 	}
@@ -43,12 +43,12 @@ func TestCodoDaInerciasDecrecientesEnK(t *testing.T) {
 func TestCodoEsDeterministaYUsaLaSubmuestra(t *testing.T) {
 	d := seisNubes()
 	op := OpcionesConc{Opciones: Opciones{MaxIter: 50, TolAbs: 1e-9, TolRel: 1e-9}, Workers: 3, Chunk: 17}
-	a, err := Codo(d, 2, 4, 100, 7, op)
+	a, err := Codo(d, 2, 4, 100, 7, 3, op)
 	if err != nil {
 		t.Fatalf("Codo: %v", err)
 	}
 	op.Workers = 8
-	b, err := Codo(d, 2, 4, 100, 7, op)
+	b, err := Codo(d, 2, 4, 100, 7, 3, op)
 	if err != nil {
 		t.Fatalf("Codo: %v", err)
 	}
@@ -57,7 +57,7 @@ func TestCodoEsDeterministaYUsaLaSubmuestra(t *testing.T) {
 			t.Errorf("k=%d: %+v vs %+v", a[i].K, a[i], b[i])
 		}
 	}
-	todo, err := Codo(d, 2, 2, 0, 7, op)
+	todo, err := Codo(d, 2, 2, 0, 7, 1, op)
 	if err != nil {
 		t.Fatalf("Codo: %v", err)
 	}
@@ -70,7 +70,7 @@ func TestCodoRechazaRangosInvalidos(t *testing.T) {
 	d := seisNubes()
 	op := OpcionesConc{Opciones: Opciones{MaxIter: 10}, Workers: 2, Chunk: 10}
 	for _, c := range [][3]int{{0, 3, 100}, {4, 3, 100}, {2, 200, 100}} {
-		if _, err := Codo(d, c[0], c[1], c[2], 1, op); err == nil {
+		if _, err := Codo(d, c[0], c[1], c[2], 1, 1, op); err == nil {
 			t.Errorf("k de %d a %d con n=%d: se esperaba error", c[0], c[1], c[2])
 		}
 	}
