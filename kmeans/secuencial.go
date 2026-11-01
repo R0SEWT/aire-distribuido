@@ -115,13 +115,16 @@ func maxAbs(xs []float64) float64 {
 // masCercano devuelve el índice del centroide más cercano y la distancia
 // euclídea al cuadrado. El empate lo gana el índice menor.
 //
-// noFusionar: en arm64 (el Pixel es un nodo candidato de la PC4) el compilador
-// de Go fusiona a*b + c en una sola instrucción FMA, que redondea una vez en
-// vez de dos y cambia el último bit. Entonces un nodo ARM y uno amd64 darían
-// distancias, asignaciones y parciales distintos para los mismos datos. La
-// especificación de Go garantiza que una conversión explícita float64(a*b)
-// redondea el producto e impide la fusión; por eso todo producto que se suma
-// en este paquete va envuelto así. En amd64 (GOAMD64=v1) no hay fusión y el
+// noFusionar: el compilador de Go fusiona a*b + c en una sola instrucción FMA,
+// que redondea una vez en vez de dos y cambia el último bit. Lo hace en arm64
+// (FMADDD; el Pixel es un nodo candidato de la PC4) y también en amd64 cuando
+// se compila con GOAMD64=v3 (VFMADD231SD). Entonces dos nodos compilados
+// distinto darían distancias, asignaciones y parciales distintos para los
+// mismos datos. La especificación de Go garantiza que una conversión explícita
+// float64(a*b) redondea el producto e impide la fusión; por eso todo producto
+// que se suma en este paquete va envuelto así. Comprobado con
+// go build -gcflags=-S: cero FMA en arm64 y en amd64 v3 (el TP sin este cambio
+// tenía cinco en v3). Con el GOAMD64=v1 por omisión no había fusión: el
 // resultado es el mismo bit a bit, como comprueban los tests contra el TP.
 func masCercano(x, cent []float64, k, dim int) (int, float64) {
 	mejor, mejorDist := 0, math.Inf(1)

@@ -58,8 +58,8 @@ func TestRecetaOpcionesConc(t *testing.T) {
 		t.Fatalf("DecodificarReceta: %v", err)
 	}
 	op := r.OpcionesConc()
-	if op.Workers != runtime.NumCPU() {
-		t.Errorf("workers 0 debería ser NumCPU (%d), es %d", runtime.NumCPU(), op.Workers)
+	if op.Workers != runtime.GOMAXPROCS(0) {
+		t.Errorf("workers 0 debería ser GOMAXPROCS (%d), es %d", runtime.GOMAXPROCS(0), op.Workers)
 	}
 	if op.K != 5 || op.MaxIter != 100 || op.Chunk != 10000 || op.TolAbs != 1e-6 || op.TolRel != 1e-6 {
 		t.Errorf("opciones: %+v", op)

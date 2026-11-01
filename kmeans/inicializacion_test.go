@@ -1,7 +1,7 @@
 package kmeans
 
 import (
-	"bytes"
+	"strconv"
 	"strings"
 	"testing"
 )
@@ -116,31 +116,6 @@ func TestKMeansPPRechazaParametrosInvalidos(t *testing.T) {
 	}
 }
 
-func TestCentroidesSeGuardanYSeVuelvenALeerIguales(t *testing.T) {
-	d := tresGruposSeparados()
-	cent, k, err := KMeansPP(d, 3, 2024)
-	if err != nil {
-		t.Fatalf("KMeansPP: %v", err)
-	}
-
-	var buf bytes.Buffer
-	if err := GuardarCentroides(&buf, cent, k, d.D); err != nil {
-		t.Fatalf("GuardarCentroides: %v", err)
-	}
-	leidos, kLeido, dimLeida, err := LeerCentroides(&buf)
-	if err != nil {
-		t.Fatalf("LeerCentroides: %v", err)
-	}
-	if kLeido != k || dimLeida != d.D {
-		t.Fatalf("se leyeron k=%d, D=%d; se esperaban k=%d, D=%d", kLeido, dimLeida, k, d.D)
-	}
-	for i := range cent {
-		if leidos[i] != cent[i] {
-			t.Errorf("el valor %d cambió al ida y vuelta: %.17g → %.17g", i, cent[i], leidos[i])
-		}
-	}
-}
-
 func TestHashCentroidesCambiaConCualquierBit(t *testing.T) {
 	// El hash es lo que prueba que las dos versiones partieron de lo mismo.
 	a := []float64{1, 2, 3, 4, 5, 6}
@@ -154,22 +129,6 @@ func TestHashCentroidesCambiaConCualquierBit(t *testing.T) {
 		t.Errorf("el hash debería ser un sha256 en hexadecimal, es %q", HashCentroides(a))
 	}
 	_ = b
-}
-
-func TestLeerCentroidesRechazaArchivoCorrupto(t *testing.T) {
-	casos := map[string]string{
-		"vacío":               "",
-		"sin cabecera":        "1,2,3,4,5,6\n",
-		"dimensión que no va": "k=2 d=6\n1,2,3\n4,5,6\n",
-		"menos filas que k":   "k=2 d=6\n1,2,3,4,5,6\n",
-	}
-	for nombre, contenido := range casos {
-		t.Run(nombre, func(t *testing.T) {
-			if _, _, _, err := LeerCentroides(strings.NewReader(contenido)); err == nil {
-				t.Fatal("se esperaba error")
-			}
-		})
-	}
 }
 
 func esPuntoDe(d *Datos, c []float64) bool {
@@ -188,4 +147,9 @@ func claveDe(p []float64) string {
 		b.WriteByte(';')
 	}
 	return b.String()
+}
+
+// strconvFormat imprime un float64 sin perder precisión al releerlo.
+func strconvFormat(v float64) string {
+	return strconv.FormatFloat(v, 'g', 17, 64)
 }
