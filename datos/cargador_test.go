@@ -505,3 +505,67 @@ func TestWorkersCeroUsaTodosLosNucleos(t *testing.T) {
 }
 
 func timeHora(h int) time.Duration { return time.Duration(h) * time.Hour }
+
+// TestBordesDeLasReglas: como en el TP, el valor justo en el umbral se queda y
+// el siguiente se va, con la config por defecto.
+func TestBordesDeLasReglas(t *testing.T) {
+	casos := []struct {
+		nombre                               string
+		param, unidad, fecha, valor, periodo string
+		regla                                string // "" = se conserva
+		silver                               string // valor esperado en el silver si se conserva
+	}{
+		{"pm2_5 en el máximo", "PM2.5", "ug/m3", "04/03/2024 05:00", "1000", "Horario", "", "1000"},
+		{"pm2_5 sobre el máximo", "PM2.5", "ug/m3", "04/03/2024 05:00", "1000.1", "Horario", "fuera_de_rango", ""},
+		{"pm10 en cero", "PM10", "ug/m3", "04/03/2024 05:00", "0", "Horario", "", "0"},
+		{"pm10 menos cero", "PM10", "ug/m3", "04/03/2024 05:00", "-0.0", "Horario", "", "0"},
+		{"pm10 negativo", "PM10", "ug/m3", "04/03/2024 05:00", "-0.1", "Horario", "negativo", ""},
+		{"temperatura negativa válida", "Temperatura", "°C", "04/03/2024 05:00", "-5.5", "Horario", "", "-5.5"},
+		{"temperatura en el mínimo", "Temperatura", "°C", "04/03/2024 05:00", "-30", "Horario", "", "-30"},
+		{"temperatura bajo el mínimo", "Temperatura", "°C", "04/03/2024 05:00", "-30.1", "Horario", "fuera_de_rango", ""},
+		{"humedad en 100", "Humedad Relativa", "%", "04/03/2024 05:00", "100", "Horario", "", "100"},
+		{"humedad sobre 100", "Humedad Relativa", "%", "04/03/2024 05:00", "100.01", "Horario", "fuera_de_rango", ""},
+		{"centinela", "PM10", "ug/m3", "04/03/2024 05:00", "-999", "Horario", "centinela", ""},
+		{"casi centinela", "PM10", "ug/m3", "04/03/2024 05:00", "-999.5", "Horario", "negativo", ""},
+		{"centinela alto", "Humedad Relativa", "%", "04/03/2024 05:00", "9999", "Horario", "centinela", ""},
+		{"CO en mg/m3 en el máximo", "CO", "mg/m3", "04/03/2024 05:00", "50", "Horario", "", "50000"},
+		{"CO en mg/m3 sobre el máximo", "CO", "mg/m3", "04/03/2024 05:00", "50.01", "Horario", "fuera_de_rango", ""},
+		{"unidad con símbolos", "PM10", "µg/m³", "04/03/2024 05:00", "12", "Horario", "", "12"},
+		{"unidad desconocida", "PM10", "ppb", "04/03/2024 05:00", "12", "Horario", "unidad", ""},
+		{"valor con espacios", "PM10", "ug/m3", "04/03/2024 05:00", " 12.5 ", "Horario", "", "12.5"},
+		{"valor vacío", "PM10", "ug/m3", "04/03/2024 05:00", "", "Horario", "valor_no_numerico", ""},
+		{"valor infinito", "PM10", "ug/m3", "04/03/2024 05:00", "Inf", "Horario", "valor_no_numerico", ""},
+		{"periodo en minúsculas", "PM10", "ug/m3", "04/03/2024 05:00", "12", " horario ", "", "12"},
+		{"periodo diario", "PM10", "ug/m3", "04/03/2024 05:00", "12", "Diario", "periodo", ""},
+		{"parámetro en minúsculas", "pm2.5", "ug/m3", "04/03/2024 05:00", "12", "Horario", "", "12"},
+		{"parámetro desconocido", "PM1", "ug/m3", "04/03/2024 05:00", "12", "Horario", "parametro", ""},
+		{"primer instante válido", "PM10", "ug/m3", "01/01/2000 00:00", "12", "Horario", "", "12"},
+		{"antes del inicio", "PM10", "ug/m3", "31/12/1999 23:00", "12", "Horario", "fecha_fuera_de_rango", ""},
+		{"último instante válido", "PM10", "ug/m3", "30/06/2026 23:00", "12", "Horario", "", "12"},
+		{"fecha de corte excluida", "PM10", "ug/m3", "01/07/2026 00:00", "12", "Horario", "fecha_fuera_de_rango", ""},
+		{"fecha imposible", "PM10", "ug/m3", "29/02/2023 05:00", "12", "Horario", "fecha", ""},
+		{"fecha ISO", "PM10", "ug/m3", "2024-03-04 05:00:00", "12", "Horario", "", "12"},
+	}
+	for _, c := range casos {
+		t.Run(c.nombre, func(t *testing.T) {
+			fila := strings.Join([]string{"I", "P", "EST X", "LIMA", "LIMA", "LIMA", "150101", "1", "2", "3", "18L", "WGS84",
+				c.param, c.unidad, c.fecha, c.valor, c.periodo}, ";")
+			res := cargarBytes(t, []byte(cabeceraMuestra+"\n"+fila+"\n"), ConfigPorDefecto(), RecetaProvisional(), opMuestra)
+			fl := res.Limpieza.FilasLargas
+			if c.regla != "" {
+				if fl.DescartadasPorRegla[c.regla] != 1 || fl.Procesadas != 0 {
+					t.Fatalf("se esperaba un descarte por %q: %+v", c.regla, fl.DescartadasPorRegla)
+				}
+				return
+			}
+			if fl.Procesadas != 1 {
+				t.Fatalf("se esperaba conservarla: %+v", fl.DescartadasPorRegla)
+			}
+			lineas := strings.Split(strings.TrimSpace(string(silverDe(t, res))), "\n")
+			campos := strings.Split(lineas[1], ",")
+			if got := campos[len(campos)-1]; got != c.silver {
+				t.Errorf("silver %q, quiero %q", got, c.silver)
+			}
+		})
+	}
+}
