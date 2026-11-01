@@ -1,0 +1,186 @@
+{
+  "_supuestos": [
+    "SUPUESTOS del 31/10, sin el CSV en disco: se verifican con el primer megabyte del archivo.",
+    "Delimitador ';', UTF-8 (con o sin BOM), punto decimal, sin campos entrecomillados con saltos de línea.",
+    "Formato largo: una fila por (estación, parámetro, fecha-hora); la estación es NOMBRE_PUNTO.",
+    "Fecha y hora en una sola columna, dd/mm/aaaa HH:MM[:SS], hora local de Lima (UTC-5, sin horario de verano).",
+    "Unidades en columna aparte; CO puede venir en mg/m3 y se lleva a ug/m3.",
+    "Centinelas, rangos físicos y rango de fechas son provisionales hasta el EDA."
+  ],
+  "delimitador": ";",
+  "codificacion": "utf-8",
+  "separador_decimal": ".",
+  "zona_horaria": "America/Lima",
+  "columnas": {
+    "estacion": "NOMBRE_PUNTO",
+    "fecha": "FECHA",
+    "hora": "",
+    "parametro": "PARAMETRO",
+    "valor": "VALOR",
+    "periodo": "PERIODO",
+    "unidad": "UNIDAD",
+    "departamento": "DEPARTAMENTO",
+    "provincia": "PROVINCIA",
+    "distrito": "DISTRITO",
+    "ubigeo": "UBIGEO",
+    "este": "ESTE",
+    "norte": "NORTE",
+    "altitud": "ALTITUD",
+    "zona": "ZONA",
+    "datum": "DATUM"
+  },
+  "parametros": {
+    "CO": "co",
+    "Direccion de Viento": "viento_direccion",
+    "Dirección del Viento": "viento_direccion",
+    "Humedad": "humedad",
+    "Humedad Relativa": "humedad",
+    "Humedad Relativa del Aire": "humedad",
+    "NO2": "no2",
+    "O3": "o3",
+    "PM 10": "pm10",
+    "PM 2.5": "pm2_5",
+    "PM10": "pm10",
+    "PM2,5": "pm2_5",
+    "PM2.5": "pm2_5",
+    "Precipitación": "precipitacion",
+    "Presion Barometrica": "presion",
+    "Presión": "presion",
+    "Presión Atmosférica": "presion",
+    "Radiación Solar": "radiacion",
+    "Radiación Solar Global": "radiacion",
+    "SO2": "so2",
+    "Temperatura": "temperatura",
+    "Temperatura Ambiente": "temperatura",
+    "Temperatura del aire": "temperatura",
+    "Velocidad de Viento": "viento_velocidad",
+    "Velocidad del Viento": "viento_velocidad"
+  },
+  "periodos_horarios": [
+    "Horario",
+    "Hora",
+    "1 h",
+    "1h",
+    "1 hora",
+    "60 min"
+  ],
+  "formatos_fecha": [
+    "02/01/2006 15:04",
+    "02/01/2006 15:04:05",
+    "2/1/2006 15:04",
+    "2006-01-02 15:04:05",
+    "2006-01-02 15:04",
+    "2006-01-02T15:04:05"
+  ],
+  "fecha_desde": "2000-01-01",
+  "fecha_hasta": "2026-07-01",
+  "centinelas": [
+    -999,
+    -9999,
+    9999,
+    99999
+  ],
+  "admiten_negativos": [
+    "temperatura"
+  ],
+  "rangos": {
+    "co": [
+      0,
+      50000
+    ],
+    "humedad": [
+      0,
+      100
+    ],
+    "no2": [
+      0,
+      2000
+    ],
+    "o3": [
+      0,
+      1000
+    ],
+    "pm10": [
+      0,
+      2000
+    ],
+    "pm2_5": [
+      0,
+      1000
+    ],
+    "precipitacion": [
+      0,
+      200
+    ],
+    "presion": [
+      400,
+      1100
+    ],
+    "radiacion": [
+      0,
+      1500
+    ],
+    "so2": [
+      0,
+      10000
+    ],
+    "temperatura": [
+      -30,
+      50
+    ],
+    "viento_direccion": [
+      0,
+      360
+    ],
+    "viento_velocidad": [
+      0,
+      60
+    ]
+  },
+  "unidades": {
+    "co": {
+      "mg/m3": 1000,
+      "ug/m3": 1
+    },
+    "humedad": {
+      "%": 1
+    },
+    "no2": {
+      "ug/m3": 1
+    },
+    "o3": {
+      "ug/m3": 1
+    },
+    "pm10": {
+      "ug/m3": 1
+    },
+    "pm2_5": {
+      "ug/m3": 1
+    },
+    "precipitacion": {
+      "mm": 1
+    },
+    "presion": {
+      "hpa": 1,
+      "mb": 1,
+      "mbar": 1
+    },
+    "radiacion": {
+      "w/m2": 1
+    },
+    "so2": {
+      "ug/m3": 1
+    },
+    "temperatura": {
+      "c": 1,
+      "°c": 1
+    },
+    "viento_direccion": {
+      "grados": 1,
+      "°": 1
+    },
+    "viento_velocidad": {
+      "m/s": 1
+    }
+  }
+}

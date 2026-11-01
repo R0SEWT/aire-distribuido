@@ -1,0 +1,134 @@
+package datos
+
+import "time"
+
+// ReporteLimpieza es reports/limpieza.json: la evidencia de limpieza del
+// informe. Todas las reglas aparecen, aun en cero.
+type ReporteLimpieza struct {
+	Entrada             string                      `json:"entrada"`
+	Bytes               int64                       `json:"bytes"`
+	Cabecera            []string                    `json:"cabecera"`
+	BOM                 bool                        `json:"bom"`
+	Delimitador         string                      `json:"delimitador"`
+	FilasLargas         ConteoLargas                `json:"filas_largas"`
+	FilasAnchas         ConteoAnchas                `json:"filas_anchas"`
+	ParametrosPresentes []string                    `json:"parametros_presentes"`
+	Features            []string                    `json:"features"`
+	Nivel               string                      `json:"nivel"`
+	Estaciones          map[string]*ReporteEstacion `json:"estaciones"`
+	Vistos              Vistos                      `json:"vistos"`
+	Avisos              []string                    `json:"avisos,omitempty"`
+	Workers             int                         `json:"workers"`
+	BloqueBytes         int64                       `json:"bloque_bytes"`
+	Bloques             int                         `json:"bloques"`
+	Chunk               int                         `json:"chunk"`
+	DuracionS           float64                     `json:"duracion_s"`
+	FasesS              map[string]float64          `json:"fases_s"`
+}
+
+// ConteoLargas cuenta filas del CSV largo. Se cumple
+// Leidas = Procesadas + Descartadas y Descartadas = Σ DescartadasPorRegla.
+// Procesadas son las lecturas que llegaron al silver.
+type ConteoLargas struct {
+	Leidas              int64            `json:"leidas"`
+	Procesadas          int64            `json:"procesadas"`
+	Descartadas         int64            `json:"descartadas"`
+	DescartadasPorRegla map[string]int64 `json:"descartadas_por_regla"`
+	// MarcadasPorRegla cuenta lo que se conserva pero se señala:
+	// duplicado_valor_distinto son las celdas (estación, parámetro, fecha-hora)
+	// cuyo valor conservado tuvo al menos un duplicado con otro valor.
+	MarcadasPorRegla         map[string]int64 `json:"marcadas_por_regla"`
+	FueraDeRangoPorParametro map[string]int64 `json:"fuera_de_rango_por_parametro"`
+}
+
+// ConteoAnchas cuenta filas de la tabla ancha (estación × fecha-hora).
+type ConteoAnchas struct {
+	Total         int `json:"total"`
+	CompletasGold int `json:"completas_gold"`
+	// Pm25MayorPm10 son filas con las dos lecturas y PM2.5 > PM10. Se
+	// conservan en el silver; en el gold la fracción fina se recorta a 1.
+	Pm25MayorPm10 int `json:"pm2_5_mayor_pm10"`
+}
+
+// ReporteEstacion resume una estación. Una estación con filas leídas y ninguna
+// procesada aparece igual, con ceros: que desaparezca en silencio es peor.
+type ReporteEstacion struct {
+	LargasLeidas     int64             `json:"largas_leidas"`
+	LargasProcesadas int64             `json:"largas_procesadas"`
+	Anchas           int               `json:"anchas"`
+	CompletasGold    int               `json:"completas_gold"`
+	Desde            string            `json:"desde,omitempty"`
+	Hasta            string            `json:"hasta,omitempty"`
+	Ubicacion        map[string]string `json:"ubicacion,omitempty"`
+}
+
+// Vistos son los valores de texto tal como vienen en el archivo, con su
+// frecuencia. Sirven para cerrar los mapeos de la config con el CSV real.
+type Vistos struct {
+	Parametros           map[string]int64            `json:"parametros"`
+	ParametrosNoMapeados map[string]int64            `json:"parametros_no_mapeados"`
+	Periodos             map[string]int64            `json:"periodos"`
+	Unidades             map[string]map[string]int64 `json:"unidades"`
+}
+
+func armarReporte(a *acumulador, t *TablaAncha, ds *Dataset, st estadoTabla, rec Receta) *ReporteLimpieza {
+	rep := &ReporteLimpieza{
+		FilasLargas: ConteoLargas{
+			Leidas:                   a.leidas,
+			Procesadas:               a.procesadas,
+			DescartadasPorRegla:      map[string]int64{},
+			MarcadasPorRegla:         map[string]int64{"duplicado_valor_distinto": st.celdasEnConflicto},
+			FueraDeRangoPorParametro: map[string]int64{},
+		},
+		FilasAnchas: ConteoAnchas{
+			Total:         t.N,
+			CompletasGold: ds.N,
+			Pm25MayorPm10: st.pm25MayorPm10,
+		},
+		ParametrosPresentes: append([]string{}, t.Parametros...),
+		Features:            append([]string{}, rec.Features...),
+		Nivel:               rec.Nivel,
+		Estaciones:          map[string]*ReporteEstacion{},
+		Vistos: Vistos{
+			Parametros:           a.parametros,
+			ParametrosNoMapeados: a.noMapeados,
+			Periodos:             a.periodos,
+			Unidades:             map[string]map[string]int64{},
+		},
+	}
+	for r, n := range a.descartadas {
+		rep.FilasLargas.DescartadasPorRegla[nombresReglas[r]] = n
+		rep.FilasLargas.Descartadas += n
+	}
+	for q, n := range a.fueraDeRango {
+		if n > 0 {
+			rep.FilasLargas.FueraDeRangoPorParametro[ParametrosCanonicos[q]] = n
+		}
+	}
+	for q, us := range a.unidades {
+		if us != nil {
+			rep.Vistos.Unidades[ParametrosCanonicos[q]] = us
+		}
+	}
+
+	for _, e := range a.estaciones {
+		rep.Estaciones[e.nombre] = &ReporteEstacion{
+			LargasLeidas:     e.leidas,
+			LargasProcesadas: e.procesadas,
+			Ubicacion:        e.ubicacion,
+		}
+	}
+	for i := 0; i < t.N; i++ {
+		e := rep.Estaciones[t.Estaciones[t.Estacion[i]]]
+		hora := time.Unix(t.Hora[i], 0).In(t.Zona).Format(time.RFC3339)
+		if e.Anchas == 0 {
+			e.Desde = hora // las filas están ordenadas por fecha dentro de la estación
+		}
+		e.Hasta = hora
+		e.Anchas++
+	}
+	for _, i := range ds.Estacion {
+		rep.Estaciones[ds.Estaciones[i]].CompletasGold++
+	}
+	return rep
+}
