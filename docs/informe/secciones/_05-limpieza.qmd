@@ -42,13 +42,24 @@ filas leídas, {{< meta cifras.limpieza.filas_largas_procesadas >}} pasaron las 
 se descartaron (@tbl-limpieza-resumen). El pivot dejó {{< meta cifras.limpieza.filas_anchas >}}
 filas anchas, de las cuales {{< meta cifras.limpieza.filas_completas >}}
 ({{< meta cifras.limpieza.pct_completas >}}) tienen todas las features y entran al modelo. La
-@tbl-limpieza-reglas desglosa los descartes por regla y la @tbl-limpieza-estaciones, por estación.
+@tbl-limpieza-reglas desglosa los descartes por regla, en cascada: cada fila descartada se cuenta en
+la primera regla que falla, así que no hay doble conteo. La @tbl-limpieza-estaciones lo desglosa por
+estación.
 
 {{< include generado/tablas/limpieza_resumen.md >}}
 
 {{< include generado/tablas/limpieza_reglas.md >}}
 
 {{< include generado/tablas/limpieza_estaciones.md >}}
+
+El cargador también registra lo que el archivo trae tal cual, sin interpretar: los nombres de
+parámetro con su frecuencia (@tbl-limpieza-parametros) y las unidades de cada parámetro
+(@tbl-limpieza-unidades). Con eso se cierran los mapeos de `configs/limpieza.json` contra el CSV
+real. Parámetros sin mapeo en esta corrida: {{< meta cifras.limpieza.no_mapeados >}}.
+
+{{< include generado/tablas/limpieza_parametros.md >}}
+
+{{< include generado/tablas/limpieza_unidades.md >}}
 
 ![Ejecución de `cmd/cargar` sobre el CSV completo: conteos por regla y conservación](capturas/cargar.png){#fig-captura-cargar width=16cm}
 

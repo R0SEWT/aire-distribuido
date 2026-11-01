@@ -1,16 +1,20 @@
 {
   "placeholder": true,
-  "_nota": "PLACEHOLDER: cifras inventadas con el esquema que escribe cmd/entrenar. No describen los datos de OEFA y no se citan. Se reemplaza el archivo entero cuando cmd/entrenar escriba el real (ver docs/informe/README.md, «Contrato de los JSON»).",
-  "generado_por": "cmd/entrenar",
-  "momento": "2026-11-04T12:00:00-05:00",
-  "commit": "PLACEHOLDER",
-  "maquina": "PLACEHOLDER",
-  "version_go": "go1.26.x",
+  "_nota": "sale de correr los comandos de Go sobre la muestra sintética data/sample/oefa_muestra.csv (estaciones SINT-*, una semana), no sobre el CSV de OEFA.",
+  "metadatos": {
+    "momento": "2026-11-01T00:01:13.895900478-05:00",
+    "maquina": "A019803",
+    "version_go": "go1.27.3",
+    "gomaxprocs": 14,
+    "cpus_logicas": 14,
+    "commit": "94d40370ee2303e1df214a92af7c8bcf57787e20",
+    "arbol_sucio": false
+  },
   "receta": {
     "features": [
       "pm10",
       "fraccion_fina",
-      "viento",
+      "viento_velocidad",
       "humedad"
     ],
     "log1p": [
@@ -18,97 +22,156 @@
     ],
     "nivel": "absoluto",
     "k": 5,
-    "semilla": 2024,
-    "tolerancia": 0.0001,
+    "semilla": 42,
+    "tolerancia": 1e-06,
     "max_iter": 100,
-    "config": "configs/kmeans.json"
+    "workers": 0,
+    "chunk": 10000
   },
-  "n": 268400,
-  "d": 4,
-  "iteraciones": 23,
-  "convergio": true,
-  "inercia": 412345.6,
-  "duracion_s": 1.9,
-  "clusters": [
-    {
-      "cluster": 0,
-      "tamano": 92000,
-      "centroide_z": [
-        -0.62,
-        -0.1,
-        0.85,
-        -0.55
-      ],
-      "centroide": {
-        "pm10": 22.0,
-        "fraccion_fina": 0.45,
-        "viento": 3.56,
-        "humedad": 66.6
-      }
-    },
-    {
-      "cluster": 1,
-      "tamano": 71500,
-      "centroide_z": [
-        -0.2,
-        0.35,
-        -0.7,
-        0.88
-      ],
-      "centroide": {
-        "pm10": 32.5,
-        "fraccion_fina": 0.53,
-        "viento": 1.36,
-        "humedad": 87.9
-      }
-    },
-    {
-      "cluster": 2,
-      "tamano": 52300,
-      "centroide_z": [
-        0.48,
-        -0.95,
-        0.4,
-        -0.75
-      ],
-      "centroide": {
-        "pm10": 51.8,
-        "fraccion_fina": 0.32,
-        "viento": 2.92,
-        "humedad": 63.6
-      }
-    },
-    {
-      "cluster": 3,
-      "tamano": 38100,
-      "centroide_z": [
-        0.95,
-        1.2,
-        -0.85,
-        0.3
-      ],
-      "centroide": {
-        "pm10": 72.9,
-        "fraccion_fina": 0.66,
-        "viento": 1.14,
-        "humedad": 79.3
-      }
-    },
-    {
-      "cluster": 4,
-      "tamano": 14500,
-      "centroide_z": [
-        1.65,
-        -1.3,
-        0.2,
-        -1.1
-      ],
-      "centroide": {
-        "pm10": 120.6,
-        "fraccion_fina": 0.26,
-        "viento": 2.63,
-        "humedad": 58.4
-      }
-    }
-  ]
+  "gold": {
+    "ruta": "/tmp/claude-1000/-home-rody-Code-personal-concurrente/abfa3006-394e-404e-9865-0a60a57d95b1/scratchpad/integ/data/gold/oefa_features.csv",
+    "sha256": "ddf7ae68f0711a76c719a7b2b18c37dde3aa475e8cbb76e2d3cf0ef3b993b5d3",
+    "n": 617,
+    "d": 4,
+    "estaciones": 4
+  },
+  "estandarizacion": "/tmp/claude-1000/-home-rody-Code-personal-concurrente/abfa3006-394e-404e-9865-0a60a57d95b1/scratchpad/integ/reports/estandarizacion.json",
+  "k": 5,
+  "k_efectivo": 5,
+  "semilla": 42,
+  "workers": 14,
+  "chunk": 10000,
+  "tol_abs": 1e-06,
+  "tol_rel": 1e-06,
+  "max_iter": 100,
+  "centroides_iniciales_sha256": "3d6137569359974274e48301541b90f592cff4a80ca005ea961f1cf593c9a87f",
+  "iteraciones": 28,
+  "paro": "tolerancia",
+  "movimiento_ultima_iteracion": 0,
+  "clusters_vacios": 0,
+  "inercia": 1257.291864506284,
+  "inercias_por_iteracion": [
+    2322.401780230369,
+    1468.918137679636,
+    1383.4962874482153,
+    1327.7141506325115,
+    1300.681008866311,
+    1283.6266365991587,
+    1272.5160464076494,
+    1267.3413189760734,
+    1264.1256666613183,
+    1263.0047724893288,
+    1262.4115025941514,
+    1262.14175607554,
+    1261.9041890656245,
+    1261.8312118884826,
+    1261.6489240403898,
+    1261.4648654338182,
+    1261.334448077006,
+    1261.2285854347033,
+    1261.1581620618904,
+    1261.0807878996825,
+    1260.991718623157,
+    1260.236964639808,
+    1259.5262689185327,
+    1258.9930645249578,
+    1258.1774711925984,
+    1257.5431013779282,
+    1257.3265152373162,
+    1257.291864506284
+  ],
+  "tamanos": [
+    125,
+    110,
+    142,
+    123,
+    117
+  ],
+  "features": [
+    "pm10",
+    "fraccion_fina",
+    "viento_velocidad",
+    "humedad"
+  ],
+  "centroides_estandarizados": [
+    [
+      -1.2388357972859942,
+      0.13301294088469182,
+      -0.27025203278250537,
+      0.6523398659912717
+    ],
+    [
+      0.5745141431005523,
+      -0.9236080614064299,
+      -0.16900557055743662,
+      0.8073820596775901
+    ],
+    [
+      0.24300421561821947,
+      0.14142060488744346,
+      -0.9282306456624826,
+      -0.9857960458894297
+    ],
+    [
+      0.5005105647135181,
+      1.0331784796698766,
+      0.7524475782951812,
+      0.6108556210589098
+    ],
+    [
+      -0.03770495006717994,
+      -0.5315590576863083,
+      0.783160824041866,
+      -0.9017667751059066
+    ]
+  ],
+  "centroides_des_estandarizados": [
+    [
+      27.15085055506228,
+      0.5390703478114931,
+      2.1952,
+      81.6488
+    ],
+    [
+      64.11083034365525,
+      0.4268096162358453,
+      2.311818181818182,
+      84.42
+    ],
+    [
+      54.85711962970992,
+      0.5399636203375403,
+      1.4373239436619714,
+      52.36901408450704
+    ],
+    [
+      61.92042396035104,
+      0.6347084637528698,
+      3.3731707317073174,
+      80.90731707317073
+    ],
+    [
+      48.05754179876396,
+      0.4684628749498894,
+      3.408547008547009,
+      53.870940170940166
+    ]
+  ],
+  "nota_des_estandarizacion": "Centroides llevados a unidades originales invirtiendo el z-score y luego log1p (reports/estandarizacion.json). En las features con log1p el centroide invertido es la media de los logaritmos llevada de vuelta (del orden de una media geométrica), menor que la media aritmética; la media aritmética de cada régimen está en reports/regimenes.json (perfil).",
+  "ms": {
+    "carga": 1.902015,
+    "inicializacion": 0.139244,
+    "clustering": 2.600621,
+    "perfiles": 0.179027,
+    "total": 32.629034
+  },
+  "recursos": {
+    "max_rss_mb": 25.01953125,
+    "heap_mb": 1.0997543334960938,
+    "total_asignado_mb": 1.0997543334960938,
+    "sistema_mb": 12.459236145019531,
+    "num_gc": 0,
+    "cpu_usuario_s": 0.023894,
+    "cpu_sistema_s": 0.009102
+  }
 }

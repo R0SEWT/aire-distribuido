@@ -1,137 +1,59 @@
 {
   "placeholder": true,
-  "_nota": "PLACEHOLDER: cifras inventadas con el esquema que escribe cmd/benchmark -parte cargador. No describen los datos de OEFA y no se citan. Se reemplaza el archivo entero cuando cmd/benchmark -parte cargador escriba el real (ver docs/informe/README.md, «Contrato de los JSON»).",
-  "generado_por": "cmd/benchmark -parte cargador",
-  "metadatos": {
-    "momento": "2026-11-04T12:00:00-05:00",
-    "commit": "PLACEHOLDER",
-    "maquina": "PLACEHOLDER",
-    "version_go": "go1.26.x",
-    "gomaxprocs": 11,
-    "cpus_logicas": 11,
-    "arbol_sucio": false
-  },
-  "protocolo": {
-    "repeticiones": 5,
-    "calentamiento": 1,
-    "estadistico": "mediana",
-    "referencia": "workers=1",
-    "unidad_chunk": "bytes",
-    "replicas_bootstrap": 2000,
-    "nivel_ic": 0.95,
-    "semilla": 7
-  },
-  "datos": {
-    "archivo": "1a_Vigilancia y Seguimiento ambiental en la calidad del aire.csv",
-    "bytes": 1317949839,
-    "filas_largas": 3600000,
-    "sha256": "PLACEHOLDER"
-  },
-  "resultados": [
+  "_nota": "sale de correr los comandos de Go sobre la muestra sintética data/sample/oefa_muestra.csv (estaciones SINT-*, una semana), no sobre el CSV de OEFA.",
+  "entrada": "data/sample/oefa_muestra.csv",
+  "bytes": 722035,
+  "filas_largas": 4236,
+  "filas_anchas": 648,
+  "bloque_bytes": 67108864,
+  "bloques": 1,
+  "chunk": 10000,
+  "repeticiones": 3,
+  "orden": "intercalado: en cada repetición se corre cada W una vez, en el orden de la lista",
+  "cpus": 14,
+  "gomaxprocs": 14,
+  "go": "go1.27.3",
+  "plataforma": "linux/amd64",
+  "host": "A019803",
+  "fecha": "2026-11-01T00:09:09-05:00",
+  "base_workers": 1,
+  "mediciones": [
     {
-      "modo": "concurrente",
       "workers": 1,
-      "chunk": 67108864,
-      "repeticiones": 5,
       "tiempos_s": [
-        179.27,
-        181.272,
-        182.0,
-        183.274,
-        185.822
+        0.010540545,
+        0.007638886,
+        0.005833393
       ],
-      "mediana_s": 182.0,
-      "speedup": {
-        "punto": 1.0,
-        "ic_inferior": 0.982,
-        "ic_superior": 1.017,
-        "nivel": 0.95
-      },
-      "eficiencia": 1.0
+      "mediana_s": 0.007638886,
+      "speedup": 1,
+      "sha256_silver": "c9803d07cd1d4b50613915eb36d13f79c99ddc4a98e198ada4155ea8ab21aa0a",
+      "sha256_gold": "ddf7ae68f0711a76c719a7b2b18c37dde3aa475e8cbb76e2d3cf0ef3b993b5d3"
     },
     {
-      "modo": "concurrente",
       "workers": 2,
-      "chunk": 67108864,
-      "repeticiones": 5,
       "tiempos_s": [
-        93.6735,
-        94.7196,
-        95.1,
-        95.7657,
-        97.0971
+        0.006517989,
+        0.008519586,
+        0.009428087
       ],
-      "mediana_s": 95.1,
-      "speedup": {
-        "punto": 1.9138,
-        "ic_inferior": 1.8793,
-        "ic_superior": 1.9463,
-        "nivel": 0.95
-      },
-      "eficiencia": 0.9569
+      "mediana_s": 0.008519586,
+      "speedup": 0.896626432317251,
+      "sha256_silver": "c9803d07cd1d4b50613915eb36d13f79c99ddc4a98e198ada4155ea8ab21aa0a",
+      "sha256_gold": "ddf7ae68f0711a76c719a7b2b18c37dde3aa475e8cbb76e2d3cf0ef3b993b5d3"
     },
     {
-      "modo": "concurrente",
       "workers": 4,
-      "chunk": 67108864,
-      "repeticiones": 5,
       "tiempos_s": [
-        50.5305,
-        51.0948,
-        51.3,
-        51.6591,
-        52.3773
+        0.006986208,
+        0.00627179,
+        0.01089131
       ],
-      "mediana_s": 51.3,
-      "speedup": {
-        "punto": 3.5478,
-        "ic_inferior": 3.4839,
-        "ic_superior": 3.6081,
-        "nivel": 0.95
-      },
-      "eficiencia": 0.8869
-    },
-    {
-      "modo": "concurrente",
-      "workers": 8,
-      "chunk": 67108864,
-      "repeticiones": 5,
-      "tiempos_s": [
-        29.747,
-        30.0792,
-        30.2,
-        30.4114,
-        30.8342
-      ],
-      "mediana_s": 30.2,
-      "speedup": {
-        "punto": 6.0265,
-        "ic_inferior": 5.918,
-        "ic_superior": 6.1289,
-        "nivel": 0.95
-      },
-      "eficiencia": 0.7533
-    },
-    {
-      "modo": "concurrente",
-      "workers": 11,
-      "chunk": 67108864,
-      "repeticiones": 5,
-      "tiempos_s": [
-        26.004,
-        26.2944,
-        26.4,
-        26.5848,
-        26.9544
-      ],
-      "mediana_s": 26.4,
-      "speedup": {
-        "punto": 6.8939,
-        "ic_inferior": 6.7698,
-        "ic_superior": 7.0111,
-        "nivel": 0.95
-      },
-      "eficiencia": 0.6267
+      "mediana_s": 0.006986208,
+      "speedup": 1.093423785836322,
+      "sha256_silver": "c9803d07cd1d4b50613915eb36d13f79c99ddc4a98e198ada4155ea8ab21aa0a",
+      "sha256_gold": "ddf7ae68f0711a76c719a7b2b18c37dde3aa475e8cbb76e2d3cf0ef3b993b5d3"
     }
-  ]
+  ],
+  "identicos": true
 }

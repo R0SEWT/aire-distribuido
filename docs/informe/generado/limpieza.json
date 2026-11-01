@@ -1,130 +1,215 @@
 {
   "placeholder": true,
-  "_nota": "PLACEHOLDER: cifras inventadas con el esquema que escribe cmd/cargar. No describen los datos de OEFA y no se citan. Se reemplaza el archivo entero cuando cmd/cargar escriba el real (ver docs/informe/README.md, «Contrato de los JSON»).",
-  "generado_por": "cmd/cargar",
-  "momento": "2026-11-04T12:00:00-05:00",
-  "commit": "PLACEHOLDER",
-  "maquina": "PLACEHOLDER",
-  "version_go": "go1.26.x",
-  "fuente": {
-    "archivo": "1a_Vigilancia y Seguimiento ambiental en la calidad del aire.csv",
-    "bytes": 1317949839,
-    "sha256": "PLACEHOLDER"
-  },
-  "parametros": {
-    "workers": 8,
-    "bloque_bytes": 67108864,
-    "config": "configs/limpieza.json"
-  },
-  "duracion_s": 38.4,
-  "filas_largas": {
-    "leidas": 3600000,
-    "procesadas": 3327400,
-    "descartadas": 272600
-  },
-  "reglas": [
-    {
-      "regla": 1,
-      "nombre": "periodo_horario",
-      "descripcion": "Solo lecturas con Periodo horario",
-      "descartadas": 240000,
-      "marcadas": 0
-    },
-    {
-      "regla": 2,
-      "nombre": "fecha_valida",
-      "descripcion": "Fecha y hora parseables y dentro del rango del dataset",
-      "descartadas": 1200,
-      "marcadas": 0
-    },
-    {
-      "regla": 3,
-      "nombre": "valor_invalido",
-      "descripcion": "Valor numérico; sin negativos (salvo temperatura) ni centinelas",
-      "descartadas": 18500,
-      "marcadas": 0
-    },
-    {
-      "regla": 4,
-      "nombre": "rango_fisico",
-      "descripcion": "Dentro del rango físico del parámetro (configs/limpieza.json)",
-      "descartadas": 3100,
-      "marcadas": 0
-    },
-    {
-      "regla": 5,
-      "nombre": "duplicados",
-      "descripcion": "Duplicados por (estación, parámetro, fecha-hora): exactos se descartan, con valor distinto se marcan y se conserva el primero",
-      "descartadas": 9800,
-      "marcadas": 450
-    },
-    {
-      "regla": 6,
-      "nombre": "unidades",
-      "descripcion": "Una sola unidad por parámetro: las filas convertidas se cuentan como marcadas",
-      "descartadas": 0,
-      "marcadas": 120000
-    }
+  "_nota": "sale de correr los comandos de Go sobre la muestra sintética data/sample/oefa_muestra.csv (estaciones SINT-*, una semana), no sobre el CSV de OEFA.",
+  "entrada": "data/sample/oefa_muestra.csv",
+  "bytes": 722035,
+  "cabecera": [
+    "ID_INFORME",
+    "PROCEDENCIA_MUESTRA",
+    "NOMBRE_PUNTO",
+    "DEPARTAMENTO",
+    "PROVINCIA",
+    "DISTRITO",
+    "UBIGEO",
+    "ESTE",
+    "NORTE",
+    "ALTITUD",
+    "ZONA",
+    "DATUM",
+    "PARAMETRO",
+    "UNIDAD",
+    "FECHA",
+    "VALOR",
+    "PERIODO"
   ],
-  "filas_anchas": {
-    "total": 331200,
-    "completas": 268400
-  },
-  "violaciones_pm2_5_mayor_pm10": 2150,
-  "estaciones": [
-    {
-      "estacion": "PH-01",
-      "nombre": "Estación de ejemplo 1",
-      "departamento": "Lima",
-      "desde": "2019-01-01T00:00",
-      "hasta": "2024-06-30T23:00",
-      "filas_anchas": 66000,
-      "completas": 58100
+  "bom": true,
+  "delimitador": ";",
+  "filas_largas": {
+    "leidas": 4236,
+    "procesadas": 4188,
+    "descartadas": 48,
+    "descartadas_por_regla": {
+      "centinela": 3,
+      "columnas": 2,
+      "duplicado_exacto": 4,
+      "duplicado_valor_distinto": 3,
+      "estacion": 1,
+      "fecha": 3,
+      "fecha_fuera_de_rango": 2,
+      "fuera_de_rango": 3,
+      "negativo": 2,
+      "parametro": 5,
+      "periodo": 15,
+      "unidad": 2,
+      "valor_no_numerico": 3
     },
-    {
-      "estacion": "PH-02",
-      "nombre": "Estación de ejemplo 2",
-      "departamento": "Callao",
-      "desde": "2019-03-15T00:00",
-      "hasta": "2024-06-30T23:00",
-      "filas_anchas": 62500,
-      "completas": 55200
+    "marcadas_por_regla": {
+      "duplicado_valor_distinto": 3
     },
-    {
-      "estacion": "PH-03",
-      "nombre": "Estación de ejemplo 3",
-      "departamento": "Junín",
-      "desde": "2020-01-01T00:00",
-      "hasta": "2024-06-30T23:00",
-      "filas_anchas": 55800,
-      "completas": 40300
-    },
-    {
-      "estacion": "PH-04",
-      "nombre": "Estación de ejemplo 4",
-      "departamento": "Pasco",
-      "desde": "2020-06-01T00:00",
-      "hasta": "2024-06-30T23:00",
-      "filas_anchas": 48900,
-      "completas": 39800
-    },
-    {
-      "estacion": "PH-05",
-      "nombre": "Estación de ejemplo 5",
-      "departamento": "Moquegua",
-      "desde": "2018-07-01T00:00",
-      "hasta": "2024-06-30T23:00",
-      "filas_anchas": 52000,
-      "completas": 44000
-    },
-    {
-      "estacion": "PH-06",
-      "nombre": "Estación de ejemplo 6",
-      "departamento": "Arequipa",
-      "desde": "2021-01-01T00:00",
-      "hasta": "2024-06-30T23:00",
-      "filas_anchas": 46000,
-      "completas": 31000
+    "fuera_de_rango_por_parametro": {
+      "humedad": 1,
+      "pm2_5": 1,
+      "viento_velocidad": 1
     }
-  ]
+  },
+  "filas_anchas": {
+    "total": 648,
+    "completas_gold": 617,
+    "pm2_5_mayor_pm10": 4
+  },
+  "parametros_presentes": [
+    "co",
+    "humedad",
+    "no2",
+    "pm10",
+    "pm2_5",
+    "so2",
+    "temperatura",
+    "viento_velocidad"
+  ],
+  "features": [
+    "pm10",
+    "fraccion_fina",
+    "viento_velocidad",
+    "humedad"
+  ],
+  "nivel": "absoluto",
+  "estaciones": {
+    "SINT-A Lima Norte": {
+      "largas_leidas": 1364,
+      "largas_procesadas": 1339,
+      "anchas": 168,
+      "completas_gold": 165,
+      "desde": "2024-03-04T00:00:00-05:00",
+      "hasta": "2024-03-10T23:00:00-05:00",
+      "ubicacion": {
+        "altitud": "150",
+        "datum": "WGS84",
+        "departamento": "LIMA",
+        "distrito": "COMAS",
+        "este": "276500",
+        "norte": "8682300",
+        "provincia": "LIMA",
+        "ubigeo": "150110",
+        "zona": "18L"
+      }
+    },
+    "SINT-B Arequipa": {
+      "largas_leidas": 1178,
+      "largas_procesadas": 1173,
+      "anchas": 168,
+      "completas_gold": 166,
+      "desde": "2024-03-04T00:00:00-05:00",
+      "hasta": "2024-03-10T23:00:00-05:00",
+      "ubicacion": {
+        "altitud": "2400",
+        "datum": "WGS84",
+        "departamento": "AREQUIPA",
+        "distrito": "CERRO COLORADO",
+        "este": "226000",
+        "norte": "8187000",
+        "provincia": "AREQUIPA",
+        "ubigeo": "040104",
+        "zona": "19K"
+      }
+    },
+    "SINT-C Junín": {
+      "largas_leidas": 853,
+      "largas_procesadas": 850,
+      "anchas": 144,
+      "completas_gold": 131,
+      "desde": "2024-03-04T00:00:00-05:00",
+      "hasta": "2024-03-10T23:00:00-05:00",
+      "ubicacion": {
+        "altitud": "3750",
+        "datum": "WGS84",
+        "departamento": "JUNÍN",
+        "distrito": "LA OROYA",
+        "este": "401000",
+        "norte": "8724000",
+        "provincia": "YAULI",
+        "ubigeo": "120801",
+        "zona": "18L"
+      }
+    },
+    "SINT-D Ucayali": {
+      "largas_leidas": 838,
+      "largas_procesadas": 826,
+      "anchas": 168,
+      "completas_gold": 155,
+      "desde": "2024-03-04T00:00:00-05:00",
+      "hasta": "2024-03-10T23:00:00-05:00",
+      "ubicacion": {
+        "altitud": "155",
+        "datum": "WGS84",
+        "departamento": "UCAYALI",
+        "distrito": "CALLERIA",
+        "este": "552000",
+        "norte": "9073000",
+        "provincia": "CORONEL PORTILLO",
+        "ubigeo": "250101",
+        "zona": "18L"
+      }
+    }
+  },
+  "vistos": {
+    "parametros": {
+      "Benceno": 5,
+      "CO": 336,
+      "Humedad Relativa": 650,
+      "NO2": 336,
+      "PM10": 663,
+      "PM2.5": 645,
+      "SO2": 312,
+      "Temperatura": 650,
+      "Velocidad del Viento": 636
+    },
+    "parametros_no_mapeados": {
+      "Benceno": 5
+    },
+    "periodos": {
+      "Diario": 14,
+      "Horario": 4218,
+      "Mensual": 1
+    },
+    "unidades": {
+      "co": {
+        "mg/m3": 167,
+        "ppm": 1,
+        "ug/m3": 168
+      },
+      "humedad": {
+        "%": 650
+      },
+      "no2": {
+        "ppb": 1,
+        "ug/m3": 335
+      },
+      "pm10": {
+        "ug/m3": 663
+      },
+      "pm2_5": {
+        "ug/m3": 645
+      },
+      "so2": {
+        "ug/m3": 312
+      },
+      "temperatura": {
+        "°C": 650
+      },
+      "viento_velocidad": {
+        "m/s": 636
+      }
+    }
+  },
+  "workers": 4,
+  "bloque_bytes": 67108864,
+  "bloques": 1,
+  "chunk": 10000,
+  "duracion_s": 0.010464306,
+  "fases_s": {
+    "gold_estandarizacion": 0.000717617,
+    "lectura_limpieza_pivot": 0.008802567,
+    "orden_tabla_ancha": 0.000944122
+  }
 }

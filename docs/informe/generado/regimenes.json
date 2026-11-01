@@ -1,396 +1,272 @@
 {
   "placeholder": true,
-  "_nota": "PLACEHOLDER: cifras inventadas con el esquema que escribe cmd/entrenar. No describen los datos de OEFA y no se citan. Se reemplaza el archivo entero cuando cmd/entrenar escriba el real (ver docs/informe/README.md, «Contrato de los JSON»).",
-  "generado_por": "cmd/entrenar",
-  "momento": "2026-11-04T12:00:00-05:00",
-  "commit": "PLACEHOLDER",
-  "maquina": "PLACEHOLDER",
-  "version_go": "go1.26.x",
+  "_nota": "sale de correr los comandos de Go sobre la muestra sintética data/sample/oefa_muestra.csv (estaciones SINT-*, una semana), no sobre el CSV de OEFA.",
+  "metadatos": {
+    "momento": "2026-11-01T00:01:13.895900478-05:00",
+    "maquina": "A019803",
+    "version_go": "go1.27.3",
+    "gomaxprocs": 14,
+    "cpus_logicas": 14,
+    "commit": "94d40370ee2303e1df214a92af7c8bcf57787e20",
+    "arbol_sucio": false
+  },
+  "gold": {
+    "ruta": "/tmp/claude-1000/-home-rody-Code-personal-concurrente/abfa3006-394e-404e-9865-0a60a57d95b1/scratchpad/integ/data/gold/oefa_features.csv",
+    "sha256": "ddf7ae68f0711a76c719a7b2b18c37dde3aa475e8cbb76e2d3cf0ef3b993b5d3",
+    "n": 617,
+    "d": 4,
+    "estaciones": 4
+  },
+  "k": 5,
+  "nivel": "absoluto",
+  "features": [
+    "pm10",
+    "fraccion_fina",
+    "viento_velocidad",
+    "humedad"
+  ],
   "eca": {
-    "pm2_5_24h": 50,
-    "pm10_24h": 100,
-    "unidad": "µg/m³",
-    "norma": "DS 003-2017-MINAM",
-    "regla": "un régimen excede si la media de PM2.5 de sus lecturas supera 50 o la de PM10 supera 100"
+    "pm2_5_ugm3": 50,
+    "pm10_ugm3": 100,
+    "norma": "DS 003-2017-MINAM, valores de 24 horas",
+    "nota": "El ECA es un promedio de 24 h. Que la media horaria de un régimen lo supere dice que el régimen es peligroso, no que haya un incumplimiento; una lectura horaria alta tampoco lo es por sí sola. excede: PM2.5 medio > 50 o PM10 medio > 100. no_excede: los dos disponibles y ninguno supera. no_evaluable: falta el contaminante que podría superar el umbral."
   },
-  "unidades": {
-    "pm2_5": "µg/m³",
-    "pm10": "µg/m³",
-    "fraccion_fina": "",
-    "viento": "m/s",
-    "humedad": "%",
-    "temperatura": "°C"
-  },
+  "nota_perfil": "perfil: media aritmética de cada feature en unidades originales del silver (PM en µg/m³), des-estandarizando cada lectura del régimen. pm2_5_medio: la feature pm2_5 o, si no está, fraccion_fina × pm10 lectura por lectura. por_hora: hora del día en Lima (UTC-5), de 0 a 23.",
   "regimenes": [
     {
-      "cluster": 0,
-      "nombre": "Fondo con viento",
-      "tamano": 92000,
-      "proporcion": 0.3428,
+      "regimen": 0,
+      "tamano": 125,
+      "fraccion": 0.2025931928687196,
       "perfil": {
-        "pm2_5": 9.9,
-        "pm10": 22.0,
-        "fraccion_fina": 0.45,
-        "viento": 3.56,
-        "humedad": 66.6,
-        "temperatura": 19.8
+        "fraccion_fina": 0.5390703478114928,
+        "humedad": 81.6488,
+        "pm10": 28.295999999999985,
+        "viento_velocidad": 2.1952000000000003
       },
-      "etiqueta_eca": "no excede",
-      "banda_inca": "buena",
+      "pm2_5_medio": 15.417600000000006,
+      "pm2_5_origen": "fraccion_fina*pm10",
+      "pm10_medio": 28.295999999999985,
+      "eca": "no_excede",
       "por_hora": [
-        0.0165,
-        0.0151,
-        0.0143,
-        0.0151,
-        0.0165,
-        0.0189,
-        0.0227,
-        0.0281,
-        0.0355,
-        0.0445,
-        0.0545,
-        0.0645,
-        0.0732,
-        0.079,
-        0.0811,
-        0.079,
-        0.0732,
-        0.0645,
-        0.0545,
-        0.0445,
-        0.0355,
-        0.0281,
-        0.0227,
-        0.0189
+        14,
+        9,
+        9,
+        9,
+        7,
+        4,
+        5,
+        5,
+        1,
+        2,
+        1,
+        1,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        3,
+        3,
+        10,
+        10,
+        18,
+        14
       ],
-      "por_estacion": [
-        {
-          "estacion": "PH-01",
-          "filas": 9200,
-          "proporcion": 0.1
-        },
-        {
-          "estacion": "PH-02",
-          "filas": 11040,
-          "proporcion": 0.12
-        },
-        {
-          "estacion": "PH-03",
-          "filas": 18400,
-          "proporcion": 0.2
-        },
-        {
-          "estacion": "PH-04",
-          "filas": 16560,
-          "proporcion": 0.18
-        },
-        {
-          "estacion": "PH-05",
-          "filas": 23000,
-          "proporcion": 0.25
-        },
-        {
-          "estacion": "PH-06",
-          "filas": 13800,
-          "proporcion": 0.15
-        }
-      ]
+      "por_estacion": {
+        "SINT-A Lima Norte": 3,
+        "SINT-B Arequipa": 20,
+        "SINT-C Junín": 24,
+        "SINT-D Ucayali": 78
+      }
     },
     {
-      "cluster": 1,
-      "nombre": "Humedad nocturna",
-      "tamano": 71500,
-      "proporcion": 0.2664,
+      "regimen": 1,
+      "tamano": 110,
+      "fraccion": 0.17828200972447325,
       "perfil": {
-        "pm2_5": 17.2,
-        "pm10": 32.5,
-        "fraccion_fina": 0.53,
-        "viento": 1.36,
-        "humedad": 87.9,
-        "temperatura": 14.1
+        "fraccion_fina": 0.4268096162358454,
+        "humedad": 84.42000000000003,
+        "pm10": 67.43181818181814,
+        "viento_velocidad": 2.3118181818181824
       },
-      "etiqueta_eca": "no excede",
-      "banda_inca": "buena",
+      "pm2_5_medio": 29.004545454545458,
+      "pm2_5_origen": "fraccion_fina*pm10",
+      "pm10_medio": 67.43181818181814,
+      "eca": "no_excede",
       "por_hora": [
-        0.0645,
-        0.0732,
-        0.079,
-        0.0811,
-        0.079,
-        0.0732,
-        0.0645,
-        0.0545,
-        0.0445,
-        0.0355,
-        0.0281,
-        0.0227,
-        0.0189,
-        0.0165,
-        0.0151,
-        0.0143,
-        0.0151,
-        0.0165,
-        0.0189,
-        0.0227,
-        0.0281,
-        0.0355,
-        0.0445,
-        0.0545
+        9,
+        10,
+        6,
+        10,
+        13,
+        5,
+        8,
+        10,
+        11,
+        9,
+        3,
+        1,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        2,
+        3,
+        3,
+        7
       ],
-      "por_estacion": [
-        {
-          "estacion": "PH-01",
-          "filas": 21450,
-          "proporcion": 0.3
-        },
-        {
-          "estacion": "PH-02",
-          "filas": 22880,
-          "proporcion": 0.32
-        },
-        {
-          "estacion": "PH-03",
-          "filas": 5720,
-          "proporcion": 0.08
-        },
-        {
-          "estacion": "PH-04",
-          "filas": 4290,
-          "proporcion": 0.06
-        },
-        {
-          "estacion": "PH-05",
-          "filas": 8580,
-          "proporcion": 0.12
-        },
-        {
-          "estacion": "PH-06",
-          "filas": 8580,
-          "proporcion": 0.12
-        }
-      ]
+      "por_estacion": {
+        "SINT-A Lima Norte": 48,
+        "SINT-B Arequipa": 39,
+        "SINT-C Junín": 18,
+        "SINT-D Ucayali": 5
+      }
     },
     {
-      "cluster": 2,
-      "nombre": "Polvo diurno",
-      "tamano": 52300,
-      "proporcion": 0.1949,
+      "regimen": 2,
+      "tamano": 142,
+      "fraccion": 0.23014586709886548,
       "perfil": {
-        "pm2_5": 16.6,
-        "pm10": 51.8,
-        "fraccion_fina": 0.32,
-        "viento": 2.92,
-        "humedad": 63.6,
-        "temperatura": 21.5
+        "fraccion_fina": 0.5399636203375402,
+        "humedad": 52.36901408450704,
+        "pm10": 58.64154929577469,
+        "viento_velocidad": 1.4373239436619711
       },
-      "etiqueta_eca": "no excede",
-      "banda_inca": "buena",
+      "pm2_5_medio": 31.654929577464795,
+      "pm2_5_origen": "fraccion_fina*pm10",
+      "pm10_medio": 58.64154929577469,
+      "eca": "no_excede",
       "por_hora": [
-        0.0101,
-        0.0102,
-        0.0105,
-        0.0112,
-        0.013,
-        0.0167,
-        0.0237,
-        0.0352,
-        0.0515,
-        0.0712,
-        0.0908,
-        0.1054,
-        0.1109,
-        0.1054,
-        0.0908,
-        0.0712,
-        0.0515,
-        0.0352,
-        0.0237,
-        0.0167,
-        0.013,
-        0.0112,
-        0.0105,
-        0.0102
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        3,
+        3,
+        10,
+        11,
+        13,
+        15,
+        11,
+        17,
+        14,
+        13,
+        15,
+        8,
+        4,
+        4,
+        1,
+        0
       ],
-      "por_estacion": [
-        {
-          "estacion": "PH-01",
-          "filas": 4184,
-          "proporcion": 0.08
-        },
-        {
-          "estacion": "PH-02",
-          "filas": 3138,
-          "proporcion": 0.06
-        },
-        {
-          "estacion": "PH-03",
-          "filas": 11506,
-          "proporcion": 0.22
-        },
-        {
-          "estacion": "PH-04",
-          "filas": 10460,
-          "proporcion": 0.2
-        },
-        {
-          "estacion": "PH-05",
-          "filas": 7322,
-          "proporcion": 0.14
-        },
-        {
-          "estacion": "PH-06",
-          "filas": 15690,
-          "proporcion": 0.3
-        }
-      ]
+      "por_estacion": {
+        "SINT-A Lima Norte": 39,
+        "SINT-B Arequipa": 42,
+        "SINT-C Junín": 32,
+        "SINT-D Ucayali": 29
+      }
     },
     {
-      "cluster": 3,
-      "nombre": "Combustión en calma",
-      "tamano": 38100,
-      "proporcion": 0.142,
+      "regimen": 3,
+      "tamano": 123,
+      "fraccion": 0.1993517017828201,
       "perfil": {
-        "pm2_5": 48.1,
-        "pm10": 72.9,
-        "fraccion_fina": 0.66,
-        "viento": 1.14,
-        "humedad": 79.3,
-        "temperatura": 15.2
+        "fraccion_fina": 0.6347084637528699,
+        "humedad": 80.90731707317076,
+        "pm10": 66.4235772357724,
+        "viento_velocidad": 3.3731707317073174
       },
-      "etiqueta_eca": "no excede",
-      "banda_inca": "moderada",
+      "pm2_5_medio": 42.31138211382116,
+      "pm2_5_origen": "fraccion_fina*pm10",
+      "pm10_medio": 66.4235772357724,
+      "eca": "no_excede",
       "por_hora": [
-        0.0712,
-        0.0515,
-        0.0352,
-        0.0237,
-        0.0167,
-        0.013,
-        0.0112,
-        0.0105,
-        0.0102,
-        0.0101,
-        0.0102,
-        0.0105,
-        0.0112,
-        0.013,
-        0.0167,
-        0.0237,
-        0.0352,
-        0.0515,
-        0.0712,
-        0.0908,
-        0.1054,
-        0.1109,
-        0.1054,
-        0.0908
+        3,
+        7,
+        11,
+        7,
+        5,
+        16,
+        12,
+        10,
+        8,
+        7,
+        3,
+        5,
+        3,
+        2,
+        1,
+        0,
+        0,
+        0,
+        2,
+        3,
+        3,
+        6,
+        4,
+        5
       ],
-      "por_estacion": [
-        {
-          "estacion": "PH-01",
-          "filas": 14478,
-          "proporcion": 0.38
-        },
-        {
-          "estacion": "PH-02",
-          "filas": 12954,
-          "proporcion": 0.34
-        },
-        {
-          "estacion": "PH-03",
-          "filas": 2286,
-          "proporcion": 0.06
-        },
-        {
-          "estacion": "PH-04",
-          "filas": 2286,
-          "proporcion": 0.06
-        },
-        {
-          "estacion": "PH-05",
-          "filas": 3048,
-          "proporcion": 0.08
-        },
-        {
-          "estacion": "PH-06",
-          "filas": 3048,
-          "proporcion": 0.08
-        }
-      ]
+      "por_estacion": {
+        "SINT-A Lima Norte": 53,
+        "SINT-B Arequipa": 33,
+        "SINT-C Junín": 30,
+        "SINT-D Ucayali": 7
+      }
     },
     {
-      "cluster": 4,
-      "nombre": "Episodio de polvo",
-      "tamano": 14500,
-      "proporcion": 0.054,
+      "regimen": 4,
+      "tamano": 117,
+      "fraccion": 0.18962722852512157,
       "perfil": {
-        "pm2_5": 31.4,
-        "pm10": 120.6,
-        "fraccion_fina": 0.26,
-        "viento": 2.63,
-        "humedad": 58.4,
-        "temperatura": 22.7
+        "fraccion_fina": 0.4684628749498895,
+        "humedad": 53.87094017094017,
+        "pm10": 51.89145299145297,
+        "viento_velocidad": 3.408547008547008
       },
-      "etiqueta_eca": "excede PM10",
-      "banda_inca": "moderada",
+      "pm2_5_medio": 24.223931623931623,
+      "pm2_5_origen": "fraccion_fina*pm10",
+      "pm10_medio": 51.89145299145297,
+      "eca": "no_excede",
       "por_hora": [
-        0.0067,
-        0.0067,
-        0.0067,
-        0.0067,
-        0.0069,
-        0.0075,
-        0.0094,
-        0.0142,
-        0.0248,
-        0.0439,
-        0.0719,
-        0.104,
-        0.1303,
-        0.1406,
-        0.1303,
-        0.104,
-        0.0719,
-        0.0439,
-        0.0248,
-        0.0142,
-        0.0094,
-        0.0075,
-        0.0069,
-        0.0067
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        2,
+        4,
+        7,
+        8,
+        10,
+        8,
+        13,
+        8,
+        12,
+        13,
+        6,
+        13,
+        7,
+        4,
+        1,
+        1
       ],
-      "por_estacion": [
-        {
-          "estacion": "PH-01",
-          "filas": 580,
-          "proporcion": 0.04
-        },
-        {
-          "estacion": "PH-02",
-          "filas": 435,
-          "proporcion": 0.03
-        },
-        {
-          "estacion": "PH-03",
-          "filas": 4350,
-          "proporcion": 0.3
-        },
-        {
-          "estacion": "PH-04",
-          "filas": 5220,
-          "proporcion": 0.36
-        },
-        {
-          "estacion": "PH-05",
-          "filas": 1015,
-          "proporcion": 0.07
-        },
-        {
-          "estacion": "PH-06",
-          "filas": 2900,
-          "proporcion": 0.2
-        }
-      ]
+      "por_estacion": {
+        "SINT-A Lima Norte": 22,
+        "SINT-B Arequipa": 32,
+        "SINT-C Junín": 27,
+        "SINT-D Ucayali": 36
+      }
     }
   ]
 }

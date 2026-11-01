@@ -13,7 +13,8 @@
 ::: {.callout-warning title="PENDIENTE"}
 Crear el tag `pc3` en `main` después del release. Enlace del video si la PC3 lo lleva (se pregunta
 al docente el lun 02/11; si sí, participan los tres). Nombre, tamaño y sha256 del CSV de OEFA que
-produjo los resultados (de `generado/limpieza.json`, campo `fuente`).
+produjo los resultados: `generado/limpieza.json` trae la ruta (`entrada`) y el tamaño (`bytes`), pero
+no el sha256; sale del bead de datos (`data/README.md`).
 :::
 
 ## Anexo B. Tablero Kanban {.unnumbered}

@@ -1,25 +1,22 @@
 <!-- Generado por tablas.py desde generado/benchmark_kmeans.json. No editar a mano. -->
 
 ::: {.callout-warning title="PLACEHOLDER"}
-Cifras de ejemplo: `generado/benchmark_kmeans.json` todavía es el archivo de muestra. Se reemplaza cuando `cmd/benchmark -parte kmeans` escriba el real.
+Cifras de prueba: `generado/benchmark_kmeans.json` sale de correr los comandos de Go sobre la muestra sintética data/sample/oefa_muestra.csv (estaciones SINT-*, una semana), no sobre el CSV de OEFA. Se reemplaza cuando `cmd/benchmark` corra sobre el CSV completo.
 :::
 
-::: {#tbl-bench-kmeans tbl-colwidths="[14,9,11,11,11,10,22,12]"}
-| Modo | Workers | Chunk (filas) | Mediana (s) | ms/iteración | Speedup | IC 95 % | Eficiencia |
-|:---|---:|---:|---:|---:|---:|---:|---:|
-| sec. | 1 | — | 2,840 | 284,0 | 1,00 | [0,98; 1,02] | 100 % |
-| conc. | 1 | 1 000 | 3,020 | 302,0 | 0,94 | [0,92; 0,96] | 94 % |
-| conc. | 2 | 1 000 | 1,580 | 158,0 | 1,80 | [1,77; 1,83] | 90 % |
-| conc. | 4 | 1 000 | 0,860 | 86,0 | 3,30 | [3,24; 3,36] | 83 % |
-| conc. | 8 | 1 000 | 0,520 | 52,0 | 5,46 | [5,36; 5,55] | 68 % |
-| conc. | 11 | 1 000 | 0,470 | 47,0 | 6,04 | [5,93; 6,15] | 55 % |
-| conc. | 1 | 10 000 | 2,910 | 291,0 | 0,98 | [0,96; 0,99] | 98 % |
-| conc. | 2 | 10 000 | 1,490 | 149,0 | 1,91 | [1,87; 1,94] | 95 % |
-| conc. | 4 | 10 000 | 0,790 | 79,0 | 3,59 | [3,53; 3,66] | 90 % |
-| conc. | 8 | 10 000 | 0,460 | 46,0 | 6,17 | [6,06; 6,28] | 77 % |
-| conc. | 11 | 10 000 | 0,410 | 41,0 | 6,93 | [6,80; 7,04] | 63 % |
+::: {#tbl-bench-kmeans tbl-colwidths="[14,7,5,8,11,12,10,9,15,9]"}
+| Experimento | Modo | W | Chunk | Mediana (ms) | Media recortada (ms) | ms/iter. | Speedup | IC 95 % | Eficiencia |
+|:---|:---|---:|---:|---:|---:|---:|---:|---:|---:|
+| hasta converger | sec. | — | — | 2,45 | 2,26 | 0,0844 | 1 (ref.) | — | — |
+| hasta converger | conc. | 1 | 100 | 2,11 | 2,08 | 0,0729 | 1,08 | [0,84; 1,27] | 108 % |
+| hasta converger | conc. | 2 | 100 | 1,53 | 1,54 | 0,0528 | 1,47 | [1,12; 1,69] | 73 % |
+| hasta converger | conc. | 4 | 100 | 1,87 | 1,83 | 0,0644 | 1,23 | [0,98; 1,54] | 31 % |
+| 10 iteraciones | sec. | — | — | 0,703 | 0,826 | 0,0640 | 1 (ref.) | — | — |
+| 10 iteraciones | conc. | 1 | 100 | 1,09 | 1,18 | 0,0994 | 0,70 | [0,51; 1,03] | 70 % |
+| 10 iteraciones | conc. | 2 | 100 | 0,673 | 0,666 | 0,0612 | 1,24 | [0,92; 1,64] | 62 % |
+| 10 iteraciones | conc. | 4 | 100 | 0,630 | 0,683 | 0,0573 | 1,21 | [0,93; 1,56] | 30 % |
 
-Tiempo y speedup del K-Means paralelo por número de workers y tamaño de chunk
+Tiempo y speedup del K-Means paralelo frente al secuencial
 :::
 
-*Nota.* Fuente: `generado/benchmark_kmeans.json`, escrito por `cmd/benchmark -parte kmeans` (commit `PLACEHOLDER`, 2026-11-04). Mediana de 5 repeticiones tras 1 de calentamiento, en PLACEHOLDER (11 CPU lógicas, go1.26.x). Speedup contra secuencial; intervalo bootstrap del cociente de medianas con 2 000 réplicas. Eficiencia = speedup / workers. Modo: sec. = secuencial, conc. = concurrente.
+*Nota.* Fuente: `generado/benchmark_kmeans.json`, escrito por `cmd/benchmark` (commit `51d8f65`, 2026-11-01, máquina A019803). 3 repeticiones medidas tras 1 de calentamiento, orden aleatorizado por bloques; se guarda el orden de cada ronda; se mide solo el clustering; carga y k-means++ quedan fuera. Speedup: media recortada secuencial / media recortada concurrente, IC bootstrap 95 % (200 réplicas); recorte de 10 % por extremo. n = 617 filas, k = 5. 14 CPU lógicas, go1.27.3. Idéntico bit a bit para todo W: hasta converger sí; 10 iteraciones sí.

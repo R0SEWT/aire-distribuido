@@ -1,53 +1,98 @@
 {
   "placeholder": true,
-  "_nota": "PLACEHOLDER: cifras inventadas con el esquema que escribe cmd/entrenar -codo. No describen los datos de OEFA y no se citan. Se reemplaza el archivo entero cuando cmd/entrenar -codo escriba el real (ver docs/informe/README.md, «Contrato de los JSON»).",
-  "generado_por": "cmd/entrenar -codo",
-  "momento": "2026-11-04T12:00:00-05:00",
-  "commit": "PLACEHOLDER",
-  "maquina": "PLACEHOLDER",
-  "version_go": "go1.26.x",
-  "submuestra": {
-    "n": 200000,
-    "metodo": "sistemática (cada n-ésima fila ancha ordenada por estación y fecha-hora)"
+  "_nota": "sale de correr los comandos de Go sobre la muestra sintética data/sample/oefa_muestra.csv (estaciones SINT-*, una semana), no sobre el CSV de OEFA.",
+  "metadatos": {
+    "momento": "2026-11-01T00:01:13.895900478-05:00",
+    "maquina": "A019803",
+    "version_go": "go1.27.3",
+    "gomaxprocs": 14,
+    "cpus_logicas": 14,
+    "commit": "94d40370ee2303e1df214a92af7c8bcf57787e20",
+    "arbol_sucio": false
   },
-  "semilla": 2024,
-  "k_elegido": 5,
+  "gold": {
+    "ruta": "/tmp/claude-1000/-home-rody-Code-personal-concurrente/abfa3006-394e-404e-9865-0a60a57d95b1/scratchpad/integ/data/gold/oefa_features.csv",
+    "sha256": "ddf7ae68f0711a76c719a7b2b18c37dde3aa475e8cbb76e2d3cf0ef3b993b5d3",
+    "n": 617,
+    "d": 4,
+    "estaciones": 4
+  },
+  "receta": {
+    "features": [
+      "pm10",
+      "fraccion_fina",
+      "viento_velocidad",
+      "humedad"
+    ],
+    "log1p": [
+      "pm10"
+    ],
+    "nivel": "absoluto",
+    "k": 5,
+    "semilla": 42,
+    "tolerancia": 1e-06,
+    "max_iter": 100,
+    "workers": 0,
+    "chunk": 10000
+  },
+  "workers": 14,
   "puntos": [
     {
       "k": 2,
-      "inercia": 512000.0
+      "k_efectivo": 2,
+      "n": 617,
+      "inercia": 1954.0581227936807,
+      "iteraciones": 15,
+      "paro": "tolerancia"
     },
     {
       "k": 3,
-      "inercia": 371000.0
+      "k_efectivo": 3,
+      "n": 617,
+      "inercia": 1655.3193260079327,
+      "iteraciones": 30,
+      "paro": "tolerancia"
     },
     {
       "k": 4,
-      "inercia": 298000.0
+      "k_efectivo": 4,
+      "n": 617,
+      "inercia": 1451.1236049815554,
+      "iteraciones": 16,
+      "paro": "tolerancia"
     },
     {
       "k": 5,
-      "inercia": 249000.0
+      "k_efectivo": 5,
+      "n": 617,
+      "inercia": 1257.291864506284,
+      "iteraciones": 28,
+      "paro": "tolerancia"
     },
     {
       "k": 6,
-      "inercia": 228000.0
+      "k_efectivo": 6,
+      "n": 617,
+      "inercia": 1143.9410896576012,
+      "iteraciones": 27,
+      "paro": "tolerancia"
     },
     {
       "k": 7,
-      "inercia": 211000.0
+      "k_efectivo": 7,
+      "n": 617,
+      "inercia": 1069.7275132505438,
+      "iteraciones": 10,
+      "paro": "tolerancia"
     },
     {
       "k": 8,
-      "inercia": 198500.0
-    },
-    {
-      "k": 9,
-      "inercia": 188000.0
-    },
-    {
-      "k": 10,
-      "inercia": 179500.0
+      "k_efectivo": 8,
+      "n": 617,
+      "inercia": 975.650876890333,
+      "iteraciones": 16,
+      "paro": "tolerancia"
     }
-  ]
+  ],
+  "nota": "Inercia con los centroides finales sobre una submuestra sistemática del gold, k-means++ con la semilla de la receta para cada k. La silueta va en la PC4."
 }

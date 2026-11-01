@@ -68,29 +68,39 @@ vuelo) y git. No hace falta Jupyter ni LaTeX. Para ver el índice, abrir el `.do
   `1ACC0065-202620_Participación_PC3.docx` (nombre de la plantilla oficial del curso con `_PC3`).
   La plantilla oficial es del docente y no se versiona.
 
-## Contrato de los JSON (`generado/`)
+## JSON de `generado/`: los escribe Go
 
-Los escriben los comandos de Go (o se copian desde `reports/`: `python3 tablas.py --entrada
-../../reports`). Hoy son **PLACEHOLDER**: `"placeholder": true` y cifras inventadas con este
-esquema. Al llegar el real se reemplaza el archivo entero (sin `placeholder`). Si el esquema real
-difiere, se ajusta `tablas.py`, no el informe. Campos comunes: `generado_por` (comando), `momento`
-(ISO 8601), `commit`, `maquina`.
+Los esquemas son los de los comandos de Go, que son la fuente de verdad; `tablas.py` se adapta a
+ellos, nunca al revés. Se copian desde `reports/` (o `python3 tablas.py --entrada ../../reports`).
 
-| Archivo | Lo escribe | Campos |
-|---|---|---|
-| `limpieza.json` | `cmd/cargar` | `fuente` {`archivo`, `bytes`, `sha256`}; `parametros` {`workers`, `bloque_bytes`, `config`}; `duracion_s`; `filas_largas` {`leidas`, `procesadas`, `descartadas`}; `reglas` [{`regla`, `nombre`, `descripcion`, `descartadas`, `marcadas`}] (reglas 1 a 6, en filas largas); `filas_anchas` {`total`, `completas`}; `violaciones_pm2_5_mayor_pm10`; `estaciones` [{`estacion`, `nombre`, `departamento`, `desde`, `hasta`, `filas_anchas`, `completas`}] |
-| `estandarizacion.json` | `cmd/cargar` | `receta`; `nivel` (`absoluto` o `por_estacion`); `n`; `features` [{`feature`, `log1p`, `media`, `desv`}], o con `por_estacion` [{`estacion`, `n`, `media`, `desv`}] si el nivel es por estación |
-| `benchmark_cargador.json`, `benchmark_kmeans.json` | `cmd/benchmark` | `metadatos` {`maquina`, `version_go`, `gomaxprocs`, `cpus_logicas`, `commit`, `arbol_sucio`}; `protocolo` {`repeticiones`, `calentamiento`, `estadistico`, `referencia` (`workers=1` o `secuencial`), `unidad_chunk` (`bytes` o `filas`), `replicas_bootstrap`, `nivel_ic`, `semilla`, y en el K-Means `iteraciones_fijas`, `k`}; `datos`; `resultados` [{`modo`, `workers`, `chunk`, `repeticiones`, `tiempos_s` [], `mediana_s`, `speedup` {`punto`, `ic_inferior`, `ic_superior`, `nivel`}, `eficiencia`, y en el K-Means `ms_por_iteracion`}]. La primera fila de `resultados` es la referencia |
-| `kmeans.json` | `cmd/entrenar` | `receta` {`features`, `log1p`, `nivel`, `k`, `semilla`, `tolerancia`, `max_iter`, `config`}; `n`; `d`; `iteraciones`; `convergio`; `inercia`; `duracion_s`; `clusters` [{`cluster`, `tamano`, `centroide_z` [d], `centroide` {feature: valor en su unidad}}] |
-| `regimenes.json` | `cmd/entrenar` | `eca` {`pm2_5_24h`, `pm10_24h`, `unidad`, `norma`, `regla`}; `unidades`; `regimenes` [{`cluster`, `nombre`, `tamano`, `proporcion`, `perfil` {parámetro: media}, `etiqueta_eca` (`no excede`, `excede PM2.5`, `excede PM10`, `excede ambos`), `banda_inca`, `por_hora` [24 proporciones que suman 1], `por_estacion` [{`estacion`, `filas`, `proporcion`}]}] |
-| `codo.json` | `cmd/entrenar -codo` | `submuestra` {`n`, `metodo`}; `semilla`; `k_elegido`; `puntos` [{`k`, `inercia`}] |
+| Archivo | Lo escribe | Esquema en | Qué toma el informe |
+|---|---|---|---|
+| `limpieza.json` | `cmd/cargar` | `datos/reporte.go` | filas largas (leídas, procesadas, descartadas y marcadas por regla, fuera de rango por parámetro), filas anchas (total, completas del gold, PM2.5 > PM10), por estación (leídas, procesadas, anchas, gold, desde, hasta, departamento), parámetros, periodos y unidades vistos, workers, bloques, duración |
+| `estandarizacion.json` | `cmd/cargar` | `datos/estandarizar.go` | features, log1p, nivel, n, media, desv, ddof, chunk |
+| `benchmark_cargador.json` | `cmd/cargar -bench` | `datos/medicion.go` | por W: tiempos, mediana, speedup (cociente de medianas), sha256 del silver y del gold; `identicos` |
+| `benchmark_kmeans.json` | `cmd/benchmark` | `cmd/benchmark/main.go` | `resumen` por experimento (iteraciones fijas y hasta converger), modo, W y chunk: mediana, media recortada, ms por iteración, speedup con IC bootstrap, eficiencia; `determinismo` |
+| `kmeans.json` | `cmd/entrenar` | `cmd/entrenar/main.go` | k, k efectivo, semilla, iteraciones, paro, inercia, tamaños, centroides estandarizados y des-estandarizados |
+| `regimenes.json` | `cmd/entrenar` | `kmeans/regimenes.go` | por régimen: perfil (media aritmética), PM2.5 medio (derivado si no es feature), PM10 medio, etiqueta ECA, conteos por hora y por estación |
+| `codo.json` | `cmd/entrenar -codo` | `kmeans/codo.go` | inercia, iteraciones y paro por k; el k elegido es el de la receta |
 
-`tablas.py` comprueba los invariantes (leídas = procesadas + descartadas; suma por regla, por
-estación y por cluster; `por_hora` suma 1) y los avisa en el informe; con `--estricto` falla.
+Hoy los siete son **PLACEHOLDER**: salidas reales de Go sobre la muestra sintética
+`data/sample/oefa_muestra.csv`, con `"placeholder": true` y una `_nota` agregadas a mano. Al
+correr los comandos sobre el CSV de OEFA se reemplaza cada archivo entero (sin `placeholder`).
+
+`tablas.py` comprueba los invariantes de Go (leídas = procesadas + descartadas = procesadas + Σ por
+regla; las sumas por estación, por cluster y por hora; el speedup del cargador como cociente de
+medianas; el determinismo de los dos benchmarks) y los avisa en el informe. Con `--estricto` falla
+si falta un JSON o un invariante no cuadra; con `--final`, además, si queda un PLACEHOLDER (es el que
+usa `empaquetar-pc3.sh`).
+
+**Lo que el informe querría y Go todavía no escribe** (está como PENDIENTE en el informe, no
+inventado): commit, fecha y máquina en `limpieza.json` y `estandarizacion.json`; sha256 del CSV de
+entrada; intervalo de confianza del speedup del cargador; nombre interpretativo y banda INCA de cada
+régimen; la tabla de decisión de la calibración (sale de los notebooks).
 
 ## Antes de entregar
 
-- `grep -rn 'title="PENDIENTE' secciones/` vacío, `python3 tablas.py --estricto` sin errores.
+- `grep -rn 'title="PENDIENTE' secciones/` vacío, `python3 tablas.py --final` sin errores.
 - Push de todas las ramas y `./generar-historial.sh` con `main` ya en el tag `pc3`.
 - Tablero Kanban y video (si la PC3 lo lleva) publicados.
 - `./empaquetar-pc3.sh pc3`: cada integrante sube su `.docx` y su `.zip`; el coordinador, además,

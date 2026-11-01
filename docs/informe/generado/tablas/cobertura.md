@@ -1,20 +1,18 @@
 <!-- Generado por tablas.py desde generado/limpieza.json. No editar a mano. -->
 
 ::: {.callout-warning title="PLACEHOLDER"}
-Cifras de ejemplo: `generado/limpieza.json` todavía es el archivo de muestra. Se reemplaza cuando `cmd/cargar` escriba el real.
+Cifras de prueba: `generado/limpieza.json` sale de correr los comandos de Go sobre la muestra sintética data/sample/oefa_muestra.csv (estaciones SINT-*, una semana), no sobre el CSV de OEFA. Se reemplaza cuando `cmd/cargar` corra sobre el CSV completo.
 :::
 
-::: {#tbl-cobertura}
-| Departamento | Estaciones | Horas completas |
+::: {#tbl-cobertura tbl-colwidths="[50,20,30]"}
+| Departamento | Estaciones | Horas completas (gold) |
 |:---|---:|---:|
-| Lima | 1 | 58 100 |
-| Callao | 1 | 55 200 |
-| Moquegua | 1 | 44 000 |
-| Junín | 1 | 40 300 |
-| Pasco | 1 | 39 800 |
-| Arequipa | 1 | 31 000 |
+| Arequipa | 1 | 166 |
+| Junín | 1 | 131 |
+| Lima | 1 | 165 |
+| Ucayali | 1 | 155 |
 
-Cobertura de la red de OEFA por departamento
+Cobertura de la red por departamento
 :::
 
-*Nota.* Fuente: `generado/limpieza.json`, escrito por `cmd/cargar` (commit `PLACEHOLDER`, 2026-11-04). Un departamento que no aparece no tiene estación de OEFA en el dataset: no hay dato, no aire limpio.
+*Nota.* Fuente: `generado/limpieza.json`, escrito por `cmd/cargar` (el JSON no registra commit ni fecha). Un departamento que no aparece no tiene estación en el dataset: no hay dato, no aire limpio.
