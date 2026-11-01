@@ -3,12 +3,43 @@ package kmeans
 import (
 	"fmt"
 	"math"
+	"math/rand"
 	"testing"
 )
 
 // --- Oráculo: el Lloyd del TP tal cual, antes de reescribirlo sobre Parciales,
 // Fusionar y Actualizar. Los tests de abajo exigen que la versión nueva dé lo
 // mismo BIT A BIT: la reescritura es mecánica y no puede mover ni un dígito.
+// El oráculo no llama a nada del paquete: masCercano, acumular, actualizar y
+// converge son copias del TP (upc.edu.pe/concurrente/tp/kmeans, secuencial.go).
+
+// masCercanoDelTP es el masCercano del TP. Único cambio: float64(delta*delta),
+// para que el oráculo haga la aritmética del TP en x86-64 también en arm64 o con
+// GOAMD64=v3, donde el compilador fusionaría el producto con la suma (FMA). En
+// amd64 v1, que es donde corrió el TP y el CI, las dos líneas compilan igual.
+func masCercanoDelTP(x, cent []float64, k, dim int) (int, float64) {
+	mejor, mejorDist := 0, math.Inf(1)
+	for j := 0; j < k; j++ {
+		c := cent[j*dim : (j+1)*dim]
+		dist := 0.0
+		for f := 0; f < dim; f++ {
+			delta := x[f] - c[f]
+			dist += float64(delta * delta)
+		}
+		if dist < mejorDist {
+			mejor, mejorDist = j, dist
+		}
+	}
+	return mejor, mejorDist
+}
+
+func acumularDelTP(sumas []float64, conteos []int, x []float64, j, dim int) {
+	s := sumas[j*dim : (j+1)*dim]
+	for f := 0; f < dim; f++ {
+		s[f] += x[f]
+	}
+	conteos[j]++
+}
 
 func actualizarDelTP(cent, sumas []float64, conteos []int, k, dim int) int {
 	vacios := 0
@@ -37,7 +68,7 @@ func convergeDelTP(cent, previos []float64, op Opciones) bool {
 			escala = mag
 		}
 	}
-	return desp <= op.TolAbs+op.TolRel*escala
+	return desp <= op.TolAbs+float64(op.TolRel*escala) // float64: ver masCercanoDelTP
 }
 
 // lloydDelTP es el Lloyd del TP con la reducción por chunks hecha en serie:
@@ -62,10 +93,10 @@ func lloydDelTP(d *Datos, inicial []float64, op Opciones, chunk int) *Resultado 
 			pi := 0.0
 			for i := ini; i < fin; i++ {
 				x := d.X[i*dim : (i+1)*dim]
-				j, dist2 := masCercano(x, cent, k, dim)
+				j, dist2 := masCercanoDelTP(x, cent, k, dim)
 				asign[i] = j
 				pi += dist2
-				acumular(ps, pc, x, j, dim)
+				acumularDelTP(ps, pc, x, j, dim)
 			}
 			for i := range sumas {
 				sumas[i] += ps[i]
@@ -149,6 +180,66 @@ func TestConcurrenteEsBitABitElDelTP(t *testing.T) {
 			mismoResultado(t, fmt.Sprintf("chunk %d, W=%d", chunk, w), got, want)
 		}
 	}
+}
+
+// datosColaPesada: n puntos con colas pesadas (cociente de normales, como una
+// Cauchy) y valores muy dispares, y k centroides iniciales de los que algunos
+// quedan lejos de todo: hay clusters vacíos, muchas iteraciones y redondeo que
+// sí depende del orden de la suma.
+func datosColaPesada(rng *rand.Rand, n, dim, k int) (*Datos, []float64) {
+	d := &Datos{D: dim, N: n}
+	for i := 0; i < n*dim; i++ {
+		v := rng.NormFloat64() / (math.Abs(rng.NormFloat64()) + 1e-3)
+		if rng.Intn(10) == 0 {
+			v *= 1e6
+		}
+		d.X = append(d.X, v)
+	}
+	cent := make([]float64, 0, k*dim)
+	for j := 0; j < k; j++ {
+		for f := 0; f < dim; f++ {
+			if j%3 == 2 {
+				cent = append(cent, 1e12*float64(j)) // lejos de todo: queda vacío
+			} else {
+				cent = append(cent, d.X[rng.Intn(n)*dim+f])
+			}
+		}
+	}
+	return d, cent
+}
+
+func TestLloydConColasPesadasVaciosYToleranciaCeroEsElDelTP(t *testing.T) {
+	rng := rand.New(rand.NewSource(20261101))
+	vacios, iteraciones := 0, 0
+	for caso := 0; caso < 25; caso++ {
+		n, dim, k := 50+rng.Intn(400), 1+rng.Intn(5), 2+rng.Intn(9)
+		d, cent := datosColaPesada(rng, n, dim, k)
+		op := Opciones{K: k, MaxIter: 5 + rng.Intn(40)} // tolerancia 0: solo para en un punto fijo exacto
+
+		quiero := lloydDelTP(d, cent, op, d.N)
+		sec, err := Secuencial(d, cent, op)
+		if err != nil {
+			t.Fatal(err)
+		}
+		mismoResultado(t, fmt.Sprintf("caso %d secuencial", caso), sec, quiero)
+
+		chunk := 1 + rng.Intn(n)
+		quiero = lloydDelTP(d, cent, op, chunk)
+		for _, w := range []int{1, 3, 8} {
+			con, err := Concurrente(d, cent, OpcionesConc{Opciones: op, Workers: w, Chunk: chunk})
+			if err != nil {
+				t.Fatal(err)
+			}
+			mismoResultado(t, fmt.Sprintf("caso %d, chunk %d, W=%d", caso, chunk, w), con, quiero)
+		}
+		vacios += quiero.Vacios
+		iteraciones += quiero.Iteraciones
+	}
+	// Que el caso pruebe lo que dice: hubo vacíos y bastante más de dos iteraciones.
+	if vacios == 0 || iteraciones < 25*5 {
+		t.Fatalf("los casos no ejercitan lo que prometen: %d vacíos, %d iteraciones en total", vacios, iteraciones)
+	}
+	t.Logf("25 casos: %d clusters vacíos al final, %d iteraciones en total", vacios, iteraciones)
 }
 
 func TestParcialesSobreTodoElRangoEsUnaIteracionDelSecuencial(t *testing.T) {

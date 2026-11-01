@@ -5,6 +5,7 @@ import (
 	"math"
 	"slices"
 	"testing"
+	"time"
 )
 
 func f64(v float64) *float64 { return &v }
@@ -230,5 +231,83 @@ func TestPerfilarRechazaEntradasQueNoCuadran(t *testing.T) {
 	otra.Features = []string{"humedad", "pm10", "fraccion_fina", "viento_velocidad"}
 	if _, err := Perfilar(s.Gold, make([]int, s.Gold.Datos.N), 2, &otra); err == nil {
 		t.Error("estandarización de otras features: se esperaba error")
+	}
+}
+
+func TestPerfilarCuentaLaHoraEnLima(t *testing.T) {
+	// 23:30-05:00 son las 04:30 UTC. La hora del régimen es la de Lima: 23, no 4,
+	// aunque el instante venga guardado en UTC.
+	e := &Estandarizacion{Features: []string{FeaturePM10}, Nivel: NivelAbsoluto, N: 2,
+		Media: []float64{0}, Desv: []float64{1}}
+	if err := e.Validar(); err != nil {
+		t.Fatal(err)
+	}
+	t1, err := time.Parse(time.RFC3339, "2024-01-01T23:30:00-05:00")
+	if err != nil {
+		t.Fatal(err)
+	}
+	g := &Gold{
+		Datos:     &Datos{X: []float64{1, 2}, N: 2, D: 1},
+		Features:  []string{FeaturePM10},
+		Estacion:  []string{"CA", "CA"},
+		FechaHora: []time.Time{t1, t1.Add(time.Hour).UTC()}, // 00:30 del 2 en Lima, guardada en UTC
+	}
+	regs, err := Perfilar(g, []int{0, 0}, 1, e)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if regs[0].PorHora[23] != 1 || regs[0].PorHora[0] != 1 {
+		t.Errorf("por hora = %v; se esperaba una lectura a las 23 y una a las 0 (hora de Lima)", regs[0].PorHora)
+	}
+}
+
+func TestPerfilarPorHoraEsLaHoraDeCadaFilaEnElSintetico(t *testing.T) {
+	s := sinteticoDe(t, NivelAbsoluto)
+	regs, err := Perfilar(s.Gold, s.Plantado, len(s.Regimenes), s.Est)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var quiero [5][24]int
+	for i, p := range s.Plantado {
+		quiero[p][s.Gold.FechaHora[i].Hour()]++
+	}
+	for j := range regs {
+		if regs[j].PorHora != quiero[j] {
+			t.Errorf("régimen %d: por hora %v, se esperaba %v", j, regs[j].PorHora, quiero[j])
+		}
+	}
+}
+
+func TestPerfilarPM25EsLaMediaDeLosProductosLecturaPorLectura(t *testing.T) {
+	// PM2.5 = fraccion_fina × pm10 en CADA lectura, y después la media. La
+	// media de los productos no es el producto de las medias: el test exige la
+	// primera y comprueba que la segunda daría otro número.
+	s := sinteticoDe(t, NivelAbsoluto)
+	regs, err := Perfilar(s.Gold, s.Plantado, len(s.Regimenes), s.Est)
+	if err != nil {
+		t.Fatal(err)
+	}
+	d := s.Gold.Datos
+	iPM10, iFF := 0, 1 // featuresPrueba
+	for j := range regs {
+		prod, pm10, ff, n := 0.0, 0.0, 0.0, 0.0
+		for i, p := range s.Plantado {
+			if p != j {
+				continue
+			}
+			x := s.Originales[i*d.D : (i+1)*d.D]
+			prod += x[iPM10] * x[iFF]
+			pm10 += x[iPM10]
+			ff += x[iFF]
+			n++
+		}
+		quiero, deMedias := prod/n, (pm10/n)*(ff/n)
+		if math.Abs(quiero-deMedias) < 1e-9*quiero {
+			t.Fatalf("régimen %d: el caso no distingue la media de productos (%v) del producto de medias (%v)", j, quiero, deMedias)
+		}
+		if math.Abs(*regs[j].PM25Medio-quiero) > 1e-12*quiero {
+			t.Errorf("régimen %d: PM2.5 medio %.15g, la media de fraccion_fina × pm10 lectura por lectura es %.15g (producto de medias: %.15g)",
+				j, *regs[j].PM25Medio, quiero, deMedias)
+		}
 	}
 }
