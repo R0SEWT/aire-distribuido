@@ -125,7 +125,7 @@ func (r Receta) Validar() error {
 		return fmt.Errorf("receta: tolerancia inválida (%v)", r.Tolerancia)
 	}
 	if r.Workers < 0 {
-		return fmt.Errorf("receta: workers no puede ser negativo (0 = NumCPU), es %d", r.Workers)
+		return fmt.Errorf("receta: workers no puede ser negativo (0 = GOMAXPROCS), es %d", r.Workers)
 	}
 	if r.Chunk <= 0 {
 		return fmt.Errorf("receta: chunk debe ser positivo, es %d", r.Chunk)
@@ -135,11 +135,13 @@ func (r Receta) Validar() error {
 
 // OpcionesConc traduce la receta al contrato numérico del paquete. La
 // tolerancia se usa como TolAbs y como TolRel (en el TP ambas valían lo
-// mismo), y workers = 0 es runtime.NumCPU().
+// mismo), y workers = 0 es runtime.GOMAXPROCS(0): desde Go 1.25 respeta el
+// límite de CPU del contenedor (cgroup), y NumCPU no; en Docker Compose
+// pediría más goroutines que núcleos asignados.
 func (r Receta) OpcionesConc() OpcionesConc {
 	w := r.Workers
 	if w == 0 {
-		w = runtime.NumCPU()
+		w = runtime.GOMAXPROCS(0)
 	}
 	return OpcionesConc{
 		Opciones: Opciones{K: r.K, MaxIter: r.MaxIter, TolAbs: r.Tolerancia, TolRel: r.Tolerancia},

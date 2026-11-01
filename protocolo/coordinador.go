@@ -3,7 +3,7 @@ package protocolo
 import (
 	"errors"
 	"fmt"
-	"io"
+	"net"
 	"sync"
 	"time"
 )
@@ -27,12 +27,18 @@ type ErrorNodo struct {
 func (e *ErrorNodo) Error() string { return fmt.Sprintf("nodo %q: %v", e.Nodo, e.Err) }
 func (e *ErrorNodo) Unwrap() error { return e.Err }
 
-// Enlace es lo que el coordinador sabe de un nodo conectado: los dos extremos
-// de su conexión y lo que el nodo declaró. Lo usa una sola goroutine a la vez;
-// Ronda le asigna una por nodo.
+// Enlace es lo que el coordinador sabe de un nodo conectado: la conexión, que
+// es suya, sus dos extremos y lo que el nodo declaró. Lo usa una sola goroutine
+// a la vez; Ronda le asigna una por nodo.
+//
+// Si una escritura falla a mitad de una línea (por ejemplo, vence el plazo de
+// escritura con un nodo que dejó de leer), el Codificador queda roto y el
+// Enlace cierra la conexión: el nodo se entera porque lee EOF, en vez de
+// quedarse esperando un mensaje que nunca va a terminar de llegar.
 type Enlace struct {
-	Cod *Codificador
-	Dec *Decodificador
+	Cod  *Codificador
+	Dec  *Decodificador
+	conn net.Conn
 
 	Nodo    string // del HOLA
 	Workers int    // del HOLA: núcleos que el nodo dice usar
@@ -45,10 +51,27 @@ type Enlace struct {
 	ultimaIter int // última ronda enviada por esta conexión
 }
 
-// NuevoEnlace envuelve la conexión con un nodo. conn tiene que admitir plazos
-// (un net.Conn): sin ellos un nodo caído bloquearía la barrera para siempre.
-func NuevoEnlace(conn io.ReadWriter) *Enlace {
-	return &Enlace{Cod: NuevoCodificador(conn), Dec: NuevoDecodificador(conn)}
+// NuevoEnlace envuelve la conexión con un nodo y se hace dueño de ella: la
+// cierra Cerrar, o el propio Enlace si una escritura la deja inservible. Es un
+// net.Conn porque hacen falta plazos: sin ellos un nodo caído bloquearía la
+// barrera para siempre.
+func NuevoEnlace(conn net.Conn) *Enlace {
+	return &Enlace{Cod: NuevoCodificador(conn), Dec: NuevoDecodificador(conn), conn: conn}
+}
+
+// Cerrar cierra la conexión con el nodo.
+func (e *Enlace) Cerrar() error {
+	return e.conn.Close()
+}
+
+// enviar escribe m antes de limite. Si la escritura deja el Codificador roto,
+// cierra la conexión: ya no se puede usar y el nodo tiene que enterarse.
+func (e *Enlace) enviar(m Mensaje, limite time.Time) error {
+	err := e.Cod.EscribirAntesDe(m, limite)
+	if err != nil && e.Cod.Roto() != nil {
+		e.conn.Close()
+	}
+	return err
 }
 
 func (e *Enlace) nombre() string {
@@ -71,7 +94,7 @@ func RecibirHola(e *Enlace, limite time.Time) error {
 	}
 	if m.Version != Version {
 		texto := fmt.Sprintf("versión de protocolo %d, el coordinador habla la %d: actualiza el nodo", m.Version, Version)
-		_ = e.Cod.EscribirAntesDe(Mensaje{Tipo: Error, Mensaje: texto}, limite)
+		_ = e.enviar(Mensaje{Tipo: Error, Mensaje: texto}, limite)
 		return &ErrorNodo{Nodo: m.Nodo, Err: fmt.Errorf("%w: %s", ErrProtocolo, texto)}
 	}
 	e.Nodo, e.Workers = m.Nodo, m.Workers
@@ -82,7 +105,7 @@ func RecibirHola(e *Enlace, limite time.Time) error {
 // huella y espera su LISTO. Comprueba que el nodo cargó exactamente esas filas del mismo
 // archivo: un rango sobre otra tabla, u ordenada distinto, suma otras filas.
 func AsignarRango(e *Enlace, r Rango, huella string, limite time.Time) error {
-	if err := e.Cod.EscribirAntesDe(Mensaje{Tipo: Cargar, Rango: &r, Huella: huella}, limite); err != nil {
+	if err := e.enviar(Mensaje{Tipo: Cargar, Rango: &r, Huella: huella}, limite); err != nil {
 		return e.fallo("enviar CARGAR: %w", err)
 	}
 	m, err := e.esperar(Listo, 0, limite)
@@ -107,7 +130,14 @@ func AsignarRango(e *Enlace, r Rango, huella string, limite time.Time) error {
 //
 // Los parciales vuelven EN EL ORDEN DE enlaces, no en el de llegada: quien
 // llama los fusiona en ese orden y el resultado no depende de qué nodo
-// respondió primero (sumar en punto flotante no es asociativo).
+// respondió primero (sumar en punto flotante no es asociativo). Ese orden tiene
+// que ser el de las filas: Ronda exige que los rangos confirmados vengan en
+// orden creciente de Rango.Desde y sin solaparse, así que dos coordinadores con
+// los mismos nodos fusionan igual.
+//
+// Antes de escribir nada rechaza un límite ya vencido, nodos fuera de orden o
+// sin rango, y enlaces cerrados: en esos casos ningún nodo recibe el ITERAR y
+// el número de ronda sigue disponible.
 //
 // Todos los nodos comparten el mismo instante límite. Si alguno no responde a
 // tiempo, responde ERROR o rompe el protocolo, la ronda se aborta y el error
@@ -125,8 +155,11 @@ func Ronda(enlaces []*Enlace, iter, k int, centroides []float64, limite time.Tim
 	if k <= 0 || len(centroides) == 0 || len(centroides)%k != 0 {
 		return nil, fmt.Errorf("ronda %d: %d centroides no son k*D con k=%d", iter, len(centroides), k)
 	}
+	if !limite.After(time.Now()) {
+		return nil, fmt.Errorf("ronda %d: %w antes de empezar; no se envió nada", iter, ErrPlazoVencido)
+	}
 	vistos := make(map[*Enlace]bool, len(enlaces))
-	for _, e := range enlaces {
+	for i, e := range enlaces {
 		if vistos[e] {
 			return nil, fmt.Errorf("ronda %d: el nodo %q aparece dos veces", iter, e.nombre())
 		}
@@ -134,6 +167,16 @@ func Ronda(enlaces []*Enlace, iter, k int, centroides []float64, limite time.Tim
 		if iter <= e.ultimaIter {
 			return nil, fmt.Errorf("ronda %d: el número de ronda tiene que crecer y el nodo %q ya recibió la %d",
 				iter, e.nombre(), e.ultimaIter)
+		}
+		if err := e.Cod.Roto(); err != nil {
+			return nil, &ErrorNodo{Nodo: e.nombre(), Err: fmt.Errorf("el enlace está cerrado: %w", err)}
+		}
+		if e.Rango.Len() <= 0 {
+			return nil, fmt.Errorf("ronda %d: el nodo %q no tiene un rango confirmado (falta CARGAR y LISTO)", iter, e.nombre())
+		}
+		if i > 0 && e.Rango.Desde < enlaces[i-1].Rango.Hasta {
+			return nil, fmt.Errorf("ronda %d: los nodos tienen que ir en orden de filas: %q [%d, %d) va después de %q [%d, %d)",
+				iter, e.nombre(), e.Rango.Desde, e.Rango.Hasta, enlaces[i-1].nombre(), enlaces[i-1].Rango.Desde, enlaces[i-1].Rango.Hasta)
 		}
 	}
 
@@ -162,7 +205,7 @@ func (e *Enlace) ronda(iter, k int, centroides []float64, limite time.Time, plaz
 	// Se marca antes de enviar: desde este momento, cualquier PARCIAL de una
 	// ronda anterior es un rezagado.
 	e.ultimaIter = iter
-	if err := e.Cod.EscribirAntesDe(Mensaje{Tipo: Iterar, Iter: iter, Centroides: centroides}, limite); err != nil {
+	if err := e.enviar(Mensaje{Tipo: Iterar, Iter: iter, Centroides: centroides}, limite); err != nil {
 		return Mensaje{}, e.fallo("enviar ITERAR: %w", err)
 	}
 	m, err := e.esperar(Parcial, iter, limite)
@@ -195,7 +238,7 @@ func (e *Enlace) ronda(iter, k int, centroides []float64, limite time.Time, plaz
 // latencia que la barrera paga en cada iteración con ese nodo.
 func Latido(e *Enlace, limite time.Time) (time.Duration, error) {
 	inicio := time.Now()
-	if err := e.Cod.EscribirAntesDe(Mensaje{Tipo: Ping}, limite); err != nil {
+	if err := e.enviar(Mensaje{Tipo: Ping}, limite); err != nil {
 		return 0, e.fallo("enviar PING: %w", err)
 	}
 	if _, err := e.esperar(Pong, 0, limite); err != nil {

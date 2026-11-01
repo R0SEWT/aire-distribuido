@@ -56,10 +56,19 @@
 //     En el espacio estandarizado los centroides son de orden 1, así que 1e-6
 //     es, en la práctica, un desplazamiento de una millonésima de desviación.
 //   - max_iter: tope de iteraciones de Lloyd si no converge antes.
-//   - workers: goroutines del pool concurrente; 0 = runtime.NumCPU().
+//   - workers: goroutines del pool concurrente; 0 = runtime.GOMAXPROCS(0), que
+//     desde Go 1.25 respeta el límite de CPU del contenedor (NumCPU no).
 //   - chunk: filas por chunk. Con el chunk fijo el resultado es idéntico bit a
 //     bit para cualquier cantidad de workers; cambiar el chunk cambia el orden
 //     de la suma y por lo tanto los últimos dígitos.
+//
+// # Los centroides iniciales: reports/centroides_iniciales.json
+//
+// k-means++ corre una vez por semilla y sus centroides se materializan
+// (ArchivoInicios): cmd/entrenar escribe el archivo la primera vez y después
+// parte de él con MejorDeInicios, con el mismo resultado bit a bit. El archivo
+// lleva el sha256 del gold y la receta que define el espacio; si no coinciden
+// con la corrida, o le faltan semillas, Para falla y pide que se borre.
 //
 // # El gold y la estandarización
 //

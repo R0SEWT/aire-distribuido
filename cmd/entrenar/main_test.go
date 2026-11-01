@@ -7,6 +7,7 @@ import (
 	"math"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strconv"
 	"strings"
 	"testing"
@@ -49,6 +50,7 @@ func preparar(t *testing.T, nivel string) (opciones, *kmeans.Sintetico) {
 		regimenes:       filepath.Join(dir, "reports/regimenes.json"),
 		codoSalida:      filepath.Join(dir, "reports/codo.json"),
 		codoN:           1000,
+		centroides:      filepath.Join(dir, "reports/centroides_iniciales.json"),
 	}, s
 }
 
@@ -323,7 +325,7 @@ func TestEntrenarConUnaSemillaEsLaCorridaDeSiempre(t *testing.T) {
 			}
 		}
 	}
-	if km.CentroidesIniciales != kmeans.HashCentroides(cent) {
+	if km.CentroidesInicialesSha != kmeans.HashCentroides(cent) || km.CentroidesIniciales.Sha256 != km.CentroidesInicialesSha {
 		t.Error("el hash de los centroides iniciales no es el de k-means++ con la semilla 42")
 	}
 }
@@ -405,5 +407,107 @@ func TestEntrenarElFlagSemillasPisaLaReceta(t *testing.T) {
 	if km.Semillas != 2 || len(km.Arranques) != 2 || km.Receta.Semillas != 10 {
 		t.Errorf("con -semillas 2 sobre una receta de 10: semillas %d, %d arranques, receta %d",
 			km.Semillas, len(km.Arranques), km.Receta.Semillas)
+	}
+}
+
+func TestEntrenarMaterializaYReusaLosCentroidesIniciales(t *testing.T) {
+	op, _ := preparar(t, kmeans.NivelAbsoluto)
+	op.semillas = 3
+	if err := correr(op, &bytes.Buffer{}); err != nil {
+		t.Fatalf("primera corrida: %v", err)
+	}
+	var primera salidaKMeans
+	leerJSON(t, op.salida, &primera)
+	if primera.CentroidesIniciales.Origen != "generados" || primera.CentroidesIniciales.Archivo != op.centroides {
+		t.Fatalf("primera corrida: %+v", primera.CentroidesIniciales)
+	}
+	arch, err := kmeans.LeerInicios(op.centroides)
+	if err != nil {
+		t.Fatalf("no se materializaron los centroides iniciales: %v", err)
+	}
+	if len(arch.Inicios) != 3 || arch.GoldSha256 != primera.Gold.Sha256 {
+		t.Fatalf("archivo: %d semillas, gold %s", len(arch.Inicios), arch.GoldSha256)
+	}
+
+	// La segunda corrida parte del archivo y da lo mismo bit a bit.
+	if err := correr(op, &bytes.Buffer{}); err != nil {
+		t.Fatalf("segunda corrida: %v", err)
+	}
+	var segunda salidaKMeans
+	leerJSON(t, op.salida, &segunda)
+	if segunda.CentroidesIniciales.Origen != "leidos" {
+		t.Errorf("la segunda corrida debió leer el archivo: %+v", segunda.CentroidesIniciales)
+	}
+	if math.Float64bits(segunda.Inercia) != math.Float64bits(primera.Inercia) || segunda.Semilla != primera.Semilla ||
+		!reflect.DeepEqual(segunda.CentroidesEstandarizados, primera.CentroidesEstandarizados) {
+		t.Errorf("desde el archivo: inercia %v semilla %d; con k-means++: %v %d", segunda.Inercia, segunda.Semilla, primera.Inercia, primera.Semilla)
+	}
+
+	// El archivo manda: si la semilla 42 trae los centroides de la 43, la
+	// corrida parte de esos.
+	arch.Inicios[0].Centroides, arch.Inicios[0].Sha256 = arch.Inicios[1].Centroides, arch.Inicios[1].Sha256
+	if err := kmeans.GuardarInicios(op.centroides, arch); err != nil {
+		t.Fatal(err)
+	}
+	op.semillas = 1
+	if err := correr(op, &bytes.Buffer{}); err != nil {
+		t.Fatalf("tercera corrida: %v", err)
+	}
+	var tercera salidaKMeans
+	leerJSON(t, op.salida, &tercera)
+	if tercera.CentroidesIniciales.Sha256 != arch.Inicios[1].Sha256 {
+		t.Errorf("la corrida no partió del archivo: sha256 %s, el archivo dice %s", tercera.CentroidesIniciales.Sha256, arch.Inicios[1].Sha256)
+	}
+
+	// Pedir semillas que el archivo no tiene, o correr sobre otro gold, falla
+	// y dice qué hacer.
+	op.semillas = 5
+	if err := correr(op, &bytes.Buffer{}); err == nil || !strings.Contains(err.Error(), "bórralo") {
+		t.Errorf("semillas que el archivo no tiene: %v", err)
+	}
+	op.semillas = 1
+	otro, _ := preparar(t, kmeans.NivelAbsoluto)
+	otro.centroides = op.centroides
+	b, err := os.ReadFile(otro.gold)
+	if err != nil {
+		t.Fatal(err)
+	}
+	escribir(t, otro.gold, append(b, []byte("EST99,2024-01-01T00:00:00-05:00,0,0,0,0\n")...))
+	var e kmeans.Estandarizacion
+	leerJSON(t, otro.estandarizacion, &e)
+	e.N++
+	e2, _ := json.Marshal(e)
+	escribir(t, otro.estandarizacion, e2)
+	if err := correr(otro, &bytes.Buffer{}); err == nil || !strings.Contains(err.Error(), "otra corrida") {
+		t.Errorf("centroides iniciales de otro gold: %v", err)
+	}
+
+	// Sin archivo (-centroides ""), no se lee ni se escribe nada.
+	sin, _ := preparar(t, kmeans.NivelAbsoluto)
+	sin.centroides = ""
+	if err := correr(sin, &bytes.Buffer{}); err != nil {
+		t.Fatal(err)
+	}
+	var km salidaKMeans
+	leerJSON(t, sin.salida, &km)
+	if km.CentroidesIniciales.Origen != "sin_archivo" {
+		t.Errorf("con -centroides vacío: %+v", km.CentroidesIniciales)
+	}
+}
+
+func TestRegimenesDicenLaConvencionDeLaHora(t *testing.T) {
+	op, _ := preparar(t, kmeans.NivelAbsoluto)
+	if err := correr(op, &bytes.Buffer{}); err != nil {
+		t.Fatal(err)
+	}
+	var rg salidaRegimenes
+	leerJSON(t, op.regimenes, &rg)
+	if rg.ConvencionHora != "fin" || !strings.Contains(rg.NotaPerfil, "00:00–01:00") {
+		t.Errorf("convencion_hora %q, nota %q", rg.ConvencionHora, rg.NotaPerfil)
+	}
+	var km salidaKMeans
+	leerJSON(t, op.salida, &km)
+	if !strings.Contains(km.NotaTiemposArranques, "benchmark") {
+		t.Errorf("kmeans.json tiene que advertir que los ms por semilla no sirven para speedup: %q", km.NotaTiemposArranques)
 	}
 }

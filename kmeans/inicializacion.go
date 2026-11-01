@@ -1,16 +1,12 @@
 package kmeans
 
 import (
-	"bufio"
 	"crypto/sha256"
 	"encoding/binary"
 	"encoding/hex"
 	"fmt"
-	"io"
 	"math"
 	"math/rand"
-	"strconv"
-	"strings"
 )
 
 // KMeansPP elige k centroides iniciales con muestreo proporcional a D²
@@ -23,9 +19,10 @@ import (
 // cero— se reduce k en vez de devolver centroides repetidos, y el llamador debe
 // registrarlo.
 //
-// Corre una sola vez por experimento y su resultado se materializa, porque la
-// misma semilla no garantiza los mismos centroides si cambia el generador o el
-// orden en que se consume.
+// Corre una sola vez por semilla y su resultado se materializa
+// (reports/centroides_iniciales.json, ver ArchivoInicios), porque la misma
+// semilla no garantiza los mismos centroides si cambia el generador o el orden
+// en que se consume.
 func KMeansPP(d *Datos, k int, semilla int64) ([]float64, int, error) {
 	if d == nil || d.N == 0 {
 		return nil, 0, fmt.Errorf("no hay datos para inicializar")
@@ -93,73 +90,6 @@ func actualizarDist2(dist2 []float64, d *Datos, c []float64) {
 	}
 }
 
-// GuardarCentroides escribe los centroides en texto, con precisión suficiente
-// para que la ida y vuelta no pierda ningún bit. Es el archivo del que parten
-// la versión secuencial y la concurrente.
-func GuardarCentroides(w io.Writer, cent []float64, k, dim int) error {
-	if len(cent) != k*dim {
-		return fmt.Errorf("centroides: %d valores, se esperaban k*D = %d", len(cent), k*dim)
-	}
-	bw := bufio.NewWriter(w)
-	fmt.Fprintf(bw, "k=%d d=%d\n", k, dim)
-	for j := 0; j < k; j++ {
-		for f := 0; f < dim; f++ {
-			if f > 0 {
-				bw.WriteByte(',')
-			}
-			bw.WriteString(strconvFormat(cent[j*dim+f]))
-		}
-		bw.WriteByte('\n')
-	}
-	return bw.Flush()
-}
-
-// LeerCentroides lee lo que escribió GuardarCentroides.
-func LeerCentroides(r io.Reader) ([]float64, int, int, error) {
-	sc := bufio.NewScanner(r)
-	if !sc.Scan() {
-		return nil, 0, 0, fmt.Errorf("archivo de centroides vacío")
-	}
-	var k, dim int
-	if _, err := fmt.Sscanf(strings.TrimSpace(sc.Text()), "k=%d d=%d", &k, &dim); err != nil {
-		return nil, 0, 0, fmt.Errorf("cabecera de centroides inválida: %q", sc.Text())
-	}
-	if k <= 0 || dim <= 0 {
-		return nil, 0, 0, fmt.Errorf("cabecera de centroides inválida: k=%d d=%d", k, dim)
-	}
-
-	cent := make([]float64, 0, k*dim)
-	filas := 0
-	for sc.Scan() {
-		fila := strings.TrimSpace(sc.Text())
-		if fila == "" {
-			continue
-		}
-		filas++
-		campos := strings.Split(fila, ",")
-		if len(campos) != dim {
-			return nil, 0, 0, fmt.Errorf("centroide %d: %d valores, se esperaban %d", filas, len(campos), dim)
-		}
-		for _, campo := range campos {
-			v, err := strconv.ParseFloat(campo, 64)
-			if err != nil {
-				return nil, 0, 0, fmt.Errorf("centroide %d: %q no es un número", filas, campo)
-			}
-			if math.IsNaN(v) || math.IsInf(v, 0) {
-				return nil, 0, 0, fmt.Errorf("centroide %d: valor no finito (%v)", filas, v)
-			}
-			cent = append(cent, v)
-		}
-	}
-	if err := sc.Err(); err != nil {
-		return nil, 0, 0, fmt.Errorf("leer centroides: %w", err)
-	}
-	if filas != k {
-		return nil, 0, 0, fmt.Errorf("el archivo dice k=%d pero trae %d centroides", k, filas)
-	}
-	return cent, k, dim, nil
-}
-
 // HashCentroides es el sha256 de los bits de los centroides. Es la evidencia de
 // que la corrida secuencial y la concurrente partieron exactamente de lo mismo.
 func HashCentroides(cent []float64) string {
@@ -170,9 +100,4 @@ func HashCentroides(cent []float64) string {
 		h.Write(buf[:])
 	}
 	return hex.EncodeToString(h.Sum(nil))
-}
-
-// strconvFormat imprime un float64 sin perder precisión al releerlo.
-func strconvFormat(v float64) string {
-	return strconv.FormatFloat(v, 'g', 17, 64)
 }
