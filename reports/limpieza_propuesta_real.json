@@ -1,0 +1,206 @@
+{
+  "_supuestos": [
+    "CSV real de OEFA (sha256 1f09a806…f26d92): 36 columnas, ';', comillas, UTF-8 sin BOM, punto decimal.",
+    "Una columna por parámetro; cada fila trae un solo parámetro con valor y el resto '-' o 'NA'.",
+    "HORA_INICIO es la hora de INICIO (diccionario de OEFA) y viene como '1899-12-31 HH:MM:SS' o '1899-12-31' (= 00:00); falta en el 94 %: se reconstruye por posición en grupos de 24 contiguos.",
+    "Convención 'fin': cada lectura se etiqueta con el FIN de su hora (la primera del día, 00-01, es la 01:00; la última es las 00:00 del día siguiente). Se aplica igual a las horas explícitas.",
+    "ppb -> µg/m³ a 25 °C y 1 atm; mmHg -> hPa; DIRECCION_VIENTO trae '°c' por error (son grados)."
+  ],
+  "delimitador": ";",
+  "codificacion": "utf-8",
+  "separador_decimal": ".",
+  "zona_horaria": "America/Lima",
+  "columnas": {
+    "estacion": "NOMBRE_PUNTO",
+    "fecha": "FECHA_INICIO",
+    "hora": "HORA_INICIO",
+    "parametro": "",
+    "valor": "",
+    "periodo": "PERIODO",
+    "unidad": "UNIDAD_MEDIDA",
+    "departamento": "DEPARTAMENTO",
+    "provincia": "PROVINCIA",
+    "distrito": "DISTRITO",
+    "ubigeo": "UBIGEO",
+    "este": "ESTE",
+    "norte": "NORTE",
+    "altitud": "ALTITUD",
+    "zona": "ZONA",
+    "datum": "DATUM"
+  },
+  "parametros_en_columnas": {
+    "PM10": "pm10",
+    "PM2.5": "pm2_5",
+    "DIOXIDO_AZUFRE": "so2",
+    "MONOXIDO_CARBONO": "co",
+    "OZONO": "o3",
+    "SULFURO_HIDROGENO": "h2s",
+    "TEMPERATURA": "temperatura",
+    "HUMEDAD_RELATIVA": "humedad",
+    "VELOCIDAD_VIENTO": "viento_velocidad",
+    "DIRECCION_VIENTO": "viento_direccion",
+    "PRESION_BAROMETRICA": "presion",
+    "PRECIPITACION": "precipitacion",
+    "RADIACION_SOLAR": "radiacion"
+  },
+  "valores_vacios": [
+    "-",
+    "NA",
+    ""
+  ],
+  "parametros": {},
+  "periodos_horarios": [
+    "1 hora"
+  ],
+  "periodos_horarios_por_grupo": [
+    "-"
+  ],
+  "hora_prefijo_ignorar": "1899-12-31",
+  "hora_por_posicion": {
+    "activar": true,
+    "filas_por_dia": 24,
+    "convencion": "fin"
+  },
+  "bloques_en_cero_como_faltante": [
+    "pm10",
+    "pm2_5",
+    "no2",
+    "so2",
+    "co",
+    "o3",
+    "h2s",
+    "temperatura",
+    "humedad",
+    "viento_velocidad",
+    "viento_direccion",
+    "presion",
+    "radiacion"
+  ],
+  "formatos_fecha": [
+    "2006-01-02"
+  ],
+  "fecha_desde": "2000-01-01",
+  "fecha_hasta": "2026-07-01",
+  "centinelas": [
+    -999,
+    -9999,
+    9999,
+    99999
+  ],
+  "admiten_negativos": [
+    "temperatura"
+  ],
+  "rangos": {
+    "pm2_5": [
+      0,
+      1000
+    ],
+    "pm10": [
+      0,
+      2000
+    ],
+    "no2": [
+      0,
+      2000
+    ],
+    "so2": [
+      0,
+      10000
+    ],
+    "co": [
+      0,
+      50000
+    ],
+    "o3": [
+      0,
+      1000
+    ],
+    "h2s": [
+      0,
+      5000
+    ],
+    "temperatura": [
+      -30,
+      50
+    ],
+    "humedad": [
+      0,
+      100
+    ],
+    "viento_velocidad": [
+      0,
+      60
+    ],
+    "viento_direccion": [
+      0,
+      360
+    ],
+    "presion": [
+      400,
+      1100
+    ],
+    "precipitacion": [
+      0,
+      200
+    ],
+    "radiacion": [
+      0,
+      1500
+    ]
+  },
+  "unidades": {
+    "pm2_5": {
+      "ug/m3": 1
+    },
+    "pm10": {
+      "ug/m3": 1
+    },
+    "no2": {
+      "ug/m3": 1
+    },
+    "so2": {
+      "ug/m3": 1,
+      "ppb": 2.62
+    },
+    "co": {
+      "ug/m3": 1,
+      "mg/m3": 1000,
+      "ppb": 1.145
+    },
+    "o3": {
+      "ug/m3": 1,
+      "ppb": 1.96
+    },
+    "h2s": {
+      "ug/m3": 1,
+      "ppb": 1.39
+    },
+    "temperatura": {
+      "°c": 1,
+      "c": 1
+    },
+    "humedad": {
+      "%": 1
+    },
+    "viento_velocidad": {
+      "m/s": 1
+    },
+    "viento_direccion": {
+      "°": 1,
+      "grados": 1,
+      "°c": 1
+    },
+    "presion": {
+      "hpa": 1,
+      "mbar": 1,
+      "mb": 1,
+      "mmhg": 1.33322
+    },
+    "precipitacion": {
+      "mm": 1
+    },
+    "radiacion": {
+      "w/m2": 1
+    }
+  }
+}

@@ -1,0 +1,122 @@
+{
+  "metadatos": {
+    "momento": "2026-11-01T13:21:49.854726277-05:00",
+    "maquina": "A019803",
+    "version_go": "go1.27.3",
+    "gomaxprocs": 14,
+    "cpus_logicas": 14,
+    "commit": "53858a093a60e88822c4c46fbbc3a5b2b0e89457",
+    "arbol_sucio": true
+  },
+  "gold": {
+    "ruta": "data/gold/oefa_features.csv",
+    "sha256": "1a93989d9af8c0bbb2138d613e2439ae8f6d78a1f46f56fc556b31505d3e89b1",
+    "n": 41991,
+    "d": 4,
+    "estaciones": 11
+  },
+  "receta": {
+    "features": [
+      "pm10",
+      "fraccion_fina",
+      "viento_velocidad",
+      "humedad"
+    ],
+    "log1p": [
+      "pm10"
+    ],
+    "nivel": "absoluto",
+    "k": 5,
+    "semilla": 42,
+    "semillas": 10,
+    "tolerancia": 0.000001,
+    "max_iter": 100,
+    "workers": 0,
+    "chunk": 10000
+  },
+  "workers": 14,
+  "puntos": [
+    {
+      "k": 2,
+      "k_efectivo": 2,
+      "n": 41991,
+      "semilla": 43,
+      "inercia": 98814.25922088561,
+      "iteraciones": 9,
+      "paro": "tolerancia"
+    },
+    {
+      "k": 3,
+      "k_efectivo": 3,
+      "n": 41991,
+      "semilla": 48,
+      "inercia": 80625.26061100993,
+      "iteraciones": 22,
+      "paro": "tolerancia"
+    },
+    {
+      "k": 4,
+      "k_efectivo": 4,
+      "n": 41991,
+      "semilla": 42,
+      "inercia": 67254.79431928389,
+      "iteraciones": 46,
+      "paro": "tolerancia"
+    },
+    {
+      "k": 5,
+      "k_efectivo": 5,
+      "n": 41991,
+      "semilla": 47,
+      "inercia": 59232.8451476433,
+      "iteraciones": 21,
+      "paro": "tolerancia"
+    },
+    {
+      "k": 6,
+      "k_efectivo": 6,
+      "n": 41991,
+      "semilla": 42,
+      "inercia": 51343.684986849126,
+      "iteraciones": 18,
+      "paro": "tolerancia"
+    },
+    {
+      "k": 7,
+      "k_efectivo": 7,
+      "n": 41991,
+      "semilla": 43,
+      "inercia": 46914.339471734755,
+      "iteraciones": 31,
+      "paro": "tolerancia"
+    },
+    {
+      "k": 8,
+      "k_efectivo": 8,
+      "n": 41991,
+      "semilla": 49,
+      "inercia": 43980.37791408471,
+      "iteraciones": 37,
+      "paro": "tolerancia"
+    },
+    {
+      "k": 9,
+      "k_efectivo": 9,
+      "n": 41991,
+      "semilla": 43,
+      "inercia": 41419.368537199596,
+      "iteraciones": 38,
+      "paro": "tolerancia"
+    },
+    {
+      "k": 10,
+      "k_efectivo": 10,
+      "n": 41991,
+      "semilla": 42,
+      "inercia": 39182.181932954336,
+      "iteraciones": 53,
+      "paro": "tolerancia"
+    }
+  ],
+  "nota": "Inercia con los centroides finales sobre una submuestra sistemática del gold; para cada k, la mejor de 10 semillas desde la de la receta, igual que el modelo final. La silueta va en la PC4."
+}
