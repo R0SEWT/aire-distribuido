@@ -62,6 +62,14 @@
 //     bit para cualquier cantidad de workers; cambiar el chunk cambia el orden
 //     de la suma y por lo tanto los últimos dígitos.
 //
+// # Los centroides iniciales: reports/centroides_iniciales.json
+//
+// k-means++ corre una vez por semilla y sus centroides se materializan
+// (ArchivoInicios): cmd/entrenar escribe el archivo la primera vez y después
+// parte de él con MejorDeInicios, con el mismo resultado bit a bit. El archivo
+// lleva el sha256 del gold y la receta que define el espacio; si no coinciden
+// con la corrida, o le faltan semillas, Para falla y pide que se borre.
+//
 // # El gold y la estandarización
 //
 // LeerGold lee data/gold/oefa_features.csv (cabecera estacion,fecha_hora y las
