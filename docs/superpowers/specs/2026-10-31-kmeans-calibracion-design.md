@@ -3,7 +3,7 @@
 > **Borrador para pensar** (2026-10-31). Acompaña a la [spec de la PC3](2026-10-31-pc3-design.md) y
 > reemplaza su §4.3 y §6.1 en lo que toca a features y k. Lo marcado **[abierta]** lo decide Rody; lo
 > marcado **[decisión mía]** se puede revertir. Se ejecuta en Colab sobre Drive (capa silver), y la
-> receta que salga se congela en `configs/kmeans.toml` para que Go la reproduzca.
+> receta que salga se congela en `configs/kmeans.json` para que Go la reproduzca.
 
 ## 1. El problema de fondo
 
@@ -130,7 +130,7 @@ segunda) y los centroides de scikit-learn como referencia para el test de equiva
 
 ## 4. De la calibración al sistema
 
-1. La receta se congela en `configs/kmeans.toml`: features, transformación, nivel, k, semilla,
+1. La receta se congela en `configs/kmeans.json`: features, transformación, nivel, k, semilla,
    tolerancia, máximo de iteraciones. **Go no decide nada de esto: lo lee.**
 2. `cmd/cargar` (parte A) produce **silver** (tabla ancha limpia) y **gold** (features de la receta,
    estandarizadas) y escribe en `reports/` las medias y desviaciones usadas, como hizo el TP.
@@ -160,7 +160,7 @@ palabras. La laptop y gorgo sincronizan con Drive por `rclone`; los notebooks mo
 | Fecha | Qué |
 |---|---|
 | lun 02/11 | Bronze en Drive, verificado. Notebook 01 (EDA): completitud estación × parámetro, distribuciones, prototipo de silver en Polars |
-| mar 03/11 | Notebook 02 (calibración): la grilla de §3 sobre el silver prototipo; tabla de decisión; `configs/kmeans.toml` |
+| mar 03/11 | Notebook 02 (calibración): la grilla de §3 sobre el silver prototipo; tabla de decisión; `configs/kmeans.json` |
 | mié 04/11 | Go: cargador produce silver y gold oficiales; auditoría en el notebook 01 |
 | jue 05/11 | Go: K-Means con la receta; auditoría de centroides; figuras en el notebook 03 |
 | vie 06/11 | Informe |
