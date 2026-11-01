@@ -3,13 +3,17 @@
 # el reporte de participación. Todo queda en salida/ (no se versiona).
 #
 #   bash render.sh                 # tablas + historial + los tres informes + participación
-#   bash render.sh U202311495      # solo el informe de ese código (más tablas e historial)
+#   bash render.sh U000000002      # solo el informe de ese código (más tablas e historial)
+#   FETCH=1 bash render.sh         # además hace git fetch antes de armar el historial
 #
 # Pasos:
 #   1. tablas.py: generado/*.json → generado/tablas/*.md y generado/cifras.yml
-#   2. generar-historial.sh: generado/historial.md (si no hay red, se conserva el anterior)
-#   3. quarto render informe.qmd -M codigo:<código> por cada integrante de `equipo` (_quarto.yml)
+#   2. generado/local/ (no versionado): equipo.yml (de equipo.local.yml o, si no existe, de
+#      equipo.ejemplo.yml), _participacion.md (de participacion.local.md o de la plantilla
+#      _participacion.md) e historial.md (generar-historial.sh o, si falla, el de ejemplo)
+#   3. quarto render informe.qmd -M codigo:<código> por cada integrante de `equipo`
 #   4. quarto render participacion.qmd
+#   5. w:updateFields en cada .docx: Word pregunta al abrir si actualiza los campos (el índice)
 set -euo pipefail
 cd "$(dirname "$0")"
 
@@ -25,33 +29,72 @@ else
   exit 1
 fi
 
-echo "→ historial de git"
+echo "→ generado/local/"
+mkdir -p generado/local
+if [ -f equipo.local.yml ]; then
+  cp equipo.local.yml generado/local/equipo.yml
+else
+  echo "aviso: no hay equipo.local.yml; la carátula sale con los códigos de ejemplo de equipo.ejemplo.yml" >&2
+  cp equipo.ejemplo.yml generado/local/equipo.yml
+fi
+if [ -f participacion.local.md ]; then
+  cp participacion.local.md generado/local/_participacion.md
+else
+  cp _participacion.md generado/local/_participacion.md
+fi
 if ! ./generar-historial.sh; then
-  if [ -s generado/historial.md ]; then
-    echo "aviso: no se pudo actualizar el historial; se conserva generado/historial.md" >&2
-  else
-    echo "error: no hay historial anterior para continuar" >&2
-    exit 1
-  fi
+  echo "aviso: no se pudo generar el historial; se usa generado/historial.ejemplo.md" >&2
+  cp generado/historial.ejemplo.md generado/local/historial.md
 fi
 
-# Los códigos salen de `equipo` en _quarto.yml (líneas indentadas), la misma fuente de la carátula.
-mapfile -t equipo < <(sed -n 's/^[[:space:]]\{1,\}codigo:[[:space:]]*\(U[0-9]\{9\}\)[[:space:]]*$/\1/p' _quarto.yml)
-[ "${#equipo[@]}" -gt 0 ] || { echo "error: no hay códigos en equipo (_quarto.yml)" >&2; exit 1; }
+# Los códigos salen de `equipo` (líneas indentadas), la misma fuente de la carátula.
+mapfile -t equipo < <(sed -n 's/^[[:space:]]\{1,\}codigo:[[:space:]]*\(U[0-9]\{9\}\)[[:space:]]*\(#.*\)\{0,1\}$/\1/p' generado/local/equipo.yml)
+[ "${#equipo[@]}" -gt 0 ] || { echo "error: no hay códigos en generado/local/equipo.yml" >&2; exit 1; }
 if [ "$#" -gt 0 ]; then codigos=("$@"); else codigos=("${equipo[@]}"); fi
 for c in "${codigos[@]}"; do
-  [[ " ${equipo[*]} " == *" $c "* ]] || { echo "error: $c no está en equipo (_quarto.yml)" >&2; exit 1; }
+  [[ " ${equipo[*]} " == *" $c "* ]] || { echo "error: $c no está en equipo (generado/local/equipo.yml)" >&2; exit 1; }
 done
 
 mkdir -p salida
 # Quarto deja el archivo en output-dir (salida/); si una versión lo deja junto al .qmd, se mueve.
 mover() { [ -f "$1" ] && mv -f "$1" "salida/$1"; [ -f "salida/$1" ]; }
 
+# Word no llena el índice (un campo TOC) hasta que actualiza los campos: con w:updateFields en
+# settings.xml lo pregunta al abrir el archivo.
+actualizar_campos() {
+  python3 - "$1" <<'PY'
+import os, re, sys, tempfile, zipfile
+ruta = sys.argv[1]
+with zipfile.ZipFile(ruta) as z:
+    partes = [(i, z.read(i.filename)) for i in z.infolist()]
+salida = []
+for info, datos in partes:
+    if info.filename == "word/settings.xml":
+        xml = datos.decode("utf-8")
+        if "w:updateFields" not in xml:
+            # Orden del esquema (CT_Settings): updateFields va antes de estos elementos.
+            despues = re.search(r"<w:(hdrShapeDefaults|footnotePr|endnotePr|compat|docVars|rsids)\b|<m:mathPr\b|"
+                                r"<w:(attachedSchema|themeFontLang|clrSchemeMapping|doNotIncludeSubdocsInStats|"
+                                r"doNotAutoCompressPictures|forceUpgrade|captions|readModeInkLockDown|smartTagType|"
+                                r"shapeDefaults|doNotEmbedSmartTags|decimalSymbol|listSeparator)\b|</w:settings>", xml)
+            xml = xml[:despues.start()] + '<w:updateFields w:val="true"/>' + xml[despues.start():]
+        datos = xml.encode("utf-8")
+    salida.append((info, datos))
+fd, tmp = tempfile.mkstemp(dir=os.path.dirname(ruta) or ".", suffix=".docx")
+os.close(fd)
+with zipfile.ZipFile(tmp, "w", zipfile.ZIP_DEFLATED) as z:
+    for info, datos in salida:
+        z.writestr(info, datos)
+os.replace(tmp, ruta)
+PY
+}
+
 for c in "${codigos[@]}"; do
   nombre="1ACC0065_PC3_202610_Informe_${c}.docx"
   echo "→ $nombre"
   quarto render informe.qmd -M "codigo:$c" --output "$nombre" --quiet
   mover "$nombre" || { echo "error: quarto no produjo $nombre" >&2; exit 1; }
+  actualizar_campos "salida/$nombre"
 done
 
 if [ "$#" -eq 0 ]; then
@@ -67,4 +110,4 @@ echo
 echo "listo: salida/"
 ls -1 salida/*.docx
 echo "avisos PENDIENTE en las fuentes: $n_pendiente · JSON PLACEHOLDER en generado/: $n_placeholder"
-echo "(la entrega final no lleva ninguno: ./empaquetar-pc3.sh lo comprueba)"
+echo "(la entrega final no lleva ninguno, ni datos sintéticos: ./empaquetar-pc3.sh lo comprueba)"

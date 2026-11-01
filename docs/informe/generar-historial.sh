@@ -1,9 +1,11 @@
 #!/usr/bin/env bash
-# Genera generado/historial.md: el historial de git del Trabajo Final por integrante, para el
-# Anexo C del informe (la rúbrica pide el historial de versiones y evidencia de Git Flow).
-# Portado de ../concurrente/tp/informe/tp/generar-historial.sh (LaTeX → Markdown).
+# Genera el historial de git del Trabajo Final por integrante, para el Anexo C del informe (la
+# rúbrica pide el historial de versiones y evidencia de Git Flow). Portado de
+# ../concurrente/tp/informe/tp/generar-historial.sh (LaTeX → Markdown).
 #
-#   ./generar-historial.sh
+#   ./generar-historial.sh                 # escribe generado/local/historial.md (no versionado)
+#   ./generar-historial.sh <archivo>       # en otro lugar (p. ej. para actualizar el de ejemplo)
+#   FETCH=1 ./generar-historial.sh         # hace git fetch origin antes (por defecto no toca la red)
 #
 # Qué escribe:
 #   1. Commits por integrante y por entregable. Los cortes son los tags pc3, pc4 y tb2 (los que
@@ -17,7 +19,7 @@
 set -euo pipefail
 cd "$(dirname "$0")"
 
-if ! git fetch --quiet origin 2>/dev/null; then
+if [ "${FETCH:-0}" = "1" ] && ! git fetch --quiet origin 2>/dev/null; then
   echo "aviso: git fetch falló; se usan las refs de origin del último fetch" >&2
 fi
 if [ -z "$(git for-each-ref --count=1 --format='%(refname)' refs/remotes/origin/)" ]; then
@@ -25,8 +27,8 @@ if [ -z "$(git for-each-ref --count=1 --format='%(refname)' refs/remotes/origin/
   exit 1
 fi
 
-out=generado/historial.md
-mkdir -p generado
+out="${1:-generado/local/historial.md}"
+mkdir -p "$(dirname "$out")"
 tmp="$(mktemp "${out}.XXXXXX")"
 trap 'rm -f "$tmp"' EXIT
 

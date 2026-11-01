@@ -34,15 +34,16 @@ bloque de código Go.
 
 ### Pruebas
 
-::: {#tbl-pruebas tbl-colwidths="[42,43,15]"}
+::: {#tbl-pruebas tbl-colwidths="[45,42,13]"}
 | Prueba | Qué demuestra | Paquete |
 |:---|:---|:---|
-| PENDIENTE | Mismo `Dataset` con W = 1 y W = 8 (bit a bit) | `datos/` |
-| PENDIENTE | Cada regla de limpieza tiene su caso en `data/sample/` | `datos/` |
-| PENDIENTE | Leídas = procesadas + descartadas | `datos/` |
+| `TestMismoResultadoConUnoYOchoWorkers` | Mismo `Dataset` con W = 1 y W = 8 (bit a bit) | `datos/` |
+| `TestMuestraSiembraCadaRegla` | Cada regla de limpieza tiene su caso en `data/sample/` | `datos/` |
+| `TestConservacionDeFilasLargas` | Leídas = procesadas + descartadas | `datos/` |
 | `TestConcurrenteDaElMismoResultadoParaCualquierP` (TP) | Mismos centroides para cualquier número de workers | `kmeans/` |
 | `TestConcurrenteEquivaleAlSecuencialConTolerancia` (TP) | El concurrente coincide con el secuencial con tolerancia | `kmeans/` |
-| PENDIENTE | `Fusionar` de parciales por nodo coincide con una máquina, con tolerancia | `kmeans/` |
+| `TestMejorDeSemillasEsElMismoParaCualquierWYCualquierParalelismo` | El arranque elegido no depende de W ni de cuántas semillas corren a la vez | `kmeans/` |
+| `TestRondaConDosNodosFusionaEnOrdenDeNodo` | Una ronda con dos nodos fusiona sus parciales en orden de nodo | `protocolo/` |
 
 Pruebas que sostienen la corrección de la concurrencia
 :::
@@ -70,14 +71,15 @@ Captura de los checks de GitHub Actions en verde sobre la PR de `release/pc3` a 
 El cargador se midió con el bloque fijo de {{< meta cifras.benchmark_cargador.bloque >}}, con
 {{< meta cifras.benchmark_cargador.workers >}} workers y
 {{< meta cifras.benchmark_cargador.repeticiones >}} repeticiones por configuración
-(@tbl-bench-cargador). El mejor speedup, cociente de medias recortadas como en el K-Means, fue
-{{< meta cifras.benchmark_cargador.speedup_max >}} (IC 95 %
-{{< meta cifras.benchmark_cargador.speedup_max_ic >}}) con
-{{< meta cifras.benchmark_cargador.workers_max >}} workers, con una eficiencia de
-{{< meta cifras.benchmark_cargador.eficiencia_max >}}; el cociente de medianas fue
+(@tbl-bench-cargador). El resumen se da para un W fijado de antemano, el máximo medido, y no para
+la mejor fila de la tabla: elegir el máximo entre configuraciones con ruido sesgaría el speedup hacia
+arriba. Con {{< meta cifras.benchmark_cargador.w >}} workers, el speedup (cociente de medias
+recortadas, como en el K-Means) fue {{< meta cifras.benchmark_cargador.speedup >}} (IC 95 %
+{{< meta cifras.benchmark_cargador.speedup_ic >}}), con una eficiencia de
+{{< meta cifras.benchmark_cargador.eficiencia >}}; el cociente de medianas fue
 {{< meta cifras.benchmark_cargador.speedup_medianas >}} (de
-{{< meta cifras.benchmark_cargador.mediana_referencia_s >}} s a
-{{< meta cifras.benchmark_cargador.mediana_mejor_s >}} s). El silver y el gold salieron idénticos
+{{< meta cifras.benchmark_cargador.mediana_base_s >}} s a
+{{< meta cifras.benchmark_cargador.mediana_w_s >}} s). El silver y el gold salieron idénticos
 (mismo sha256) para todo número de workers: {{< meta cifras.benchmark_cargador.identicos >}}.
 
 {{< include generado/tablas/benchmark_cargador.md >}}
@@ -85,11 +87,12 @@ El cargador se midió con el bloque fijo de {{< meta cifras.benchmark_cargador.b
 El K-Means se midió con {{< meta cifras.benchmark_kmeans.workers >}} workers y chunks de
 {{< meta cifras.benchmark_kmeans.chunks >}} filas, contra la versión secuencial, en dos
 experimentos: un número fijo de iteraciones (el mismo trabajo) y hasta converger (el mismo
-resultado) (@tbl-bench-kmeans). Hasta converger, el mejor speedup fue
-{{< meta cifras.benchmark_kmeans.speedup_max >}} (IC 95 %
-{{< meta cifras.benchmark_kmeans.speedup_max_ic >}}) con
-{{< meta cifras.benchmark_kmeans.workers_max >}} workers y chunks de
-{{< meta cifras.benchmark_kmeans.chunk_max >}} filas. El resultado fue idéntico bit a bit para todo
+resultado) (@tbl-bench-kmeans). Con el mismo criterio de un W fijo, hasta converger y con
+{{< meta cifras.benchmark_kmeans.w >}} workers y chunks de
+{{< meta cifras.benchmark_kmeans.chunk >}} filas, el speedup fue
+{{< meta cifras.benchmark_kmeans.speedup >}} (IC 95 %
+{{< meta cifras.benchmark_kmeans.speedup_ic >}}), con una eficiencia de
+{{< meta cifras.benchmark_kmeans.eficiencia >}}. El resultado fue idéntico bit a bit para todo
 número de workers: {{< meta cifras.benchmark_kmeans.identico >}}.
 
 {{< include generado/tablas/benchmark_kmeans.md >}}
@@ -121,15 +124,25 @@ resultó más lenta que la secuencial, explicando por qué.
 
 ### Resultados del K-Means {#sec-resultados-kmeans}
 
-El K-Means {{< meta cifras.kmeans.paro >}} sobre
-{{< meta cifras.kmeans.n >}} horas-estación, con inercia {{< meta cifras.kmeans.inercia >}}. La
-@tbl-centroides da el perfil de cada cluster en las unidades originales y la @tbl-regimenes lo
-interpreta como régimen, con su etiqueta frente al ECA. Exceden el ECA
-{{< meta cifras.regimenes.n_excede >}} de {{< meta cifras.regimenes.n >}} regímenes
-({{< meta cifras.regimenes.excede >}}), que reúnen el {{< meta cifras.regimenes.pct_filas_excede >}}
-de las horas-estación.
+**Semillas.** De las {{< meta cifras.kmeans.semillas >}} semillas, se quedó la
+{{< meta cifras.kmeans.semilla >}}, la de menor inercia (@tbl-semillas); la peor llegó a
+{{< meta cifras.kmeans.inercia_peor_semilla >}}, lo que muestra cuánto depende Lloyd del arranque.
+Las corridas fueron a la vez, {{< meta cifras.kmeans.corridas_a_la_vez >}} en paralelo: los
+arranques tardaron {{< meta cifras.kmeans.ms_arranques_pared >}} ms de pared frente a
+{{< meta cifras.kmeans.ms_arranques_suma >}} ms que suman sus corridas por separado
+({{< meta cifras.kmeans.solapamiento_semillas >}} veces), que es la evidencia del paralelismo por
+semillas.
 
-{{< include generado/tablas/kmeans_centroides.md >}}
+{{< include generado/tablas/kmeans_semillas.md >}}
+
+**El modelo elegido.** El K-Means {{< meta cifras.kmeans.paro >}} sobre
+{{< meta cifras.kmeans.n >}} horas-estación, con inercia {{< meta cifras.kmeans.inercia >}}. Sus
+centroides, en el espacio estandarizado en que corre, están en la @tbl-centroides-z; el **perfil**
+de cada régimen, en unidades originales, en la @tbl-regimenes. Son cosas distintas: el perfil es la
+media aritmética de las lecturas del régimen, y el centroide invertido (con log1p) se parece a una
+media geométrica, menor (@sec-eca-inca). Exceden el ECA {{< meta cifras.regimenes.n_excede >}} de
+{{< meta cifras.regimenes.n >}} regímenes ({{< meta cifras.regimenes.excede >}}), que reúnen el
+{{< meta cifras.regimenes.pct_filas_excede >}} de las horas-estación.
 
 {{< include generado/tablas/kmeans_centroides_z.md >}}
 
@@ -216,7 +229,15 @@ CSV (no entra en la imagen) y el comando que corre.
 
 ### Gestión del proyecto
 
-El repositorio sigue Git Flow: `develop` es la rama por defecto, cada cambio entra por una rama
-`feature/*` con su PR, y la entrega sale de `release/pc3` hacia `main`. Las tareas se siguen en un
-tablero Kanban de GitHub Projects desde el inicio de la semana de la entrega (Anexo B), y el
-historial de commits por integrante está en el Anexo C.
+`develop` es la rama por defecto del repositorio. En la PC3 cada pieza se trabajó en su rama:
+`feature/cargador`, `feature/kmeans`, `feature/diseno`, `feature/informe` y `feature/notebooks`.
+Como las piezas dependen unas de otras (el informe lee lo que escriben el cargador y el K-Means; los
+notebooks, lo que escribe Go), no se fusionaron una por una en `develop`: se fusionaron varias veces
+en una rama de integración, `feature/spec-pc3`, que es la que entra a `develop` con una sola PR. La
+entrega sale de una rama `release/pc3` hacia `main`. Las tareas se siguen en un tablero Kanban de
+GitHub Projects (Anexo B), y el historial de commits por integrante y de PR está en el Anexo C.
+
+::: {.callout-warning title="PENDIENTE"}
+Número y enlace de la PR de `feature/spec-pc3` a `develop` y de la de `release/pc3` a `main` cuando
+existan; el Anexo C las lista solas al regenerar el historial.
+:::

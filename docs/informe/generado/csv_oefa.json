@@ -1,0 +1,42 @@
+{
+  "transcrito": true,
+  "_fuente": "docs/specs/2026-10-31-pc3-design.md §4.1, «Lo que el CSV es de verdad» (inspección del 01/11).",
+  "descargado": "2026-11-01",
+  "bytes": 1317949839,
+  "sha256_abreviado": "1f09a806…f26d92",
+  "fecha_corte": "2024-04-29",
+  "columnas": 36,
+  "delimitador": ";",
+  "codificacion": "UTF-8 sin BOM, punto decimal",
+  "estaciones": 33,
+  "evaluaciones": 19,
+  "departamentos": 10,
+  "anio_desde": 2018,
+  "anio_hasta": 2022,
+  "columnas_parametro": ["PM10", "PM2.5", "DIOXIDO_AZUFRE", "MONOXIDO_CARBONO", "OZONO", "SULFURO_HIDROGENO",
+                         "TEMPERATURA", "HUMEDAD_RELATIVA", "VELOCIDAD_VIENTO", "DIRECCION_VIENTO",
+                         "PRESION_BAROMETRICA", "PRECIPITACION", "RADIACION_SOLAR"],
+  "filas": {
+    "datos": 2883877,
+    "un_parametro": 2609011,
+    "sin_parametro": 274866,
+    "departamento_na": 5296
+  },
+  "hora": {
+    "sin_hora": 2715954,
+    "hora_excel": 159454,
+    "solo_fecha": 8469,
+    "grupos_sin_hora": 95932,
+    "grupos_de_24": 93935,
+    "filas_con_hora": 112383,
+    "proporcion_posicion_mas_1": 0.985
+  },
+  "unidades_duplicadas": {
+    "gases": ["SO2", "CO", "O3", "H2S"],
+    "claves": 11290
+  },
+  "volumen_util": {
+    "pm10_horario": 193353,
+    "pm2_5_horario": 90492
+  }
+}
