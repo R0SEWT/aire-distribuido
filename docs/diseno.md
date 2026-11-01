@@ -2,7 +2,7 @@
 
 Fuente de los puntos «Diseño del modelo ML distribuido» y «Paralelización del cálculo» del informe de
 la PC3. Desarrolla las secciones 5 a 7 de la
-[spec de la PC3](superpowers/specs/2026-10-31-pc3-design.md) y continúa el diseño del K-Means del TP
+[spec de la PC3](specs/2026-10-31-pc3-design.md) y continúa el diseño del K-Means del TP
 (`../concurrente/tp/docs/kmeans.md`), del que se porta el paquete `kmeans/`.
 
 Dos entregables, dos palabras. La **PC3 es concurrente**: goroutines en una sola máquina, para cargar
