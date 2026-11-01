@@ -71,6 +71,12 @@ type corrida struct {
 	Iteraciones    int     `json:"iteraciones"`
 	Paro           string  `json:"paro"`
 	Inercia        float64 `json:"inercia"`
+	// DistintasIteraciones marca una corrida concurrente que hizo otra
+	// cantidad de iteraciones que el secuencial (IteracionesSecuencial): el
+	// árbol de suma es otro y la parada puede caer una iteración antes o
+	// después. Su speedup compara trabajos distintos.
+	DistintasIteraciones  bool `json:"distintas_iteraciones_que_el_secuencial,omitempty"`
+	IteracionesSecuencial int  `json:"iteraciones_secuencial,omitempty"`
 }
 
 type resumen struct {
@@ -91,6 +97,9 @@ type resumen struct {
 	Eficiencia       float64                   `json:"eficiencia_por_worker,omitempty"`
 	Iteraciones      int                       `json:"iteraciones"`
 	Inercia          float64                   `json:"inercia"`
+	// CorridasConOtrasIteraciones cuenta las corridas medidas de esta
+	// configuración marcadas con DistintasIteraciones.
+	CorridasConOtrasIteraciones int `json:"corridas_con_otras_iteraciones,omitempty"`
 }
 
 // determinismo dice si, con un chunk dado, todas las corridas concurrentes
@@ -209,7 +218,7 @@ func correr(c config, w io.Writer) error {
 			}
 			inf.Centroides[fmt.Sprintf("%s/%d", exper, n)] = kmeans.HashCentroides(cent)
 
-			op := kmeans.Opciones{K: kEf, MaxIter: c.iterFijas}
+			op := opcionesFijas(kEf, c.iterFijas)
 			if exper == "convergencia" {
 				op = kmeans.Opciones{K: kEf, MaxIter: receta.MaxIter, TolAbs: receta.Tolerancia, TolRel: receta.Tolerancia}
 			}
@@ -252,6 +261,7 @@ func correr(c config, w io.Writer) error {
 		}
 	}
 
+	marcarIteraciones(inf.Corridas)
 	if inf.Resumen, err = resumir(inf.Corridas, c.recorte, c.boot, c.semillaOrden); err != nil {
 		return err
 	}
@@ -322,6 +332,7 @@ func clave(c corrida) string {
 func resumir(corridas []corrida, recorte float64, boot int, semilla int64) ([]resumen, error) {
 	tiempos := map[string][]float64{}
 	porIter := map[string][]float64{}
+	otras := map[string]int{}
 	ultima := map[string]corrida{}
 	var claves []string
 	for _, c := range corridas {
@@ -333,6 +344,9 @@ func resumir(corridas []corrida, recorte float64, boot int, semilla int64) ([]re
 			claves = append(claves, k)
 		}
 		tiempos[k] = append(tiempos[k], c.MsClustering)
+		if c.DistintasIteraciones {
+			otras[k]++
+		}
 		porIter[k] = append(porIter[k], c.MsPorIteracion)
 		ultima[k] = c
 	}
@@ -365,7 +379,7 @@ func resumir(corridas []corrida, recorte float64, boot int, semilla int64) ([]re
 			Experimento: c.Experimento, Tamano: c.Tamano, Modo: c.Modo, Workers: c.Workers, Chunk: c.Chunk,
 			Repeticiones: len(ts), MedianaMs: mediana, MediaRecortadaMs: media, DesvMs: desv,
 			MinMs: orden[0], MaxMs: orden[len(orden)-1], MsPorIteracion: medianaIter,
-			Iteraciones: c.Iteraciones, Inercia: c.Inercia,
+			Iteraciones: c.Iteraciones, Inercia: c.Inercia, CorridasConOtrasIteraciones: otras[k],
 		}
 		if c.Modo == "conc" {
 			seq := tiempos[clave(corrida{Experimento: c.Experimento, Tamano: c.Tamano, Modo: "seq"})]
@@ -386,6 +400,39 @@ func resumir(corridas []corrida, recorte float64, boot int, semilla int64) ([]re
 		salida = append(salida, r)
 	}
 	return salida, nil
+}
+
+// opcionesFijas es el experimento de trabajo fijo: exactamente iter
+// iteraciones. TolAbs = -1 hace el umbral de parada negativo, y el
+// desplazamiento (>= 0) nunca lo alcanza: con tolerancia 0 una corrida que
+// llega a un punto fijo exacto pararía antes y mediría menos trabajo.
+func opcionesFijas(k, iter int) kmeans.Opciones {
+	return kmeans.Opciones{K: k, MaxIter: iter, TolAbs: -1}
+}
+
+// marcarIteraciones compara cada corrida concurrente con el secuencial del
+// mismo experimento y tamaño, y marca las que hicieron otra cantidad de
+// iteraciones. En «fijas» no puede pasar; en «convergencia» sí, porque la suma
+// por chunks redondea distinto y la parada puede moverse una iteración.
+func marcarIteraciones(corridas []corrida) {
+	seq := map[string]int{}
+	for _, c := range corridas {
+		if c.Modo == "seq" {
+			seq[fmt.Sprintf("%s|%d", c.Experimento, c.Tamano)] = c.Iteraciones
+		}
+	}
+	for i := range corridas {
+		c := &corridas[i]
+		if c.Modo != "conc" {
+			continue
+		}
+		s, ok := seq[fmt.Sprintf("%s|%d", c.Experimento, c.Tamano)]
+		if !ok {
+			continue
+		}
+		c.IteracionesSecuencial = s
+		c.DistintasIteraciones = c.Iteraciones != s
+	}
 }
 
 // comprobarDeterminismo agrupa las corridas concurrentes por experimento,
@@ -450,6 +497,13 @@ func imprimirTabla(w io.Writer, inf informe) {
 		}
 		fmt.Fprintf(w, "%-13s %9d %-5s %6s %7s %9.1fms %9.1fms %9.2f %20s %8s %6s\n",
 			r.Experimento, r.Tamano, r.Modo, ch, wk, r.MedianaMs, r.MediaRecortadaMs, r.MsPorIteracion, sp, spm, efic)
+	}
+	for _, r := range inf.Resumen {
+		if r.CorridasConOtrasIteraciones > 0 {
+			fmt.Fprintf(w, "OJO %s n=%d W=%d chunk=%d: %d de %d corridas hicieron otra cantidad de iteraciones que el "+
+				"secuencial; ese speedup compara trabajos distintos\n", r.Experimento, r.Tamano, r.Workers, r.Chunk,
+				r.CorridasConOtrasIteraciones, r.Repeticiones)
+		}
 	}
 	fmt.Fprintln(w)
 	for _, d := range inf.Determinismo {
