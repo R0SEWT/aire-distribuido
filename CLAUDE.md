@@ -11,7 +11,7 @@ las evaluaciones, enunciado) vive en `../concurrente`; este repo es el sistema y
   El equipo empezó con el caso 2 (denuncias SIDPOL) y el profesor lo reasignó al 10 el 31/10; el repo
   se llamaba `infelix-distribuido` (y la base de beads conserva ese prefijo).
 - **Pregunta de impacto social**: no se fija a ciegas. Se elige el martes 03/11 con la criba del EDA
-  entre las nueve candidatas de `docs/superpowers/specs/2026-10-31-preguntas-candidatas.md`. La base
+  entre las nueve candidatas de `docs/specs/2026-10-31-preguntas-candidatas.md`. La base
   esperada: episodios sobre el ECA, dónde, cuándo y con cuánta anticipación; el diferencial: lo que solo
   OEFA permite (sus estaciones están alrededor de actividades fiscalizadas).
 - **Cobertura de estaciones**: 34 estaciones no cubren el país. Una zona sin estación no es una zona
@@ -25,7 +25,7 @@ las evaluaciones, enunciado) vive en `../concurrente`; este repo es el sistema y
   y conteos parciales por cluster; la fusión en orden fijo es exacta; el coordinador recalcula los
   centroides y repite. La receta (features, log1p, nivel, k, semilla) se calibra en Colab y Go la lee
   de `configs/kmeans.json`: Go no decide features ni k.
-- **Specs de diseño** (se escriben y revisan antes de codificar): `docs/superpowers/specs/`. La de la
+- **Specs de diseño** (se escriben y revisan antes de codificar): `docs/specs/`. La de la
   PC3, la de calibración del K-Means y la de preguntas candidatas. `docs/propuesta.md` es el borrador
   anterior, superado por las specs.
 
@@ -59,9 +59,9 @@ cd docs/informe && bash render.sh                      # Quarto → los tres .do
 
 | Archivo | Propósito |
 |------|---------|
-| `docs/superpowers/specs/2026-10-31-pc3-design.md` | Spec de la PC3: datos, reglas, cargador, K-Means, diseño distribuido, informe, calendario, decisiones. |
-| `docs/superpowers/specs/2026-10-31-kmeans-calibracion-design.md` | Qué tiene que decir un régimen y la grilla que congela `configs/kmeans.json`. |
-| `docs/superpowers/specs/2026-10-31-preguntas-candidatas.md` | Las nueve preguntas y la criba del EDA que decide cuál sobrevive. |
+| `docs/specs/2026-10-31-pc3-design.md` | Spec de la PC3: datos, reglas, cargador, K-Means, diseño distribuido, informe, calendario, decisiones. |
+| `docs/specs/2026-10-31-kmeans-calibracion-design.md` | Qué tiene que decir un régimen y la grilla que congela `configs/kmeans.json`. |
+| `docs/specs/2026-10-31-preguntas-candidatas.md` | Las nueve preguntas y la criba del EDA que decide cuál sobrevive. |
 | `configs/limpieza.json` | Columnas, parámetros, periodos, unidades, centinelas y rangos del CSV. **Supuestos hasta ver el CSV real**; `reports/limpieza.json → vistos` dice qué llegó. |
 | `configs/kmeans.json` | Receta congelada por la calibración: features, log1p, nivel, k, semilla, tolerancia, chunk. |
 | `datos/doc.go` | Pipeline del cargador, cascada de reglas y la config campo por campo. |
@@ -76,7 +76,7 @@ cd docs/informe && bash render.sh                      # Quarto → los tres .do
 
 ## Convenciones
 
-- **Spec antes que código**: cada parte tiene su diseño en `docs/superpowers/specs/` revisado contra el
+- **Spec antes que código**: cada parte tiene su diseño en `docs/specs/` revisado contra el
   enunciado y la rúbrica antes de implementar. Las decisiones abiertas se marcan en la spec.
 - **Solo biblioteca estándar de Go**; configs en JSON por eso. TDD y `go test -race` siempre.
 - **Determinismo**: mismo resultado bit a bit para cualquier número de workers (reducciones en orden

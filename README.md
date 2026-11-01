@@ -27,7 +27,7 @@ enunciado: Monitoreo Calidad del Aire y Sensores Ambientales.
 | `configs/` | `limpieza.json` (columnas, parámetros, unidades, reglas) y `kmeans.json` (receta: features, k, semilla). |
 | `notebooks/` | Laboratorio en Colab: criba de preguntas y EDA, calibración del K-Means, auditoría y figuras. |
 | `docs/informe/` | Informe en Quarto renderizado a Word, con las cifras tomadas de `reports/`. |
-| `docs/superpowers/specs/` | Specs de diseño de cada parte. |
+| `docs/specs/` | Specs de diseño de cada parte. |
 
 ## Cómo correrlo
 

@@ -50,7 +50,7 @@ fuente de las cifras de este informe: ninguna cifra sale de la redacción.
 ::: {#tbl-uso-ia tbl-colwidths="[30,22,48]"}
 | Tarea | Herramienta | Cómo se verificó |
 |:---|:---|:---|
-| Specs de diseño de la PC3, de la calibración y de las preguntas candidatas (`docs/superpowers/specs/`) | Claude Code (Anthropic), modelo Claude Opus 5.5 | Revisión de Rody; las decisiones del redactor quedaron marcadas como tales en las specs y se aceptaron o revirtieron una por una |
+| Specs de diseño de la PC3, de la calibración y de las preguntas candidatas (`docs/specs/`) | Claude Code (Anthropic), modelo Claude Opus 5.5 | Revisión de Rody; las decisiones del redactor quedaron marcadas como tales en las specs y se aceptaron o revirtieron una por una |
 | Esqueleto de este informe en Quarto, `tablas.py`, `render.sh`, `generar-historial.sh`, `empaquetar-pc3.sh` y la plantilla de Word | Claude Code, mismo modelo | El render produce los tres `.docx`; las cifras salen de los JSON que escriben los comandos de Go; las referencias se verificaron por DOI o en el documento oficial |
 | Código Go (cargador, K-Means, comandos) | PENDIENTE | `go test -race`, la muestra con un caso por regla y la integración continua |
 | Notebooks (EDA, calibración, auditoría) | PENDIENTE | Auditoría cruzada: Go contra Polars y scikit-learn |
