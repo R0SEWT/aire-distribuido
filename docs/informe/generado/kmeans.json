@@ -2,12 +2,12 @@
   "placeholder": true,
   "_nota": "sale de correr los comandos de Go sobre la muestra sintética data/sample/oefa_muestra.csv (estaciones SINT-*, una semana), no sobre el CSV de OEFA.",
   "metadatos": {
-    "momento": "2026-11-01T00:01:13.895900478-05:00",
+    "momento": "2026-11-01T12:46:48.618674771-05:00",
     "maquina": "A019803",
     "version_go": "go1.27.3",
     "gomaxprocs": 14,
     "cpus_logicas": 14,
-    "commit": "94d40370ee2303e1df214a92af7c8bcf57787e20",
+    "commit": "abf3e7fc5bea567a7429328aa429e8aca7e0c8ec",
     "arbol_sucio": false
   },
   "receta": {
@@ -23,69 +23,192 @@
     "nivel": "absoluto",
     "k": 5,
     "semilla": 42,
+    "semillas": 10,
     "tolerancia": 1e-06,
     "max_iter": 100,
     "workers": 0,
     "chunk": 10000
   },
   "gold": {
-    "ruta": "data/gold/oefa_features.csv",
+    "ruta": "/tmp/claude-1000/-home-rody-Code-personal-concurrente/abfa3006-394e-404e-9865-0a60a57d95b1/scratchpad/regen/data/gold/oefa_features.csv",
     "sha256": "ddf7ae68f0711a76c719a7b2b18c37dde3aa475e8cbb76e2d3cf0ef3b993b5d3",
     "n": 617,
     "d": 4,
     "estaciones": 4
   },
-  "estandarizacion": "reports/estandarizacion.json",
+  "estandarizacion": "/tmp/claude-1000/-home-rody-Code-personal-concurrente/abfa3006-394e-404e-9865-0a60a57d95b1/scratchpad/regen/reports/estandarizacion.json",
   "k": 5,
   "k_efectivo": 5,
-  "semilla": 42,
+  "semilla": 44,
+  "semilla_base": 42,
+  "semillas": 10,
+  "criterio_semillas": "menor inercia final; si empatan bit a bit, la semilla menor",
+  "arranque_elegido": 2,
+  "arranques": [
+    {
+      "semilla": 42,
+      "k_efectivo": 5,
+      "inercia": 1257.291864506284,
+      "iteraciones": 28,
+      "paro": "tolerancia",
+      "clusters_vacios": 0,
+      "centroides_iniciales_sha256": "3d6137569359974274e48301541b90f592cff4a80ca005ea961f1cf593c9a87f",
+      "workers": 4,
+      "ms_kmeanspp": 0.067988,
+      "ms_lloyd": 2.441198
+    },
+    {
+      "semilla": 43,
+      "k_efectivo": 5,
+      "inercia": 1381.694476969185,
+      "iteraciones": 30,
+      "paro": "tolerancia",
+      "clusters_vacios": 0,
+      "centroides_iniciales_sha256": "bfaf5e961fd9ae40c472a7c9177dccc13c2ae2b85b374a256ad606435cb8ba8c",
+      "workers": 5,
+      "ms_kmeanspp": 0.15653,
+      "ms_lloyd": 3.148743
+    },
+    {
+      "semilla": 44,
+      "k_efectivo": 5,
+      "inercia": 1254.0990548801012,
+      "iteraciones": 18,
+      "paro": "tolerancia",
+      "clusters_vacios": 0,
+      "centroides_iniciales_sha256": "c9ad86888f288e0c04d69a7898f2bce7d403da20a5509ced23536ef05255ee40",
+      "workers": 5,
+      "ms_kmeanspp": 0.113948,
+      "ms_lloyd": 2.757732
+    },
+    {
+      "semilla": 45,
+      "k_efectivo": 5,
+      "inercia": 1287.2557237531794,
+      "iteraciones": 12,
+      "paro": "tolerancia",
+      "clusters_vacios": 0,
+      "centroides_iniciales_sha256": "f5c0eff660a0c0d2194c03f6d012299cfac78b64b21bc4aa94ec3a52f2d71f2a",
+      "workers": 4,
+      "ms_kmeanspp": 0.134298,
+      "ms_lloyd": 1.212173
+    },
+    {
+      "semilla": 46,
+      "k_efectivo": 5,
+      "inercia": 1286.8031096017937,
+      "iteraciones": 15,
+      "paro": "tolerancia",
+      "clusters_vacios": 0,
+      "centroides_iniciales_sha256": "71b2274081c0867c6a07ec7cd3ef16fb41d8c8b946f7c6fb396216980e512edb",
+      "workers": 5,
+      "ms_kmeanspp": 0.140314,
+      "ms_lloyd": 1.501589
+    },
+    {
+      "semilla": 47,
+      "k_efectivo": 5,
+      "inercia": 1396.1169122259844,
+      "iteraciones": 12,
+      "paro": "tolerancia",
+      "clusters_vacios": 0,
+      "centroides_iniciales_sha256": "94bc7a9446c1a2631d4df07dca6bd75cef3cb1228bc09bbef7b23b1e73ee576e",
+      "workers": 5,
+      "ms_kmeanspp": 0.092665,
+      "ms_lloyd": 0.784655
+    },
+    {
+      "semilla": 48,
+      "k_efectivo": 5,
+      "inercia": 1369.6577065354168,
+      "iteraciones": 24,
+      "paro": "tolerancia",
+      "clusters_vacios": 0,
+      "centroides_iniciales_sha256": "a45f2b9d5c274e1e113a95c22aac5d9a829904ab052957a4567b4b0aaf4961ba",
+      "workers": 4,
+      "ms_kmeanspp": 0.06388,
+      "ms_lloyd": 1.040528
+    },
+    {
+      "semilla": 49,
+      "k_efectivo": 5,
+      "inercia": 1257.423897426519,
+      "iteraciones": 29,
+      "paro": "tolerancia",
+      "clusters_vacios": 0,
+      "centroides_iniciales_sha256": "accc8a1546948c3dd16121029b9c0a6bf243e038e33ce4c37a2ec45962e1955d",
+      "workers": 5,
+      "ms_kmeanspp": 0.07967,
+      "ms_lloyd": 1.779411
+    },
+    {
+      "semilla": 50,
+      "k_efectivo": 5,
+      "inercia": 1261.823649547853,
+      "iteraciones": 26,
+      "paro": "tolerancia",
+      "clusters_vacios": 0,
+      "centroides_iniciales_sha256": "530ae1e8027acefd6cc04ca043b8dc0aa1d001c4b6d025094de9962378dc41da",
+      "workers": 5,
+      "ms_kmeanspp": 0.135501,
+      "ms_lloyd": 2.260149
+    },
+    {
+      "semilla": 51,
+      "k_efectivo": 5,
+      "inercia": 1284.3331358027783,
+      "iteraciones": 13,
+      "paro": "tolerancia",
+      "clusters_vacios": 0,
+      "centroides_iniciales_sha256": "55ce1191f76bf40c57a33239b98a8cf337e05c1e749b46d33187f940d240ed5f",
+      "workers": 4,
+      "ms_kmeanspp": 0.06508,
+      "ms_lloyd": 0.624313
+    }
+  ],
+  "corridas_a_la_vez": 3,
+  "workers_por_corrida": [
+    5,
+    5,
+    4
+  ],
   "workers": 14,
   "chunk": 10000,
   "tol_abs": 1e-06,
   "tol_rel": 1e-06,
   "max_iter": 100,
-  "centroides_iniciales_sha256": "3d6137569359974274e48301541b90f592cff4a80ca005ea961f1cf593c9a87f",
-  "iteraciones": 28,
+  "centroides_iniciales_sha256": "c9ad86888f288e0c04d69a7898f2bce7d403da20a5509ced23536ef05255ee40",
+  "iteraciones": 18,
   "paro": "tolerancia",
   "movimiento_ultima_iteracion": 0,
   "clusters_vacios": 0,
-  "inercia": 1257.291864506284,
+  "inercia": 1254.0990548801012,
   "inercias_por_iteracion": [
-    2322.401780230369,
-    1468.918137679636,
-    1383.4962874482153,
-    1327.7141506325115,
-    1300.681008866311,
-    1283.6266365991587,
-    1272.5160464076494,
-    1267.3413189760734,
-    1264.1256666613183,
-    1263.0047724893288,
-    1262.4115025941514,
-    1262.14175607554,
-    1261.9041890656245,
-    1261.8312118884826,
-    1261.6489240403898,
-    1261.4648654338182,
-    1261.334448077006,
-    1261.2285854347033,
-    1261.1581620618904,
-    1261.0807878996825,
-    1260.991718623157,
-    1260.236964639808,
-    1259.5262689185327,
-    1258.9930645249578,
-    1258.1774711925984,
-    1257.5431013779282,
-    1257.3265152373162,
-    1257.291864506284
+    1837.0629339332238,
+    1425.4765553985314,
+    1356.144979831061,
+    1316.3872338488213,
+    1295.075326225472,
+    1282.6400326330322,
+    1273.4914397836092,
+    1267.6970867257892,
+    1265.8319491340133,
+    1263.1577534728997,
+    1260.7256831784396,
+    1257.6347578040438,
+    1255.6907155666768,
+    1254.9300906254964,
+    1254.5583200932824,
+    1254.3141175021503,
+    1254.1834962677265,
+    1254.0990548801012
   ],
   "tamanos": [
-    125,
-    110,
-    142,
-    123,
-    117
+    121,
+    140,
+    111,
+    151,
+    94
   ],
   "features": [
     "pm10",
@@ -95,83 +218,84 @@
   ],
   "centroides_estandarizados": [
     [
-      -1.2388357972859942,
-      0.13301294088469182,
-      -0.27025203278250537,
-      0.6523398659912717
+      -1.159179159124673,
+      0.06342799809317802,
+      -0.6212523966797032,
+      0.5339690143680014
     ],
     [
-      0.5745141431005523,
-      -0.9236080614064299,
-      -0.16900557055743662,
-      0.8073820596775901
+      0.20725243539637203,
+      0.8802762264934634,
+      0.911549766800515,
+      0.6893324679201811
     ],
     [
-      0.24300421561821947,
-      0.14142060488744346,
-      -0.9282306456624826,
-      -0.9857960458894297
+      -0.2890328311451186,
+      -0.8019665740103116,
+      0.8046800044736917,
+      -0.6597171577773678
     ],
     [
-      0.5005105647135181,
-      1.0331784796698766,
-      0.7524475782951812,
-      0.6108556210589098
+      0.4579506282259484,
+      0.27441507754875555,
+      -0.6714306097649381,
+      -1.0331926649259706
     ],
     [
-      -0.03770495006717994,
-      -0.5315590576863083,
-      0.783160824041866,
-      -0.9017667751059066
+      0.7891216669530285,
+      -0.8865090050328078,
+      -0.4295626146372364,
+      0.7247223475505912
     ]
   ],
   "centroides_des_estandarizados": [
     [
-      27.15085055506228,
-      0.5390703478114931,
-      2.1952,
-      81.6488
+      28.207095936074438,
+      0.5316772933790271,
+      1.790909090909091,
+      79.53305785123968
     ],
     [
-      64.11083034365525,
-      0.4268096162358453,
-      2.311818181818182,
-      84.42
+      53.941279603545,
+      0.6184633590616612,
+      3.5564285714285715,
+      82.31
     ],
     [
-      54.85711962970992,
-      0.5399636203375403,
-      1.4373239436619714,
-      52.36901408450704
+      42.67505447227983,
+      0.4397334198848625,
+      3.4333333333333336,
+      58.1972972972973
     ],
     [
-      61.92042396035104,
-      0.6347084637528698,
-      3.3731707317073174,
-      80.90731707317073
+      60.69424327783563,
+      0.5540936222626419,
+      1.7331125827814569,
+      51.52185430463576
     ],
     [
-      48.05754179876396,
-      0.4684628749498894,
-      3.408547008547009,
-      53.870940170940166
+      70.90370719239056,
+      0.43075120664549865,
+      2.0117021276595746,
+      82.94255319148937
     ]
   ],
   "nota_des_estandarizacion": "Centroides llevados a unidades originales invirtiendo el z-score y luego log1p (reports/estandarizacion.json). En las features con log1p el centroide invertido es la media de los logaritmos llevada de vuelta (del orden de una media geométrica), menor que la media aritmética; la media aritmética de cada régimen está en reports/regimenes.json (perfil).",
   "ms": {
-    "carga": 1.902015,
-    "inicializacion": 0.139244,
-    "clustering": 2.600621,
-    "perfiles": 0.179027,
-    "total": 32.629034
+    "carga": 1.677977,
+    "arranques": 6.959367,
+    "inicializacion": 0.113948,
+    "clustering": 2.757732,
+    "perfiles": 0.070425,
+    "total": 73.629272
   },
   "recursos": {
-    "max_rss_mb": 25.01953125,
-    "heap_mb": 1.0997543334960938,
-    "total_asignado_mb": 1.0997543334960938,
-    "sistema_mb": 12.459236145019531,
-    "num_gc": 0,
-    "cpu_usuario_s": 0.023894,
-    "cpu_sistema_s": 0.009102
+    "max_rss_mb": 25.02734375,
+    "heap_mb": 0.8034286499023438,
+    "total_asignado_mb": 2.9654006958007812,
+    "sistema_mb": 13.521736145019531,
+    "num_gc": 1,
+    "cpu_usuario_s": 0.158538,
+    "cpu_sistema_s": 0.017501
   }
 }

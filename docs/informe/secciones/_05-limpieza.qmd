@@ -17,10 +17,11 @@ con el EDA sin tocar las pruebas.
 |:---|:---|:---|
 | 1 | Solo filas con `Periodo` horario; los promedios diarios o mensuales se descartan | La unidad de análisis es la lectura horaria |
 | 2 | Fecha y hora parseables, en hora local de Lima (UTC−5); fuera del rango del dataset, se descarta | Evitar basura histórica |
+| 2′ | Hora: si falta, se reconstruye por posición en los grupos de 24 filas contiguas (hora final) y se marca como inferida; si el grupo no tiene 24 filas, se descarta (@sec-hora) | La hora falta en el {{< meta cifras.csv.pct_sin_hora >}} del archivo |
 | 3 | Valor numérico; negativos (salvo temperatura) y centinelas del equipo se descartan | Lectura inválida del sensor |
 | 4 | Fuera del rango físico del parámetro, se descarta y se cuenta por parámetro | Rango del equipo |
 | 5 | Duplicados exactos (estación, parámetro, fecha-hora): se conserva el primero en orden de archivo; con valor distinto, se marcan | Reenvíos del sistema de captura |
-| 6 | Una sola unidad por parámetro; lo que venga en otra se convierte | Comparabilidad entre estaciones |
+| 6 | Una sola unidad por parámetro; lo que venga en otra se convierte. Los gases que vienen en ppb y en µg/m³ conservan µg/m³ y el duplicado se cuenta | Comparabilidad entre estaciones |
 | 7 | Pivot: una fila ancha por (estación, fecha-hora); parámetro faltante, NaN | Es la unidad del modelo |
 | 8 | Completitud: una fila ancha entra al modelo solo si tiene todas las features de la receta | El K-Means no admite NaN |
 | 9 | Coordenadas UTM a latitud y longitud, una vez por estación; no son features | Va en el TB2, con el mapa |
@@ -32,6 +33,35 @@ Reglas de limpieza y su motivo
 Los umbrales concretos de las reglas 3, 4 y 6 (centinelas, rango físico y unidad de cada
 parámetro), citados desde `configs/limpieza.json` cuando el EDA los cierre (mar 03/11). Lo ideal es
 que `tablas.py` los lea de ahí y genere la tabla, igual que las demás.
+:::
+
+### La hora, reconstruida por posición {#sec-hora}
+
+El archivo no trae la hora en el {{< meta cifras.csv.pct_sin_hora >}} de sus filas (@sec-csv). Sin
+hora no hay lectura horaria, y sin lectura horaria no hay ni pivot ni régimen. La decisión del 01/11
+es reconstruirla por **posición**: dentro de cada grupo de un mismo día, estación, parámetro, unidad
+y periodo, la fila *i* (contando desde cero) es la hora *i* + 1, en hora final (la lectura «1» cubre
+de 00:00 a 01:00 y la «24» corresponde a las 00:00 del día siguiente). Solo se aplica cuando el
+grupo tiene exactamente 24 filas contiguas, que es el caso del
+{{< meta cifras.csv.pct_grupos_de_24 >}} de los grupos sin hora; si no, la fila se descarta por la
+regla de la hora. Cada hora reconstruida se marca como inferida y se cuenta.
+
+**La evidencia del control.** La regla se probó donde se puede comprobar: en las
+{{< meta cifras.csv.filas_con_hora >}} filas que sí traen hora, la hora coincide con la posición
+dentro del día más uno en el {{< meta cifras.csv.control_hora >}} de los casos.
+
+**Esto es un supuesto fuerte, y el informe lo dice con esas palabras.** Que la hora sea la posición
+en las filas con hora no prueba que lo sea en las que no la traen: si OEFA ordenara distinto los
+grupos sin hora, o si faltara una lectura dentro de un bloque de 24, las horas se correrían sin que
+nada lo delate. Por eso se exige el bloque completo y se marca cada hora inferida: cualquier
+resultado que dependa de la hora del día (el ciclo diario de un régimen, la hora pico) hereda este
+supuesto.
+
+::: {.callout-warning title="PENDIENTE"}
+Los conteos de la regla de la hora (horas inferidas y filas descartadas por grupo incompleto) los
+escribe `cmd/cargar` cuando implemente la reconstrucción: van en la tabla de reglas
+(`generado/limpieza.json`) y en la prosa con el shortcode meta. Hoy el cargador todavía espera la
+columna de hora, y las cifras de esta sección vienen de la inspección del 01/11 (@tbl-csv-oefa).
 :::
 
 ### Evidencias de la limpieza
@@ -128,6 +158,6 @@ concurrente y determinista. La @tbl-estandarizacion da los valores usados
 ::: {.callout-warning title="PENDIENTE"}
 Resultado de la auditoría cruzada (patrón del TP: dos implementaciones, si discrepan hay un bug): el
 notebook recalcula gold desde silver con la misma receta y lo compara con el gold de Go (tolerancia
-1e-9 tras el z-score), y compara el prototipo de silver en Polars con el de Go. Una tabla o una
+1e-9 tras el z-score), y compara el prototipo de silver en pandas con el de Go. Una tabla o una
 captura con la diferencia máxima. Sale del notebook 01/03.
 :::

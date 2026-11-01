@@ -2,16 +2,16 @@
   "placeholder": true,
   "_nota": "sale de correr los comandos de Go sobre la muestra sintética data/sample/oefa_muestra.csv (estaciones SINT-*, una semana), no sobre el CSV de OEFA.",
   "metadatos": {
-    "momento": "2026-11-01T00:01:13.895900478-05:00",
+    "momento": "2026-11-01T12:46:48.618674771-05:00",
     "maquina": "A019803",
     "version_go": "go1.27.3",
     "gomaxprocs": 14,
     "cpus_logicas": 14,
-    "commit": "94d40370ee2303e1df214a92af7c8bcf57787e20",
+    "commit": "abf3e7fc5bea567a7429328aa429e8aca7e0c8ec",
     "arbol_sucio": false
   },
   "gold": {
-    "ruta": "data/gold/oefa_features.csv",
+    "ruta": "/tmp/claude-1000/-home-rody-Code-personal-concurrente/abfa3006-394e-404e-9865-0a60a57d95b1/scratchpad/regen/data/gold/oefa_features.csv",
     "sha256": "ddf7ae68f0711a76c719a7b2b18c37dde3aa475e8cbb76e2d3cf0ef3b993b5d3",
     "n": 617,
     "d": 4,
@@ -30,6 +30,7 @@
     "nivel": "absoluto",
     "k": 5,
     "semilla": 42,
+    "semillas": 10,
     "tolerancia": 1e-06,
     "max_iter": 100,
     "workers": 0,
@@ -41,58 +42,65 @@
       "k": 2,
       "k_efectivo": 2,
       "n": 617,
-      "inercia": 1954.0581227936807,
-      "iteraciones": 15,
+      "semilla": 49,
+      "inercia": 1953.6845421329515,
+      "iteraciones": 8,
       "paro": "tolerancia"
     },
     {
       "k": 3,
       "k_efectivo": 3,
       "n": 617,
-      "inercia": 1655.3193260079327,
-      "iteraciones": 30,
+      "semilla": 51,
+      "inercia": 1651.9685874756287,
+      "iteraciones": 15,
       "paro": "tolerancia"
     },
     {
       "k": 4,
       "k_efectivo": 4,
       "n": 617,
-      "inercia": 1451.1236049815554,
-      "iteraciones": 16,
+      "semilla": 46,
+      "inercia": 1436.0275678487344,
+      "iteraciones": 34,
       "paro": "tolerancia"
     },
     {
       "k": 5,
       "k_efectivo": 5,
       "n": 617,
-      "inercia": 1257.291864506284,
-      "iteraciones": 28,
+      "semilla": 44,
+      "inercia": 1254.0990548801012,
+      "iteraciones": 18,
       "paro": "tolerancia"
     },
     {
       "k": 6,
       "k_efectivo": 6,
       "n": 617,
-      "inercia": 1143.9410896576012,
-      "iteraciones": 27,
+      "semilla": 44,
+      "inercia": 1119.9640470921945,
+      "iteraciones": 15,
       "paro": "tolerancia"
     },
     {
       "k": 7,
       "k_efectivo": 7,
       "n": 617,
-      "inercia": 1069.7275132505438,
-      "iteraciones": 10,
+      "semilla": 51,
+      "inercia": 1024.3386252331754,
+      "iteraciones": 23,
       "paro": "tolerancia"
     },
     {
       "k": 8,
       "k_efectivo": 8,
       "n": 617,
-      "inercia": 975.650876890333,
-      "iteraciones": 16,
+      "semilla": 45,
+      "inercia": 937.2441146848415,
+      "iteraciones": 36,
       "paro": "tolerancia"
     }
   ],
-  "nota": "Inercia con los centroides finales sobre una submuestra sistemática del gold, k-means++ con la semilla de la receta para cada k. La silueta va en la PC4."
+  "nota": "Inercia con los centroides finales sobre una submuestra sistemática del gold; para cada k, la mejor de 10 semillas desde la de la receta, igual que el modelo final. La silueta va en la PC4."
 }

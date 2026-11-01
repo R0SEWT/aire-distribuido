@@ -22,14 +22,14 @@ CIENCIAS DE LA COMPUTACIÓN
 ::: {.callout-warning title="PENDIENTE"}
 Lo escribe el coordinador al cerrar la entrega (sáb 07/11): cómo se repartió el trabajo y cómo
 cumplió cada integrante. El reparto se ofreció con fecha límite el mar 03/11 (spec de la PC3, §10):
-lo que no se tomó lo hizo Rody, y esta tabla lo refleja. También falta el nombre del grupo.
+la tabla dice quién hizo qué. También falta el nombre del grupo.
 :::
 
 **Tabla de participación.** Marcar con una X de acuerdo al nivel de cumplimiento.
 
 | Nro | Estudiante | Responsabilidades | Cumplió | Cumplimiento parcial | No cumplió |
 |:---|:-----------|:---------------------|:----:|:-----:|:----:|
-| 1 | Rody Sebastian Vilchez Marin | Coordinación, specs de diseño y de calibración, cargador concurrente (parte A), port del K-Means (parte B), diseño distribuido e informe | | | |
+| 1 | Rody Sebastian Vilchez Marin | Coordinación. Dirigió y revisó el trabajo generado con IA (specs, cargador, K-Means, protocolo, diseño, notebooks e informe; ver el Anexo E) | | | |
 | 2 | Dayana Kety Gómez Rodriguez | Ofrecida: EDA y evidencias de limpieza (`docs/limpieza.md`, completitud por estación). PENDIENTE: confirmar | | | |
 | 3 | Julio Cesar Meza Alfaro | Ofrecida: benchmark del cargador en gorgo y capturas de las ejecuciones. PENDIENTE: confirmar | | | |
 

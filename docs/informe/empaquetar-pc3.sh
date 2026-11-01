@@ -12,7 +12,12 @@
 #
 # La versión final sale del tag pc3, después del release a main por release/pc3 (nunca con develop
 # como rama de origen). El zip lleva solo lo versionado: el CSV de OEFA (1,3 GB) nunca lo está, y
-# de data/ entran el README y la muestra de las pruebas.
+# de data/ entran el README y la muestra de las pruebas. No entran la base de tareas ni la
+# configuración de los agentes (.beads/, .claude/, .codex/, .agents/, CLAUDE.md, AGENTS.md): no
+# son la solución (el uso de IA se declara en el Anexo E del informe).
+#
+# Los códigos de alumno salen de equipo.local.yml (no versionado). Sin él solo se arma una entrega
+# --preliminar, con los códigos de ejemplo.
 set -euo pipefail
 cd "$(dirname "$0")"
 
@@ -25,12 +30,18 @@ git rev-parse -q --verify "$ref^{commit}" >/dev/null || { echo "error: no existe
 commit="$(git rev-parse "$ref^{commit}")"
 tag="$(git describe --tags --exact-match "$commit" 2>/dev/null || true)"
 raiz="$(git rev-parse --show-toplevel)"
-mapfile -t codigos < <(sed -n 's/^[[:space:]]\{1,\}codigo:[[:space:]]*\(U[0-9]\{9\}\)[[:space:]]*$/\1/p' _quarto.yml)
-[ "${#codigos[@]}" -eq 3 ] || echo "aviso: equipo tiene ${#codigos[@]} códigos en _quarto.yml" >&2
-
 problemas=()
-# 1. Ninguna cifra de prueba: tablas.py --final falla si queda un PLACEHOLDER, falta un JSON o un
-#    invariante no cuadra.
+equipo=equipo.local.yml
+if [ ! -f "$equipo" ]; then
+  problemas+=("no hay equipo.local.yml con los códigos reales (ver equipo.ejemplo.yml)")
+  equipo=equipo.ejemplo.yml
+fi
+mapfile -t codigos < <(sed -n 's/^[[:space:]]\{1,\}codigo:[[:space:]]*\(U[0-9]\{9\}\)[[:space:]]*\(#.*\)\{0,1\}$/\1/p' "$equipo")
+[ "${#codigos[@]}" -eq 3 ] || echo "aviso: $equipo tiene ${#codigos[@]} códigos" >&2
+
+# 1. Ninguna cifra de prueba: tablas.py --final falla si queda un PLACEHOLDER, una entrada de
+#    data/sample/, una estación SINT-/SIN-, una figura sintética, falta un JSON o un invariante no
+#    cuadra. Go no marca los datos sintéticos: estas guardas son las que lo impiden.
 if python3 -c 'import pandas' 2>/dev/null; then tablas=(python3 tablas.py --final); else tablas=(uv run --quiet tablas.py --final); fi
 "${tablas[@]}" >/dev/null 2>&1 || problemas+=("quedan cifras PLACEHOLDER o invariantes sin cuadrar (python3 tablas.py --final)")
 # 2. Ningún aviso PENDIENTE en las fuentes.
@@ -65,7 +76,9 @@ mkdir -p "$destino"
 rm -f "$destino"/1ACC0065_PC3_* "$destino"/1ACC0065-202620_Participación_PC3.docx
 for c in "${codigos[@]}"; do
   cp "salida/1ACC0065_PC3_202610_Informe_${c}.docx" "$destino/"
-  git -C "$raiz" archive --format=zip --prefix=aire-distribuido/ -o "$destino/1ACC0065_PC3_${c}.zip" "$commit"
+  git -C "$raiz" archive --format=zip --prefix=aire-distribuido/ -o "$destino/1ACC0065_PC3_${c}.zip" "$commit" \
+    -- . ':(exclude).beads' ':(exclude).claude' ':(exclude).codex' ':(exclude).agents' \
+    ':(exclude)CLAUDE.md' ':(exclude)AGENTS.md'
 done
 cp "salida/1ACC0065-202620_Participación_PC3.docx" "$destino/"
 
@@ -82,7 +95,7 @@ PY
 estado="final"
 [ "${#problemas[@]}" -eq 0 ] || estado="PRELIMINAR (${#problemas[@]} problemas: ver la salida del script)"
 [ "$tag" = "pc3" ] || estado="$estado; la ref no es el tag pc3"
-[ -z "$(git status --porcelain -- . ':!generado/historial.md')" ] || estado="$estado; hay cambios sin commitear en docs/informe"
+[ -z "$(git status --porcelain -- .)" ] || estado="$estado; hay cambios sin commitear en docs/informe"
 
 {
   echo "# Entrega PC3 · 1ACC0065 · 2026-20"

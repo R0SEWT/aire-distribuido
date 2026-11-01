@@ -6,7 +6,9 @@
 
     python3 tablas.py                 # lee generado/*.json, escribe generado/tablas/*.md y generado/cifras.yml
     python3 tablas.py --estricto      # además falla si falta un JSON o no cuadra un invariante
-    python3 tablas.py --final         # --estricto y, además, falla si queda un JSON PLACEHOLDER
+    python3 tablas.py --final         # --estricto y, además, falla si queda un JSON PLACEHOLDER, una
+                                      # entrada de data/sample/, una estación SINT-/SIN- o una figura
+                                      # sintética (generado/figuras/origen.json)
     uv run tablas.py                  # si no hay pandas en el Python del sistema
 
 Ninguna cifra del informe se escribe a mano: los comandos de Go escriben los JSON, este script los
@@ -20,6 +22,8 @@ generado/cifras.yml). Los esquemas son los de Go, que son la fuente de verdad:
     regimenes.json           cmd/entrenar           kmeans/regimenes.go    (Regimen)
     codo.json                cmd/entrenar -codo     kmeans/codo.go
     benchmark_kmeans.json    cmd/benchmark          cmd/benchmark/main.go
+    csv_oefa.json            (transcrito)           hechos del CSV real de la spec §4.1, hasta que el
+                                                    notebook 01 o cmd/cargar los escriban
 
 Si un JSON trae `"placeholder": true` (lo agrega el equipo, no Go), su tabla sale con un aviso
 PLACEHOLDER y sus cifras con la marca [PLACEHOLDER], para que nadie las confunda con resultados.
@@ -182,6 +186,7 @@ class Informe:
         self.datos: dict[str, dict] = {}
         self.cifras: dict[str, dict] = {}
         self.placeholders: list[str] = []
+        self.sinteticos: list[str] = []
         self.faltantes: list[str] = []
         self.problemas: list[str] = []
 
@@ -202,6 +207,29 @@ class Informe:
 
     def guardar_cifras(self, grupo: str, d: dict, valores: dict) -> None:
         self.cifras[grupo] = {k: self.cifra(d, v) for k, v in valores.items()}
+
+    def sintetico(self, origen: str, texto: str) -> None:
+        """Señal de datos sintéticos, que Go no marca: la entrega final no puede llevarlos."""
+        self.sinteticos.append(f"{origen}: {texto}")
+
+    def revisar_estaciones(self, origen: str, nombres) -> None:
+        sint = sorted(e for e in nombres if str(e).upper().startswith(("SINT-", "SIN-")))
+        if sint:
+            self.sintetico(origen, "estaciones sintéticas " + ", ".join(sint))
+
+    def revisar_entrada(self, origen: str, ruta) -> None:
+        if ruta and "data/sample/" in str(ruta):
+            self.sintetico(origen, f"entrada {ruta}")
+
+    def figuras(self) -> None:
+        """generado/figuras/origen.json: el notebook marca cada figura con sintetico: true/false."""
+        ruta = AQUI / "generado" / "figuras" / "origen.json"
+        if not ruta.exists():
+            return
+        sint = [f for f, meta in sorted(json.loads(ruta.read_text(encoding="utf-8")).items())
+                if isinstance(meta, dict) and meta.get("sintetico")]
+        if sint:
+            self.sintetico("figuras/origen.json", "figuras sintéticas " + ", ".join(sint))
 
     def problema(self, origen: str, texto: str) -> None:
         self.problemas.append(f"{origen}: {texto}")
@@ -267,6 +295,8 @@ class Informe:
                 self.tabla(a, o, None, i, t)
             return
         fl, fa = d["filas_largas"], d["filas_anchas"]
+        self.revisar_entrada(o, d.get("entrada"))
+        self.revisar_estaciones(o, d.get("estaciones", {}))
         desc = fl.get("descartadas_por_regla", {})
         marc = fl.get("marcadas_por_regla", {})
         est = d.get("estaciones", {})
@@ -443,6 +473,7 @@ class Informe:
         med = d["mediciones"]
         base = med[0]
         pr = d.get("protocolo", {})
+        self.revisar_entrada(o, d.get("entrada"))
         for m in med:
             self.comprobar(o, abs(m["speedup"] - base["mediana_s"] / m["mediana_s"]) < 1e-9,
                            f"el speedup de W = {m['workers']} no es mediana(base) / mediana(W)")
@@ -480,15 +511,17 @@ class Informe:
                    f"por extremo; al lado, el cociente de medianas. Base: {base['workers']} worker(s). "
                    f"Eficiencia = speedup / workers. {d.get('cpus')} CPU, {d.get('go', '')}, {d.get('plataforma', '')}. "
                    f"Silver y gold idénticos para todo W: {'sí' if d.get('identicos') else 'NO'}.")
-        mejor = max(med, key=punto)
+        # El resumen reporta un W fijado de antemano (el máximo medido), no el mejor de la tabla: elegir
+        # el máximo entre configuraciones ruidosas sesga el speedup hacia arriba.
+        fijo = max(med, key=lambda m: m["workers"])
         self.guardar_cifras("benchmark_cargador", d, {
-            "speedup_max": decimal(punto(mejor), 2),
-            "speedup_max_ic": ic(mejor),
-            "speedup_medianas": decimal(mejor["speedup"], 2),
-            "workers_max": entero(mejor["workers"]),
-            "mediana_referencia_s": tiempo(base["mediana_s"]),
-            "mediana_mejor_s": tiempo(mejor["mediana_s"]),
-            "eficiencia_max": pct(punto(mejor) / mejor["workers"], 0),
+            "w": entero(fijo["workers"]),
+            "speedup": decimal(punto(fijo), 2),
+            "speedup_ic": ic(fijo),
+            "speedup_medianas": decimal(fijo["speedup"], 2),
+            "mediana_base_s": tiempo(base["mediana_s"]),
+            "mediana_w_s": tiempo(fijo["mediana_s"]),
+            "eficiencia": pct(punto(fijo) / fijo["workers"], 0),
             "workers": lista([m["workers"] for m in med]),
             "bloque": f"{entero(d.get('bloque_bytes', 0) / 2**20)} MiB",
             "repeticiones": entero(d.get("repeticiones")),
@@ -506,6 +539,9 @@ class Informe:
         pr = d.get("protocolo", {})
         res = d["resumen"]
         det = d.get("determinismo", [])
+        if d.get("datos", {}).get("sintetico"):
+            self.sintetico(o, "gold sintético (datos.sintetico)")
+        self.revisar_entrada(o, d.get("datos", {}).get("ruta"))
         for x in det:
             self.comprobar(o, bool(x.get("identico_bit_a_bit_para_todo_w")),
                            f"experimento {x.get('experimento')}: el resultado NO es idéntico bit a bit para todo W")
@@ -543,20 +579,29 @@ class Informe:
         self.tabla("benchmark_kmeans.md", o, d, "tbl-bench-kmeans", titulo, markdown(t, "llrrrrrrrr"),
                    anchos=[14, 7, 5, 8, 11, 12, 10, 9, 15, 9], nota=nota)
 
+        # W fijo de antemano: el experimento hasta converger (mismo resultado), el máximo de workers
+        # medido y el chunk de la receta si se midió (si no, el primero del protocolo). No el mejor de la
+        # tabla, que sesga el speedup hacia arriba.
         concs = [r for r in res if r["modo"] == "conc" and r.get("speedup")]
-        principal = [r for r in concs if r["experimento"] == "convergencia"] or concs
-        if principal:
-            mejor = max(principal, key=lambda r: r["speedup"]["punto"])
-            sec = next((r for r in res if r["modo"] == "seq" and r["experimento"] == mejor["experimento"]), None)
+        exper = "convergencia" if any(r["experimento"] == "convergencia" for r in concs) else (concs[0]["experimento"] if concs else None)
+        candidatos = [r for r in concs if r["experimento"] == exper]
+        if candidatos:
+            w_max = max(r["workers"] for r in candidatos)
+            chunks = [r["chunk"] for r in candidatos if r["workers"] == w_max]
+            chunk_receta = d.get("receta", {}).get("chunk")
+            orden = [c for c in (pr.get("chunks") or []) if c in chunks] or chunks
+            chunk = chunk_receta if chunk_receta in chunks else orden[0]
+            fijo = next(r for r in candidatos if r["workers"] == w_max and r["chunk"] == chunk)
+            sec = next((r for r in res if r["modo"] == "seq" and r["experimento"] == exper), None)
             self.guardar_cifras("benchmark_kmeans", d, {
-                "experimento": exp.get(mejor["experimento"], mejor["experimento"]),
-                "speedup_max": decimal(mejor["speedup"]["punto"], 2),
-                "speedup_max_ic": f"[{decimal(mejor['speedup']['inferior'], 2)}; {decimal(mejor['speedup']['superior'], 2)}]",
-                "workers_max": entero(mejor["workers"]),
-                "chunk_max": entero(mejor["chunk"]),
-                "mediana_referencia_ms": tiempo(sec["mediana_ms"]) if sec else "—",
-                "mediana_mejor_ms": tiempo(mejor["mediana_ms"]),
-                "eficiencia_max": pct(mejor["eficiencia_por_worker"], 0),
+                "experimento": exp.get(exper, exper),
+                "w": entero(fijo["workers"]),
+                "chunk": entero(fijo["chunk"]),
+                "speedup": decimal(fijo["speedup"]["punto"], 2),
+                "speedup_ic": f"[{decimal(fijo['speedup']['inferior'], 2)}; {decimal(fijo['speedup']['superior'], 2)}]",
+                "mediana_seq_ms": tiempo(sec["mediana_ms"]) if sec else "—",
+                "mediana_w_ms": tiempo(fijo["mediana_ms"]),
+                "eficiencia": pct(fijo["eficiencia_por_worker"], 0),
                 "workers": lista(pr.get("workers") or [r.get("workers") for r in concs]),
                 "chunks": lista(pr.get("chunks") or [r.get("chunk") for r in concs]),
                 "identico": "sí" if det and all(x.get("identico_bit_a_bit_para_todo_w") for x in det) else "no",
@@ -568,37 +613,65 @@ class Informe:
         o = "kmeans.json"
         d = self.leer(o)
         if d is None:
-            self.tabla("kmeans_centroides.md", o, None, "tbl-centroides", "Centroides des-estandarizados")
             self.tabla("kmeans_centroides_z.md", o, None, "tbl-centroides-z", "Centroides estandarizados")
+            self.tabla("kmeans_semillas.md", o, None, "tbl-semillas", "Arranques del K-Means por semilla")
             return
         feats = d["features"]
         tam = d["tamanos"]
         n = d.get("gold", {}).get("n", sum(tam))
         self.comprobar(o, sum(tam) == n, f"la suma de tamaños ({sum(tam)}) ≠ n del gold ({n})")
-        self.comprobar(o, len(d["centroides_des_estandarizados"]) == len(tam) == d.get("k_efectivo", len(tam)),
+        self.comprobar(o, len(d["centroides_estandarizados"]) == len(tam) == d.get("k_efectivo", len(tam)),
                        "centroides, tamaños y k_efectivo no coinciden")
-        base = pd.DataFrame({"Cluster": [entero(i) for i in range(len(tam))], "Filas": [entero(x) for x in tam],
-                             "%": [pct(x / n) for x in tam]})
-        des, z = base.copy(), base.copy()
+        z = pd.DataFrame({"Cluster": [entero(i) for i in range(len(tam))], "Filas": [entero(x) for x in tam],
+                          "%": [pct(x / n) for x in tam]})
         for i, f in enumerate(feats):
-            des[corto(f)] = [decimal(c[i], 2) for c in d["centroides_des_estandarizados"]]
             z[corto(f)] = [decimal(c[i], 3) for c in d["centroides_estandarizados"]]
         paro = ("convergió por tolerancia" if d.get("paro") == "tolerancia" else
                 "llegó al máximo de iteraciones" if d.get("paro") == "max_iter" else f"paro «{d.get('paro')}»")
-        nota = (f"k = {d['k']} (efectivo {d.get('k_efectivo')}), semilla {d.get('semilla')}, {d['iteraciones']} "
-                f"iteraciones ({paro}), inercia {decimal(d['inercia'], 1)}, n = {entero(n)}, "
-                f"{d.get('workers')} workers, chunk {entero(d.get('chunk'))}, clusters vacíos: {d.get('clusters_vacios', 0)}.")
+        nota = (f"k = {d['k']} (efectivo {d.get('k_efectivo')}), semilla elegida {d.get('semilla')}, {d['iteraciones']} "
+                f"iteraciones ({paro}), inercia {decimal(d['inercia'], 1)}, n = {entero(n)}, chunk "
+                f"{entero(d.get('chunk'))}, clusters vacíos: {d.get('clusters_vacios', 0)}. El perfil de cada cluster "
+                "en unidades originales está en la tabla de regímenes: es la media aritmética de sus lecturas, no "
+                "este centroide invertido.")
         al = "rrr" + "r" * len(feats)
         anch = [10, 12, 10] + [68 // len(feats)] * len(feats)
         anch[0] += 100 - sum(anch)
-        self.tabla("kmeans_centroides.md", o, d, "tbl-centroides",
-                   "Centroides des-estandarizados (z-score y log1p invertidos)", markdown(des, al), anchos=anch,
-                   nota=f"{nota} {unidades(feats)} {d.get('nota_des_estandarizacion', '')}")
         self.tabla("kmeans_centroides_z.md", o, d, "tbl-centroides-z",
                    "Centroides en el espacio estandarizado (z-score) en que corre el K-Means", markdown(z, al),
                    anchos=anch, nota=nota)
+
+        arr = d.get("arranques") or []
+        elegido = d.get("arranque_elegido")
+        if arr:
+            mejor = min(range(len(arr)), key=lambda i: (arr[i]["inercia"], arr[i]["semilla"]))
+            self.comprobar(o, elegido is None or elegido == mejor, "arranque_elegido no es el de menor inercia")
+            self.comprobar(o, arr[mejor]["semilla"] == d.get("semilla"), "la semilla elegida no es la del arranque de menor inercia")
+        t = pd.DataFrame([(
+            str(a["semilla"]), decimal(a["inercia"], 1), entero(a["iteraciones"]), a.get("paro", ""),
+            entero(a.get("workers")), tiempo(a.get("ms_kmeanspp")), tiempo(a.get("ms_lloyd")),
+            "**sí**" if i == elegido else "",
+        ) for i, a in enumerate(arr)], columns=["Semilla", "Inercia", "Iteraciones", "Paro", "Workers",
+                                                "k-means++ (ms)", "Lloyd (ms)", "Elegida"])
+        ms = d.get("ms", {})
+        suma = sum((a.get("ms_kmeanspp") or 0) + (a.get("ms_lloyd") or 0) for a in arr)
+        pared = ms.get("arranques")
+        wpc = d.get("workers_por_corrida") or []
+        self.tabla("kmeans_semillas.md", o, d, "tbl-semillas", "Arranques del K-Means: una corrida completa por semilla",
+                   markdown(t, "rrrlrrrc") if arr else "| (sin arranques) |\n|:---|\n| — |",
+                   anchos=[11, 15, 13, 14, 11, 14, 12, 10], nota=
+                   f"{d.get('semillas', len(arr))} semillas desde {d.get('semilla_base')}; criterio: "
+                   f"{d.get('criterio_semillas', 'menor inercia final')}. Paralelismo por semillas: "
+                   f"{d.get('corridas_a_la_vez', '¿?')} corridas a la vez, con {', '.join(str(x) for x in wpc) or '¿?'} "
+                   f"workers cada una ({d.get('workers')} en total). Los {len(arr)} arranques tardaron "
+                   f"{tiempo(pared)} ms de pared frente a {tiempo(suma)} ms de la suma de sus corridas"
+                   + (f" ({decimal(suma / pared, 1)} veces)." if pared else "."))
         self.guardar_cifras("kmeans", d, {
             "k": entero(d["k"]), "k_efectivo": entero(d.get("k_efectivo")), "semilla": str(d.get("semilla")),
+            "semillas": entero(d.get("semillas", len(arr))), "semilla_base": str(d.get("semilla_base")),
+            "corridas_a_la_vez": entero(d.get("corridas_a_la_vez")),
+            "inercia_peor_semilla": decimal(max(a["inercia"] for a in arr), 1) if arr else "—",
+            "ms_arranques_pared": tiempo(pared), "ms_arranques_suma": tiempo(suma),
+            "solapamiento_semillas": decimal(suma / pared, 1) if pared else "—",
             "iteraciones": entero(d["iteraciones"]),
             "paro": (f"convergió por tolerancia en {entero(d['iteraciones'])} iteraciones" if d.get("paro") == "tolerancia"
                      else f"llegó al máximo de {entero(d['iteraciones'])} iteraciones sin converger"),
@@ -620,6 +693,7 @@ class Informe:
                 self.tabla(a, o, None, i, t)
             return
         rg = d["regimenes"]
+        self.revisar_estaciones(o, {e for x in rg for e in x.get("por_estacion", {})})
         n = d.get("gold", {}).get("n", sum(x["tamano"] for x in rg))
         self.comprobar(o, sum(x["tamano"] for x in rg) == n, "la suma de tamaños ≠ n del gold")
         for x in rg:
@@ -709,20 +783,86 @@ class Informe:
                           "Inercia": p["inercia"].map(lambda x: decimal(x, 1)),
                           "Caída frente a k − 1": caida.map(lambda x: "—" if pd.isna(x) else pct(x)),
                           "Iteraciones": p["iteraciones"].map(entero), "Paro": p["paro"]})
+        if "semilla" in p:
+            t.insert(3, "Semilla", p["semilla"].map(str))
         k = d.get("receta", {}).get("k")
-        self.tabla("codo.md", o, d, "tbl-codo", titulo, markdown(t, "rrrrrl"), anchos=[10, 14, 20, 22, 16, 18],
+        self.tabla("codo.md", o, d, "tbl-codo", titulo, markdown(t, "rrr" + ("r" if "semilla" in p else "") + "rrl"),
+                   anchos=([9, 11, 17, 11, 18, 15, 19] if "semilla" in p else [10, 14, 20, 22, 16, 18]),
                    nota=f"n = {lista(p['n'].tolist())} filas. {d.get('nota', '')} k de la receta: {k}.")
         self.guardar_cifras("codo", d, {"k_elegido": entero(k), "k_min": entero(p["k"].min()),
                                         "k_max": entero(p["k"].max())})
 
+    # ----------------------------------------------------------------------- el CSV real
+    def csv_oefa(self) -> None:
+        """Hechos del CSV de OEFA que todavía no escribe ningún comando (spec §4.1).
+
+        csv_oefa.json es una transcripción con su fuente: sale con un aviso PENDIENTE hasta que el
+        notebook 01 (eda_bronze.json) o cmd/cargar los produzcan. Aun así se comprueba su aritmética.
+        """
+        o = "csv_oefa.json"
+        ruta = self.entrada / o
+        titulo = "El CSV de OEFA tal como viene"
+        if not ruta.exists():
+            self.tabla("csv_oefa.md", o, None, "tbl-csv-oefa", titulo)
+            return
+        d = json.loads(ruta.read_text(encoding="utf-8"))
+        h, f = d["hora"], d["filas"]
+        self.comprobar(o, f["un_parametro"] + f["sin_parametro"] == f["datos"],
+                       "filas con un parámetro + sin parámetro ≠ filas de datos")
+        self.comprobar(o, h["sin_hora"] + h["hora_excel"] + h["solo_fecha"] == f["datos"],
+                       "sin hora + hora de Excel + solo fecha ≠ filas de datos")
+        filas = [
+            ("Tamaño y sha256", f"{entero(d['bytes'])} bytes, `{d['sha256_abreviado']}`"),
+            ("Formato", f"{entero(d['columnas'])} columnas, delimitador «{d['delimitador']}», {d['codificacion']}, textos entre comillas"),
+            ("Filas de datos", entero(f["datos"])),
+            ("Filas con un solo parámetro (su columna; el resto en «-»)", f"{entero(f['un_parametro'])} ({pct(f['un_parametro'] / f['datos'])})"),
+            ("Filas sin ningún parámetro (se descartan)", f"{entero(f['sin_parametro'])} ({pct(f['sin_parametro'] / f['datos'])})"),
+            ("Estaciones · evaluaciones · departamentos", f"{entero(d['estaciones'])} · {entero(d['evaluaciones'])} · {entero(d['departamentos'])}"),
+            ("Años", f"{d['anio_desde']}–{d['anio_hasta']} (fecha de corte {d['fecha_corte']})"),
+            ("Hora: falta (NA)", f"{entero(h['sin_hora'])} ({pct(h['sin_hora'] / f['datos'])})"),
+            ("Hora: «1899-12-31 HH:MM» (artefacto de Excel)", entero(h["hora_excel"])),
+            ("Hora: solo fecha", entero(h["solo_fecha"])),
+            ("Grupos sin hora en bloques contiguos de 24", f"{entero(h['grupos_de_24'])} de {entero(h['grupos_sin_hora'])} ({pct(h['grupos_de_24'] / h['grupos_sin_hora'])})"),
+            ("Control: hora = posición en el día + 1", f"{pct(h['proporcion_posicion_mas_1'])} de {entero(h['filas_con_hora'])} filas con hora"),
+            ("Gases en dos unidades (ppb y µg/m³)", f"{', '.join(d['unidades_duplicadas']['gases'])}: {entero(d['unidades_duplicadas']['claves'])} claves con hora"),
+            ("PM10 · PM2,5 horarios", f"{entero(d['volumen_util']['pm10_horario'])} · {entero(d['volumen_util']['pm2_5_horario'])} filas"),
+        ]
+        t = pd.DataFrame(filas, columns=["Característica", "Valor"])
+        partes = [f"<!-- Generado por tablas.py desde generado/{o}. No editar a mano. -->", ""]
+        if d.get("transcrito"):
+            partes += ["::: {.callout-warning title=\"PENDIENTE\"}",
+                       f"Cifras transcritas de {d.get('_fuente', 'la spec')} Se reemplazan por la salida del "
+                       "notebook 01 (`eda_bronze.json`) o de `cmd/cargar` cuando corran sobre el bronze.", ":::", ""]
+        partes += ['::: {#tbl-csv-oefa tbl-colwidths="[50,50]"}', markdown(t, "ll"), "", titulo, ":::", ""]
+        partes += [f"*Nota.* Inspección del archivo descargado el {d.get('descargado', '¿?')}. Las filas de datos se "
+                   "reparten en las tres formas de la hora sin resto, y en filas con y sin parámetro también.", ""]
+        (self.salida / "csv_oefa.md").write_text("\n".join(partes), encoding="utf-8")
+        self.cifras["csv"] = {k: str(v) for k, v in {
+            "filas": entero(f["datos"]),
+            "estaciones": entero(d["estaciones"]),
+            "departamentos": entero(d["departamentos"]),
+            "anios": f"{d['anio_desde']}–{d['anio_hasta']}",
+            "pct_sin_hora": pct(h["sin_hora"] / f["datos"], 0),
+            "pct_grupos_de_24": pct(h["grupos_de_24"] / h["grupos_sin_hora"]),
+            "control_hora": pct(h["proporcion_posicion_mas_1"]),
+            "filas_con_hora": entero(h["filas_con_hora"]),
+            "filas_sin_parametro": entero(f["sin_parametro"]),
+            "columnas": entero(d["columnas"]),
+            "gases_dos_unidades": ", ".join(d["unidades_duplicadas"]["gases"]),
+            "pm10_horario": entero(d["volumen_util"]["pm10_horario"]),
+            "pm2_5_horario": entero(d["volumen_util"]["pm2_5_horario"]),
+        }.items()}
+
     # ----------------------------------------------------------------------- estado y cifras
     def cerrar(self, estricto: bool, final: bool) -> int:
         estado = ["<!-- Generado por tablas.py. No editar a mano. -->", ""]
-        if self.placeholders or self.faltantes or self.problemas:
+        if self.placeholders or self.faltantes or self.problemas or self.sinteticos:
             estado += ["::: {.callout-warning title=\"PENDIENTE: cifras de prueba\"}"]
             if self.placeholders:
                 estado.append("Estos archivos de `generado/` todavía son PLACEHOLDER y sus cifras no son "
                               "resultados sobre el dataset de OEFA: " + ", ".join(f"`{p}`" for p in self.placeholders) + ".")
+            if self.sinteticos:
+                estado.append("\nDatos sintéticos: " + "; ".join(self.sinteticos) + ".")
             if self.faltantes:
                 estado.append("\nFaltan: " + ", ".join(f"`{p}`" for p in self.faltantes) + ".")
             if self.problemas:
@@ -745,8 +885,10 @@ class Informe:
         if (estricto or final) and (self.faltantes or self.problemas):
             print("error: faltan JSON o no cuadran invariantes", file=sys.stderr)
             return 1
-        if final and self.placeholders:
-            print("error (--final): quedan JSON PLACEHOLDER", file=sys.stderr)
+        if final and (self.placeholders or self.sinteticos):
+            for x in self.sinteticos:
+                print(f"sintético: {x}", file=sys.stderr)
+            print("error (--final): quedan JSON PLACEHOLDER o datos sintéticos", file=sys.stderr)
             return 1
         return 0
 
@@ -767,6 +909,8 @@ def main() -> int:
     inf.kmeans()
     inf.regimenes()
     inf.codo()
+    inf.csv_oefa()
+    inf.figuras()
     return inf.cerrar(a.estricto, a.final)
 
 
