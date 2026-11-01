@@ -63,7 +63,7 @@ func DesviacionEstandar(xs []float64) (float64, error) {
 	suma := 0.0
 	for _, x := range xs {
 		d := x - media
-		suma += d * d
+		suma += float64(d * d) // sin FMA: ver noFusionar en secuencial.go
 	}
 	return math.Sqrt(suma / float64(len(xs)-1)), nil
 }

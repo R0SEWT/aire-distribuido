@@ -4,6 +4,7 @@
   "nivel": "absoluto",
   "k": 5,
   "semilla": 42,
+  "semillas": 10,
   "tolerancia": 1e-6,
   "max_iter": 100,
   "workers": 0,

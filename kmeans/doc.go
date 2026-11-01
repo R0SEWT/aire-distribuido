@@ -37,6 +37,20 @@
 //     porque se calculan fila por fila con la estadística de su estación.
 //   - k: cantidad de regímenes.
 //   - semilla: semilla de k-means++ (math/rand con rand.NewSource, como en el TP).
+//   - semillas: cuántos arranques se prueban (0 o ausente = 1, el comportamiento
+//     de antes). Con N, MejorDeSemillas corre k-means++ y Lloyd con semilla,
+//     semilla+1, …, semilla+N-1 y se queda con el de menor inercia final; si dos
+//     empatan bit a bit, con la semilla menor. Lloyd converge a mínimos locales:
+//     en el gold sintético, la semilla 42 sola parte un régimen plantado en dos y
+//     junta otros dos, y 10 semillas lo recuperan (scikit-learn usa n_init = 10).
+//     Es determinista para cualquier W y cualquier orden de ejecución. Las N
+//     corridas son el paralelismo por semillas de la spec §7 y corren a la vez
+//     (cmd/entrenar -paralelas; 0 = automático, ver RepartirSemillas). Medido en
+//     la laptop (Core Ultra 7 255U, 14 hilos, P y E cores) con 10 semillas,
+//     mediana de 5 corridas intercaladas, 510 000 filas sintéticas (102 000 entre
+//     paréntesis): una semilla 0,43 s (0,17); diez en serie con todo el pool
+//     3,16 s (1,01); 2 a la vez 2,60 (0,76); 3 a la vez 2,45 (0,66); 5 a la vez
+//     2,71 (0,62); las 10 a la vez 3,40 (0,82). El automático elige 3.
 //   - tolerancia: criterio de parada; se usa como tol_abs y tol_rel del TP:
 //     max_j ||mu_j(t) - mu_j(t-1)||inf <= tol * (1 + max_j ||mu_j(t-1)||inf).
 //     En el espacio estandarizado los centroides son de orden 1, así que 1e-6

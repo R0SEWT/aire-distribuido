@@ -288,3 +288,122 @@ func TestRangoK(t *testing.T) {
 		}
 	}
 }
+
+func TestEntrenarConUnaSemillaEsLaCorridaDeSiempre(t *testing.T) {
+	// La receta de preparar no trae «semillas»: corre una sola, y el modelo
+	// tiene que ser bit a bit el de k-means++ con la semilla 42 y el Lloyd
+	// concurrente, como antes de que existieran las semillas.
+	op, s := preparar(t, kmeans.NivelAbsoluto)
+	if err := correr(op, &bytes.Buffer{}); err != nil {
+		t.Fatalf("correr: %v", err)
+	}
+	var km salidaKMeans
+	leerJSON(t, op.salida, &km)
+	if km.Semillas != 1 || len(km.Arranques) != 1 || km.Semilla != 42 || km.SemillaBase != 42 || km.ArranqueElegido != 0 {
+		t.Fatalf("semillas %d, arranques %d, semilla %d, base %d, elegido %d",
+			km.Semillas, len(km.Arranques), km.Semilla, km.SemillaBase, km.ArranqueElegido)
+	}
+	d := s.Gold.Datos
+	cent, _, err := kmeans.KMeansPP(d, 5, 42)
+	if err != nil {
+		t.Fatal(err)
+	}
+	r, err := kmeans.Concurrente(d, cent, kmeans.OpcionesConc{
+		Opciones: kmeans.Opciones{K: 5, MaxIter: 100, TolAbs: 1e-6, TolRel: 1e-6}, Workers: 3, Chunk: 250})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if math.Float64bits(km.Inercia) != math.Float64bits(r.Inercia) || km.Iteraciones != r.Iteraciones {
+		t.Errorf("inercia %v en %d iteraciones; la corrida directa da %v en %d", km.Inercia, km.Iteraciones, r.Inercia, r.Iteraciones)
+	}
+	for j, c := range km.CentroidesEstandarizados {
+		for f, v := range c {
+			if math.Float64bits(v) != math.Float64bits(r.Centroide(j)[f]) {
+				t.Fatalf("centroide %d, feature %d: %.17g vs %.17g", j, f, v, r.Centroide(j)[f])
+			}
+		}
+	}
+	if km.CentroidesIniciales != kmeans.HashCentroides(cent) {
+		t.Error("el hash de los centroides iniciales no es el de k-means++ con la semilla 42")
+	}
+}
+
+func TestEntrenarConDiezSemillasRecuperaLosRegimenesPlantados(t *testing.T) {
+	// El caso del óptimo local: con la semilla 42 sola, K-Means parte «polvo» en
+	// dos y junta «limpio» con «moderado». Con 10 semillas se queda con la de
+	// menor inercia, que recupera los cinco regímenes y sus etiquetas.
+	op, s := preparar(t, kmeans.NivelAbsoluto)
+	op.semillas = 10
+	var resumen bytes.Buffer
+	if err := correr(op, &resumen); err != nil {
+		t.Fatalf("correr: %v", err)
+	}
+	var km salidaKMeans
+	leerJSON(t, op.salida, &km)
+	if km.Semillas != 10 || len(km.Arranques) != 10 {
+		t.Fatalf("semillas %d, %d arranques", km.Semillas, len(km.Arranques))
+	}
+	mejor := 0
+	for i, a := range km.Arranques {
+		if a.Semilla != 42+int64(i) {
+			t.Errorf("arranque %d: semilla %d", i, a.Semilla)
+		}
+		if a.Inercia < km.Arranques[mejor].Inercia {
+			mejor = i
+		}
+	}
+	if km.ArranqueElegido != mejor || km.Semilla != km.Arranques[mejor].Semilla ||
+		math.Float64bits(km.Inercia) != math.Float64bits(km.Arranques[mejor].Inercia) {
+		t.Errorf("elegido %d (semilla %d, inercia %v); el de menor inercia es el %d", km.ArranqueElegido, km.Semilla, km.Inercia, mejor)
+	}
+	if !strings.Contains(resumen.String(), "← elegida") {
+		t.Errorf("el resumen no marca la semilla elegida:\n%s", resumen.String())
+	}
+
+	asign := leerAsignaciones(t, op.asignaciones)
+	var rg salidaRegimenes
+	leerJSON(t, op.regimenes, &rg)
+	plantados := map[int]bool{}
+	excede := 0
+	for _, r := range rg.Regimenes {
+		cuenta := map[int]int{}
+		for i, a := range asign {
+			if a == r.Regimen {
+				cuenta[s.Plantado[i]]++
+			}
+		}
+		for p, c := range cuenta {
+			if float64(c) >= 0.95*float64(r.Tamano) {
+				plantados[p] = true
+			}
+		}
+		if r.ECA == kmeans.ECAExcede {
+			excede++
+		}
+	}
+	if len(plantados) != 5 {
+		t.Errorf("con 10 semillas se recuperan %d de 5 regímenes plantados", len(plantados))
+	}
+	if excede != 3 {
+		t.Errorf("%d regímenes exceden el ECA, se plantaron 3 (polvo, combustión y episodio fuerte)", excede)
+	}
+}
+
+func TestEntrenarElFlagSemillasPisaLaReceta(t *testing.T) {
+	op, _ := preparar(t, kmeans.NivelAbsoluto)
+	b, err := os.ReadFile(op.receta)
+	if err != nil {
+		t.Fatal(err)
+	}
+	escribir(t, op.receta, []byte(strings.Replace(string(b), `"k": 5`, `"k": 5, "semillas": 10`, 1)))
+	op.semillas = 2
+	if err := correr(op, &bytes.Buffer{}); err != nil {
+		t.Fatalf("correr: %v", err)
+	}
+	var km salidaKMeans
+	leerJSON(t, op.salida, &km)
+	if km.Semillas != 2 || len(km.Arranques) != 2 || km.Receta.Semillas != 10 {
+		t.Errorf("con -semillas 2 sobre una receta de 10: semillas %d, %d arranques, receta %d",
+			km.Semillas, len(km.Arranques), km.Receta.Semillas)
+	}
+}

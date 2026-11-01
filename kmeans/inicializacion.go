@@ -85,7 +85,7 @@ func actualizarDist2(dist2 []float64, d *Datos, c []float64) {
 		dist := 0.0
 		for f := 0; f < d.D; f++ {
 			delta := x[f] - c[f]
-			dist += delta * delta
+			dist += float64(delta * delta) // sin FMA: ver noFusionar en secuencial.go
 		}
 		if dist < dist2[i] {
 			dist2[i] = dist

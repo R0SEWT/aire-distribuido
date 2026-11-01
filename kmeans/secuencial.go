@@ -86,7 +86,7 @@ func Secuencial(d *Datos, centroidesIniciales []float64, op Opciones) (*Resultad
 // El umbral se calcula con los centroides ANTES de actualizarlos, como en el TP:
 // max_j ||mu_j(t) - mu_j(t-1)||inf <= TolAbs + TolRel * max_j ||mu_j(t-1)||inf.
 func cerrarIteracion(r *Resultado, cent []float64, p Parcial, it int, op Opciones) bool {
-	umbral := op.TolAbs + op.TolRel*maxAbs(cent)
+	umbral := op.TolAbs + float64(op.TolRel*maxAbs(cent))
 	mov := Actualizar(cent, p)
 	r.Vacios = p.Vacios()
 	r.Movimiento = mov
@@ -114,6 +114,15 @@ func maxAbs(xs []float64) float64 {
 
 // masCercano devuelve el índice del centroide más cercano y la distancia
 // euclídea al cuadrado. El empate lo gana el índice menor.
+//
+// noFusionar: en arm64 (el Pixel es un nodo candidato de la PC4) el compilador
+// de Go fusiona a*b + c en una sola instrucción FMA, que redondea una vez en
+// vez de dos y cambia el último bit. Entonces un nodo ARM y uno amd64 darían
+// distancias, asignaciones y parciales distintos para los mismos datos. La
+// especificación de Go garantiza que una conversión explícita float64(a*b)
+// redondea el producto e impide la fusión; por eso todo producto que se suma
+// en este paquete va envuelto así. En amd64 (GOAMD64=v1) no hay fusión y el
+// resultado es el mismo bit a bit, como comprueban los tests contra el TP.
 func masCercano(x, cent []float64, k, dim int) (int, float64) {
 	mejor, mejorDist := 0, math.Inf(1)
 	for j := 0; j < k; j++ {
@@ -121,7 +130,7 @@ func masCercano(x, cent []float64, k, dim int) (int, float64) {
 		dist := 0.0
 		for f := 0; f < dim; f++ {
 			delta := x[f] - c[f]
-			dist += delta * delta
+			dist += float64(delta * delta) // sin FMA: ver noFusionar
 		}
 		if dist < mejorDist {
 			mejor, mejorDist = j, dist

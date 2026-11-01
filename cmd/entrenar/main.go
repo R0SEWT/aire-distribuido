@@ -3,7 +3,8 @@
 //
 // Lee configs/kmeans.json (la receta congelada por la calibración),
 // data/gold/oefa_features.csv y reports/estandarizacion.json (lo que deja
-// cmd/cargar), corre k-means++ y el Lloyd concurrente, y escribe:
+// cmd/cargar), corre k-means++ y el Lloyd concurrente con las semillas de la
+// receta (o de -semillas) y se queda con el de menor inercia, y escribe:
 //
 //   - reports/kmeans.json: centroides estandarizados y des-estandarizados,
 //     tamaños, inercia, iteraciones, paro, k, semilla y metadatos de la máquina;
@@ -36,6 +37,7 @@ type opciones struct {
 	salida, asignaciones, regimenes string
 	codo, codoSalida                string
 	codoN                           int
+	semillas, paralelas             int
 }
 
 type infoGold struct {
@@ -46,8 +48,12 @@ type infoGold struct {
 	Estaciones int    `json:"estaciones"`
 }
 
+// tiempos en ms. Arranques es el tiempo de pared de todas las semillas
+// (k-means++ y Lloyd, en paralelo); Init y Clustering son los del arranque
+// elegido, medidos con los workers que le tocaron.
 type tiempos struct {
 	Carga     float64 `json:"carga"`
+	Arranques float64 `json:"arranques"`
 	Init      float64 `json:"inicializacion"`
 	Clusterin float64 `json:"clustering"`
 	Perfiles  float64 `json:"perfiles"`
@@ -60,9 +66,20 @@ type salidaKMeans struct {
 	Gold            infoGold         `json:"gold"`
 	Estandarizacion string           `json:"estandarizacion"`
 
-	K                   int     `json:"k"`
-	KEfectivo           int     `json:"k_efectivo"`
-	Semilla             int64   `json:"semilla"`
+	K         int `json:"k"`
+	KEfectivo int `json:"k_efectivo"`
+	// Semilla es la del arranque elegido, la que produjo el modelo publicado;
+	// con una sola semilla es la de la receta. SemillaBase es la de la receta:
+	// se probaron SemillaBase, SemillaBase+1, …, SemillaBase+Semillas-1.
+	Semilla           int64             `json:"semilla"`
+	SemillaBase       int64             `json:"semilla_base"`
+	Semillas          int               `json:"semillas"`
+	CriterioSemillas  string            `json:"criterio_semillas"`
+	ArranqueElegido   int               `json:"arranque_elegido"`
+	Arranques         []kmeans.Arranque `json:"arranques"`
+	CorridasALaVez    int               `json:"corridas_a_la_vez"`
+	WorkersPorCorrida []int             `json:"workers_por_corrida"`
+
 	Workers             int     `json:"workers"`
 	Chunk               int     `json:"chunk"`
 	TolAbs              float64 `json:"tol_abs"`
@@ -143,6 +160,8 @@ func main() {
 	flag.StringVar(&op.codo, "codo", "", "rango de k para el codo, p. ej. 2:10; vacío = no se calcula")
 	flag.StringVar(&op.codoSalida, "codo-salida", "reports/codo.json", "inercia por k")
 	flag.IntVar(&op.codoN, "codo-n", 200000, "filas de la submuestra sistemática del codo; 0 = todas")
+	flag.IntVar(&op.semillas, "semillas", 0, "arranques de k-means++ (semilla, semilla+1, …); 0 = los de la receta")
+	flag.IntVar(&op.paralelas, "paralelas", 0, "semillas que corren a la vez; 0 = automático (min(semillas, workers))")
 	flag.CommandLine.Parse(argumentos(os.Args))
 
 	if err := correr(op, os.Stdout); err != nil {
@@ -164,6 +183,13 @@ func correr(op opciones, w io.Writer) error {
 	receta, err := kmeans.LeerReceta(op.receta)
 	if err != nil {
 		return err
+	}
+	if op.semillas < 0 || op.paralelas < 0 {
+		return fmt.Errorf("-semillas y -paralelas no pueden ser negativos (%d, %d)", op.semillas, op.paralelas)
+	}
+	nSemillas := receta.Semillas
+	if op.semillas > 0 {
+		nSemillas = op.semillas
 	}
 	est, err := kmeans.LeerEstandarizacion(op.estandarizacion)
 	if err != nil {
@@ -191,38 +217,32 @@ func correr(op opciones, w io.Writer) error {
 	conc := receta.OpcionesConc()
 
 	if op.codo != "" {
-		puntos, err := kmeans.Codo(g.Datos, kMin, kMax, op.codoN, receta.Semilla, conc)
+		puntos, err := kmeans.Codo(g.Datos, kMin, kMax, op.codoN, receta.Semilla, nSemillas, conc)
 		if err != nil {
 			return err
 		}
 		if err := guardarJSON(op.codoSalida, salidaCodo{Metadatos: meta, Gold: info, Receta: receta,
 			Workers: conc.Workers, Puntos: puntos,
-			Nota: "Inercia con los centroides finales sobre una submuestra sistemática del gold, " +
-				"k-means++ con la semilla de la receta para cada k. La silueta va en la PC4."}); err != nil {
+			Nota: fmt.Sprintf("Inercia con los centroides finales sobre una submuestra sistemática del gold; "+
+				"para cada k, la mejor de %d semillas desde la de la receta, igual que el modelo final. "+
+				"La silueta va en la PC4.", nSemillas)}); err != nil {
 			return err
 		}
 		imprimirCodo(w, puntos, op.codoSalida)
 	}
 
 	t0 = time.Now()
-	cent, kEf, err := kmeans.KMeansPP(g.Datos, receta.K, receta.Semilla)
+	m, err := kmeans.MejorDeSemillas(g.Datos, receta.K, receta.Semilla, nSemillas, conc, op.paralelas)
 	if err != nil {
 		return err
 	}
-	msInit := ms(time.Since(t0))
+	msArranques := ms(time.Since(t0))
+	r, elegido := m.Mejor, m.Arranques[m.Elegido]
+	kEf := elegido.KEfectivo
 	if kEf < receta.K {
 		fmt.Fprintf(os.Stderr, "aviso: k-means++ solo encontró %d puntos distintos; k efectivo %d en vez de %d\n",
 			kEf, kEf, receta.K)
 	}
-	hashInicial := kmeans.HashCentroides(cent)
-	conc.K = kEf
-
-	t0 = time.Now()
-	r, err := kmeans.Concurrente(g.Datos, cent, conc)
-	if err != nil {
-		return err
-	}
-	msClustering := ms(time.Since(t0))
 
 	t0 = time.Now()
 	regs, err := kmeans.Perfilar(g, r.Asignaciones, kEf, est)
@@ -233,8 +253,11 @@ func correr(op opciones, w io.Writer) error {
 
 	s := salidaKMeans{
 		Metadatos: meta, Receta: receta, Gold: info, Estandarizacion: op.estandarizacion,
-		K: receta.K, KEfectivo: kEf, Semilla: receta.Semilla, Workers: conc.Workers, Chunk: conc.Chunk,
-		TolAbs: conc.TolAbs, TolRel: conc.TolRel, MaxIter: conc.MaxIter, CentroidesIniciales: hashInicial,
+		K: receta.K, KEfectivo: kEf, Semilla: elegido.Semilla, SemillaBase: receta.Semilla, Semillas: nSemillas,
+		CriterioSemillas: "menor inercia final; si empatan bit a bit, la semilla menor",
+		ArranqueElegido:  m.Elegido, Arranques: m.Arranques, CorridasALaVez: len(m.Cupos), WorkersPorCorrida: m.Cupos,
+		Workers: conc.Workers, Chunk: conc.Chunk,
+		TolAbs: conc.TolAbs, TolRel: conc.TolRel, MaxIter: conc.MaxIter, CentroidesIniciales: elegido.CentroidesIniciales,
 		Iteraciones: r.Iteraciones, Paro: r.Paro, Movimiento: r.Movimiento, Vacios: r.Vacios,
 		Inercia: r.Inercia, Inercias: r.Inercias, Features: receta.Features,
 	}
@@ -268,8 +291,8 @@ func correr(op opciones, w io.Writer) error {
 	}); err != nil {
 		return err
 	}
-	s.Ms = tiempos{Carga: msCarga, Init: msInit, Clusterin: msClustering, Perfiles: msPerfiles,
-		Total: ms(time.Since(inicio))}
+	s.Ms = tiempos{Carga: msCarga, Arranques: msArranques, Init: elegido.MsKMeansPP, Clusterin: elegido.MsLloyd,
+		Perfiles: msPerfiles, Total: ms(time.Since(inicio))}
 	s.Recursos = kmeans.MedirRecursos()
 	if err := guardarJSON(op.salida, s); err != nil {
 		return err
@@ -385,10 +408,24 @@ func imprimir(w io.Writer, s salidaKMeans, regs []kmeans.Regimen, receta kmeans.
 		strings.Join(feats, ", "), receta.Nivel, s.K, s.Semilla)
 	fmt.Fprintf(w, "modo        concurrente · %d workers · chunk %d · %s · %s\n",
 		s.Workers, s.Chunk, s.Metadatos.Maquina, s.Metadatos.VersionGo)
-	fmt.Fprintf(w, "tiempos     carga %.0f ms · k-means++ %.0f ms · clustering %.0f ms · perfiles %.0f ms · total %.0f ms\n",
-		s.Ms.Carga, s.Ms.Init, s.Ms.Clusterin, s.Ms.Perfiles, s.Ms.Total)
-	fmt.Fprintf(w, "resultado   %d iteraciones (paro=%s) · %d clusters vacíos · inercia %.6e\n\n",
-		s.Iteraciones, s.Paro, s.Vacios, s.Inercia)
+	fmt.Fprintf(w, "semillas    %d arranques (%d…%d) · %d a la vez con %s workers c/u · %.0f ms de pared\n",
+		s.Semillas, s.SemillaBase, s.SemillaBase+int64(s.Semillas)-1, s.CorridasALaVez, rangoCupos(s.WorkersPorCorrida),
+		s.Ms.Arranques)
+	if s.Semillas > 1 {
+		fmt.Fprintf(w, "            %-8s %14s %11s %-10s %10s\n", "semilla", "inercia", "iteraciones", "paro", "ms")
+		for i, a := range s.Arranques {
+			marca := ""
+			if i == s.ArranqueElegido {
+				marca = "  ← elegida (menor inercia)"
+			}
+			fmt.Fprintf(w, "            %-8d %14.6e %11d %-10s %10.0f%s\n",
+				a.Semilla, a.Inercia, a.Iteraciones, a.Paro, a.MsKMeansPP+a.MsLloyd, marca)
+		}
+	}
+	fmt.Fprintf(w, "tiempos     carga %.0f ms · semillas %.0f ms · perfiles %.0f ms · total %.0f ms\n",
+		s.Ms.Carga, s.Ms.Arranques, s.Ms.Perfiles, s.Ms.Total)
+	fmt.Fprintf(w, "resultado   semilla %d · %d iteraciones (paro=%s) · %d clusters vacíos · inercia %.6e\n\n",
+		s.Semilla, s.Iteraciones, s.Paro, s.Vacios, s.Inercia)
 
 	fmt.Fprintf(w, "%-8s %9s %6s", "régimen", "lecturas", "%")
 	for _, f := range receta.Features {
@@ -425,6 +462,17 @@ func imprimir(w io.Writer, s salidaKMeans, regs []kmeans.Regimen, receta kmeans.
 		fmt.Fprintf(w, "  régimen %d  horas %s · estaciones %s\n", r.Regimen, topHoras(r, 3), topEstaciones(r, 3))
 	}
 	fmt.Fprintf(w, "\n→ %s · %s · %s\n", op.salida, op.regimenes, op.asignaciones)
+}
+
+func rangoCupos(c []int) string {
+	lo, hi := c[0], c[0]
+	for _, v := range c {
+		lo, hi = min(lo, v), max(hi, v)
+	}
+	if lo == hi {
+		return strconv.Itoa(lo)
+	}
+	return fmt.Sprintf("%d–%d", lo, hi)
 }
 
 func topHoras(r kmeans.Regimen, n int) string {

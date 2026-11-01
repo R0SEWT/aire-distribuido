@@ -162,7 +162,7 @@ func momentos(x []float64, dim, desde, hasta int) ([]float64, []float64) {
 	for i := desde; i < hasta; i++ {
 		for f := 0; f < dim; f++ {
 			d := x[i*dim+f] - media[f]
-			desv[f] += d * d
+			desv[f] += float64(d * d) // sin FMA: ver noFusionar en secuencial.go
 		}
 	}
 	for f := range desv {

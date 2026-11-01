@@ -33,6 +33,23 @@ func TestDecodificarRecetaLeeTodosLosCampos(t *testing.T) {
 	if r.K != 5 || r.Semilla != 42 || r.Tolerancia != 1e-6 || r.MaxIter != 100 || r.Workers != 0 || r.Chunk != 10000 {
 		t.Errorf("receta leída: %+v", r)
 	}
+	if r.Semillas != 1 {
+		t.Errorf("sin el campo semillas la receta corre una sola, como antes; dio %d", r.Semillas)
+	}
+	r, err = DecodificarReceta(strings.NewReader(strings.Replace(recetaBuena, `"k": 5`, `"k": 5, "semillas": 10`, 1)))
+	if err != nil || r.Semillas != 10 {
+		t.Errorf("semillas = %d, %v; se esperaba 10", r.Semillas, err)
+	}
+}
+
+func TestLaRecetaDelRepoCorreDiezSemillas(t *testing.T) {
+	r, err := LeerReceta("../configs/kmeans.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if r.Semillas != 10 {
+		t.Errorf("la receta provisional pasa a 10 semillas, tiene %d", r.Semillas)
+	}
 }
 
 func TestRecetaOpcionesConc(t *testing.T) {
@@ -67,6 +84,7 @@ func TestRecetaRechazaLoQueNoTieneSentido(t *testing.T) {
 		"tolerancia negativa":   strings.Replace(recetaBuena, `1e-6`, `-1e-6`, 1),
 		"workers negativo":      strings.Replace(recetaBuena, `"workers": 0`, `"workers": -1`, 1),
 		"chunk cero":            strings.Replace(recetaBuena, `"chunk": 10000`, `"chunk": 0`, 1),
+		"semillas negativas":    strings.Replace(recetaBuena, `"k": 5`, `"k": 5, "semillas": -2`, 1),
 		"basura al final":       recetaBuena + ` {}`,
 		"no es JSON":            `features = ["pm10"]`,
 	}
