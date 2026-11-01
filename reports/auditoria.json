@@ -1,24 +1,20 @@
 {
-  "fecha": "2026-11-01 14:05",
+  "fecha": "2026-11-01 15:00",
   "bronze": "1a_Vigilancia y Seguimiento ambiental en la calidad del aire.csv",
   "receta": {
     "features": [
-      "pm10",
-      "fraccion_fina",
-      "viento_velocidad",
-      "humedad"
-    ],
-    "log1p": [
+      "pm2_5",
       "pm10"
     ],
+    "log1p": [],
     "nivel": "absoluto",
-    "k": 5,
+    "k": 3,
     "semilla": 42,
     "semillas": 10,
     "tolerancia": 1e-06,
     "max_iter": 100,
     "workers": 0,
-    "chunk": 10000
+    "chunk": 1000
   },
   "chequeos": [
     {
@@ -74,52 +70,52 @@
     {
       "chequeo": "cabecera del gold",
       "estado": "OK",
-      "detalle": "go ['estacion', 'fecha_hora', 'pm10', 'fraccion_fina', 'viento_velocidad', 'humedad']"
+      "detalle": "go ['estacion', 'fecha_hora', 'pm2_5', 'pm10']"
     },
     {
       "chequeo": "filas del gold (regla 8)",
       "estado": "OK",
-      "detalle": "python 41,991 · go 41,991 · 0 claves en un solo lado"
+      "detalle": "python 64,236 · go 64,236 · 0 claves en un solo lado"
     },
     {
       "chequeo": "valores del gold",
       "estado": "OK",
-      "detalle": "diferencia máxima 1.69e-14 (tolerancia 1e-09); 0 filas fuera"
+      "detalle": "diferencia máxima 2.13e-14 (tolerancia 1e-09); 0 filas fuera"
     },
     {
       "chequeo": "gold desde el silver de Go",
       "estado": "OK",
-      "detalle": "0 claves en un solo lado; diferencia máxima 1.69e-14"
+      "detalle": "0 claves en un solo lado; diferencia máxima 2.13e-14"
     },
     {
       "chequeo": "completas para el gold (total y por estación)",
       "estado": "OK",
-      "detalle": "python 41,991 · go 41991"
+      "detalle": "python 64,236 · go 64236"
     },
     {
       "chequeo": "receta en estandarizacion.json",
       "estado": "OK",
-      "detalle": "go features=['pm10', 'fraccion_fina', 'viento_velocidad', 'humedad'] log1p=['pm10'] nivel=absoluto ddof=0"
+      "detalle": "go features=['pm2_5', 'pm10'] log1p=[] nivel=absoluto ddof=0"
     },
     {
       "chequeo": "n de la estandarización",
       "estado": "OK",
-      "detalle": "python 41,991 · go 41991"
+      "detalle": "python 64,236 · go 64236"
     },
     {
       "chequeo": "medias de la estandarización",
       "estado": "OK",
-      "detalle": "diferencia relativa máxima 3.26e-15"
+      "detalle": "diferencia relativa máxima 2.53e-16"
     },
     {
       "chequeo": "desviaciones de la estandarización",
       "estado": "OK",
-      "detalle": "diferencia relativa máxima 8.88e-16"
+      "detalle": "diferencia relativa máxima 5.68e-16"
     },
     {
       "chequeo": "el modelo se entrenó con este gold",
       "estado": "OK",
-      "detalle": "gold 1a93989d9af8… · kmeans 1a93989d9af8…, regimenes 1a93989d9af8…, codo 1a93989d9af8…"
+      "detalle": "gold ce1fd2a036e1… · kmeans ce1fd2a036e1…, regimenes ce1fd2a036e1…, codo ce1fd2a036e1…"
     },
     {
       "chequeo": "receta de kmeans.json = configs/kmeans.json",
@@ -129,42 +125,42 @@
     {
       "chequeo": "forma de los centroides",
       "estado": "OK",
-      "detalle": "go (5, 4) · k efectivo 5, D 4"
+      "detalle": "go (3, 2) · k efectivo 3, D 2"
     },
     {
       "chequeo": "asignaciones",
       "estado": "OK",
-      "detalle": "0 filas con otro régimen · 0 claves en un solo lado de 41,991"
+      "detalle": "0 filas con otro régimen · 0 claves en un solo lado de 64,236"
     },
     {
       "chequeo": "tamaños",
       "estado": "OK",
-      "detalle": "python [6227, 7004, 7845, 7647, 13268] · go [6227, 7004, 7845, 7647, 13268]"
+      "detalle": "python [47070, 15651, 1515] · go [47070, 15651, 1515]"
     },
     {
       "chequeo": "inercia con los centroides finales",
       "estado": "OK",
-      "detalle": "python 59232.845147643 · go 59232.845147643 (rel 6.1e-16)"
+      "detalle": "python 49658.357931554 · go 49658.357931554 (rel 1.5e-16)"
     },
     {
       "chequeo": "la inercia no crece entre iteraciones",
       "estado": "OK",
-      "detalle": "21 iteraciones, paro «tolerancia», 0 subidas"
+      "detalle": "24 iteraciones, paro «tolerancia», 0 subidas"
     },
     {
       "chequeo": "punto fijo de Lloyd",
       "estado": "OK",
-      "detalle": "máx |media de las filas − centroide| = 7.11e-15 (umbral de paro de Go 2.6e-06, paro «tolerancia»)"
+      "detalle": "máx |media de las filas − centroide| = 1.10e-14 (umbral de paro de Go 5.2e-06, paro «tolerancia»)"
     },
     {
       "chequeo": "scikit-learn desde los centroides de Go",
       "estado": "OK",
-      "detalle": "se mueven 2.22e-15 en 2 iteraciones"
+      "detalle": "se mueven 5.55e-16 en 2 iteraciones"
     },
     {
       "chequeo": "centroides frente a scikit-learn",
-      "estado": "AVISO",
-      "detalle": "máx |Δ| tras emparejar 8.17e-03 (tolerancia 0.001); ARI 0.9962; inercia sklearn/go − 1 = +0.00%. Otro mínimo local de igual calidad: no es un bug"
+      "estado": "OK",
+      "detalle": "máx |Δ| tras emparejar 5.55e-16 (tolerancia 0.001); ARI 1.0000; inercia sklearn/go − 1 = -0.00%"
     },
     {
       "chequeo": "centroides des-estandarizados",
@@ -172,14 +168,24 @@
       "detalle": "diferencia relativa máxima 0.00e+00"
     },
     {
+      "chequeo": "arranque elegido entre las semillas",
+      "estado": "OK",
+      "detalle": "10 arranques (semillas 42–51); elegida la 42, inercia 49658.357932 = la menor; 6 semillas empatan bit a bit en ella; inercias distintas: [49658.357932, 49658.363217]"
+    },
+    {
+      "chequeo": "Lloyd desde los centroides iniciales de Go",
+      "estado": "OK",
+      "detalle": "10 de 10 arranques reproducen la inercia de Go (diferencia relativa máxima 1.5e-16); semilla elegida: máx |Δ centroide| 5.6e-16"
+    },
+    {
       "chequeo": "regimenes.json (perfil, PM medio, ECA, horas, estaciones)",
       "estado": "OK",
-      "detalle": "iguales"
+      "detalle": "iguales; convención de la hora «fin»"
     },
     {
       "chequeo": "codo.json frente a scikit-learn",
       "estado": "OK",
-      "detalle": "inercia de Go / mejor de scikit-learn: máximo 1.000 en k = 3"
+      "detalle": "inercia de Go / mejor de scikit-learn: máximo 1.000 en k = 2"
     },
     {
       "chequeo": "cargador: mismo silver y gold para todo W",
@@ -187,9 +193,19 @@
       "detalle": "identicos=True; 5 valores de W; sha del silver = el auditado"
     },
     {
+      "chequeo": "cargador: el benchmark es de la receta auditada",
+      "estado": "AVISO",
+      "detalle": "el benchmark del cargador (2026-11-01T13:15:42-05:00) corrió con otra receta: gold ≠ el auditado, configs/kmeans.json ≠ el actual; el silver es el mismo. No es un bug: sus tiempos son de esa corrida (bronze → silver → gold con la receta de entonces); conviene repetirlo con la receta final antes de citarlo"
+    },
+    {
       "chequeo": "K-Means: idéntico bit a bit para todo W",
       "estado": "OK",
       "detalle": "convergencia chunk 1000: True; convergencia chunk 10000: True; fijas chunk 1000: True; fijas chunk 10000: True"
+    },
+    {
+      "chequeo": "K-Means: el benchmark es del gold y la receta auditados",
+      "estado": "OK",
+      "detalle": "reports/benchmark_kmeans.json: gold = el auditado; receta igual; inercia de «convergencia» con chunk 1000 frente a kmeans.json: diferencia relativa 0.0e+00"
     }
   ]
 }
