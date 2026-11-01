@@ -154,7 +154,7 @@ func (e *Estandarizacion) Invertir(z []float64, estacion string, dst []float64) 
 		return err
 	}
 	for f := range e.Features {
-		x := z[f]*desv[f] + media[f]
+		x := float64(z[f]*desv[f]) + media[f] // sin FMA: ver noFusionar en secuencial.go
 		if slices.Contains(e.Log1p, e.Features[f]) {
 			x = math.Expm1(x)
 		}

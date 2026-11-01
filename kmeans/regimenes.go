@@ -127,7 +127,7 @@ func Perfilar(g *Gold, asign []int, k int, e *Estandarizacion) ([]Regimen, error
 		case FeaturePM25:
 			sumaPM25[j] += x[iPM25]
 		case OrigenFraccionPorPM10:
-			sumaPM25[j] += x[iFF] * x[iPM10]
+			sumaPM25[j] += float64(x[iFF] * x[iPM10]) // sin FMA: ver noFusionar en secuencial.go
 		}
 		r := &regs[j]
 		r.Tamano++

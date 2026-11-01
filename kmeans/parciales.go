@@ -156,7 +156,7 @@ func Actualizar(cent []float64, p Parcial) (movimiento float64) {
 		s := p.Sumas[j*dim : (j+1)*dim]
 		inv := 1 / float64(p.Conteos[j])
 		for f := 0; f < dim; f++ {
-			nuevo := s[f] * inv
+			nuevo := float64(s[f] * inv) // sin FMA con la resta de abajo: ver noFusionar
 			if delta := math.Abs(nuevo - c[f]); delta > movimiento {
 				movimiento = delta
 			}
