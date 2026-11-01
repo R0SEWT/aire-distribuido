@@ -27,7 +27,7 @@ la receta ya congelada.
 
 ## 2. Decisiones de diseño que cambian lo que sale
 
-### 2.1 Colas largas: log antes del z-score
+### 2.1 Colas largas: log antes del z-score (REFUTADO el 01/11: con log1p la pureza del régimen de episodios cae a 0; el log comprime la cola. La receta final va sin log.)
 
 PM2.5 y PM10 son aproximadamente log-normales. Con el z-score sobre el valor crudo, una lectura de
 500 µg/m³ pesa más que mil lecturas normales y el K-Means pone un centroide ahí. Con `log1p` antes

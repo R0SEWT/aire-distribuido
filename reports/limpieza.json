@@ -103,7 +103,7 @@
   },
   "filas_anchas": {
     "total": 233707,
-    "completas_gold": 41991,
+    "completas_gold": 64236,
     "pm2_5_mayor_pm10": 2,
     "hora_inferida": 217248
   },
@@ -123,10 +123,8 @@
     "viento_velocidad"
   ],
   "features": [
-    "pm10",
-    "fraccion_fina",
-    "viento_velocidad",
-    "humedad"
+    "pm2_5",
+    "pm10"
   ],
   "nivel": "absoluto",
   "estaciones": {
@@ -170,7 +168,7 @@
       "largas_leidas": 83920,
       "largas_procesadas": 16032,
       "anchas": 6696,
-      "completas_gold": 336,
+      "completas_gold": 6672,
       "desde": "2021-12-10T01:00:00-05:00",
       "hasta": "2022-12-31T00:00:00-05:00",
       "ubicacion": {
@@ -238,7 +236,7 @@
       "largas_leidas": 15292,
       "largas_procesadas": 8904,
       "anchas": 1752,
-      "completas_gold": 312,
+      "completas_gold": 1032,
       "desde": "2021-12-03T01:00:00-05:00",
       "hasta": "2022-02-14T00:00:00-05:00",
       "ubicacion": {
@@ -276,7 +274,7 @@
       "largas_leidas": 232458,
       "largas_procesadas": 75134,
       "anchas": 15816,
-      "completas_gold": 0,
+      "completas_gold": 1224,
       "desde": "2020-01-01T01:00:00-05:00",
       "hasta": "2022-01-01T00:00:00-05:00",
       "ubicacion": {
@@ -295,7 +293,7 @@
       "largas_leidas": 5660,
       "largas_procesadas": 1944,
       "anchas": 696,
-      "completas_gold": 0,
+      "completas_gold": 624,
       "desde": "2021-12-03T01:00:00-05:00",
       "hasta": "2022-01-01T00:00:00-05:00",
       "ubicacion": {
@@ -314,7 +312,7 @@
       "largas_leidas": 137546,
       "largas_procesadas": 131555,
       "anchas": 17016,
-      "completas_gold": 15851,
+      "completas_gold": 16896,
       "desde": "2020-01-23T01:00:00-05:00",
       "hasta": "2022-01-01T00:00:00-05:00",
       "ubicacion": {
@@ -333,7 +331,7 @@
       "largas_leidas": 9092,
       "largas_procesadas": 3336,
       "anchas": 1128,
-      "completas_gold": 0,
+      "completas_gold": 1104,
       "desde": "2021-11-15T01:00:00-05:00",
       "hasta": "2022-01-01T00:00:00-05:00",
       "ubicacion": {
@@ -352,7 +350,7 @@
       "largas_leidas": 4350,
       "largas_procesadas": 1056,
       "anchas": 528,
-      "completas_gold": 0,
+      "completas_gold": 264,
       "desde": "2021-12-10T01:00:00-05:00",
       "hasta": "2022-01-01T00:00:00-05:00",
       "ubicacion": {
@@ -371,7 +369,7 @@
       "largas_leidas": 3566,
       "largas_procesadas": 1296,
       "anchas": 432,
-      "completas_gold": 0,
+      "completas_gold": 432,
       "desde": "2021-12-14T01:00:00-05:00",
       "hasta": "2022-01-01T00:00:00-05:00",
       "ubicacion": {
@@ -390,7 +388,7 @@
       "largas_leidas": 84082,
       "largas_procesadas": 52887,
       "anchas": 8212,
-      "completas_gold": 5475,
+      "completas_gold": 7448,
       "desde": "2021-12-08T19:00:00-05:00",
       "hasta": "2023-01-01T00:00:00-05:00",
       "ubicacion": {
@@ -409,7 +407,7 @@
       "largas_leidas": 5296,
       "largas_procesadas": 1200,
       "anchas": 624,
-      "completas_gold": 0,
+      "completas_gold": 288,
       "desde": "2021-12-05T01:00:00-05:00",
       "hasta": "2022-01-01T00:00:00-05:00",
       "ubicacion": {
@@ -424,7 +422,7 @@
       "largas_leidas": 53410,
       "largas_procesadas": 38208,
       "anchas": 5760,
-      "completas_gold": 3696,
+      "completas_gold": 5448,
       "desde": "2022-05-01T01:00:00-05:00",
       "hasta": "2023-01-01T00:00:00-05:00",
       "ubicacion": {
@@ -443,7 +441,7 @@
       "largas_leidas": 83840,
       "largas_procesadas": 47685,
       "anchas": 8247,
-      "completas_gold": 5047,
+      "completas_gold": 8236,
       "desde": "2021-12-09T23:00:00-05:00",
       "hasta": "2023-01-01T00:00:00-05:00",
       "ubicacion": {
@@ -462,7 +460,7 @@
       "largas_leidas": 85246,
       "largas_procesadas": 49584,
       "anchas": 7752,
-      "completas_gold": 4344,
+      "completas_gold": 7584,
       "desde": "2021-12-03T01:00:00-05:00",
       "hasta": "2023-01-01T00:00:00-05:00",
       "ubicacion": {
@@ -500,7 +498,7 @@
       "largas_leidas": 102200,
       "largas_procesadas": 24731,
       "anchas": 3216,
-      "completas_gold": 245,
+      "completas_gold": 264,
       "desde": "2021-12-12T01:00:00-05:00",
       "hasta": "2022-05-30T00:00:00-05:00",
       "ubicacion": {
@@ -576,7 +574,7 @@
       "largas_leidas": 4948,
       "largas_procesadas": 4120,
       "anchas": 600,
-      "completas_gold": 301,
+      "completas_gold": 336,
       "desde": "2021-12-07T01:00:00-05:00",
       "hasta": "2022-01-01T00:00:00-05:00",
       "ubicacion": {
@@ -956,32 +954,32 @@
   "workers": 4,
   "bloque_bytes": 16777216,
   "bloques": 79,
-  "chunk": 10000,
-  "duracion_s": 2.143595526,
+  "chunk": 1000,
+  "duracion_s": 2.140117145,
   "fases_s": {
-    "fusion": 0.431665738,
-    "gold_estandarizacion": 0.008368255,
-    "horas": 0.037302435,
-    "lectura_limpieza_pivot": 2.08525311,
-    "lectura_parseo": 1.969397834,
-    "orden_tabla_ancha": 0.049974161,
-    "pivot": 0.078552841,
-    "salida": 0.163553095,
-    "tabla": 0.049974161
+    "fusion": 0.414683464,
+    "gold_estandarizacion": 0.007934045,
+    "horas": 0.039148292,
+    "lectura_limpieza_pivot": 2.074167344,
+    "lectura_parseo": 1.9530989779999999,
+    "orden_tabla_ancha": 0.058015756,
+    "pivot": 0.081920074,
+    "salida": 0.214697949,
+    "tabla": 0.058015756
   },
   "metadatos": {
-    "momento": "2026-11-01T13:21:40.748603503-05:00",
+    "momento": "2026-11-01T14:32:18.930145136-05:00",
     "maquina": "A019803",
     "version_go": "go1.27.3",
     "gomaxprocs": 14,
     "cpus_logicas": 14,
-    "commit": "53858a093a60e88822c4c46fbbc3a5b2b0e89457",
+    "commit": "11cef5a77afd3cbb8a144725d2e51fdd8158ae8a",
     "arbol_sucio": true
   },
   "configs": {
     "kmeans": {
       "ruta": "configs/kmeans.json",
-      "sha256": "4fdeea524a470ea788548522ce3cbb5fc74965270c3b520f326c858c57f97129",
+      "sha256": "a9e48be6dd31906f53a29209a1a5dc7364b4b2110c3f24c9c025e42a3afa9234",
       "existe": true
     },
     "limpieza": {
