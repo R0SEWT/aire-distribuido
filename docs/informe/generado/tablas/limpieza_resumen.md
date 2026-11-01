@@ -1,20 +1,20 @@
 <!-- Generado por tablas.py desde generado/limpieza.json. No editar a mano. -->
 
 ::: {.callout-warning title="PLACEHOLDER"}
-Cifras de ejemplo: `generado/limpieza.json` todavía es el archivo de muestra. Se reemplaza cuando `cmd/cargar` escriba el real.
+Cifras de prueba: `generado/limpieza.json` sale de correr los comandos de Go sobre la muestra sintética data/sample/oefa_muestra.csv (estaciones SINT-*, una semana), no sobre el CSV de OEFA. Se reemplaza cuando `cmd/cargar` corra sobre el CSV completo.
 :::
 
-::: {#tbl-limpieza-resumen tbl-colwidths="[60,22,18]"}
+::: {#tbl-limpieza-resumen tbl-colwidths="[62,20,18]"}
 | Concepto | Filas | Proporción |
 |:---|---:|---:|
-| Filas largas leídas | 3 600 000 | 100 % |
-| Filas largas procesadas | 3 327 400 | 92,4 % |
-| Filas largas descartadas | 272 600 | 7,6 % |
-| Filas anchas (estación × fecha-hora), regla 7 | 331 200 | 100 % |
-| Filas anchas completas para el modelo, regla 8 | 268 400 | 81,0 % |
-| Lecturas con PM2,5 > PM10 (marcadas) | 2 150 | 0,65 % |
+| Filas largas leídas | 4 236 | 100 % |
+| Filas largas procesadas (llegan al silver) | 4 188 | 98,9 % |
+| Filas largas descartadas | 48 | 1,1 % |
+| Filas anchas (estación × fecha-hora), regla 7 | 648 | 100 % |
+| Filas anchas completas para el modelo (gold), regla 8 | 617 | 95,2 % |
+| Filas anchas con PM2,5 > PM10 (se marcan, no se descartan) | 4 | 0,62 % |
 
 Conservación de filas en la carga
 :::
 
-*Nota.* Fuente: `generado/limpieza.json`, escrito por `cmd/cargar` (commit `PLACEHOLDER`, 2026-11-04). Leídas = procesadas + descartadas, en filas largas. Corrida con 8 workers y bloques de 64 MiB en 38,4 s.
+*Nota.* Fuente: `generado/limpieza.json`, escrito por `cmd/cargar` (el JSON no registra commit ni fecha). Leídas = procesadas + descartadas, en filas largas. Archivo `data/sample/oefa_muestra.csv` (722 035 bytes, delimitador «;», con BOM), 4 workers, 1 bloque(s) de 64 MiB, 0,0105 s.

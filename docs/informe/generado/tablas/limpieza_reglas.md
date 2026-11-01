@@ -1,21 +1,28 @@
 <!-- Generado por tablas.py desde generado/limpieza.json. No editar a mano. -->
 
 ::: {.callout-warning title="PLACEHOLDER"}
-Cifras de ejemplo: `generado/limpieza.json` todavía es el archivo de muestra. Se reemplaza cuando `cmd/cargar` escriba el real.
+Cifras de prueba: `generado/limpieza.json` sale de correr los comandos de Go sobre la muestra sintética data/sample/oefa_muestra.csv (estaciones SINT-*, una semana), no sobre el CSV de OEFA. Se reemplaza cuando `cmd/cargar` corra sobre el CSV completo.
 :::
 
-::: {#tbl-limpieza-reglas tbl-colwidths="[6,52,14,14,14]"}
-| N.º | Regla | Descartadas | % de leídas | Marcadas |
-|:---|:---|---:|---:|---:|
-| 1 | Solo lecturas con Periodo horario | 240 000 | 6,67 % | 0 |
-| 2 | Fecha y hora parseables y dentro del rango del dataset | 1 200 | 0,03 % | 0 |
-| 3 | Valor numérico; sin negativos (salvo temperatura) ni centinelas | 18 500 | 0,51 % | 0 |
-| 4 | Dentro del rango físico del parámetro (configs/limpieza.json) | 3 100 | 0,09 % | 0 |
-| 5 | Duplicados por (estación, parámetro, fecha-hora): exactos se descartan, con valor distinto se marcan y se conserva el primero | 9 800 | 0,27 % | 450 |
-| 6 | Una sola unidad por parámetro: las filas convertidas se cuentan como marcadas | 0 | 0,00 % | 120 000 |
-|  | **Total** | **272 600** | **7,57 %** | **120 450** |
+::: {#tbl-limpieza-reglas tbl-colwidths="[8,28,33,11,10,10]"}
+| Spec | Regla | Qué descarta | Descartadas | % de leídas | Marcadas |
+|:---|:---|:---|---:|---:|---:|
+| — | `columnas` | La fila no tiene tantos campos como la cabecera | 2 | 0,05 % | — |
+| — | `estacion` | Estación vacía | 1 | 0,02 % | — |
+| 1 | `periodo` | El periodo no es horario (diario, mensual…) | 15 | 0,35 % | — |
+| — | `parametro` | Parámetro sin mapeo a un canónico en configs/limpieza.json | 5 | 0,12 % | — |
+| 2 | `fecha` | Fecha y hora no parseables con ningún formato | 3 | 0,07 % | — |
+| 2 | `fecha_fuera_de_rango` | Fecha fuera del rango configurado | 2 | 0,05 % | — |
+| 3 | `valor_no_numerico` | Valor vacío, texto, NaN o infinito | 3 | 0,07 % | — |
+| 3 | `centinela` | Código del equipo (−999, 9999…) | 3 | 0,07 % | — |
+| 6 | `unidad` | Unidad que no figura para ese parámetro | 2 | 0,05 % | — |
+| 3 | `negativo` | Negativo en un parámetro que no los admite | 2 | 0,05 % | — |
+| 4 | `fuera_de_rango` | Fuera del rango físico del parámetro | 3 | 0,07 % | — |
+| 5 | `duplicado_exacto` | Misma (estación, parámetro, fecha-hora) y mismo valor | 4 | 0,09 % | — |
+| 5 | `duplicado_valor_distinto` | Misma clave con otro valor: se descarta el repetido y se conserva el primero | 3 | 0,07 % | 3 |
+|  |  | **Total** | **48** | **1,13 %** | **3** |
 
-Filas largas descartadas y marcadas por regla de limpieza
+Filas largas descartadas y marcadas por regla, en el orden de la cascada
 :::
 
-*Nota.* Fuente: `generado/limpieza.json`, escrito por `cmd/cargar` (commit `PLACEHOLDER`, 2026-11-04). Las marcadas se conservan (duplicados con valor distinto, unidades convertidas). Las reglas 7 y 8 (pivot y completitud) actúan sobre filas anchas: ver la tabla de conservación.
+*Nota.* Fuente: `generado/limpieza.json`, escrito por `cmd/cargar` (el JSON no registra commit ni fecha). Cada fila descartada se cuenta en la primera regla que falla (cascada de `datos/bloque.go`), así que la suma no tiene solapes. «Spec» es el número de regla de la @tbl-reglas; «—» son controles de estructura. Marcadas: celdas cuyo valor conservado tuvo un duplicado con otro valor (se conservan). Fuera de rango por parámetro: Humedad 1; PM2,5 1; Viento 1.

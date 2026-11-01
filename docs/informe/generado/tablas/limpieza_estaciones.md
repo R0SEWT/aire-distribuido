@@ -1,20 +1,18 @@
 <!-- Generado por tablas.py desde generado/limpieza.json. No editar a mano. -->
 
 ::: {.callout-warning title="PLACEHOLDER"}
-Cifras de ejemplo: `generado/limpieza.json` todavía es el archivo de muestra. Se reemplaza cuando `cmd/cargar` escriba el real.
+Cifras de prueba: `generado/limpieza.json` sale de correr los comandos de Go sobre la muestra sintética data/sample/oefa_muestra.csv (estaciones SINT-*, una semana), no sobre el CSV de OEFA. Se reemplaza cuando `cmd/cargar` corra sobre el CSV completo.
 :::
 
-::: {#tbl-limpieza-estaciones}
-| Estación | Departamento | Desde | Hasta | Filas anchas | Completas | % completas |
-|:---|:---|:---|:---|---:|---:|---:|
-| PH-01 | Lima | 2019-01-01 | 2024-06-30 | 66 000 | 58 100 | 88,0 % |
-| PH-02 | Callao | 2019-03-15 | 2024-06-30 | 62 500 | 55 200 | 88,3 % |
-| PH-03 | Junín | 2020-01-01 | 2024-06-30 | 55 800 | 40 300 | 72,2 % |
-| PH-04 | Pasco | 2020-06-01 | 2024-06-30 | 48 900 | 39 800 | 81,4 % |
-| PH-05 | Moquegua | 2018-07-01 | 2024-06-30 | 52 000 | 44 000 | 84,6 % |
-| PH-06 | Arequipa | 2021-01-01 | 2024-06-30 | 46 000 | 31 000 | 67,4 % |
+::: {#tbl-limpieza-estaciones tbl-colwidths="[17,12,10,10,8,8,9,13,13]"}
+| Estación | Departamento | Largas leídas | Procesadas | Anchas | Gold | % gold | Desde | Hasta |
+|:---|:---|---:|---:|---:|---:|---:|:---|:---|
+| SINT-A Lima Norte | Lima | 1 364 | 1 339 | 168 | 165 | 98,2 % | 2024-03-04 | 2024-03-10 |
+| SINT-B Arequipa | Arequipa | 1 178 | 1 173 | 168 | 166 | 98,8 % | 2024-03-04 | 2024-03-10 |
+| SINT-C Junín | Junín | 853 | 850 | 144 | 131 | 91,0 % | 2024-03-04 | 2024-03-10 |
+| SINT-D Ucayali | Ucayali | 838 | 826 | 168 | 155 | 92,3 % | 2024-03-04 | 2024-03-10 |
 
-Filas anchas, completas para el modelo y rango de fechas por estación
+Filas por estación: largas leídas y procesadas, anchas, completas para el modelo y rango de fechas
 :::
 
-*Nota.* Fuente: `generado/limpieza.json`, escrito por `cmd/cargar` (commit `PLACEHOLDER`, 2026-11-04).
+*Nota.* Fuente: `generado/limpieza.json`, escrito por `cmd/cargar` (el JSON no registra commit ni fecha). Gold: filas anchas con todas las features de la receta (regla 8). Desde y hasta: primera y última hora con fila ancha, en hora de Lima. Una estación con lecturas y ninguna fila procesada aparece igual, con ceros.

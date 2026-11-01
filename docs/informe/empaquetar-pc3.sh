@@ -29,9 +29,10 @@ mapfile -t codigos < <(sed -n 's/^[[:space:]]\{1,\}codigo:[[:space:]]*\(U[0-9]\{
 [ "${#codigos[@]}" -eq 3 ] || echo "aviso: equipo tiene ${#codigos[@]} códigos en _quarto.yml" >&2
 
 problemas=()
-# 1. Ninguna cifra de ejemplo: tablas.py --estricto falla si queda un PLACEHOLDER o un invariante roto.
-if python3 -c 'import pandas' 2>/dev/null; then tablas=(python3 tablas.py --estricto); else tablas=(uv run --quiet tablas.py --estricto); fi
-"${tablas[@]}" >/dev/null 2>&1 || problemas+=("quedan cifras PLACEHOLDER o invariantes sin cuadrar (python3 tablas.py --estricto)")
+# 1. Ninguna cifra de prueba: tablas.py --final falla si queda un PLACEHOLDER, falta un JSON o un
+#    invariante no cuadra.
+if python3 -c 'import pandas' 2>/dev/null; then tablas=(python3 tablas.py --final); else tablas=(uv run --quiet tablas.py --final); fi
+"${tablas[@]}" >/dev/null 2>&1 || problemas+=("quedan cifras PLACEHOLDER o invariantes sin cuadrar (python3 tablas.py --final)")
 # 2. Ningún aviso PENDIENTE en las fuentes.
 n="$(cat informe.qmd secciones/*.qmd _participacion.md | grep -c 'title="PENDIENTE' || true)"
 [ "$n" -eq 0 ] || problemas+=("quedan $n avisos PENDIENTE en las fuentes (grep -n 'title=\"PENDIENTE' secciones/*.qmd)")

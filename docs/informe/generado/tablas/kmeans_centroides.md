@@ -1,19 +1,19 @@
 <!-- Generado por tablas.py desde generado/kmeans.json. No editar a mano. -->
 
 ::: {.callout-warning title="PLACEHOLDER"}
-Cifras de ejemplo: `generado/kmeans.json` todavía es el archivo de muestra. Se reemplaza cuando `cmd/entrenar` escriba el real.
+Cifras de prueba: `generado/kmeans.json` sale de correr los comandos de Go sobre la muestra sintética data/sample/oefa_muestra.csv (estaciones SINT-*, una semana), no sobre el CSV de OEFA. Se reemplaza cuando `cmd/entrenar` corra sobre el CSV completo.
 :::
 
-::: {#tbl-centroides}
+::: {#tbl-centroides tbl-colwidths="[10,12,10,17,17,17,17]"}
 | Cluster | Filas | % | PM10 | Fracción fina | Viento | Humedad |
 |---:|---:|---:|---:|---:|---:|---:|
-| 0 | 92 000 | 34,3 % | 22,00 | 0,45 | 3,56 | 66,60 |
-| 1 | 71 500 | 26,6 % | 32,50 | 0,53 | 1,36 | 87,90 |
-| 2 | 52 300 | 19,5 % | 51,80 | 0,32 | 2,92 | 63,60 |
-| 3 | 38 100 | 14,2 % | 72,90 | 0,66 | 1,14 | 79,30 |
-| 4 | 14 500 | 5,4 % | 120,60 | 0,26 | 2,63 | 58,40 |
+| 0 | 125 | 20,3 % | 27,15 | 0,54 | 2,20 | 81,65 |
+| 1 | 110 | 17,8 % | 64,11 | 0,43 | 2,31 | 84,42 |
+| 2 | 142 | 23,0 % | 54,86 | 0,54 | 1,44 | 52,37 |
+| 3 | 123 | 19,9 % | 61,92 | 0,63 | 3,37 | 80,91 |
+| 4 | 117 | 19,0 % | 48,06 | 0,47 | 3,41 | 53,87 |
 
-Centroides des-estandarizados: media de cada feature en su unidad original
+Centroides des-estandarizados (z-score y log1p invertidos)
 :::
 
-*Nota.* Fuente: `generado/kmeans.json`, escrito por `cmd/entrenar` (commit `PLACEHOLDER`, 2026-11-04). k = 5, semilla 2024, 23 iteraciones (convergió), inercia 412 345,6, n = 268 400. Receta en `configs/kmeans.json`. Unidades: PM10 en µg/m³; Viento en m/s; Humedad en %.
+*Nota.* Fuente: `generado/kmeans.json`, escrito por `cmd/entrenar` (commit `94d4037`, 2026-11-01, máquina A019803). k = 5 (efectivo 5), semilla 42, 28 iteraciones (convergió por tolerancia), inercia 1 257,3, n = 617, 14 workers, chunk 10 000, clusters vacíos: 0. Unidades: PM10 en µg/m³; Viento en m/s; Humedad en %. Centroides llevados a unidades originales invirtiendo el z-score y luego log1p (reports/estandarizacion.json). En las features con log1p el centroide invertido es la media de los logaritmos llevada de vuelta (del orden de una media geométrica), menor que la media aritmética; la media aritmética de cada régimen está en reports/regimenes.json (perfil).

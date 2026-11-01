@@ -1,19 +1,17 @@
 <!-- Generado por tablas.py desde generado/benchmark_cargador.json. No editar a mano. -->
 
 ::: {.callout-warning title="PLACEHOLDER"}
-Cifras de ejemplo: `generado/benchmark_cargador.json` todavía es el archivo de muestra. Se reemplaza cuando `cmd/benchmark -parte cargador` escriba el real.
+Cifras de prueba: `generado/benchmark_cargador.json` sale de correr los comandos de Go sobre la muestra sintética data/sample/oefa_muestra.csv (estaciones SINT-*, una semana), no sobre el CSV de OEFA. Se reemplaza cuando `cmd/cargar -bench` corra sobre el CSV completo.
 :::
 
-::: {#tbl-bench-cargador tbl-colwidths="[16,10,12,14,12,24,12]"}
-| Modo | Workers | Bloque | Mediana (s) | Speedup | IC 95 % | Eficiencia |
-|:---|---:|---:|---:|---:|---:|---:|
-| conc. | 1 | 64 MiB | 182,000 | 1,00 | [0,98; 1,02] | 100 % |
-| conc. | 2 | 64 MiB | 95,100 | 1,91 | [1,88; 1,95] | 96 % |
-| conc. | 4 | 64 MiB | 51,300 | 3,55 | [3,48; 3,61] | 89 % |
-| conc. | 8 | 64 MiB | 30,200 | 6,03 | [5,92; 6,13] | 75 % |
-| conc. | 11 | 64 MiB | 26,400 | 6,89 | [6,77; 7,01] | 63 % |
+::: {#tbl-bench-cargador tbl-colwidths="[10,34,13,11,12,20]"}
+| Workers | Tiempos (s) | Mediana (s) | Speedup | Eficiencia | sha256 del gold |
+|---:|:---|---:|---:|---:|:---|
+| 1 | 0,0105; 0,00764; 0,00583 | 0,00764 | 1,00 | 100 % | `ddf7ae68f071` |
+| 2 | 0,00652; 0,00852; 0,00943 | 0,00852 | 0,90 | 45 % | `ddf7ae68f071` |
+| 4 | 0,00699; 0,00627; 0,0109 | 0,00699 | 1,09 | 27 % | `ddf7ae68f071` |
 
-Tiempo y speedup del cargador concurrente sobre el CSV completo
+Tiempo y speedup del cargador concurrente
 :::
 
-*Nota.* Fuente: `generado/benchmark_cargador.json`, escrito por `cmd/benchmark -parte cargador` (commit `PLACEHOLDER`, 2026-11-04). Mediana de 5 repeticiones tras 1 de calentamiento, en PLACEHOLDER (11 CPU lógicas, go1.26.x). Speedup contra workers=1; intervalo bootstrap del cociente de medianas con 2 000 réplicas. Eficiencia = speedup / workers. Modo: sec. = secuencial, conc. = concurrente.
+*Nota.* Fuente: `generado/benchmark_cargador.json`, escrito por `cmd/cargar -bench` (2026-11-01, máquina A019803). Carga completa (lectura, limpieza, pivot y gold, sin escribir los CSV) de `data/sample/oefa_muestra.csv` (4 236 filas largas, 1 bloque(s) de 64 MiB). 3 repeticiones por W, orden intercalado: en cada repetición se corre cada W una vez, en el orden de la lista. Speedup = mediana con 1 worker(s) / mediana con W; el JSON no trae intervalo de confianza. 14 CPU, go1.27.3, linux/amd64. Silver y gold idénticos para todo W: sí.

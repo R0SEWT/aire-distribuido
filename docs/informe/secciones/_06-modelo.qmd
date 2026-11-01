@@ -94,10 +94,7 @@ func Actualizar(cent []float64, p Parcial) (movimiento float64)
 La versión de una máquina (PC3) y la distribuida (PC4) ejecutan **el mismo código**: solo cambia
 quién llama a `Parciales`, un worker sobre un chunk o un nodo sobre su partición.
 
-::: {.callout-warning title="PENDIENTE"}
-Confirmar las firmas contra `kmeans/` cuando se fusione (rama del K-Means) y citar el archivo y las
-líneas.
-:::
+Las tres funciones están en `kmeans/parciales.go`.
 
 **Topología.** Estrella: el coordinador (la API de la parte C) y $K$ nodos de cómputo, cada uno en
 su contenedor. **El nodo se conecta al coordinador, nunca al revés**: así puede unirse un nodo que no
@@ -149,11 +146,17 @@ diferencia entre los dos es el costo de coordinar. El protocolo de la barrera (n
 timeout y un nodo que puede caerse) se modela en Promela y se verifica con Spin en la PC4: que no
 haya deadlock y que toda iteración termine o aborte.
 
+La @fig-secuencia muestra una iteración: el coordinador manda los centroides, espera los
+parciales de todos los nodos (la barrera) y recién entonces actualiza.
+
+![Una iteración del K-Means distribuido: `ITERAR`, `PARCIAL`, la barrera y el timeout](../diagramas/secuencia-iteracion.png){#fig-secuencia width=15cm}
+
+:::: {si-falta="../diagramas/secuencia-iteracion.png"}
 ::: {.callout-warning title="PENDIENTE"}
-Diagrama de secuencia de una iteración (coordinador, dos nodos, `ITERAR`/`PARCIAL`, barrera,
-timeout), si `docs/diagramas/` produce uno. Se incluye como figura con su aviso `si-falta`, igual
-que la arquitectura.
+Falta `docs/diagramas/secuencia-iteracion.png` (lo genera `docs/diagramas/renderizar.sh` desde
+`secuencia-iteracion.mmd`).
 :::
+::::
 
 ### Regímenes frente al ECA y al INCA {#sec-eca-inca}
 
