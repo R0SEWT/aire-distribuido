@@ -411,3 +411,30 @@ func TestActualizarConservaElVacioYDevuelveElMayorDesplazamiento(t *testing.T) {
 		t.Error("con el mismo parcial los centroides ya no se mueven")
 	}
 }
+
+func TestConcurrenteConW1YW8EsIdenticoSobreElGoldSintetico(t *testing.T) {
+	// Lo mismo que el test estrella del TP, sobre datos con la forma del gold de
+	// OEFA (4 features estandarizadas, 3 000 filas) y el chunk fijo.
+	s, err := GoldSintetico(OpcionesSintetico{Features: featuresPrueba, Log1p: []string{"pm10"},
+		Nivel: NivelAbsoluto, Estaciones: 6, Horas: 500, Ruido: 0.3, Semilla: 11})
+	if err != nil {
+		t.Fatalf("GoldSintetico: %v", err)
+	}
+	d := s.Gold.Datos
+	cent, _, err := KMeansPP(d, 5, 42)
+	if err != nil {
+		t.Fatalf("KMeansPP: %v", err)
+	}
+	op := OpcionesConc{Opciones: Opciones{K: 5, MaxIter: 100, TolAbs: 1e-6, TolRel: 1e-6}, Chunk: 128}
+	op.Workers = 1
+	uno, err := Concurrente(d, cent, op)
+	if err != nil {
+		t.Fatalf("Concurrente W=1: %v", err)
+	}
+	op.Workers = 8
+	ocho, err := Concurrente(d, cent, op)
+	if err != nil {
+		t.Fatalf("Concurrente W=8: %v", err)
+	}
+	mismoResultado(t, "W=8 contra W=1", ocho, uno)
+}
