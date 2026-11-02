@@ -41,9 +41,9 @@ productor ─ índices de bloques (B bytes) ─▶ W workers: unir multilínea, 
   concurrente.
 - **Workers.** W goroutines. Cada una une las líneas de un registro multilínea (una cantidad impar de
   comillas), parsea y aplica las reglas que se deciden por fila, sin estado compartido ni `Mutex`:
-  búfer, cachés y tablas son del worker.
+  búfer, cachés y tablas son del worker (@lst-cargador-pool).
 - **Recolector y cosedora.** Recibe los parciales en cualquier orden y los fusiona **en orden de
-  índice de bloque**, de modo que el resultado no depende de W. Si un registro multilínea quedó
+  índice de bloque**, de modo que el resultado no depende de W (@lst-cargador-orden). Si un registro multilínea quedó
   abierto en el borde de un bloque, la cosedora rehace el siguiente bloque desde su inicio, en serie.
 - **Horas.** Con todos los días ya completos, una fase serial da la hora por posición y aplica las
   reglas que se deciden por día (`hora`, `bloque_en_cero`, el periodo «-»).
@@ -63,7 +63,10 @@ En cada iteración, los centroides son de solo lectura y cada worker escribe sol
 $k \times D$, conteos $k$ e inercia) **del chunk que le tocó**; no hay `Mutex` en el bucle caliente.
 La única sincronización es la **barrera** al final de cada iteración (`sync.WaitGroup`). La
 reducción suma los parciales **en orden de chunk**, no de worker; por eso el resultado es idéntico
-bit a bit para cualquier número de workers con el chunk fijo.
+bit a bit para cualquier número de workers con el chunk fijo. El pool, la iteración con su barrera y
+la reducción están, copiados del código, en el @lst-kmeans-pool, el @lst-kmeans-iter y el
+@lst-fusionar
+(@sec-evidencias).
 
 Por encima de ese pool corre un segundo nivel de paralelismo: las semillas. `cmd/entrenar` lanza
 varias corridas completas a la vez, cada una con su parte de los workers, y se queda con la de menor

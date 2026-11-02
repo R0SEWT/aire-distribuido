@@ -12,11 +12,27 @@ siete veces al año [@minam2017eca]. La Resolución Ministerial N.° 181-2016-MI
 Calidad del Aire (INCA), que traduce las concentraciones a cuatro bandas (buena, moderada, mala y
 umbral de cuidado) para comunicarlas a la población [@minam2016inca]. Ver la @sec-eca-inca.
 
-::: {.callout-warning title="PENDIENTE"}
-Un párrafo sobre el efecto en la salud (enfermedad respiratoria, población vulnerable) con una
-fuente citable: OMS o MINSA, agregada a `referencias.bib` con su DOI o URL oficial. Sin cifras de
-salud que no tengan fuente.
+::: {.callout-note title="Borrador generado con IA, para revisión de Rody"}
+Párrafo de salud redactado por un agente de Claude Code el 02/11. Las frases de la OMS se leyeron en
+sus páginas (guía y comunicado del 22/09/2021). Los niveles de la guía (5 y 15 µg/m³ de PM2,5; 15 y
+45 de PM10) la OMS los publica como imagen y su PDF no se pudo descargar: se cotejaron con la tabla
+que reproduce la declaración de COMEAP (gov.uk). Cotejarlos una vez con la tabla del PDF de la OMS y
+borrar este aviso.
 :::
+
+Según la Organización Mundial de la Salud (OMS), tanto el PM10 como el PM2,5 penetran hasta lo
+profundo de los pulmones, y el PM2,5 puede pasar al torrente sanguíneo; sus efectos son sobre todo
+cardiovasculares y respiratorios, y alcanzan a otros órganos [@oms2021comunicado]. La contaminación
+del aire es un factor de riesgo de cardiopatía isquémica, accidente cerebrovascular, enfermedad
+pulmonar obstructiva crónica, asma y cáncer, y se le atribuyen millones de muertes y de años de vida
+saludable perdidos [@oms2021guias]. En 2021 la OMS bajó los niveles de su guía para el material
+particulado: 15 µg/m³ de PM2,5 y 45 µg/m³ de PM10 como promedio de 24 horas (que no debería
+superarse más de 3 o 4 días al año), y 5 y 15 µg/m³ como media anual [@oms2021guias]. El ECA peruano
+de 24 horas es más de tres veces el nivel de la guía para el PM2,5 y más del doble para el PM10: un
+día que cumple la norma puede estar lejos de lo que recomienda la OMS. Por eso este informe habla de
+«exceder el ECA», que es lo que la norma permite evaluar, y no de «aire seguro». Y por eso el
+enunciado pone como ejemplo de impacto avisar a las personas con enfermedades respiratorias: son las
+primeras a las que una alerta les sirve.
 
 ## El dato: la red de vigilancia de OEFA
 
@@ -41,10 +57,10 @@ habla de 34) en {{< meta cifras.limpieza.n_departamentos >}} departamentos, con 
 {{< meta cifras.limpieza.anios >}}; solo {{< meta cifras.limpieza.n_estaciones_con_datos >}} tienen
 lecturas horarias válidas (@tbl-csv-oefa).
 
-::: {.callout-warning title="PENDIENTE"}
-Junto a qué actividad fiscalizada está cada estación (las 19 evaluaciones del archivo), desde el EDA
-(notebook 01, `reports/eda_criba.md`).
-:::
+Cada estación mide junto a una actividad fiscalizada: minas, refinerías, un complejo metalúrgico,
+agroindustrias, ladrilleras, zonas industriales y un corredor vial. La
+@tbl-estaciones-actividad lo dice estación por estación, con su tipo de serie y cuántas de sus horas
+llegan al modelo (@sec-procedencia).
 
 ## La pregunta de impacto social {#sec-pregunta}
 

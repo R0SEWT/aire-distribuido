@@ -1,38 +1,47 @@
 # Resumen {.unnumbered}
 
-::: {.callout-warning title="PENDIENTE"}
-Redactar al final (vie 06/11), entre 200 y 250 palabras: problema, pregunta de impacto, datos,
-qué se construyó en Go y qué salió. El borrador de abajo ya toma sus cifras de
-`generado/cifras.yml`; si se reescribe, las cifras siguen yendo como
-`{{</* meta cifras.grupo.clave */>}}`, nunca a mano. Revisar también el título de la carátula cuando
-la pregunta esté elegida (mar 03/11).
+::: {.callout-note title="Borrador generado con IA, para revisión de Rody"}
+Redactado por un agente de Claude Code (Claude Opus 5.5) el 02/11. Todas las cifras van con el
+shortcode `meta` desde `generado/cifras.yml`; ninguna está escrita a mano. Tiene unas 400 palabras:
+revisar que quepa en una página y que el título de la carátula siga la pregunta elegida. Borrar este aviso al aprobarlo:
+`empaquetar-pc3.sh` no arma la entrega mientras quede.
 :::
 
-El Organismo de Evaluación y Fiscalización Ambiental (OEFA) publica las lecturas horarias de su red
-de vigilancia de la calidad del aire: material particulado, gases y meteorología de sus estaciones,
-en un CSV de 1,3 GB con un parámetro por fila [@oefa2026aire]. Este primer entregable del Trabajo
-Final carga ese archivo en Go de forma concurrente ({{< meta cifras.limpieza.filas_largas_leidas >}}
-filas leídas, {{< meta cifras.limpieza.filas_largas_descartadas >}} descartadas por las reglas de
-limpieza, entre ellas los días enteros en cero de equipos que no midieron), reconstruye la hora del
-{{< meta cifras.limpieza.pct_hora_inferida >}} de las lecturas por su posición en el día, lo pivota a
-{{< meta cifras.limpieza.filas_anchas >}} horas-estación y deja
-{{< meta cifras.limpieza.filas_completas >}} completas para el modelo, de
-{{< meta cifras.limpieza.n_estaciones_gold >}} estaciones. Sobre ellas, un K-Means
-paralelo con goroutines, portado del Trabajo Parcial, identifica
-{{< meta cifras.kmeans.k >}} regímenes de contaminación que se etiquetan frente al Estándar de
-Calidad Ambiental (ECA) para aire [@minam2017eca] y se ubican por estación y por hora del día.
+El Organismo de Evaluación y Fiscalización Ambiental (OEFA) publica las lecturas horarias de calidad
+del aire que toma junto a las actividades que fiscaliza: un CSV de 1,3 GB con
+{{< meta cifras.limpieza.filas_largas_leidas >}} filas de {{< meta cifras.limpieza.n_estaciones >}}
+estaciones, de {{< meta cifras.limpieza.anios >}} [@oefa2026aire]. La pregunta de impacto es en qué
+estaciones y a qué horas el aire entra en un nivel alto de PM2,5 y PM10, y con cuánta anticipación eso
+avisa de un episodio que supera el Estándar de Calidad Ambiental (ECA) [@minam2017eca]. Este primer
+entregable responde el dónde y el cuándo.
 
-Con {{< meta cifras.benchmark_cargador.w >}} workers, el cargador alcanza un speedup de
-{{< meta cifras.benchmark_cargador.speedup >}} (IC 95 % {{< meta cifras.benchmark_cargador.speedup_ic >}})
-y, con {{< meta cifras.benchmark_kmeans.w >}}, el K-Means uno de
-{{< meta cifras.benchmark_kmeans.speedup >}} (IC 95 % {{< meta cifras.benchmark_kmeans.speedup_ic >}}),
-con el mismo resultado bit a bit para cualquier número de workers. El diseño de la versión distribuida (coordinador y nodos por TCP, una barrera
-por iteración) queda listo para la PC4. La receta, elegida con una calibración de
-{{< meta cifras.calibracion.n_corridas >}} corridas, usa solo PM2,5 y PM10, y sus tres regímenes son
-niveles de aire: el alto, el {{< meta cifras.alto.pct >}} de las horas, excede el ECA en promedio y
-se concentra de mañana en pocas estaciones ({{< meta cifras.alto.principales >}}). Es la primera
-mitad de la pregunta de impacto; cuánto anticipa ese nivel un episodio se mide en el TB2. La red cubre {{< meta cifras.limpieza.n_departamentos >}}
-departamentos, y el informe lo dice sin rodeos: una zona sin estación no es una zona con aire limpio.
+En Go, solo con la biblioteca estándar, se construyó un cargador concurrente que reparte el archivo en
+bloques entre goroutines y fusiona en orden de bloque. Reconstruye por su posición la hora del
+{{< meta cifras.limpieza.pct_hora_inferida >}} de las lecturas (validada en el
+{{< meta cifras.eda.control_fisico >}} de las que sí la traen) y trata como faltante el 0 con que OEFA
+marca lo no medido: quedan {{< meta cifras.limpieza.filas_largas_procesadas >}} lecturas válidas y
+{{< meta cifras.limpieza.filas_completas >}} horas-estación con PM2,5 y PM10, de
+{{< meta cifras.limpieza.n_estaciones_gold >}} estaciones. Con {{< meta cifras.benchmark_cargador.w >}}
+workers, la carga logra un speedup de {{< meta cifras.benchmark_cargador.speedup >}} (IC 95 %
+{{< meta cifras.benchmark_cargador.speedup_ic >}}) con salida idéntica para cualquier número de
+workers. El K-Means del Trabajo Parcial corre en paralelo con un worker pool y una barrera por
+iteración, da el mismo resultado bit a bit para cualquier número de workers y logra un speedup de
+{{< meta cifras.benchmark_kmeans.speedup >}}; una auditoría en pandas y scikit-learn reproduce
+{{< meta cifras.auditoria.ok >}} de {{< meta cifras.auditoria.chequeos >}} chequeos. La versión
+distribuida por TCP queda diseñada, con su protocolo probado, para la PC4.
+
+La receta, elegida con {{< meta cifras.calibracion.n_corridas >}} corridas de calibración, da tres
+niveles de aire. El alto, el {{< meta cifras.alto.pct >}} de las horas, promedia
+{{< meta cifras.alto.pm2_5 >}} µg/m³ de PM2,5 y {{< meta cifras.alto.pm10 >}} de PM10
+({{< meta cifras.alto.eca >}} el ECA), recoge el {{< meta cifras.calibracion.recall >}} de las horas
+en que el promedio de 24 horas supera el ECA, cae sobre todo de {{< meta cifras.alto.franja >}} (pico a
+las {{< meta cifras.alto.hora_pico >}}) y se concentra en pocas estaciones, encabezadas por
+{{< meta cifras.alto.estacion >}} ({{< meta cifras.alto.departamento >}}). Su fracción fina, la menor
+de los tres niveles ({{< meta cifras.alto.cociente >}}), apunta a polvo antes que a combustión. Ningún
+K-Means aísla los episodios: la alerta necesita el nivel y el ECA juntos, y su anticipación se mide en
+el TB2. Los límites van a la vista: el {{< meta cifras.alto.pct_lima >}} del nivel alto sale de
+campañas de semanas en Lima, el {{< meta cifras.eda.gold_2022_pct >}} % del gold es de 2022 y una zona
+sin estación no es una zona con aire limpio.
 
 *Palabras clave:* calidad del aire, PM2,5, PM10, K-Means paralelo, Go, goroutines, worker pool,
 MapReduce, OEFA, ECA.

@@ -32,9 +32,10 @@ intervenciones periódicas o continuas para observar los componentes ambientales
 mediante la vigilancia, con el fin de alertar impactos negativos, priorizadas por el plan anual de
 fiscalización [@oefa2020reglamento]; antes de 2020 los informes la llamaban «vigilancia ambiental»
 [@oefa2019ventanilla]. En el dato, cada estación pertenece a la evaluación de una actividad:
-{{< meta cifras.eda.evaluaciones >}} evaluaciones, todas «calidad del aire en el ámbito de influencia
-de» una unidad minera, un complejo metalúrgico, una refinería, una agroindustria, una zona
-industrial o una zona ladrillera, y la descripción de cada punto lo sitúa respecto de la fuente
+{{< meta cifras.eda.evaluaciones >}} evaluaciones, casi todas «calidad del aire en el ámbito de
+influencia de» una unidad minera, un complejo metalúrgico, una refinería, una agroindustria, una zona
+industrial o una zona ladrillera (las de tres estaciones de Cusco son del corredor vial Apurímac –
+Cusco), y la descripción de cada punto lo sitúa respecto de la fuente
 («a 700 m del Complejo Metalúrgico de La Oroya»). OEFA ubica las estaciones a sotavento de la fuente
 [@oefa2019ventanilla] y a veces empieza a medir por quejas de la población [@oefa2019champamarca].
 
@@ -53,6 +54,20 @@ Describen el aire **junto a una fuente fiscalizada, en el periodo en que se la v
 Falta `generado/figuras/mapa.png` (la dibuja el notebook 04).
 :::
 ::::
+
+::: {.callout-note title="Borrador generado con IA, para revisión de Rody"}
+Párrafo y tabla de estaciones agregados por un agente de Claude Code el 02/11 (la tabla la genera
+`tablas.py` desde `reports/estaciones_ficha.csv` y `regimenes.json`); también se corrigió arriba la
+lista de actividades, que no nombraba el corredor vial de Cusco. Borrar este aviso al aprobarlo.
+:::
+
+La @tbl-estaciones-actividad pone cada estación junto a la actividad que vigila, con su tipo de serie,
+sus horas válidas y cuántas llegan al gold. Se lee de un vistazo lo que el modelo puede y no puede
+ver: las series largas de La Oroya, Paragsha, Talara y Cuajone no llegan al gold (no miden PM2,5), los
+puntos de muestreo manual no tienen ninguna hora válida, y los porcentajes más altos de nivel alto son
+de estaciones de Lima junto a ladrilleras y a una refinería de zinc, con pocas horas en el gold.
+
+{{< include generado/tablas/estaciones_actividad.md >}}
 
 **Cómo se mide.** Las estaciones de las EAS son de monitoreo continuo con equipos automáticos; en
 CA-AYAS-01, por ejemplo, un monitor de partículas por dispersión de luz, bajo el Protocolo Nacional
