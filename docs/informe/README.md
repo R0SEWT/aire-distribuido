@@ -116,10 +116,10 @@ ellos, nunca al revés. Se copian desde `reports/` (o `python3 tablas.py --entra
 | `codo.json` | `cmd/entrenar -codo` | `kmeans/codo.go` | inercia, semilla, iteraciones y paro por k; el k elegido es el de la receta |
 | `auditoria.json` | notebook 03 | — | los chequeos de Go contra pandas y scikit-learn; si la auditoría corrió con otra receta que `kmeans.json`, el informe lo dice y `--final` falla |
 | `../../reports/calibracion_resumen.csv`, `kmeans_propuesto.json` | notebook 02 | — | la tabla de la calibración: la receta final frente a su versión con log1p, la que prefería la regla automática y la provisional (se leen de `reports/`, no se copian: `*.csv` está ignorado en el repo) |
-| `../../reports/estaciones_ficha.csv` | notebook 04 | — | el tipo de serie de cada estación (años, meses, semanas, manual), para la tabla de tipología, y la actividad fiscalizada y el rubro de cada una, para la tabla de estaciones; las lecturas salen de `limpieza.json` y las horas del gold y del nivel alto, de `regimenes.json` |
-| `../../reports/descriptores_regimen.csv` | §8 del notebook 02 | — | la fracción fina y la meteorología de cada nivel, con su anomalía dentro de la estación (no son features); si sus horas no suman el gold de `kmeans.json`, la tabla y `_estado.md` lo avisan y `--final` falla |
-| `../../configs/limpieza.json` | el equipo | `datos/config.go` | la tabla de umbrales (rangos, unidades, centinelas, ceros); si su sha256 no es el que registra `limpieza.json`, la tabla no es la de la corrida y se avisa |
-| `../../datos/`, `kmeans/`, `protocolo/` (código Go) | — | — | los fragmentos de código de la sección de evidencias (`generado/tablas/frag_*.md`): `tablas.py` los extrae por patrón con su archivo y sus líneas (`FRAGMENTOS`); si el patrón ya no aparece, `--estricto` falla |
+| `../../reports/estaciones_ficha.csv` | notebook 04 | — | el tipo de serie de cada estación (años, meses, semanas, manual), para la tabla de tipología, y la actividad fiscalizada (todas, si hubo más de una evaluación) y el rubro de cada una, para la tabla de estaciones; las lecturas salen de `limpieza.json` y las horas del gold y del nivel alto, de `regimenes.json`, que tienen que dar las mismas horas del gold por estación. El texto importado se escapa (`escapar`): un nombre de OEFA no puede meter formato, enlaces ni HTML |
+| `../../reports/descriptores_regimen.csv` | §8 del notebook 02 | — | la fracción fina y la meteorología de cada nivel, con su anomalía dentro de la estación (no son features), y cuántas estaciones tienen cada variable (la prosa usa la menor); cada régimen tiene que tener el tamaño, las estaciones y los PM medios de `regimenes.json` (el del modelo de `kmeans.json`): si no, la tabla y `_estado.md` lo avisan y `--final` falla |
+| `../../configs/limpieza.json` | el equipo | `datos/config.go` | la tabla de umbrales (rangos, unidades, centinelas, ceros); si su sha256 no es el que registra `limpieza.json`, o `limpieza.json` no lo registra, la tabla no es (o no se sabe si es) la de la corrida: se avisa y `--final` falla |
+| `../../datos/`, `kmeans/`, `protocolo/` (código Go) | — | — | los fragmentos de código de la sección de evidencias (`generado/tablas/frag_*.md`): `tablas.py` los extrae por patrón con su archivo y sus líneas (`FRAGMENTOS`); si el patrón ya no aparece, el fragmento sale como PENDIENTE (no queda el viejo) y `--estricto` falla; si el archivo tiene cambios sin commitear, `--final` falla, porque el zip es el commit. `configs/` y el código se leen de la raíz del repo, sea cual sea `--reports` |
 | `eda.json` | transcrito de `reports/eda_criba.md` (notebook 01) y `docs/eda-procedencia.md` (notebook 04) | — | lo que solo miden los notebooks: el control de la hora por posición, los registros multilínea, los episodios de 24 h, y los datos de procedencia (evaluaciones, regiones, regla de las 18 horas, filas idénticas, filas vacías de 2022, % del gold de 2022). Se actualiza desde los `.md` si los notebooks vuelven a correr; la prosa respeta sus etiquetas [dato], [OEFA], [norma] e [inferencia] |
 
 Los siete de Go son copias de `reports/` de la **corrida sobre el CSV completo de OEFA** (01/11).
@@ -129,7 +129,9 @@ la detectan igual.
 
 `tablas.py` comprueba los invariantes de Go (leídas = procesadas + descartadas = procesadas + Σ por
 regla; las sumas por estación, por cluster y por hora; los dos speedups del cargador; el arranque
-elegido es el de menor inercia; el determinismo de los dos benchmarks) y los avisa en el informe.
+elegido es el de menor inercia; el determinismo de los dos benchmarks) y que las copias sean de la
+misma corrida (`kmeans.json` y `regimenes.json`, mismo gold y tamaños; `regimenes.json` y
+`limpieza.json`, mismas horas del gold por estación), y los avisa en el informe.
 Con `--estricto` falla si falta un JSON o un invariante no cuadra. Con `--final`, el que usa
 `empaquetar-pc3.sh`, además falla con cualquier señal de datos de prueba: un `placeholder`, una
 `entrada` bajo `data/sample/`, una estación `SINT-` o `SIN-`, un gold sintético o una figura
@@ -152,5 +154,6 @@ que sale de los notebooks (`reports/descriptores_regimen.csv`); y lo que solo mi
 - `grep -rn 'title="PENDIENTE' secciones/` vacío, `python3 tablas.py --final` sin errores.
 - Push de todas las ramas y `FETCH=1 bash render.sh` con `main` ya en el tag `pc3`.
 - Tablero Kanban y video (si la PC3 lo lleva) publicados.
-- `./empaquetar-pc3.sh pc3`: cada integrante sube su `.docx` y su `.zip`; el coordinador, además,
-  la participación.
+- `./empaquetar-pc3.sh pc3`, con `pc3` en el checkout (el informe sale del árbol de trabajo y el zip, de
+  la ref: si HEAD no es la ref, se niega): cada integrante sube su `.docx` y su `.zip`; el coordinador,
+  además, la participación.

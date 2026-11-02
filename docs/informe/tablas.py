@@ -47,6 +47,8 @@ except ImportError:  # el python3 del sistema puede no tenerlo
     sys.exit("tablas.py necesita pandas: `uv run tablas.py` lo instala al vuelo (o pip install pandas)")
 
 AQUI = Path(__file__).resolve().parent
+# Raíz del repo: configs/ y el código Go se leen de aquí, no del padre de --reports (que puede ser otra carpeta).
+RAIZ = AQUI.parent.parent
 MARCA = "[PLACEHOLDER]"
 
 COMANDOS = {
@@ -214,6 +216,18 @@ def titulo_lugar(s: str | None) -> str:
 
 def celda(v) -> str:
     return str(v).replace("|", "\\|").replace("\n", " ")
+
+
+# Lo que Pandoc o Quarto interpretarían en una celda: énfasis, código, enlaces, HTML, entidades, citas (@),
+# matemáticas ($), atributos y shortcodes ({ }). La barra | la escapa celda().
+ESPECIALES = set("\\`*_[]<>{}#$@~^&!")
+
+
+def escapar(x) -> str:
+    """Texto importado (nombres de OEFA, valores del CSV) → Markdown que se lee tal cual, sin formato."""
+    if not isinstance(x, str):
+        return "—" if vacio(x) else str(x)
+    return "".join("\\" + c if c in ESPECIALES else c for c in x)
 
 
 def markdown(df: pd.DataFrame, alineacion: str | None = None) -> str:
@@ -459,17 +473,17 @@ class Informe:
 
         par = vistos.get("parametros", {})
         nomap = vistos.get("parametros_no_mapeados", {})
-        p = pd.DataFrame([(k, entero(v), "sin mapeo: se descarta (regla `parametro`)" if k in nomap else "mapeado")
+        p = pd.DataFrame([(escapar(k), entero(v), "sin mapeo: se descarta (regla `parametro`)" if k in nomap else "mapeado")
                           for k, v in sorted(par.items(), key=lambda kv: -kv[1])],
                          columns=["Parámetro en el archivo", "Lecturas", "Estado"])
         periodos = vistos.get("periodos", {})
         self.tabla(tablas[3][0], o, d, tablas[3][1], tablas[3][2], markdown(p, "lrl"), anchos=[35, 15, 50], nota=
                    "Nombres tal como vienen en el CSV, con su frecuencia. Periodos vistos: "
-                   + ("; ".join(f"{k} {entero(v)}" for k, v in sorted(periodos.items(), key=lambda kv: -kv[1])) or "—")
+                   + ("; ".join(f"{escapar(k)} {entero(v)}" for k, v in sorted(periodos.items(), key=lambda kv: -kv[1])) or "—")
                    + ". Parámetros canónicos presentes en la tabla ancha: "
                    + ", ".join(corto(x) for x in d.get("parametros_presentes", [])) + ".")
 
-        u = pd.DataFrame([(corto(q), "; ".join(f"{un} ({entero(n)})" for un, n in sorted(us.items(), key=lambda kv: -kv[1])))
+        u = pd.DataFrame([(corto(q), "; ".join(f"{escapar(un)} ({entero(n)})" for un, n in sorted(us.items(), key=lambda kv: -kv[1])))
                           for q, us in sorted(vistos.get("unidades", {}).items())],
                          columns=["Parámetro", "Unidades vistas (lecturas)"])
         self.tabla(tablas[4][0], o, d, tablas[4][1], tablas[4][2], markdown(u, "ll"), anchos=[25, 75], nota=
@@ -931,6 +945,12 @@ class Informe:
             self.comprobar(o, sum(x["por_hora"]) == x["tamano"], f"por_hora del régimen {x['regimen']} no suma su tamaño")
             self.comprobar(o, sum(x["por_estacion"].values()) == x["tamano"],
                            f"por_estacion del régimen {x['regimen']} no suma su tamaño")
+        # kmeans.json y regimenes.json los escribe la misma corrida de cmd/entrenar: mismo gold y mismos tamaños.
+        km = self.datos.get("kmeans.json")
+        if km and ((km.get("gold") or {}).get("sha256") != (d.get("gold") or {}).get("sha256")
+                   or km.get("tamanos") != [x["tamano"] for x in sorted(rg, key=lambda x: x["regimen"])]):
+            self.desactualizadas.append("regimenes.json y kmeans.json no son de la misma corrida de cmd/entrenar "
+                                        "(otro gold u otros tamaños)")
         feats = d.get("features") or sorted(rg[0]["perfil"])
         eca = d.get("eca", {})
 
@@ -1172,7 +1192,7 @@ class Informe:
             ests = sorted(f.loc[f["tipo_serie"] == tipo, "estacion"])
             proc = sum(est.get(e, {}).get("largas_procesadas", 0) for e in ests)
             gold = sum(est.get(e, {}).get("completas_gold", 0) for e in ests)
-            filas.append((tipo, entero(len(ests)), ", ".join(ests), entero(proc), entero(gold),
+            filas.append((escapar(tipo), entero(len(ests)), ", ".join(escapar(e) for e in ests), entero(proc), entero(gold),
                           pct(gold / gold_total) if gold_total else "—"))
             clave = {"serie de años": "anios", "serie de meses": "meses", "campaña de semanas": "semanas",
                      "muestreo manual de 24 h": "manual"}.get(tipo, tipo)
@@ -1191,7 +1211,7 @@ class Informe:
     # ----------------------------------------------------------------------- umbrales de la limpieza
     def umbrales(self) -> None:
         """Los umbrales de las reglas 3, 4 y 6, tal como los lee el cargador de configs/limpieza.json."""
-        ruta = self.reports.parent / "configs" / "limpieza.json"
+        ruta = RAIZ / "configs" / "limpieza.json"
         titulo = "Umbrales de la limpieza por parámetro (configs/limpieza.json)"
         if not ruta.exists():
             self.faltantes.append("configs/limpieza.json")
@@ -1199,9 +1219,13 @@ class Informe:
             return
         # La tabla tiene que mostrar la config con la que corrió el cargador: limpieza.json guarda su sha256.
         import hashlib
-        usada = (((self.datos.get("limpieza.json") or {}).get("configs") or {}).get("limpieza") or {}).get("sha256")
+        lim = self.datos.get("limpieza.json")
+        usada = (((lim or {}).get("configs") or {}).get("limpieza") or {}).get("sha256")
         actual = hashlib.sha256(ruta.read_bytes()).hexdigest()
-        if usada and usada != actual:
+        if lim is not None and not usada:     # sin limpieza.json ya figura como faltante
+            self.desactualizadas.append("limpieza.json no registra el sha256 de configs/limpieza.json: no se puede "
+                                        "comprobar que la tabla de umbrales sea la de la corrida")
+        elif usada and usada != actual:
             self.desactualizadas.append("configs/limpieza.json cambió después de la corrida de limpieza.json "
                                         "(otro sha256): la tabla de umbrales no es la de la corrida")
         c = json.loads(ruta.read_text(encoding="utf-8"))
@@ -1250,12 +1274,30 @@ class Informe:
             self.tabla("meteorologia.md", f"reports/{o}", None, "tbl-meteorologia", titulo)
             return
         r = pd.read_csv(ruta)
-        n_gold = (km or {}).get("gold", {}).get("n")
-        al_dia = n_gold is None or int(r["horas"].sum()) == n_gold
+        # Los descriptores salen de las asignaciones de un modelo: tienen que ser las del de kmeans.json. El total
+        # de horas no basta (otro k u otra receta sobre el mismo gold suman lo mismo): cada régimen tiene que tener
+        # el tamaño, las estaciones y los PM medios que registra regimenes.json, de la misma corrida de Go.
+        rg = {x["regimen"]: x for x in (self.datos.get("regimenes.json") or {}).get("regimenes") or []}
+
+        def igual(a, b):
+            return (vacio(a) and vacio(b)) or (not vacio(a) and not vacio(b) and math.isclose(a, b, rel_tol=1e-6))
+
+        def del_modelo(x):
+            g = rg.get(int(x["regimen"]))
+            return (g is not None and int(x["horas"]) == g["tamano"]
+                    and int(x["estaciones"]) == sum(1 for c in (g.get("por_estacion") or {}).values() if c > 0)
+                    and igual(x["pm2_5_medio"], g.get("pm2_5_medio")) and igual(x["pm10_medio"], g.get("pm10_medio")))
+
+        if rg:
+            al_dia = len(r) == len(rg) and all(del_modelo(x) for _, x in r.iterrows())
+            motivo = "sus regímenes no son los de regimenes.json: tamaño, estaciones o PM medios"
+        else:   # sin regimenes.json (ya figura como faltante), al menos el total de horas
+            n_gold = (km or {}).get("gold", {}).get("n")
+            al_dia = n_gold is None or int(r["horas"].sum()) == n_gold
+            motivo = f"sus horas suman {entero(r['horas'].sum())}, el gold tiene {entero(n_gold)}"
         if not al_dia:
-            self.desactualizadas.append(f"reports/descriptores_regimen.csv es de otra corrida (sus horas suman "
-                                        f"{entero(r['horas'].sum())}, el gold tiene {entero(n_gold)}); se rehace "
-                                        f"con la §8 del notebook 02")
+            self.desactualizadas.append(f"reports/descriptores_regimen.csv no es del modelo de kmeans.json ({motivo}); "
+                                        f"se rehace con la §8 del notebook 02")
 
         def con_anomalia(fila, var, d=1):
             m, a = fila.get(f"{var}_media"), fila.get(f"{var}_anomalia_media")
@@ -1263,14 +1305,25 @@ class Informe:
                 return "—"
             return f"{decimal(m, d)} ({'+' if a >= 0 else '−'}{decimal(abs(a), d)})" if not vacio(a) else decimal(m, d)
 
+        # Cobertura por variable: las estaciones con viento, con humedad y con temperatura pueden no ser las mismas.
+        # La tabla da un número si coinciden y los tres si no; la prosa, el menor, que no sobreestima ninguna.
+        meteo = ("viento_velocidad", "humedad", "temperatura")
+
+        def n_meteo(x):
+            return [int(x[f"{v}_estaciones"]) for v in meteo]
+
+        def cobertura(x):
+            ns = n_meteo(x)
+            return f"{entero(ns[0]) if len(set(ns)) == 1 else ' · '.join(entero(n) for n in ns)} de {entero(x['estaciones'])}"
+
         filas = []
         for _, x in r.sort_values("pm10_medio").iterrows():
-            filas.append((x["nombre"], entero(x["horas"]), decimal(x["fraccion_fina_media"], 2),
+            filas.append((escapar(x["nombre"]), entero(x["horas"]), decimal(x["fraccion_fina_media"], 2),
                           con_anomalia(x, "viento_velocidad", 2), con_anomalia(x, "humedad"), con_anomalia(x, "temperatura"),
-                          f"{entero(x['viento_velocidad_estaciones'])} de {entero(x['estaciones'])}"))
+                          cobertura(x)))
         t = pd.DataFrame(filas, columns=["Nivel", "Horas", "Fracción fina media", "Viento (m/s)", "Humedad (%)",
                                          "Temperatura (°C)", "Estaciones con meteorología"])
-        estado = "" if al_dia else (" **Ojo: el archivo es de una corrida anterior a la de `kmeans.json`; "
+        estado = "" if al_dia else (" **Ojo: el archivo no es del modelo de `kmeans.json`; "
                                     "las cifras se rehacen con la §8 del notebook 02.**")
         self.tabla("meteorologia.md", f"reports/{o}", {"generado_por": "notebook 02"}, "tbl-meteorologia", titulo,
                    markdown(t, "lrrrrrr"), anchos=[10, 11, 14, 15, 15, 17, 18],
@@ -1278,9 +1331,11 @@ class Informe:
                    nota="Entre paréntesis, la anomalía media dentro de la estación: cuánto se aparta la hora del promedio "
                         "de su propia estación, para que la comparación no sea entre lugares. La fracción fina es la media "
                         "por hora de PM2,5/PM10. La meteorología solo existe en las estaciones que la miden; las demás no "
-                        "entran en esas columnas." + estado)
+                        "entran en esas columnas. «Estaciones con meteorología»: cuántas estaciones del nivel tienen "
+                        "lecturas de cada variable en sus horas; un número si las tres coinciden y, si no, viento · "
+                        "humedad · temperatura." + estado)
         por_nivel = r.sort_values("pm10_medio").reset_index(drop=True)
-        cif = {"estaciones_con_meteo": entero(r["viento_velocidad_estaciones"].max()),
+        cif = {"estaciones_con_meteo": entero(max(min(n_meteo(x)) for _, x in r.iterrows())),
                "estaciones": entero(r["estaciones"].max()),
                "al_dia": "sí" if al_dia else "no"}
         for i, x in por_nivel.iterrows():
@@ -1289,7 +1344,7 @@ class Informe:
                         f"{nivel}_humedad_anomalia": con_signo(x["humedad_anomalia_media"], 1),
                         f"{nivel}_viento_anomalia": con_signo(x["viento_velocidad_anomalia_media"], 2),
                         f"{nivel}_temperatura_anomalia": con_signo(x["temperatura_anomalia_media"], 1),
-                        f"{nivel}_estaciones_con_meteo": entero(x["viento_velocidad_estaciones"]),
+                        f"{nivel}_estaciones_con_meteo": entero(min(n_meteo(x))),
                         f"{nivel}_estaciones": entero(x["estaciones"])})
         self.cifras["meteo"] = {k: str(v) for k, v in cif.items()}
 
@@ -1311,9 +1366,17 @@ class Informe:
             for e, n in (x.get("por_estacion") or {}).items():
                 gold_est[e] = gold_est.get(e, 0) + n
         alto_est = (max(rg, key=lambda x: x.get("pm10_medio") or 0).get("por_estacion") or {}) if rg else {}
+        # Las horas del gold por estación vienen de dos comandos (cmd/cargar y cmd/entrenar): tienen que coincidir.
+        lim_gold = {e: x["completas_gold"] for e, x in lim.items() if x.get("completas_gold")}
+        if rg and lim and {e: n for e, n in gold_est.items() if n} != lim_gold:
+            self.desactualizadas.append("regimenes.json y limpieza.json no son del mismo gold (las horas por estación "
+                                        "no coinciden): la tabla de estaciones mezclaría corridas")
 
-        def primero(x):
-            return str(x).split(" | ")[0].strip() if isinstance(x, str) else "—"
+        def actividades(x):
+            """Todas las actividades de la estación: una por evaluación de OEFA, separadas por « | » en la ficha."""
+            if not isinstance(x, str):
+                return "—"
+            return "; ".join(escapar(a) for a in dict.fromkeys(a.strip() for a in x.split(" | ") if a.strip())) or "—"
 
         filas = []
         orden = {"serie de años": 0, "serie de meses": 1, "campaña de semanas": 2, "muestreo manual de 24 h": 3}
@@ -1322,9 +1385,9 @@ class Informe:
             e = x["estacion"]
             horas = lim.get(e, {}).get("anchas")
             gold = gold_est.get(e, 0)
-            filas.append((e, primero(x["objeto_fiscalizado"]), x.get("tipo_actividad", "—"),
-                          titulo_lugar(x.get("departamento") if isinstance(x.get("departamento"), str) else None),
-                          x.get("tipo_serie", "—"), entero(horas) if horas is not None else "—",
+            filas.append((escapar(e), actividades(x["objeto_fiscalizado"]), escapar(x.get("tipo_actividad")),
+                          escapar(titulo_lugar(x.get("departamento") if isinstance(x.get("departamento"), str) else None)),
+                          escapar(x.get("tipo_serie")), entero(horas) if horas is not None else "—",
                           entero(gold) if gold else "—", pct(alto_est.get(e, 0) / gold) if gold else "—"))
         t = pd.DataFrame(filas, columns=["Estación", "Actividad fiscalizada", "Rubro", "Departamento", "Serie",
                                          "Horas válidas", "Horas en el gold", "% en nivel alto"])
@@ -1333,7 +1396,8 @@ class Informe:
                    fuente="Fuente: la actividad, el rubro y la serie, de `reports/estaciones_ficha.csv` (notebook 04); "
                           "las horas válidas (filas anchas), de `generado/limpieza.json`; las del gold y las del nivel "
                           "alto, de `generado/regimenes.json` (`cmd/entrenar`).",
-                   nota="La actividad sale del nombre de la evaluación de OEFA; el rubro, del mismo nombre, sin adivinar "
+                   nota="La actividad sale del nombre de la evaluación de OEFA (todas, separadas por punto y coma, si la "
+                        "estación tuvo más de una); el rubro, del mismo nombre, sin adivinar "
                         "cuando no lo dice. «% en nivel alto»: proporción de las horas de la estación en el gold que el "
                         "K-Means asignó al nivel alto («—» si la estación no entra al gold). El departamento va como lo "
                         "escribe el archivo, sin tildes; CA-HUAR-01 lo trae vacío.")
@@ -1394,13 +1458,39 @@ class Informe:
                 k += 1
         raise ValueError("llave sin cerrar")
 
+    def fragmento_pendiente(self, archivo: str, ident: str, ruta: str, titulo: str, motivo: str) -> None:
+        """Si la extracción falla, el fragmento sale como PENDIENTE: no queda en el informe el de una corrida vieja."""
+        texto = [f"<!-- Generado por tablas.py desde {ruta}. No editar a mano. -->", "",
+                 "::: {.callout-warning title=\"PENDIENTE\"}",
+                 f"{motivo}: falta este fragmento de código (se corrige `FRAGMENTOS` en `tablas.py`).",
+                 ":::", "", f"::: {{#{ident}}}", "```go", "// (fragmento pendiente)", "```", "",
+                 f"{titulo} (`{ruta}`)", ":::", ""]
+        (self.salida / f"{archivo}.md").write_text("\n".join(texto), encoding="utf-8")
+
+    @staticmethod
+    def sin_commitear(rutas: list[str]) -> list[str]:
+        """Las rutas con cambios sin commitear o sin versionar. Sin git (p. ej., desde el zip), ninguna."""
+        import subprocess
+        try:
+            r = subprocess.run(["git", "-C", str(RAIZ), "status", "--porcelain", "--", *rutas],
+                               capture_output=True, text=True, check=True)
+        except (OSError, subprocess.CalledProcessError):
+            return []
+        return sorted({l[3:] for l in r.stdout.splitlines() if l.strip()})
+
     def fragmentos(self) -> None:
         import re
-        raiz = self.reports.parent
+        # Los fragmentos se leen del árbol de trabajo y el zip de la entrega es un commit (git archive): un
+        # archivo con cambios sin commitear daría un fragmento que no está en el código entregado.
+        sucios = self.sin_commitear(sorted({f[2] for f in self.FRAGMENTOS}))
+        if sucios:
+            self.desactualizadas.append("código con cambios sin commitear (" + ", ".join(sucios) + "): sus "
+                                        "fragmentos no serían los del commit que se entrega")
         for archivo, ident, ruta, tramos_def, titulo in self.FRAGMENTOS:
-            fuente = raiz / ruta
+            fuente = RAIZ / ruta
             if not fuente.exists():
                 self.faltantes.append(ruta)
+                self.fragmento_pendiente(archivo, ident, ruta, titulo, f"No está `{ruta}`")
                 continue
             lineas = fuente.read_text(encoding="utf-8").splitlines()
 
@@ -1424,6 +1514,7 @@ class Informe:
                         tramos.append((c, f))
             except (StopIteration, ValueError):
                 self.problema(ruta, f"no se encontró el fragmento «{ident}»: ¿cambió el código?")
+                self.fragmento_pendiente(archivo, ident, ruta, titulo, f"El patrón ya no aparece en `{ruta}`")
                 continue
             codigo, rangos = [], []
             for a, b in tramos:
@@ -1641,7 +1732,7 @@ class Informe:
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("--entrada", type=Path, default=AQUI / "generado", help="carpeta con los JSON (p. ej. ../../reports)")
-    ap.add_argument("--reports", type=Path, default=AQUI.parent.parent / "reports",
+    ap.add_argument("--reports", type=Path, default=RAIZ / "reports",
                     help="reports/ del repo: calibracion_resumen.csv y kmeans_propuesto.json del notebook 02")
     ap.add_argument("--estricto", action="store_true", help="falla si falta un JSON o no cuadra un invariante")
     ap.add_argument("--final", action="store_true", help="como --estricto y, además, falla si queda un PLACEHOLDER")
