@@ -169,6 +169,12 @@ CONFIG_OEFA_REAL = {
         "Convención 'fin': cada lectura se etiqueta con el FIN de su hora (la primera del día, 00-01, es "
         "la 01:00; la última es las 00:00 del día siguiente). Se aplica igual a las horas explícitas.",
         "ppb -> µg/m³ a 25 °C y 1 atm; mmHg -> hPa; DIRECCION_VIENTO trae '°c' por error (son grados).",
+        "Desde 2022 un hueco es una fila vacía que ocupa su hora: si el día del parámetro no tiene 24 filas, la "
+        "posición se cuenta en el bloque físico (filas contiguas de la misma estación, fecha, unidad, periodo y "
+        "tipo de análisis, con o sin valor) si tiene 24 filas y un solo parámetro.",
+        "Un 0 exacto de un contaminante es «sin dato» también hora a hora (cero_como_faltante); la meteorología "
+        "no (salvo el día entero en 0) y la precipitación nunca.",
+        "CA-HUAR-01 trae zona UTM 19; su descripción la pone en Huaraucaca (Pasco), zona 18 (correcciones_ubicacion).",
     ],
     "delimitador": ";",
     "codificacion": "utf-8",
@@ -176,7 +182,8 @@ CONFIG_OEFA_REAL = {
     "zona_horaria": "America/Lima",
     "columnas": {
         "estacion": "NOMBRE_PUNTO", "fecha": "FECHA_INICIO", "hora": "HORA_INICIO", "parametro": "",
-        "valor": "", "periodo": "PERIODO", "unidad": "UNIDAD_MEDIDA", "departamento": "DEPARTAMENTO",
+        "valor": "", "periodo": "PERIODO", "unidad": "UNIDAD_MEDIDA", "tipo_analisis": "TIPO_ANALISIS",
+        "departamento": "DEPARTAMENTO",
         "provincia": "PROVINCIA", "distrito": "DISTRITO", "ubigeo": "UBIGEO", "este": "ESTE",
         "norte": "NORTE", "altitud": "ALTITUD", "zona": "ZONA", "datum": "DATUM",
     },
@@ -220,6 +227,10 @@ CONFIG_OEFA_REAL = {
         "viento_direccion": {"°": 1, "grados": 1, "°c": 1}, "presion": {"hpa": 1, "mbar": 1, "mb": 1, "mmhg": 1.33322},
         "precipitacion": {"mm": 1}, "radiacion": {"w/m2": 1},
     },
+    # = Go: un 0 exacto de un contaminante es «sin dato» también hora a hora; nunca la meteorología.
+    "cero_como_faltante": ["pm2_5", "pm10", "so2", "co", "o3", "h2s"],
+    # = Go: estación -> {columna de ubicación -> valor correcto}; el valor del CSV queda en el reporte.
+    "correcciones_ubicacion": {"CA-HUAR-01": {"zona": 18}},
 }
 CONFIG_MUESTRA_ANTIGUA = CONFIG_DEFECTO   # formato del primer borrador (parámetro/valor): Go ya no lo lee
 CONFIG_DEFECTO = CONFIG_OEFA_REAL         # = datos.ConfigPorDefecto(): el formato real y el de data/sample/
@@ -228,8 +239,9 @@ CLAVES_CONFIG = ["_supuestos", "delimitador", "codificacion", "separador_decimal
                  "fecha_hasta", "centinelas", "admiten_negativos", "rangos", "unidades",
                  "parametros_en_columnas", "valores_vacios", "periodos_horarios_por_grupo",
                  "hora_prefijo_ignorar", "hora_por_posicion", "bloques_en_cero_como_faltante",
-                 "formatos_hora", "hora_solo_prefijo", "hora_explicita", "hora_no_en_punto"]
-COLUMNAS_LOGICAS = ["estacion", "fecha", "hora", "parametro", "valor", "periodo", "unidad",
+                 "formatos_hora", "hora_solo_prefijo", "hora_explicita", "hora_no_en_punto",
+                 "cero_como_faltante", "correcciones_ubicacion"]
+COLUMNAS_LOGICAS = ["estacion", "fecha", "hora", "parametro", "valor", "periodo", "unidad", "tipo_analisis",
                     "departamento", "provincia", "distrito", "ubigeo", "este", "norte", "altitud",
                     "zona", "datum"]
 COLUMNAS_UBICACION = ["departamento", "provincia", "distrito", "ubigeo", "este", "norte", "altitud",
@@ -241,18 +253,20 @@ REQUERIDAS = ["estacion", "fecha", "parametro", "valor"]  # parametro y valor no
 REGLAS = [
     ("columnas", "La fila no tiene tantos campos como la cabecera"),
     ("estacion", "Estación vacía"),
-    ("periodo", "Regla 1: el periodo no es horario"),
-    ("parametro", "El parámetro no está en el mapeo a canónicos"),
+    ("periodo", "Regla 1: el periodo no es horario (o «-» sin hora y con el día incompleto)"),
+    ("sin_valor", "Ninguna columna de parámetro con valor: el hueco de la plantilla de 2022 (ocupa antes su hora en el bloque físico)"),
+    ("parametro", "Más de una columna de parámetro con valor (formato real) o parámetro sin canónico (formato parámetro/valor)"),
     ("fecha", "Regla 2: fecha no parseable con ningún formato"),
     ("fecha_fuera_de_rango", "Regla 2: fuera de [fecha_desde, fecha_hasta)"),
     ("hora_no_en_punto", "Regla 2: hora explícita con minutos o segundos (política descartar)"),
-    ("hora", "Regla 2: hora ilegible, o sin hora y su bloque no tiene las filas_por_dia contiguas"),
+    ("hora", "Regla 2: hora ilegible, o sin hora y ni su día ni su bloque físico tienen las filas_por_dia contiguas"),
     ("valor_no_numerico", "Regla 3: vacío, texto, NaN o infinito"),
     ("centinela", "Regla 3: código del equipo (sobre el valor crudo)"),
     ("unidad", "Regla 6: unidad que no figura para ese parámetro"),
     ("negativo", "Regla 3: negativo en un parámetro que no los admite"),
     ("fuera_de_rango", "Regla 4: fuera del rango físico, ya en la unidad canónica"),
     ("bloque_en_cero", "Un bloque del día entero en 0 exacto es un equipo sin medir, no una medición"),
+    ("cero_como_faltante", "Un 0 exacto de un contaminante en un día con datos: hora sin dato (OEFA no promedia los 0)"),
     ("duplicado_unidad", "Regla 6: la misma lectura en otra unidad (ppb, mmHg); se conserva la canónica"),
     ("duplicado_exacto", "Regla 5: misma (estación, parámetro, fecha-hora) y mismo valor"),
     ("duplicado_valor_distinto", "Regla 5: misma clave y otro valor; se conserva el primero del archivo"),
@@ -405,6 +419,67 @@ def parsear_valor_go(s: str, decimal: str = ".") -> float:
     return v if math.isfinite(v) else math.nan
 
 
+def nombre_estacion(s) -> str:
+    """= datos.nombreEstacion: espacios colapsados y en mayúsculas («sint-d» es «SINT-D»)."""
+    return " ".join(str(s).split()).upper()
+
+
+def _texto_json(v) -> str:
+    """= datos.ValorUbicacion: un valor de correcciones_ubicacion como texto (número o texto en el JSON)."""
+    if isinstance(v, bool):
+        return "true" if v else "false"
+    return str(v)
+
+
+def lat_lon_de_ubicacion(campos: dict) -> tuple[float, float] | None:
+    """= datos.latLonDeUbicacion: lat/lon WGS84 desde este, norte y zona (ya corregidos), en el hemisferio
+    sur; None si el datum no es WGS84 o falta o no se lee una coordenada, o la zona no es de 1 a 60."""
+    d = campos.get("datum")
+    if d and normalizar(d).replace(" ", "") != "wgs84":
+        return None
+    try:
+        este, norte = float(campos["este"]), float(campos["norte"])
+        zona = int(str(campos["zona"]).strip())
+    except (KeyError, TypeError, ValueError):
+        return None
+    if not 1 <= zona <= 60:
+        return None
+    lat, lon = utm_a_latlon(este, norte, zona, True)
+    return float(lat), float(lon)
+
+
+def bloques_fisicos(est, dia, unidad, periodo, tipo, alcanza, canon, un_valor):
+    """= datos.ubicarEnTramo + combinarParametro: el bloque físico de cada fila en orden de archivo, es
+    decir, las filas contiguas con la misma (estación, día, unidad, periodo, tipo de análisis), con valor
+    o vacías. Solo entran las filas que llegan a ese punto de la cascada (`alcanza`: estación, periodo no
+    descartado y fecha válida y en rango); las demás cortan el bloque, como en Go. Unidad, periodo y tipo
+    se comparan crudos (recortados). Devuelve, por fila: tamaño del bloque (0 si no tiene), posición en él
+    (-1 si no tiene) y su parámetro: el único de sus filas con un solo valor (`un_valor`), o None si no
+    tiene ninguna o tiene de varios parámetros."""
+    n = len(alcanza)
+    tam = np.zeros(n, dtype=np.int64)
+    pos = np.full(n, -1, dtype=np.int64)
+    param = np.full(n, None, dtype=object)
+    idx = np.flatnonzero(alcanza)
+    if not len(idx):
+        return tam, pos, param
+    claves = pd.DataFrame({"e": est[idx], "d": dia[idx], "u": unidad[idx], "p": periodo[idx], "t": tipo[idx]})
+    codigo = claves.groupby(["e", "d", "u", "p", "t"], sort=False, dropna=False).ngroup().to_numpy()
+    nuevo = np.ones(len(idx), dtype=bool)
+    nuevo[1:] = (np.diff(idx) != 1) | (np.diff(codigo) != 0)
+    tid = np.cumsum(nuevo) - 1
+    tam_t = np.bincount(tid)
+    pos_t = np.arange(len(idx)) - np.flatnonzero(nuevo)[tid]
+    con = np.asarray(un_valor, dtype=bool)[idx]
+    g = pd.Series(np.asarray(canon, dtype=object)[idx][con], dtype=object).groupby(tid[con])
+    distintos, primero = g.nunique(), g.first()
+    par_t = np.full(len(tam_t), None, dtype=object)
+    uno = distintos.index[distintos.to_numpy() == 1].to_numpy()
+    par_t[uno] = primero.loc[uno].to_numpy()
+    tam[idx], pos[idx], param[idx] = tam_t[tid], pos_t, par_t[tid]
+    return tam, pos, param
+
+
 def es_formato_real(cabecera) -> bool:
     """¿La cabecera es la del CSV real (una columna por parámetro y FECHA_INICIO)?"""
     n = {normalizar(c) for c in cabecera}
@@ -454,6 +529,30 @@ def compilar(cfg: dict) -> dict:
     if not desde < hasta:
         errores.append("fecha_desde tiene que ser anterior a fecha_hasta")
     unidades = {p: {normalizar(u): float(f) for u, f in us.items()} for p, us in (cfg.get("unidades") or {}).items()}
+    cero_faltante = set(cfg.get("cero_como_faltante") or [])
+    for p in sorted(cero_faltante - set(CANONICOS)):
+        errores.append(f"cero_como_faltante: {p!r} no es un parámetro canónico")
+    vacios_cfg = set(cfg.get("valores_vacios") or ["-", "NA", ""])
+    correcciones = {}
+    for e, campos in sorted((cfg.get("correcciones_ubicacion") or {}).items()):
+        nombre = nombre_estacion(e)
+        if not nombre:
+            errores.append("correcciones_ubicacion: estación vacía")
+            continue
+        if nombre in correcciones:
+            errores.append(f"correcciones_ubicacion: {e!r} aparece dos veces (los nombres se comparan normalizados)")
+            continue
+        buenos = {}
+        for campo, v in (campos or {}).items():
+            valor = _texto_json(v).strip()
+            if campo not in COLUMNAS_UBICACION:
+                errores.append(f"correcciones_ubicacion[{e!r}]: {campo!r} no es una columna de ubicación")
+            elif valor == "" or valor in vacios_cfg:
+                errores.append(f"correcciones_ubicacion[{e!r}][{campo!r}]: el valor está vacío")
+            else:
+                buenos[campo] = valor
+        if buenos:
+            correcciones[nombre] = buenos
     if errores:
         raise ValueError("config de limpieza inválida: " + "; ".join(errores))
     return {
@@ -470,6 +569,8 @@ def compilar(cfg: dict) -> dict:
         "hora_prefijo": str(cfg.get("hora_prefijo_ignorar") or ""),
         "hpp": dict(cfg.get("hora_por_posicion") or {}),
         "bloques_en_cero": set(cfg.get("bloques_en_cero_como_faltante") or []),
+        "cero_faltante": cero_faltante,
+        "correcciones": correcciones,
         "solo_prefijo_sin_hora": (cfg.get("hora_solo_prefijo") or "medianoche") == "sin_hora",
         "explicita_inicio": (cfg.get("hora_explicita") or "inicio") == "inicio",
         "truncar": (cfg.get("hora_no_en_punto") or "descartar") == "truncar",
@@ -707,13 +808,16 @@ def _segundos_hora(txt: str, prefijo: str, vacios, solo_prefijo_sin_hora=False, 
 
 def limpiar(largo: pd.DataFrame, cfg: dict, info: dict) -> tuple[pd.DataFrame, dict]:
     """Cascada de Go, en este orden; cada fila descartada cuenta en la primera regla que falla:
-    columnas -> estacion -> periodo -> parametro -> fecha -> hora -> fecha_fuera_de_rango ->
-    valor_no_numerico -> centinela (sobre el valor crudo) -> unidad -> negativo -> (factor de la
-    unidad y del mapeo) -> fuera_de_rango (en la unidad canónica) -> duplicado_unidad ->
-    duplicado_exacto / duplicado_valor_distinto. Con `parametros_en_columnas`, el parámetro de la
-    fila es la única columna de parámetro con valor; con `hora_por_posicion`, la hora que falta se
-    reconstruye por la posición de la fila en su grupo (estación, parámetro, fecha, unidad,
-    periodo) si el grupo tiene `filas_por_dia` filas contiguas. Devuelve las lecturas conservadas
+    columnas -> estacion -> periodo -> sin_valor -> parametro -> fecha -> fecha_fuera_de_rango ->
+    hora_no_en_punto -> hora -> valor_no_numerico -> centinela (sobre el valor crudo) -> unidad ->
+    negativo -> (factor de la unidad y del mapeo) -> fuera_de_rango (en la unidad canónica) ->
+    bloque_en_cero -> cero_como_faltante -> duplicado_unidad -> duplicado_exacto /
+    duplicado_valor_distinto. Con `parametros_en_columnas`, el parámetro de la fila es la única
+    columna de parámetro con valor (ninguna: sin_valor; más de una: parametro); con
+    `hora_por_posicion`, la hora que falta se reconstruye por la posición de la fila en su día
+    (estación, parámetro, fecha, unidad, periodo) si el día tiene `filas_por_dia` filas contiguas y,
+    si no, por su posición en el bloque físico (`bloques_fisicos`) si este tiene `filas_por_dia` filas
+    de un solo parámetro. Devuelve las lecturas conservadas
     (estacion, parametro, fecha_hora, valor, inferida, en orden de archivo) y el reporte con el
     esquema de reports/limpieza.json (más «_python» con la evidencia de la hora por posición)."""
     reg = compilar(cfg)
@@ -726,8 +830,7 @@ def limpiar(largo: pd.DataFrame, cfg: dict, info: dict) -> tuple[pd.DataFrame, d
     desc["columnas"] = int((~ok).sum()) + int(info.get("lineas_blancas", 0))
     vivo = ok.copy()
 
-    # = datos.nombreEstacion: espacios colapsados y en mayúsculas («sint-d» es «SINT-D»)
-    est = _por_categoria(largo["estacion"], lambda c: [" ".join(x.split()).upper() for x in c], "")
+    est = _por_categoria(largo["estacion"], lambda c: [nombre_estacion(x) for x in c], "")
     vacia = vivo & (est == "")
     desc["estacion"] = int(vacia.sum())
     vivo &= ~vacia
@@ -818,9 +921,27 @@ def limpiar(largo: pd.DataFrame, cfg: dict, info: dict) -> tuple[pd.DataFrame, d
     else:
         h_seg = None
         no_en_punto_truncadas = 0
+    # Fecha (y hora): con hora_por_posicion la fecha es solo la fecha; si no, fecha + " " + hora (Go).
+    if "hora" in largo and not por_posicion:
+        ff = largo["fecha"].cat.codes.to_numpy().astype(np.int64)
+        hh = largo["hora"].cat.codes.to_numpy().astype(np.int64)
+        fc = [str(c).strip() for c in largo["fecha"].cat.categories]
+        hc = [str(c).strip() for c in largo["hora"].cat.categories]
+        combo = ff * (len(hc) + 1) + hh
+        unicos, inversa = np.unique(combo, return_inverse=True)
+        textos = [f"{fc[c // (len(hc) + 1)]} {hc[c % (len(hc) + 1)]}" if c >= 0 else "" for c in unicos]
+        fechas = np.asarray([parsear_fecha_go(t, reg["formatos"]) for t in textos] + [None], dtype=object)[inversa.ravel()]
+    else:
+        fechas = _por_categoria(largo["fecha"], lambda c: [parsear_fecha_go(x.strip(), reg["formatos"]) for x in c])
+    fh = pd.to_datetime(pd.Series(fechas, dtype=object), errors="coerce").to_numpy(dtype="datetime64[ns]")
+    nat = np.isnat(fh)
+    desde, hasta = np.datetime64(reg["desde"]), np.datetime64(reg["hasta"])
+
     completo = np.zeros(n, dtype=bool)
     posicion = np.full(n, -1, dtype=np.int64)
     bloque_id = np.full(n, -1, dtype=np.int64)
+    fisico = np.zeros(n, dtype=bool)
+    hora_fisica = 0
     if por_posicion:
         en_grupo = registrada & ~pd.isna(canon)
         idx = np.flatnonzero(en_grupo)
@@ -833,6 +954,22 @@ def limpiar(largo: pd.DataFrame, cfg: dict, info: dict) -> tuple[pd.DataFrame, d
         posicion[idx] = gg.cumcount().to_numpy()
         bloque_id[idx] = gg.ngroup().to_numpy()
         completo[idx] = (tam == filas_dia) & (span == filas_dia)
+        dia_completo = completo.copy()
+        # Bloque físico (= Go): si el día del parámetro no está completo, la posición se cuenta en las filas
+        # contiguas de la misma (estación, día, unidad, periodo, tipo de análisis), con las vacías de la
+        # plantilla de 2022, si son filas_por_dia y de un solo parámetro.
+        horario_o_grupo = (np.isin(periodo_n, list(reg["periodos"]) + list(reg["periodos_por_grupo"]))
+                           if periodo is not None else np.ones(n, dtype=bool))
+        alcanza = registrada & horario_o_grupo & ~nat & (fh >= desde) & (fh < hasta)
+        tipo = strip_col("tipo_analisis")
+        tam_f, pos_f, par_f = bloques_fisicos(
+            est, fh, unidad if unidad is not None else np.full(n, "", dtype=object),
+            periodo if periodo is not None else np.full(n, "", dtype=object),
+            tipo if tipo is not None else np.full(n, "", dtype=object),
+            alcanza, canon, cuantos == 1 if reg["en_columnas"] else ~pd.isna(canon))
+        fisico = en_grupo & alcanza & ~dia_completo & (tam_f == filas_dia) & (par_f == canon)
+        completo |= fisico
+        posicion = np.where(fisico, pos_f, posicion)
         con_h = ~np.isnan(h_seg[idx]) & (h_seg[idx] >= 0)
         hora_ent = (h_seg[idx][con_h] // 3600).astype(int)
         pos_con = posicion[idx][con_h]
@@ -851,6 +988,8 @@ def limpiar(largo: pd.DataFrame, cfg: dict, info: dict) -> tuple[pd.DataFrame, d
             "grupos_sin_hora": int(sin_hora_g.sum()),
             "grupos_sin_hora_completos": int((sin_hora_g & comp_g).sum()),
             "tamanos_de_grupo": pd.Series(tam).value_counts().head(10).to_dict(),
+            "filas_en_dias_completos": int(dia_completo.sum()),
+            "filas_en_bloque_fisico_completo": int(fisico.sum()),
         }
 
     def descartar(regla, mascara):
@@ -878,26 +1017,15 @@ def limpiar(largo: pd.DataFrame, cfg: dict, info: dict) -> tuple[pd.DataFrame, d
         con_hora_expl = (~np.isnan(h_seg) & (h_seg >= 0)) if h_seg is not None else np.zeros(n, dtype=bool)
         horario |= por_grupo & (con_hora_expl | completo)
     descartar("periodo", ~horario)
-    descartar("parametro", pd.isna(canon))
-
-    # Fecha (y hora): con hora_por_posicion la fecha es solo la fecha; si no, fecha + " " + hora (Go).
-    if "hora" in largo and not por_posicion:
-        ff = largo["fecha"].cat.codes.to_numpy().astype(np.int64)
-        hh = largo["hora"].cat.codes.to_numpy().astype(np.int64)
-        fc = [str(c).strip() for c in largo["fecha"].cat.categories]
-        hc = [str(c).strip() for c in largo["hora"].cat.categories]
-        combo = ff * (len(hc) + 1) + hh
-        unicos, inversa = np.unique(combo, return_inverse=True)
-        textos = [f"{fc[c // (len(hc) + 1)]} {hc[c % (len(hc) + 1)]}" if c >= 0 else "" for c in unicos]
-        fechas = np.asarray([parsear_fecha_go(t, reg["formatos"]) for t in textos] + [None], dtype=object)[inversa.ravel()]
+    if reg["en_columnas"]:  # = Go: ninguna columna con valor es sin_valor; más de una, parametro
+        descartar("sin_valor", cuantos == 0)
+        descartar("parametro", cuantos > 1)
     else:
-        fechas = _por_categoria(largo["fecha"], lambda c: [parsear_fecha_go(x.strip(), reg["formatos"]) for x in c])
-    fh = pd.to_datetime(pd.Series(fechas, dtype=object), errors="coerce").to_numpy(dtype="datetime64[ns]")
-    nat = np.isnat(fh)
+        descartar("parametro", pd.isna(canon))
+
     m = descartar("fecha", nat)
     detalle["fecha"] = (pd.Series(_por_categoria(largo["fecha"], lambda c: c, "")[m]).value_counts().head(10).to_dict()
                         if m.any() else {})
-    desde, hasta = np.datetime64(reg["desde"]), np.datetime64(reg["hasta"])
     if por_posicion:  # = Go: el rango se mira sobre el día, antes de la hora
         descartar("fecha_fuera_de_rango", ~nat & ((fh < desde) | (fh >= hasta)))
         # = Go: la unidad se cuenta en «vistos» al llegar con día, y los «-» de un bloque incompleto
@@ -950,6 +1078,9 @@ def limpiar(largo: pd.DataFrame, cfg: dict, info: dict) -> tuple[pd.DataFrame, d
         lo[sel], hi[sel] = a, b
     m = descartar("fuera_de_rango", (valor < lo) | (valor > hi))
     fuera_param = pd.Series(canon[m]).value_counts().to_dict() if m.any() else {}
+    # = Go (hora_por_bloque_fisico): las que reciben la hora de su bloque físico, contadas al recibirla
+    # (después de las reglas de valor; aún pueden caer en bloque_en_cero, cero_como_faltante o duplicados).
+    hora_fisica = int((vivo & inferida & fisico).sum())
 
     # PROPUESTA bloque_en_cero: si todas las lecturas vivas de un bloque (estación, parámetro, fecha,
     # unidad, periodo) valen 0 exacto, el bloque es un equipo sin medir y se descarta entero.
@@ -962,6 +1093,12 @@ def limpiar(largo: pd.DataFrame, cfg: dict, info: dict) -> tuple[pd.DataFrame, d
         mz[ii[todo_cero]] = True
         m = descartar("bloque_en_cero", mz)
         bloque_cero_param = pd.Series(canon[m]).value_counts().to_dict() if m.any() else {}
+
+    # cero_como_faltante (= Go): en los días que quedan, un 0 exacto de un contaminante es una hora sin dato.
+    cero_param = {}
+    if reg["cero_faltante"]:
+        m = descartar("cero_como_faltante", (valor == 0) & pd.Series(canon, dtype=object).isin(list(reg["cero_faltante"])).to_numpy())
+        cero_param = pd.Series(canon[m]).value_counts().to_dict() if m.any() else {}
 
     # Regla 6 (unidades duplicadas): si una celda tiene lecturas en la unidad canónica (factor 1),
     # las de otra unidad (ppb, mmHg) son duplicado_unidad. Luego, regla 5: en orden de archivo, la
@@ -1005,10 +1142,12 @@ def limpiar(largo: pd.DataFrame, cfg: dict, info: dict) -> tuple[pd.DataFrame, d
         estaciones[e] = {"largas_leidas": int(c), "largas_procesadas": 0, "anchas": 0, "completas_gold": 0}
     for e, c in conservados["estacion"].value_counts().items():
         estaciones[e]["largas_procesadas"] = int(c)
-    # Ubicación (= datos.verUbicacion y armarReporte): la combinación más frecuente de las columnas de
-    # ubicación de la estación, sin los campos vacíos («NA»), con el UBIGEO a seis dígitos; si hubo
-    # más de una, se listan todas en ubicaciones_distintas.
+    # Ubicación (= datos.verUbicacion, corregirUbicacion y armarReporte): la combinación más frecuente de
+    # las columnas de ubicación de la estación, sin los campos vacíos («NA»), con el UBIGEO a seis dígitos
+    # y con correcciones_ubicacion aplicada (el valor del CSV queda en ubicacion_original), más lat y lon
+    # WGS84 con 6 decimales; si hubo más de una combinación, se listan todas en ubicaciones_distintas.
     cols_u = [c for c in COLUMNAS_UBICACION if c in largo]
+    corregidas = 0
     if cols_u:
         u = {"_e": est[registrada]}
         for c in cols_u:
@@ -1019,15 +1158,31 @@ def limpiar(largo: pd.DataFrame, cfg: dict, info: dict) -> tuple[pd.DataFrame, d
             u[c] = vals
         conteo = pd.DataFrame(u).groupby(["_e"] + cols_u, dropna=False, sort=False).size()
         for e, g in conteo.groupby(level=0, sort=False):
-            vistas = [({c: v for c, v in zip(cols_u, clave[1:]) if isinstance(v, str)}, int(f)) for clave, f in g.items()]
-            mas = max(range(len(vistas)), key=lambda i: (vistas[i][1], -i))
+            vistas = []
+            for clave, f in g.items():
+                campos = {c: v for c, v in zip(cols_u, clave[1:]) if isinstance(v, str)}
+                original = {}
+                for campo, v in reg["correcciones"].get(e, {}).items():
+                    if campos.get(campo) != v:
+                        original[campo] = campos.get(campo, "")
+                        campos[campo] = v
+                vistas.append((dict(sorted(campos.items())), dict(sorted(original.items())), int(f)))
+                corregidas += int(f) if original else 0
+            mas = max(range(len(vistas)), key=lambda i: (vistas[i][2], -i))
             if vistas[mas][0]:
-                estaciones[e]["ubicacion"] = dict(sorted(vistas[mas][0].items()))
+                u = dict(vistas[mas][0])
+                ll = lat_lon_de_ubicacion(u)
+                if ll is not None:
+                    u["lat"], u["lon"] = f"{ll[0]:.6f}", f"{ll[1]:.6f}"
+                estaciones[e]["ubicacion"] = dict(sorted(u.items()))
                 estaciones[e]["_ubicacion_frecuente"] = estaciones[e]["ubicacion"]
+                if vistas[mas][1]:
+                    estaciones[e]["ubicacion_original"] = vistas[mas][1]
             if len(vistas) > 1:
-                estaciones[e]["ubicaciones_distintas"] = [{"campos": c, "filas": f} for c, f in vistas]
+                estaciones[e]["ubicaciones_distintas"] = [{"campos": c, **({"original": o} if o else {}), "filas": f}
+                                                          for c, o, f in vistas]
 
-    marcas = {"duplicado_valor_distinto": marcadas}
+    marcas = {"duplicado_valor_distinto": marcadas, "ubicacion_corregida": int(corregidas)}
     convertidas = conservados.loc[~conservados["canonica"], "parametro"].value_counts().to_dict()
     if por_posicion:
         marcas["hora_inferida"] = int(conservados["inferida"].sum())
@@ -1044,6 +1199,12 @@ def limpiar(largo: pd.DataFrame, cfg: dict, info: dict) -> tuple[pd.DataFrame, d
             "descartadas_por_regla": desc,
             "marcadas_por_regla": marcas,
             "fuera_de_rango_por_parametro": {k: int(v) for k, v in fuera_param.items()},
+            "bloque_en_cero_por_parametro": {str(k): int(v) for k, v in sorted(bloque_cero_param.items())},
+            "cero_como_faltante_por_parametro": {str(k): int(v) for k, v in sorted(cero_param.items())},
+            "hora_explicita": int(procesadas - (int(conservados["inferida"].sum()) if por_posicion else 0)),
+            "hora_inferida": int(conservados["inferida"].sum()) if por_posicion else 0,
+            "hora_por_bloque_fisico": hora_fisica if por_posicion else 0,
+            "unidad_convertida_por_parametro": {str(k): int(v) for k, v in sorted(convertidas.items())},
         },
         "filas_anchas": {"total": None, "completas_gold": None, "pm2_5_mayor_pm10": None},
         "parametros_presentes": sorted(conservados["parametro"].astype(str).unique()),
@@ -1691,10 +1852,11 @@ SALIDAS_GO = {
     "benchmark_cargador": "reports/benchmark_cargador.json",
     "benchmark_kmeans": "reports/benchmark_kmeans.json",
 }
-# Qué necesita cada notebook de Go: el 02 solo para su §8; el 03 para auditar.
+# Qué necesita cada notebook de Go: el 02 solo para su §8; el 03 para auditar; el 04 para cuadrar y la ficha.
 GO_POR_NOTEBOOK = {
     "02": ["silver", "asignaciones", "regimenes"],
     "03": ["silver", "gold", "asignaciones", "limpieza", "estandarizacion", "kmeans", "regimenes"],
+    "04": ["limpieza", "silver", "gold", "asignaciones", "regimenes"],
 }
 # Cómo se suben a Drive, desde la raíz del repo en la máquina donde están (donde corrió Go).
 _JSON_GO = "{" + ",".join(Path(r).stem for r in SALIDAS_GO.values() if r.endswith(".json")) + "}.json"
@@ -1789,9 +1951,9 @@ def verificar_insumos(notebook: str, raiz, configs, estricto: bool = True) -> di
             cmds.append(RCLONE[clave])
 
     # Bronze: el 01 lo necesita; el 03 sin él deja OMITIDA la auditoría de la limpieza.
-    if notebook in ("01", "03") and not os.environ.get("AIRE_BRONZE"):
+    if notebook in ("01", "03", "04") and not os.environ.get("AIRE_BRONZE"):
         if not any((raiz / "data" / "bronze").glob("*.csv")):
-            if notebook == "01":
+            if notebook in ("01", "04"):
                 falta(f"el bronze: ningún CSV en {raiz / 'data' / 'bronze'}", "bronze")
             else:
                 avisos.append(f"no hay bronze en {raiz / 'data' / 'bronze'}: la auditoría de la limpieza queda OMITIDA "
@@ -1807,8 +1969,10 @@ def verificar_insumos(notebook: str, raiz, configs, estricto: bool = True) -> di
             if notebook == "03":
                 falta(f"{SALIDAS_GO[clave]} (Go)", clave)
             else:
-                avisos.append(f"falta {SALIDAS_GO[clave]} (Go): la grilla corre, la §8 no "
-                              f"(se sube con: {RCLONE[clave]})")
+                que = {"02": "la grilla corre, la §8 no",
+                       "04": "el análisis corre; sin limpieza.json no se cuadra la réplica con Go, y sin silver, "
+                             "gold y regímenes la ficha no trae horas válidas, filas del gold ni régimen alto"}.get(notebook, "")
+                avisos.append(f"falta {SALIDAS_GO[clave]} (Go){': ' + que if que else ''} (se sube con: {RCLONE[clave]})")
     # Desfase: salidas de Go de otra receta o de otro gold (una subida a medias o una corrida vieja).
     if notebook in ("02", "03"):
         try:
