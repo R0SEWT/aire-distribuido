@@ -2,6 +2,8 @@ package kmeans
 
 import (
 	"bufio"
+	"encoding/csv"
+	"errors"
 	"fmt"
 	"io"
 	"math"
@@ -70,24 +72,29 @@ func LeerGold(ruta string, features []string) (*Gold, error) {
 //     sea un orden, porque de él dependen k-means++ (elige índices), la
 //     submuestra sistemática y la suma por chunks.
 //
-// No usa encoding/csv: el gold no tiene comillas ni comas dentro de los campos,
-// así que partir por coma es correcto y bastante más rápido.
+// Usa encoding/csv: el cargador (datos.Dataset.EscribirGold) entrecomilla el
+// nombre de una estación que tiene coma, comilla o salto de línea, con las
+// comillas dobladas (RFC 4180), y partir por coma rechazaría «A,B» por columna
+// extra. Las estaciones reales (CA-LI-01) no las tienen, pero la muestra
+// sintética sí puede.
 func LeerGoldDe(r io.Reader, features []string) (*Gold, error) {
 	if len(features) == 0 {
 		return nil, fmt.Errorf("gold: la receta no trae features")
 	}
 	esperada := "estacion,fecha_hora," + strings.Join(features, ",")
 
-	sc := bufio.NewScanner(r)
-	sc.Buffer(make([]byte, 0, 64*1024), 1024*1024)
-	if !sc.Scan() {
-		if err := sc.Err(); err != nil {
-			return nil, fmt.Errorf("leer la cabecera del gold: %w", err)
-		}
+	cr := csv.NewReader(bufio.NewReaderSize(r, 1<<20))
+	cr.FieldsPerRecord = -1 // la cantidad de columnas se valida aquí, con un mensaje propio
+	cr.ReuseRecord = true
+	cab, err := cr.Read()
+	if errors.Is(err, io.EOF) {
 		return nil, fmt.Errorf("gold vacío: no tiene ni cabecera")
 	}
-	if cab := strings.TrimRight(sc.Text(), "\r"); cab != esperada {
-		return nil, fmt.Errorf("la cabecera del gold no coincide con la receta: es %q, se esperaba %q", cab, esperada)
+	if err != nil {
+		return nil, fmt.Errorf("leer la cabecera del gold: %w", err)
+	}
+	if got := strings.Join(cab, ","); got != esperada {
+		return nil, fmt.Errorf("la cabecera del gold no coincide con la receta: es %q, se esperaba %q", got, esperada)
 	}
 
 	dim := len(features)
@@ -97,15 +104,15 @@ func LeerGoldDe(r io.Reader, features []string) (*Gold, error) {
 	}
 	internas := map[string]string{} // una sola cadena por estación
 	terminadas := map[string]bool{} // estaciones cuyo bloque ya se cerró
-	campos := make([]string, 0, dim+2)
-	linea := 1
-	for sc.Scan() {
-		linea++
-		fila := strings.TrimRight(sc.Text(), "\r")
-		if fila == "" {
-			continue
+	for {
+		campos, err := cr.Read()
+		if errors.Is(err, io.EOF) {
+			break
 		}
-		campos = dividir(campos[:0], fila)
+		if err != nil {
+			return nil, fmt.Errorf("leer el gold: %w", err)
+		}
+		linea, _ := cr.FieldPos(0)
 		if len(campos) != dim+2 {
 			return nil, fmt.Errorf("línea %d del gold: %d columnas, se esperaban %d", linea, len(campos), dim+2)
 		}
@@ -160,26 +167,10 @@ func LeerGoldDe(r io.Reader, features []string) (*Gold, error) {
 		g.Estacion = append(g.Estacion, est)
 		g.FechaHora = append(g.FechaHora, t)
 	}
-	if err := sc.Err(); err != nil {
-		return nil, fmt.Errorf("leer el gold: %w", err)
-	}
 	if g.Datos.N == 0 {
 		return nil, fmt.Errorf("el gold no tiene filas: solo la cabecera")
 	}
 	return g, nil
-}
-
-// dividir parte por coma reutilizando el slice: strings.Split asignaría uno
-// nuevo por fila.
-func dividir(dst []string, s string) []string {
-	for {
-		i := strings.IndexByte(s, ',')
-		if i < 0 {
-			return append(dst, s)
-		}
-		dst = append(dst, s[:i])
-		s = s[i+1:]
-	}
 }
 
 // EscribirGold escribe un Gold con el formato del contrato del cargador
@@ -192,8 +183,7 @@ func EscribirGold(w io.Writer, g *Gold) error {
 	d := g.Datos
 	var buf []byte
 	for i := 0; i < d.N; i++ {
-		buf = buf[:0]
-		buf = append(buf, g.Estacion[i]...)
+		buf = appendCampo(buf[:0], g.Estacion[i])
 		buf = append(buf, ',')
 		buf = g.FechaHora[i].In(ZonaPeru).AppendFormat(buf, time.RFC3339)
 		for _, v := range d.Punto(i) {
@@ -206,4 +196,15 @@ func EscribirGold(w io.Writer, g *Gold) error {
 		}
 	}
 	return bw.Flush()
+}
+
+// appendCampo entrecomilla el nombre de una estación solo si lo necesita,
+// como el cargador (RFC 4180: comillas dobladas).
+func appendCampo(buf []byte, s string) []byte {
+	if !strings.ContainsAny(s, ",\"\r\n") {
+		return append(buf, s...)
+	}
+	buf = append(buf, '"')
+	buf = append(buf, strings.ReplaceAll(s, `"`, `""`)...)
+	return append(buf, '"')
 }

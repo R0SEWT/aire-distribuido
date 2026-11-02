@@ -6,6 +6,7 @@ import (
 	"math/rand"
 	"os"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
 	"testing"
@@ -190,5 +191,54 @@ func TestEscribirGoldYLeerGoldSonInversos(t *testing.T) {
 func TestLeerGoldFallaSiNoExiste(t *testing.T) {
 	if _, err := LeerGold(filepath.Join(t.TempDir(), "no.csv"), featuresPrueba); err == nil {
 		t.Fatal("se esperaba error")
+	}
+}
+
+func TestLeerGoldDecodificaLasComillasCSV(t *testing.T) {
+	// El cargador entrecomilla una estación con coma, comilla o salto de línea
+	// y dobla las comillas (RFC 4180).
+	csv := cabeceraPrueba + "\n" +
+		`"A,B",2024-01-01T00:00:00-05:00,1,2,3,4` + "\n" +
+		`"dijo ""hola""",2024-01-01T00:00:00-05:00,5,6,7,8` + "\n" +
+		"\"línea\npartida\",2024-01-01T00:00:00-05:00,9,10,11,12\n" +
+		"CA-LI-01,2024-01-01T00:00:00-05:00,13,14,15,16\n"
+	g, err := LeerGoldDe(strings.NewReader(csv), featuresPrueba)
+	if err != nil {
+		t.Fatalf("LeerGoldDe: %v", err)
+	}
+	if want := []string{"A,B", `dijo "hola"`, "línea\npartida", "CA-LI-01"}; !slices.Equal(g.Estacion, want) {
+		t.Errorf("estaciones %q, se esperaban %q", g.Estacion, want)
+	}
+	if g.Datos.N != 4 || g.Datos.X[4] != 5 || g.Datos.X[15] != 16 {
+		t.Errorf("N = %d, X = %v", g.Datos.N, g.Datos.X)
+	}
+	// Una comilla sin cerrar es un error con su línea, no una fila mal partida.
+	_, err = LeerGoldDe(strings.NewReader(cabeceraPrueba+"\n"+`"A,B,2024-01-01T00:00:00-05:00,1,2,3,4`+"\n"), featuresPrueba)
+	if err == nil {
+		t.Error("comilla sin cerrar: se esperaba error")
+	}
+}
+
+func TestEscribirGoldEntrecomillaLoQueHaceFalta(t *testing.T) {
+	inicio := time.Date(2024, 1, 1, 0, 0, 0, 0, ZonaPeru)
+	g := &Gold{
+		Datos:     &Datos{X: []float64{1, 2, 3, 4, 5, 6, 7, 8}, N: 2, D: 4},
+		Features:  featuresPrueba,
+		Estacion:  []string{"A,B", `C"D`},
+		FechaHora: []time.Time{inicio, inicio},
+	}
+	var buf bytes.Buffer
+	if err := EscribirGold(&buf, g); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(buf.String(), `"A,B",`) || !strings.Contains(buf.String(), `"C""D",`) {
+		t.Errorf("no se entrecomilló como RFC 4180:\n%s", buf.String())
+	}
+	leido, err := LeerGoldDe(&buf, featuresPrueba)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !slices.Equal(leido.Estacion, g.Estacion) {
+		t.Errorf("ida y vuelta: %q", leido.Estacion)
 	}
 }
