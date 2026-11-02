@@ -1,0 +1,1732 @@
+<!DOCTYPE html>
+<html>
+<head>
+    
+    <meta http-equiv="content-type" content="text/html; charset=UTF-8" />
+    <title>Estaciones de calidad del aire de OEFA</title>
+    <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.3/dist/leaflet.js"></script>
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Leaflet.awesome-markers/2.0.2/leaflet.awesome-markers.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.3/dist/leaflet.css"/>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.2/dist/css/bootstrap.min.css"/>
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.0.0/css/bootstrap-glyphicons.css"/>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.2.0/css/all.min.css"/>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/Leaflet.awesome-markers/2.0.2/leaflet.awesome-markers.css"/>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/python-visualization/folium/folium/templates/leaflet.awesome.rotate.min.css"/>
+    
+            <meta name="viewport" content="width=device-width,
+                initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+            <style>
+                #map_db24d80f83829e1fadc305b34ae5f6f5 {
+                    position: relative;
+                    width: 100.0%;
+                    height: 100.0%;
+                    left: 0.0%;
+                    top: 0.0%;
+                }
+                .leaflet-container { font-size: 1rem; }
+            </style>
+
+            <style>html, body {
+                width: 100%;
+                height: 100%;
+                margin: 0;
+                padding: 0;
+            }
+            </style>
+
+            <style>#map {
+                position:absolute;
+                top:0;
+                bottom:0;
+                right:0;
+                left:0;
+                }
+            </style>
+
+            <script>
+                L_NO_TOUCH = false;
+                L_DISABLE_3D = false;
+            </script>
+
+        
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.1.0/leaflet.markercluster.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.1.0/MarkerCluster.css"/>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.1.0/MarkerCluster.Default.css"/>
+</head>
+<body>
+    
+    <details open style='position:fixed;bottom:24px;left:12px;z-index:9999;background:#fcfcfb;padding:8px 12px;border:1px solid #b5b4ae;border-radius:6px;font:12px system-ui,sans-serif;color:#0b0b0b;max-width:290px'><summary style='font-weight:700;cursor:pointer;margin-bottom:4px'>Estaciones de OEFA (2018–2022)</summary><div><span style='display:inline-block;width:11px;height:11px;border-radius:50%;background:#2a78d6;margin-right:6px'></span>horarias con PM (22)</div><div><span style='display:inline-block;width:11px;height:11px;border-radius:50%;background:#eb6834;margin-right:6px'></span>horarias sin PM (3)</div><div><span style='display:inline-block;width:11px;height:11px;border-radius:50%;background:#1baf7a;margin-right:6px'></span>solo promedios de 24 h (8)</div><div><span style='display:inline-block;width:11px;height:11px;border-radius:50%;background:#8c8b86;margin-right:6px'></span>sin lecturas válidas (0)</div><div style='margin-top:4px;color:#52514e'>Tamaño: horas válidas. Número negro: racimo de estaciones a menos de 15 km (clic para abrir).</div><div style='margin-top:4px;color:#a32626'>Una zona sin estación no es una zona con aire limpio: las estaciones están donde OEFA fiscaliza una actividad, no donde vive la gente.</div></details>
+    
+            <div class="folium-map" id="map_db24d80f83829e1fadc305b34ae5f6f5" ></div>
+        
+</body>
+<script>
+    
+    
+            var map_db24d80f83829e1fadc305b34ae5f6f5 = L.map(
+                "map_db24d80f83829e1fadc305b34ae5f6f5",
+                {
+                    center: [-10.2, -75.8],
+                    crs: L.CRS.EPSG3857,
+                    ...{
+  "zoom": 6,
+  "zoomControl": true,
+  "preferCanvas": false,
+}
+
+                }
+            );
+            L.control.scale().addTo(map_db24d80f83829e1fadc305b34ae5f6f5);
+
+            
+
+        
+    
+            var tile_layer_308a059009d67411939b494feb90a452 = L.tileLayer(
+                "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+                {
+  "minZoom": 0,
+  "maxZoom": 19,
+  "maxNativeZoom": 19,
+  "noWrap": false,
+  "attribution": "\u0026copy; \u003ca href=\"https://www.openstreetmap.org/copyright\"\u003eOpenStreetMap\u003c/a\u003e contributors",
+  "subdomains": "abc",
+  "detectRetina": false,
+  "tms": false,
+  "opacity": 1,
+}
+
+            );
+        
+    
+            tile_layer_308a059009d67411939b494feb90a452.addTo(map_db24d80f83829e1fadc305b34ae5f6f5);
+        
+    
+            var marker_cluster_843167ce504a69344b869ff8e292ff40 = L.markerClusterGroup(
+                {
+  "maxClusterRadius": 120,
+  "spiderfyOnMaxZoom": true,
+  "showCoverageOnHover": false,
+  "disableClusteringAtZoom": 16,
+}
+            );
+            marker_cluster_843167ce504a69344b869ff8e292ff40.options.iconCreateFunction =
+                function(cluster) {
+  var n = cluster.getChildCount();
+  return L.divIcon({html: '<div style="background:#0b0b0b;color:#fcfcfb;border:2px solid #fcfcfb;border-radius:50%;'
+    + 'width:34px;height:34px;line-height:30px;text-align:center;font:600 13px system-ui;box-shadow:0 0 0 1px #52514e">' + n + '</div>',
+    className: '', iconSize: L.point(34, 34)});
+};
+        
+    
+            var marker_e5d3487928b7f11ed8251402643b6ecd = L.marker(
+                [-11.86186, -77.1221],
+                {
+}
+            ).addTo(marker_cluster_843167ce504a69344b869ff8e292ff40);
+        
+    
+            var div_icon_9571052c77d12d57f1eccdb67bcb2b07 = L.divIcon({
+  "html": "\u003cdiv style=\u0027width:18px;height:18px;border-radius:50%;background:#1baf7a;opacity:0.85;border:2px solid #fcfcfb;box-shadow:0 0 0 1px #52514e\u0027\u003e\u003c/div\u003e",
+  "iconSize": [18.0, 18.0],
+  "iconAnchor": [9.0, 9.0],
+  "className": "empty",
+});
+        
+    
+        var popup_4b4542f655b0623965ae334ebbe26a1a = L.popup({
+  "maxWidth": 420,
+});
+
+        
+            
+                var html_e8cfe96f3c477f2078f9e33a212cd0fa = $(`<div id="html_e8cfe96f3c477f2078f9e33a212cd0fa" style="width: 100.0%; height: 100.0%;"><div style='font-family:system-ui,sans-serif;font-size:12px;max-width:380px'><div style='font-size:15px;font-weight:700;margin-bottom:4px'>CA-VMP-1</div><div style='color:#1baf7a;font-weight:600;margin-bottom:6px'>solo promedios de 24 h · muestreo manual de 24 h</div><table style='border-collapse:collapse'><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Evaluación</th><td>Calidad de aire realizada en el ámbito de la zona industrial de Ventanilla-Mi Perú</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Actividad</th><td>Zona industrial de Ventanilla-Mi Perú (zona industrial)</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Dpto. / prov. / distrito</th><td>CALLAO / CALLAO / MI PERU<br><span style='color:#a32626'>ALTITUD con 2 valores (0: 35 filas, 106: 100 filas)</span></td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Altitud</th><td>106 m s. n. m.</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Datos</th><td>2018-03-15 a 2019-10-17; años con datos válidos: —</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Horas válidas</th><td>0 (promedios de 24 h con valor: 135)</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Parámetros</th><td>—</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Régimen alto</th><td>no está en el gold (le falta PM2.5 o PM10 horario)</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Días en cero</th><td>—</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Ubicación</th><td>Ubicado en la azotea de la vivienda del asentamiento humano – A.H. Virgen de Guadalupe-2da etapa, Mz. O Lote 11, distrito Mi Perú.</td></tr></table></div></div>`)[0];
+                popup_4b4542f655b0623965ae334ebbe26a1a.setContent(html_e8cfe96f3c477f2078f9e33a212cd0fa);
+            
+        
+
+        marker_e5d3487928b7f11ed8251402643b6ecd.bindPopup(popup_4b4542f655b0623965ae334ebbe26a1a)
+        ;
+
+        
+    
+    
+            marker_e5d3487928b7f11ed8251402643b6ecd.bindTooltip(
+                `<div>
+                     <b>CA-VMP-1</b> · solo promedios de 24 h · 0 h válidas
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+                marker_e5d3487928b7f11ed8251402643b6ecd.setIcon(div_icon_9571052c77d12d57f1eccdb67bcb2b07);
+            
+    
+            var marker_bf7cf113b75a430a8e93328726482217 = L.marker(
+                [-11.86331, -77.12729],
+                {
+}
+            ).addTo(marker_cluster_843167ce504a69344b869ff8e292ff40);
+        
+    
+            var div_icon_5de56ced49ca88792ffa9d4d76b97438 = L.divIcon({
+  "html": "\u003cdiv style=\u0027width:18px;height:18px;border-radius:50%;background:#1baf7a;opacity:0.85;border:2px solid #fcfcfb;box-shadow:0 0 0 1px #52514e\u0027\u003e\u003c/div\u003e",
+  "iconSize": [18.0, 18.0],
+  "iconAnchor": [9.0, 9.0],
+  "className": "empty",
+});
+        
+    
+        var popup_baf57d9f20c8de3a2012410751b654cb = L.popup({
+  "maxWidth": 420,
+});
+
+        
+            
+                var html_0141f26775a9fd4dd4f0942242b11677 = $(`<div id="html_0141f26775a9fd4dd4f0942242b11677" style="width: 100.0%; height: 100.0%;"><div style='font-family:system-ui,sans-serif;font-size:12px;max-width:380px'><div style='font-size:15px;font-weight:700;margin-bottom:4px'>CA-VMP-10</div><div style='color:#1baf7a;font-weight:600;margin-bottom:6px'>solo promedios de 24 h · muestreo manual de 24 h</div><table style='border-collapse:collapse'><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Evaluación</th><td>Calidad de aire realizada en el ámbito de la zona industrial de Ventanilla-Mi Perú</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Actividad</th><td>Zona industrial de Ventanilla-Mi Perú (zona industrial)</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Dpto. / prov. / distrito</th><td>CALLAO / CALLAO / VENTANILLA</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Altitud</th><td>54 m s. n. m.</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Datos</th><td>2020-02-20 a 2021-11-26; años con datos válidos: —</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Horas válidas</th><td>0 (promedios de 24 h con valor: 85)</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Parámetros</th><td>—</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Régimen alto</th><td>no está en el gold (le falta PM2.5 o PM10 horario)</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Días en cero</th><td>—</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Ubicación</th><td>Azotea del área de oficinas de la empresa Comercial Lider S.A., Calle Martin Paz 146, zona industrial de Ventanilla, distrito Ventanilla.</td></tr></table></div></div>`)[0];
+                popup_baf57d9f20c8de3a2012410751b654cb.setContent(html_0141f26775a9fd4dd4f0942242b11677);
+            
+        
+
+        marker_bf7cf113b75a430a8e93328726482217.bindPopup(popup_baf57d9f20c8de3a2012410751b654cb)
+        ;
+
+        
+    
+    
+            marker_bf7cf113b75a430a8e93328726482217.bindTooltip(
+                `<div>
+                     <b>CA-VMP-10</b> · solo promedios de 24 h · 0 h válidas
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+                marker_bf7cf113b75a430a8e93328726482217.setIcon(div_icon_5de56ced49ca88792ffa9d4d76b97438);
+            
+    
+            var marker_28caa4c5a520f2955671b1061cef5e78 = L.marker(
+                [-11.85986, -77.12442],
+                {
+}
+            ).addTo(marker_cluster_843167ce504a69344b869ff8e292ff40);
+        
+    
+            var div_icon_d7d79aa17f1a300cf3db2e676322f5c4 = L.divIcon({
+  "html": "\u003cdiv style=\u0027width:18px;height:18px;border-radius:50%;background:#1baf7a;opacity:0.85;border:2px solid #fcfcfb;box-shadow:0 0 0 1px #52514e\u0027\u003e\u003c/div\u003e",
+  "iconSize": [18.0, 18.0],
+  "iconAnchor": [9.0, 9.0],
+  "className": "empty",
+});
+        
+    
+        var popup_08fa3a725b91d4ca83de0c5a9f9b4804 = L.popup({
+  "maxWidth": 420,
+});
+
+        
+            
+                var html_c60d1b2f534d4b9e0702ef3d83f4dbbb = $(`<div id="html_c60d1b2f534d4b9e0702ef3d83f4dbbb" style="width: 100.0%; height: 100.0%;"><div style='font-family:system-ui,sans-serif;font-size:12px;max-width:380px'><div style='font-size:15px;font-weight:700;margin-bottom:4px'>CA-VMP-2</div><div style='color:#1baf7a;font-weight:600;margin-bottom:6px'>solo promedios de 24 h · muestreo manual de 24 h</div><table style='border-collapse:collapse'><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Evaluación</th><td>Calidad de aire realizada en el ámbito de la zona industrial de Ventanilla-Mi Perú</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Actividad</th><td>Zona industrial de Ventanilla-Mi Perú (zona industrial)</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Dpto. / prov. / distrito</th><td>CALLAO / CALLAO / VENTANILLA<br><span style='color:#a32626'>ESTE con 2 valores (268570: 141 filas, 268573: 61 filas); NORTE con 2 valores (8687999: 61 filas, 8688061: 141 filas); ALTITUD con 3 valores (0: 37 filas, 69: 61 filas, 80: 104 filas)</span></td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Altitud</th><td>80 m s. n. m.</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Datos</th><td>2018-03-15 a 2021-04-23; años con datos válidos: —</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Horas válidas</th><td>0 (promedios de 24 h con valor: 202)</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Parámetros</th><td>—</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Régimen alto</th><td>no está en el gold (le falta PM2.5 o PM10 horario)</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Días en cero</th><td>—</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Ubicación</th><td>Ubicado en la Institución Educativa Privada - IEP Arturo Padilla Espinoza, Av. Revolución N° 2494, distrito Ventanilla.</td></tr></table></div></div>`)[0];
+                popup_08fa3a725b91d4ca83de0c5a9f9b4804.setContent(html_c60d1b2f534d4b9e0702ef3d83f4dbbb);
+            
+        
+
+        marker_28caa4c5a520f2955671b1061cef5e78.bindPopup(popup_08fa3a725b91d4ca83de0c5a9f9b4804)
+        ;
+
+        
+    
+    
+            marker_28caa4c5a520f2955671b1061cef5e78.bindTooltip(
+                `<div>
+                     <b>CA-VMP-2</b> · solo promedios de 24 h · 0 h válidas
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+                marker_28caa4c5a520f2955671b1061cef5e78.setIcon(div_icon_d7d79aa17f1a300cf3db2e676322f5c4);
+            
+    
+            var marker_0ed9c6c6af453592fa7027461ee42ff1 = L.marker(
+                [-11.8602, -77.12393],
+                {
+}
+            ).addTo(marker_cluster_843167ce504a69344b869ff8e292ff40);
+        
+    
+            var div_icon_b2264ef80e817e798b0dcbf1d5b580e0 = L.divIcon({
+  "html": "\u003cdiv style=\u0027width:22px;height:22px;border-radius:50%;background:#2a78d6;opacity:0.85;border:2px solid #fcfcfb;box-shadow:0 0 0 1px #52514e\u0027\u003e\u003c/div\u003e",
+  "iconSize": [21.640219472740533, 21.640219472740533],
+  "iconAnchor": [10.820109736370267, 10.820109736370267],
+  "className": "empty",
+});
+        
+    
+        var popup_124d7c40bc3c798d4a7e3cef10b65ce9 = L.popup({
+  "maxWidth": 420,
+});
+
+        
+            
+                var html_66f627f728df9ced5b7993c7f842aa3d = $(`<div id="html_66f627f728df9ced5b7993c7f842aa3d" style="width: 100.0%; height: 100.0%;"><div style='font-family:system-ui,sans-serif;font-size:12px;max-width:380px'><div style='font-size:15px;font-weight:700;margin-bottom:4px'>CA-VMP-2A</div><div style='color:#2a78d6;font-weight:600;margin-bottom:6px'>horarias con PM · campaña de semanas</div><table style='border-collapse:collapse'><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Evaluación</th><td>Calidad de aire realizada en el ámbito de la zona industrial de Ventanilla-Mi Perú</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Actividad</th><td>Zona industrial de Ventanilla-Mi Perú (zona industrial)</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Dpto. / prov. / distrito</th><td>CALLAO / CALLAO / VENTANILLA</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Altitud</th><td>0 m s. n. m.</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Datos</th><td>2018-11-19 a 2018-11-30; años con datos válidos: 2018</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Horas válidas</th><td>240 (100 % con hora inferida)</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Parámetros</th><td>co, h2s, pm10, so2</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Régimen alto</th><td>no está en el gold (le falta PM2.5 o PM10 horario)</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Días en cero</th><td>0.0 % de los días-parámetro</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Ubicación</th><td>Ubicado a 15 m del patio de la Institución Educativa Privada - IEP Arturo Padilla Espinoza, Av. Revolución N° 2494, distrito Ventanilla.</td></tr></table></div></div>`)[0];
+                popup_124d7c40bc3c798d4a7e3cef10b65ce9.setContent(html_66f627f728df9ced5b7993c7f842aa3d);
+            
+        
+
+        marker_0ed9c6c6af453592fa7027461ee42ff1.bindPopup(popup_124d7c40bc3c798d4a7e3cef10b65ce9)
+        ;
+
+        
+    
+    
+            marker_0ed9c6c6af453592fa7027461ee42ff1.bindTooltip(
+                `<div>
+                     <b>CA-VMP-2A</b> · horarias con PM · 240 h válidas
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+                marker_0ed9c6c6af453592fa7027461ee42ff1.setIcon(div_icon_b2264ef80e817e798b0dcbf1d5b580e0);
+            
+    
+            var marker_9ae2c425b572459d2a6404bf07bc84d6 = L.marker(
+                [-11.87251, -77.1257],
+                {
+}
+            ).addTo(marker_cluster_843167ce504a69344b869ff8e292ff40);
+        
+    
+            var div_icon_97f147e4c9fac06c51ebfd58d305ab11 = L.divIcon({
+  "html": "\u003cdiv style=\u0027width:18px;height:18px;border-radius:50%;background:#1baf7a;opacity:0.85;border:2px solid #fcfcfb;box-shadow:0 0 0 1px #52514e\u0027\u003e\u003c/div\u003e",
+  "iconSize": [18.0, 18.0],
+  "iconAnchor": [9.0, 9.0],
+  "className": "empty",
+});
+        
+    
+        var popup_b9441bb3c7f640bd4de81e742f2e3d75 = L.popup({
+  "maxWidth": 420,
+});
+
+        
+            
+                var html_4b3f4c88718e5a04340c5d53db036f39 = $(`<div id="html_4b3f4c88718e5a04340c5d53db036f39" style="width: 100.0%; height: 100.0%;"><div style='font-family:system-ui,sans-serif;font-size:12px;max-width:380px'><div style='font-size:15px;font-weight:700;margin-bottom:4px'>CA-VMP-6</div><div style='color:#1baf7a;font-weight:600;margin-bottom:6px'>solo promedios de 24 h · muestreo manual de 24 h</div><table style='border-collapse:collapse'><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Evaluación</th><td>Calidad de aire realizada en el ámbito de la zona industrial de Ventanilla-Mi Perú</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Actividad</th><td>Zona industrial de Ventanilla-Mi Perú (zona industrial)</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Dpto. / prov. / distrito</th><td>CALLAO / CALLAO / VENTANILLA</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Altitud</th><td>0 m s. n. m.</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Datos</th><td>2018-03-15 a 2021-01-29; años con datos válidos: —</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Horas válidas</th><td>0 (promedios de 24 h con valor: 120)</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Parámetros</th><td>—</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Régimen alto</th><td>no está en el gold (le falta PM2.5 o PM10 horario)</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Días en cero</th><td>—</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Ubicación</th><td>Ubicado en la azotea del Hospital de Ventanilla. Av. Pedro Beltrán S/N Urb. Satélite, distrito Ventanilla.</td></tr></table></div></div>`)[0];
+                popup_b9441bb3c7f640bd4de81e742f2e3d75.setContent(html_4b3f4c88718e5a04340c5d53db036f39);
+            
+        
+
+        marker_9ae2c425b572459d2a6404bf07bc84d6.bindPopup(popup_b9441bb3c7f640bd4de81e742f2e3d75)
+        ;
+
+        
+    
+    
+            marker_9ae2c425b572459d2a6404bf07bc84d6.bindTooltip(
+                `<div>
+                     <b>CA-VMP-6</b> · solo promedios de 24 h · 0 h válidas
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+                marker_9ae2c425b572459d2a6404bf07bc84d6.setIcon(div_icon_97f147e4c9fac06c51ebfd58d305ab11);
+            
+    
+            var marker_d9727dead697d0fcbdf40006e85bf62c = L.marker(
+                [-11.86314, -77.12292],
+                {
+}
+            ).addTo(marker_cluster_843167ce504a69344b869ff8e292ff40);
+        
+    
+            var div_icon_9a1278d532c9bc9dc2b64a5615fb7db1 = L.divIcon({
+  "html": "\u003cdiv style=\u0027width:18px;height:18px;border-radius:50%;background:#1baf7a;opacity:0.85;border:2px solid #fcfcfb;box-shadow:0 0 0 1px #52514e\u0027\u003e\u003c/div\u003e",
+  "iconSize": [18.0, 18.0],
+  "iconAnchor": [9.0, 9.0],
+  "className": "empty",
+});
+        
+    
+        var popup_44e98eb77cdda0788e1eb60c75b283be = L.popup({
+  "maxWidth": 420,
+});
+
+        
+            
+                var html_720bdb054bc0133231a00a24f32edaa0 = $(`<div id="html_720bdb054bc0133231a00a24f32edaa0" style="width: 100.0%; height: 100.0%;"><div style='font-family:system-ui,sans-serif;font-size:12px;max-width:380px'><div style='font-size:15px;font-weight:700;margin-bottom:4px'>CA-VMP-7</div><div style='color:#1baf7a;font-weight:600;margin-bottom:6px'>solo promedios de 24 h · muestreo manual de 24 h</div><table style='border-collapse:collapse'><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Evaluación</th><td>Calidad de aire realizada en el ámbito de la zona industrial de Ventanilla-Mi Perú</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Actividad</th><td>Zona industrial de Ventanilla-Mi Perú (zona industrial)</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Dpto. / prov. / distrito</th><td>CALLAO / CALLAO / MI PERU<br><span style='color:#a32626'>ALTITUD con 2 valores (0: 19 filas, 86: 61 filas)</span></td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Altitud</th><td>86 m s. n. m.</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Datos</th><td>2018-07-07 a 2019-10-17; años con datos válidos: —</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Horas válidas</th><td>0 (promedios de 24 h con valor: 80)</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Parámetros</th><td>—</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Régimen alto</th><td>no está en el gold (le falta PM2.5 o PM10 horario)</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Días en cero</th><td>—</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Ubicación</th><td>Ubicado en la azotea de la vivienda del asentamiento humano – A.H. Virgen de Guadalupe – 2da etapa, Mz. Y Lote 28, aproximadamente a 80 m del asentamiento humano – A.H. Las Casuarinas, distrito Mi Perú.</td></tr></table></div></div>`)[0];
+                popup_44e98eb77cdda0788e1eb60c75b283be.setContent(html_720bdb054bc0133231a00a24f32edaa0);
+            
+        
+
+        marker_d9727dead697d0fcbdf40006e85bf62c.bindPopup(popup_44e98eb77cdda0788e1eb60c75b283be)
+        ;
+
+        
+    
+    
+            marker_d9727dead697d0fcbdf40006e85bf62c.bindTooltip(
+                `<div>
+                     <b>CA-VMP-7</b> · solo promedios de 24 h · 0 h válidas
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+                marker_d9727dead697d0fcbdf40006e85bf62c.setIcon(div_icon_9a1278d532c9bc9dc2b64a5615fb7db1);
+            
+    
+            var marker_36671ef1f99d130370b1bf0d92cc7ecc = L.marker(
+                [-11.86137, -77.12325],
+                {
+}
+            ).addTo(marker_cluster_843167ce504a69344b869ff8e292ff40);
+        
+    
+            var div_icon_a5098730d3a01a471d06c33176072d02 = L.divIcon({
+  "html": "\u003cdiv style=\u0027width:18px;height:18px;border-radius:50%;background:#1baf7a;opacity:0.85;border:2px solid #fcfcfb;box-shadow:0 0 0 1px #52514e\u0027\u003e\u003c/div\u003e",
+  "iconSize": [18.0, 18.0],
+  "iconAnchor": [9.0, 9.0],
+  "className": "empty",
+});
+        
+    
+        var popup_01d437a09289ff3d4162d11b00eb5a3c = L.popup({
+  "maxWidth": 420,
+});
+
+        
+            
+                var html_45d18ff77f1f4be4c4f5bc2cf52d3543 = $(`<div id="html_45d18ff77f1f4be4c4f5bc2cf52d3543" style="width: 100.0%; height: 100.0%;"><div style='font-family:system-ui,sans-serif;font-size:12px;max-width:380px'><div style='font-size:15px;font-weight:700;margin-bottom:4px'>CA-VMP-8</div><div style='color:#1baf7a;font-weight:600;margin-bottom:6px'>solo promedios de 24 h · muestreo manual de 24 h</div><table style='border-collapse:collapse'><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Evaluación</th><td>Calidad de aire realizada en el ámbito de la zona industrial de Ventanilla-Mi Perú</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Actividad</th><td>Zona industrial de Ventanilla-Mi Perú (zona industrial)</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Dpto. / prov. / distrito</th><td>CALLAO / CALLAO / MI PERU</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Altitud</th><td>76 m s. n. m.</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Datos</th><td>2020-01-26 a 2021-11-26; años con datos válidos: —</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Horas válidas</th><td>0 (promedios de 24 h con valor: 96)</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Parámetros</th><td>—</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Régimen alto</th><td>no está en el gold (le falta PM2.5 o PM10 horario)</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Días en cero</th><td>—</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Ubicación</th><td>Azotea de la vivienda del A.H. Virgen de Guadalupe – 2da etapa, Mz. I, lote 18, cuadra 4 de Av. Virgen de Guadalupe, distrito Mi Perú.</td></tr></table></div></div>`)[0];
+                popup_01d437a09289ff3d4162d11b00eb5a3c.setContent(html_45d18ff77f1f4be4c4f5bc2cf52d3543);
+            
+        
+
+        marker_36671ef1f99d130370b1bf0d92cc7ecc.bindPopup(popup_01d437a09289ff3d4162d11b00eb5a3c)
+        ;
+
+        
+    
+    
+            marker_36671ef1f99d130370b1bf0d92cc7ecc.bindTooltip(
+                `<div>
+                     <b>CA-VMP-8</b> · solo promedios de 24 h · 0 h válidas
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+                marker_36671ef1f99d130370b1bf0d92cc7ecc.setIcon(div_icon_a5098730d3a01a471d06c33176072d02);
+            
+    
+            var marker_2efb0cc099957fd93f45b28d667a5d45 = L.marker(
+                [-11.86197, -77.12326],
+                {
+}
+            ).addTo(marker_cluster_843167ce504a69344b869ff8e292ff40);
+        
+    
+            var div_icon_2cd5eaf2ced035d0faace688addddc7f = L.divIcon({
+  "html": "\u003cdiv style=\u0027width:18px;height:18px;border-radius:50%;background:#1baf7a;opacity:0.85;border:2px solid #fcfcfb;box-shadow:0 0 0 1px #52514e\u0027\u003e\u003c/div\u003e",
+  "iconSize": [18.0, 18.0],
+  "iconAnchor": [9.0, 9.0],
+  "className": "empty",
+});
+        
+    
+        var popup_4aea68adcaa16d2284c61abffa1e8522 = L.popup({
+  "maxWidth": 420,
+});
+
+        
+            
+                var html_615da8d0827ee85aa4b9f530ffd6a16f = $(`<div id="html_615da8d0827ee85aa4b9f530ffd6a16f" style="width: 100.0%; height: 100.0%;"><div style='font-family:system-ui,sans-serif;font-size:12px;max-width:380px'><div style='font-size:15px;font-weight:700;margin-bottom:4px'>CA-VMP-9</div><div style='color:#1baf7a;font-weight:600;margin-bottom:6px'>solo promedios de 24 h · muestreo manual de 24 h</div><table style='border-collapse:collapse'><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Evaluación</th><td>Calidad de aire realizada en el ámbito de la zona industrial de Ventanilla-Mi Perú</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Actividad</th><td>Zona industrial de Ventanilla-Mi Perú (zona industrial)</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Dpto. / prov. / distrito</th><td>CALLAO / CALLAO / MI PERU</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Altitud</th><td>77 m s. n. m.</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Datos</th><td>2020-01-26 a 2021-11-27; años con datos válidos: —</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Horas válidas</th><td>0 (promedios de 24 h con valor: 95)</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Parámetros</th><td>—</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Régimen alto</th><td>no está en el gold (le falta PM2.5 o PM10 horario)</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Días en cero</th><td>—</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Ubicación</th><td>Azotea de la vivienda del A.H. Virgen de Guadalupe – 2da etapa, Mz. J, lote 20, cuadra 5 de Av. Virgen de Guadalupe, distrito Mi Perú</td></tr></table></div></div>`)[0];
+                popup_4aea68adcaa16d2284c61abffa1e8522.setContent(html_615da8d0827ee85aa4b9f530ffd6a16f);
+            
+        
+
+        marker_2efb0cc099957fd93f45b28d667a5d45.bindPopup(popup_4aea68adcaa16d2284c61abffa1e8522)
+        ;
+
+        
+    
+    
+            marker_2efb0cc099957fd93f45b28d667a5d45.bindTooltip(
+                `<div>
+                     <b>CA-VMP-9</b> · solo promedios de 24 h · 0 h válidas
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+                marker_2efb0cc099957fd93f45b28d667a5d45.setIcon(div_icon_2cd5eaf2ced035d0faace688addddc7f);
+            
+    
+            marker_cluster_843167ce504a69344b869ff8e292ff40.addTo(map_db24d80f83829e1fadc305b34ae5f6f5);
+        
+    
+            var marker_cluster_c5ea47f0ccfadafc913cde535b35f400 = L.markerClusterGroup(
+                {
+  "maxClusterRadius": 120,
+  "spiderfyOnMaxZoom": true,
+  "showCoverageOnHover": false,
+  "disableClusteringAtZoom": 16,
+}
+            );
+            marker_cluster_c5ea47f0ccfadafc913cde535b35f400.options.iconCreateFunction =
+                function(cluster) {
+  var n = cluster.getChildCount();
+  return L.divIcon({html: '<div style="background:#0b0b0b;color:#fcfcfb;border:2px solid #fcfcfb;border-radius:50%;'
+    + 'width:34px;height:34px;line-height:30px;text-align:center;font:600 13px system-ui;box-shadow:0 0 0 1px #52514e">' + n + '</div>',
+    className: '', iconSize: L.point(34, 34)});
+};
+        
+    
+            var marker_979d54640873b6cf11a18a7604920efa = L.marker(
+                [-11.97893, -76.88874],
+                {
+}
+            ).addTo(marker_cluster_c5ea47f0ccfadafc913cde535b35f400);
+        
+    
+            var div_icon_11eb5659eddd1ca3b42b8403c1abd60d = L.divIcon({
+  "html": "\u003cdiv style=\u0027width:32px;height:32px;border-radius:50%;background:#eb6834;opacity:0.85;border:2px solid #fcfcfb;box-shadow:0 0 0 1px #52514e\u0027\u003e\u003c/div\u003e",
+  "iconSize": [31.909259075231247, 31.909259075231247],
+  "iconAnchor": [15.954629537615624, 15.954629537615624],
+  "className": "empty",
+});
+        
+    
+        var popup_3215ad2d9d02ac74e413d94ece02c5a5 = L.popup({
+  "maxWidth": 420,
+});
+
+        
+            
+                var html_6cc849772e44371b76d5517de7541c6e = $(`<div id="html_6cc849772e44371b76d5517de7541c6e" style="width: 100.0%; height: 100.0%;"><div style='font-family:system-ui,sans-serif;font-size:12px;max-width:380px'><div style='font-size:15px;font-weight:700;margin-bottom:4px'>CA-RZC-01</div><div style='color:#eb6834;font-weight:600;margin-bottom:6px'>horarias sin PM · serie de meses</div><table style='border-collapse:collapse'><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Evaluación</th><td>Calidad del aire en el ámbito de la refinería de zinc Cajamarquilla de Nexa Resources Cajamarquilla S.A.C.,<br>Calidad del aire en el ámbito de la refinería de zinc Cajamarquilla</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Actividad</th><td>Refinería de zinc Cajamarquilla de Nexa Resources Cajamarquilla S.A.C | Refinería de zinc Cajamarquilla (metalurgia (refinación o fundición))</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Dpto. / prov. / distrito</th><td>LIMA / LIMA / LURIGANCHO</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Altitud</th><td>428 m s. n. m.</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Datos</th><td>2021-12-14 a 2022-12-31; años con datos válidos: 2021, 2022</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Horas válidas</th><td>3 504 (100 % con hora inferida)</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Parámetros</th><td>humedad, precipitacion, presion, radiacion, so2, temperatura, viento_direccion, viento_velocidad</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Régimen alto</th><td>no está en el gold (le falta PM2.5 o PM10 horario)</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Días en cero</th><td>3.0 % de los días-parámetro</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Ubicación</th><td>Techo de la casa ubicada en el Jr. Los Andes Lote 109, aproximadamente a 750 m del ingreso de la refinería de zinc Cajamarquilla.</td></tr></table></div></div>`)[0];
+                popup_3215ad2d9d02ac74e413d94ece02c5a5.setContent(html_6cc849772e44371b76d5517de7541c6e);
+            
+        
+
+        marker_979d54640873b6cf11a18a7604920efa.bindPopup(popup_3215ad2d9d02ac74e413d94ece02c5a5)
+        ;
+
+        
+    
+    
+            marker_979d54640873b6cf11a18a7604920efa.bindTooltip(
+                `<div>
+                     <b>CA-RZC-01</b> · horarias sin PM · 3 504 h válidas
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+                marker_979d54640873b6cf11a18a7604920efa.setIcon(div_icon_11eb5659eddd1ca3b42b8403c1abd60d);
+            
+    
+            var marker_fd3b098ecd6422b84401269059636047 = L.marker(
+                [-11.95288, -76.87557],
+                {
+}
+            ).addTo(marker_cluster_c5ea47f0ccfadafc913cde535b35f400);
+        
+    
+            var div_icon_fea4075cd24e010bdd6002a1f549f657 = L.divIcon({
+  "html": "\u003cdiv style=\u0027width:31px;height:31px;border-radius:50%;background:#2a78d6;opacity:0.85;border:2px solid #fcfcfb;box-shadow:0 0 0 1px #52514e\u0027\u003e\u003c/div\u003e",
+  "iconSize": [31.325391200645463, 31.325391200645463],
+  "iconAnchor": [15.662695600322731, 15.662695600322731],
+  "className": "empty",
+});
+        
+    
+        var popup_63f827ba077634dd286e040868e7e50a = L.popup({
+  "maxWidth": 420,
+});
+
+        
+            
+                var html_fe36cf76002893b7859a70c72ce6dd96 = $(`<div id="html_fe36cf76002893b7859a70c72ce6dd96" style="width: 100.0%; height: 100.0%;"><div style='font-family:system-ui,sans-serif;font-size:12px;max-width:380px'><div style='font-size:15px;font-weight:700;margin-bottom:4px'>CA-RZC-02</div><div style='color:#2a78d6;font-weight:600;margin-bottom:6px'>horarias con PM · serie de meses</div><table style='border-collapse:collapse'><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Evaluación</th><td>Calidad del aire en el ámbito de la refinería de zinc Cajamarquilla de Nexa Resources Cajamarquilla S.A.C.,<br>Calidad del aire en el ámbito de la refinería de zinc Cajamarquilla</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Actividad</th><td>Refinería de zinc Cajamarquilla de Nexa Resources Cajamarquilla S.A.C | Refinería de zinc Cajamarquilla (metalurgia (refinación o fundición))</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Dpto. / prov. / distrito</th><td>LIMA / LIMA / LURIGANCHO</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Altitud</th><td>504 m s. n. m.</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Datos</th><td>2021-12-12 a 2022-12-31; años con datos válidos: 2021, 2022</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Horas válidas</th><td>3 216 (100 % con hora inferida)</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Parámetros</th><td>humedad, pm10, pm2_5, precipitacion, presion, radiacion, so2, temperatura, viento_direccion, viento_velocidad</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Régimen alto</th><td>61.7 % de 264 h del gold</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Días en cero</th><td>3.8 % de los días-parámetro</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Ubicación</th><td>Techo de la oficina de medidores de SO2 en las instalaciones del Radio Observatorio de Jicamarca.</td></tr></table></div></div>`)[0];
+                popup_63f827ba077634dd286e040868e7e50a.setContent(html_fe36cf76002893b7859a70c72ce6dd96);
+            
+        
+
+        marker_fd3b098ecd6422b84401269059636047.bindPopup(popup_63f827ba077634dd286e040868e7e50a)
+        ;
+
+        
+    
+    
+            marker_fd3b098ecd6422b84401269059636047.bindTooltip(
+                `<div>
+                     <b>CA-RZC-02</b> · horarias con PM · 3 216 h válidas
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+                marker_fd3b098ecd6422b84401269059636047.setIcon(div_icon_fea4075cd24e010bdd6002a1f549f657);
+            
+    
+            var marker_a9a764029ca0fb32870a45735b3d83b5 = L.marker(
+                [-11.99614, -76.92252],
+                {
+}
+            ).addTo(marker_cluster_c5ea47f0ccfadafc913cde535b35f400);
+        
+    
+            var div_icon_4644b08ce391afe2e2dbff32e469de72 = L.divIcon({
+  "html": "\u003cdiv style=\u0027width:23px;height:23px;border-radius:50%;background:#2a78d6;opacity:0.85;border:2px solid #fcfcfb;box-shadow:0 0 0 1px #52514e\u0027\u003e\u003c/div\u003e",
+  "iconSize": [23.399318029286903, 23.399318029286903],
+  "iconAnchor": [11.699659014643451, 11.699659014643451],
+  "className": "empty",
+});
+        
+    
+        var popup_6a4672d2b9d8a729be526bee57ddadcc = L.popup({
+  "maxWidth": 420,
+});
+
+        
+            
+                var html_cb6dc90e93e8d672db2a164925a45da8 = $(`<div id="html_cb6dc90e93e8d672db2a164925a45da8" style="width: 100.0%; height: 100.0%;"><div style='font-family:system-ui,sans-serif;font-size:12px;max-width:380px'><div style='font-size:15px;font-weight:700;margin-bottom:4px'>CA-HU-04</div><div style='color:#2a78d6;font-weight:600;margin-bottom:6px'>horarias con PM · campaña de semanas</div><table style='border-collapse:collapse'><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Evaluación</th><td>Calidad del aire en el ámbito de influencia de la zona ladrillera de centro poblado menor Santa María de Huachipa y Nievería.</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Actividad</th><td>Zona ladrillera de centro poblado menor Santa María de Huachipa y Nievería (ladrilleras)</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Dpto. / prov. / distrito</th><td>LIMA / LIMA / LURIGANCHO</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Altitud</th><td>360 m s. n. m.</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Datos</th><td>2021-12-09 a 2021-12-31; años con datos válidos: 2021</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Horas válidas</th><td>528 (100 % con hora inferida)</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Parámetros</th><td>pm10, pm2_5, precipitacion</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Régimen alto</th><td>82.6 % de 264 h del gold</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Días en cero</th><td>85.1 % de los días-parámetro</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Ubicación</th><td>Punto ubicado en el Techo de la I.E. 1224 ElParaíso, ubicado en Av. San Juan s/n, Distrito Lurigancho, provincia y departamento Lima.</td></tr></table></div></div>`)[0];
+                popup_6a4672d2b9d8a729be526bee57ddadcc.setContent(html_cb6dc90e93e8d672db2a164925a45da8);
+            
+        
+
+        marker_a9a764029ca0fb32870a45735b3d83b5.bindPopup(popup_6a4672d2b9d8a729be526bee57ddadcc)
+        ;
+
+        
+    
+    
+            marker_a9a764029ca0fb32870a45735b3d83b5.bindTooltip(
+                `<div>
+                     <b>CA-HU-04</b> · horarias con PM · 528 h válidas
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+                marker_a9a764029ca0fb32870a45735b3d83b5.setIcon(div_icon_4644b08ce391afe2e2dbff32e469de72);
+            
+    
+            var marker_c454b37f2cb26def02e5c1b5d571bbdb = L.marker(
+                [-12.01236, -76.93717],
+                {
+}
+            ).addTo(marker_cluster_c5ea47f0ccfadafc913cde535b35f400);
+        
+    
+            var div_icon_7a39271f732de008dda2f0d35a1299ff = L.divIcon({
+  "html": "\u003cdiv style=\u0027width:23px;height:23px;border-radius:50%;background:#2a78d6;opacity:0.85;border:2px solid #fcfcfb;box-shadow:0 0 0 1px #52514e\u0027\u003e\u003c/div\u003e",
+  "iconSize": [22.883866916439764, 22.883866916439764],
+  "iconAnchor": [11.441933458219882, 11.441933458219882],
+  "className": "empty",
+});
+        
+    
+        var popup_955ccc11e9706cfabaf3d502e0472590 = L.popup({
+  "maxWidth": 420,
+});
+
+        
+            
+                var html_0456804469495a7911aa17c31e031d66 = $(`<div id="html_0456804469495a7911aa17c31e031d66" style="width: 100.0%; height: 100.0%;"><div style='font-family:system-ui,sans-serif;font-size:12px;max-width:380px'><div style='font-size:15px;font-weight:700;margin-bottom:4px'>CA-HU-09</div><div style='color:#2a78d6;font-weight:600;margin-bottom:6px'>horarias con PM · campaña de semanas</div><table style='border-collapse:collapse'><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Evaluación</th><td>Calidad del aire en el ámbito de influencia de la zona ladrillera de centro poblado menor Santa María de Huachipa y Nievería.</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Actividad</th><td>Zona ladrillera de centro poblado menor Santa María de Huachipa y Nievería (ladrilleras)</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Dpto. / prov. / distrito</th><td>LIMA / LIMA / LURIGANCHO</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Altitud</th><td>315 m s. n. m.</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Datos</th><td>2021-12-13 a 2021-12-31; años con datos válidos: 2021</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Horas válidas</th><td>432 (100 % con hora inferida)</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Parámetros</th><td>pm10, pm2_5, precipitacion</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Régimen alto</th><td>17.4 % de 432 h del gold</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Días en cero</th><td>71.4 % de los días-parámetro</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Ubicación</th><td>Azotea del 2do piso de la Vivienda, calle Los Gavilanes s/n, Mz C, Lt 26A. Distrito Lurigancho, provincia y departamento Lima.</td></tr></table></div></div>`)[0];
+                popup_955ccc11e9706cfabaf3d502e0472590.setContent(html_0456804469495a7911aa17c31e031d66);
+            
+        
+
+        marker_c454b37f2cb26def02e5c1b5d571bbdb.bindPopup(popup_955ccc11e9706cfabaf3d502e0472590)
+        ;
+
+        
+    
+    
+            marker_c454b37f2cb26def02e5c1b5d571bbdb.bindTooltip(
+                `<div>
+                     <b>CA-HU-09</b> · horarias con PM · 432 h válidas
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+                marker_c454b37f2cb26def02e5c1b5d571bbdb.setIcon(div_icon_7a39271f732de008dda2f0d35a1299ff);
+            
+    
+            marker_cluster_c5ea47f0ccfadafc913cde535b35f400.addTo(map_db24d80f83829e1fadc305b34ae5f6f5);
+        
+    
+            var marker_cluster_27f9437842a03c4a49a9bc61dee0bb80 = L.markerClusterGroup(
+                {
+  "maxClusterRadius": 120,
+  "spiderfyOnMaxZoom": true,
+  "showCoverageOnHover": false,
+  "disableClusteringAtZoom": 16,
+}
+            );
+            marker_cluster_27f9437842a03c4a49a9bc61dee0bb80.options.iconCreateFunction =
+                function(cluster) {
+  var n = cluster.getChildCount();
+  return L.divIcon({html: '<div style="background:#0b0b0b;color:#fcfcfb;border:2px solid #fcfcfb;border-radius:50%;'
+    + 'width:34px;height:34px;line-height:30px;text-align:center;font:600 13px system-ui;box-shadow:0 0 0 1px #52514e">' + n + '</div>',
+    className: '', iconSize: L.point(34, 34)});
+};
+        
+    
+            var marker_178328348fe40aaffbc2731f199bf6b1 = L.marker(
+                [-7.74245, -79.18739],
+                {
+}
+            ).addTo(marker_cluster_27f9437842a03c4a49a9bc61dee0bb80);
+        
+    
+            var div_icon_75f14ae82494920f2100b9300955f7e1 = L.divIcon({
+  "html": "\u003cdiv style=\u0027width:28px;height:28px;border-radius:50%;background:#2a78d6;opacity:0.85;border:2px solid #fcfcfb;box-shadow:0 0 0 1px #52514e\u0027\u003e\u003c/div\u003e",
+  "iconSize": [27.835331413376544, 27.835331413376544],
+  "iconAnchor": [13.917665706688272, 13.917665706688272],
+  "className": "empty",
+});
+        
+    
+        var popup_861335d6e5f999380bfde8f9d2fe47cc = L.popup({
+  "maxWidth": 420,
+});
+
+        
+            
+                var html_bb3684c8e638c4dc779acb74d98f3c83 = $(`<div id="html_bb3684c8e638c4dc779acb74d98f3c83" style="width: 100.0%; height: 100.0%;"><div style='font-family:system-ui,sans-serif;font-size:12px;max-width:380px'><div style='font-size:15px;font-weight:700;margin-bottom:4px'>CA-CG-01</div><div style='color:#2a78d6;font-weight:600;margin-bottom:6px'>horarias con PM · campaña de semanas</div><table style='border-collapse:collapse'><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Evaluación</th><td>Calidad del aire en el ámbito de la empresa Casa Grande S.A.A.<br>Calidad del aire en el ámbito de influencia de la empresa agroindustrial Casa Grande S.A.A.</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Actividad</th><td>Empresa Casa Grande S.A.A | Empresa agroindustrial Casa Grande S.A.A (agroindustria)</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Dpto. / prov. / distrito</th><td>LA LIBERTAD / ASCOPE / CASA GRANDE</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Altitud</th><td>149 m s. n. m.</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Datos</th><td>2021-12-02 a 2022-02-13; años con datos válidos: 2021, 2022</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Horas válidas</th><td>1 752 (100 % con hora inferida)</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Parámetros</th><td>humedad, pm10, pm2_5, precipitacion, presion, temperatura, viento_direccion, viento_velocidad</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Régimen alto</th><td>1.6 % de 1 032 h del gold</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Días en cero</th><td>32.3 % de los días-parámetro</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Ubicación</th><td>Punto ubicado en Calle Urubamba Nro 40 - Casa Grande, distrito de casa grande a 400 m de la Planta Casa Grande en la provincia Ascope</td></tr></table></div></div>`)[0];
+                popup_861335d6e5f999380bfde8f9d2fe47cc.setContent(html_bb3684c8e638c4dc779acb74d98f3c83);
+            
+        
+
+        marker_178328348fe40aaffbc2731f199bf6b1.bindPopup(popup_861335d6e5f999380bfde8f9d2fe47cc)
+        ;
+
+        
+    
+    
+            marker_178328348fe40aaffbc2731f199bf6b1.bindTooltip(
+                `<div>
+                     <b>CA-CG-01</b> · horarias con PM · 1 752 h válidas
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+                marker_178328348fe40aaffbc2731f199bf6b1.setIcon(div_icon_75f14ae82494920f2100b9300955f7e1);
+            
+    
+            var marker_d7017835d354842627e1c4eaeb3d0002 = L.marker(
+                [-7.74125, -79.18495],
+                {
+}
+            ).addTo(marker_cluster_27f9437842a03c4a49a9bc61dee0bb80);
+        
+    
+            var div_icon_46cc82d204c2013b54064965b344e599 = L.divIcon({
+  "html": "\u003cdiv style=\u0027width:37px;height:37px;border-radius:50%;background:#2a78d6;opacity:0.85;border:2px solid #fcfcfb;box-shadow:0 0 0 1px #52514e\u0027\u003e\u003c/div\u003e",
+  "iconSize": [36.703786305895164, 36.703786305895164],
+  "iconAnchor": [18.351893152947582, 18.351893152947582],
+  "className": "empty",
+});
+        
+    
+        var popup_cd3805f2fc8600e09f59fe236809bd78 = L.popup({
+  "maxWidth": 420,
+});
+
+        
+            
+                var html_36030664f805cf7a8560b3eb5db9a089 = $(`<div id="html_36030664f805cf7a8560b3eb5db9a089" style="width: 100.0%; height: 100.0%;"><div style='font-family:system-ui,sans-serif;font-size:12px;max-width:380px'><div style='font-size:15px;font-weight:700;margin-bottom:4px'>CA-CG-02</div><div style='color:#2a78d6;font-weight:600;margin-bottom:6px'>horarias con PM · serie de meses</div><table style='border-collapse:collapse'><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Evaluación</th><td>Calidad del aire en el ámbito de la empresa Casa Grande S.A.A.</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Actividad</th><td>Empresa Casa Grande S.A.A (agroindustria)</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Dpto. / prov. / distrito</th><td>LA LIBERTAD / ASCOPE / CASA GRANDE</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Altitud</th><td>137 m s. n. m.</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Datos</th><td>2022-02-14 a 2022-12-31; años con datos válidos: 2022</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Horas válidas</th><td>6 336 (100 % con hora inferida)</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Parámetros</th><td>humedad, pm10, pm2_5, precipitacion, presion, temperatura, viento_direccion, viento_velocidad</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Régimen alto</th><td>2.1 % de 5 688 h del gold</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Días en cero</th><td>0.0 % de los días-parámetro</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Ubicación</th><td>Estación ubicada a sotavento en la Mz. A, lote 1 asentamiento humano 11 de Febrero, distrito Casa Grande.</td></tr></table></div></div>`)[0];
+                popup_cd3805f2fc8600e09f59fe236809bd78.setContent(html_36030664f805cf7a8560b3eb5db9a089);
+            
+        
+
+        marker_d7017835d354842627e1c4eaeb3d0002.bindPopup(popup_cd3805f2fc8600e09f59fe236809bd78)
+        ;
+
+        
+    
+    
+            marker_d7017835d354842627e1c4eaeb3d0002.bindTooltip(
+                `<div>
+                     <b>CA-CG-02</b> · horarias con PM · 6 336 h válidas
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+                marker_d7017835d354842627e1c4eaeb3d0002.setIcon(div_icon_46cc82d204c2013b54064965b344e599);
+            
+    
+            var marker_a9b0911a7eda8cba6ca60f5c040d44da = L.marker(
+                [-7.76327, -79.15208],
+                {
+}
+            ).addTo(marker_cluster_27f9437842a03c4a49a9bc61dee0bb80);
+        
+    
+            var div_icon_cb1dbb51db6a991c9f853d29339de8aa = L.divIcon({
+  "html": "\u003cdiv style=\u0027width:39px;height:39px;border-radius:50%;background:#2a78d6;opacity:0.85;border:2px solid #fcfcfb;box-shadow:0 0 0 1px #52514e\u0027\u003e\u003c/div\u003e",
+  "iconSize": [38.68849171046395, 38.68849171046395],
+  "iconAnchor": [19.344245855231975, 19.344245855231975],
+  "className": "empty",
+});
+        
+    
+        var popup_8dec17f336692b540afb79c5c02de3d1 = L.popup({
+  "maxWidth": 420,
+});
+
+        
+            
+                var html_9deadfcc095d15de9fcf1e9d8ff170cb = $(`<div id="html_9deadfcc095d15de9fcf1e9d8ff170cb" style="width: 100.0%; height: 100.0%;"><div style='font-family:system-ui,sans-serif;font-size:12px;max-width:380px'><div style='font-size:15px;font-weight:700;margin-bottom:4px'>CA-ROM-01</div><div style='color:#2a78d6;font-weight:600;margin-bottom:6px'>horarias con PM · serie de meses</div><table style='border-collapse:collapse'><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Evaluación</th><td>Calidad del aire en el ámbito de la empresa Casa Grande S.A.A.<br>Calidad del aire en el ámbito de influencia de la empresa agroindustrial Casa Grande S.A.A.</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Actividad</th><td>Empresa Casa Grande S.A.A | Empresa agroindustrial Casa Grande S.A.A (agroindustria)</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Dpto. / prov. / distrito</th><td>LA LIBERTAD / ASCOPE / CASA GRANDE</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Altitud</th><td>177 m s. n. m.</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Datos</th><td>2021-12-02 a 2022-12-31; años con datos válidos: 2021, 2022</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Horas válidas</th><td>7 752 (100 % con hora inferida)</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Parámetros</th><td>humedad, pm10, pm2_5, precipitacion, presion, temperatura, viento_direccion, viento_velocidad</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Régimen alto</th><td>1.3 % de 7 584 h del gold</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Días en cero</th><td>7.3 % de los días-parámetro</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Ubicación</th><td>Estación ubicada a barlovento en Calle Barrios Altos Manzana E Lote 18, Anexo Roma, distrito Casa Grande.</td></tr></table></div></div>`)[0];
+                popup_8dec17f336692b540afb79c5c02de3d1.setContent(html_9deadfcc095d15de9fcf1e9d8ff170cb);
+            
+        
+
+        marker_a9b0911a7eda8cba6ca60f5c040d44da.bindPopup(popup_8dec17f336692b540afb79c5c02de3d1)
+        ;
+
+        
+    
+    
+            marker_a9b0911a7eda8cba6ca60f5c040d44da.bindTooltip(
+                `<div>
+                     <b>CA-ROM-01</b> · horarias con PM · 7 752 h válidas
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+                marker_a9b0911a7eda8cba6ca60f5c040d44da.setIcon(div_icon_cb1dbb51db6a991c9f853d29339de8aa);
+            
+    
+            marker_cluster_27f9437842a03c4a49a9bc61dee0bb80.addTo(map_db24d80f83829e1fadc305b34ae5f6f5);
+        
+    
+            var marker_cluster_350e944e5171be5de6817071c16d3fc0 = L.markerClusterGroup(
+                {
+  "maxClusterRadius": 120,
+  "spiderfyOnMaxZoom": true,
+  "showCoverageOnHover": false,
+  "disableClusteringAtZoom": 16,
+}
+            );
+            marker_cluster_350e944e5171be5de6817071c16d3fc0.options.iconCreateFunction =
+                function(cluster) {
+  var n = cluster.getChildCount();
+  return L.divIcon({html: '<div style="background:#0b0b0b;color:#fcfcfb;border:2px solid #fcfcfb;border-radius:50%;'
+    + 'width:34px;height:34px;line-height:30px;text-align:center;font:600 13px system-ui;box-shadow:0 0 0 1px #52514e">' + n + '</div>',
+    className: '', iconSize: L.point(34, 34)});
+};
+        
+    
+            var marker_148dcc4ab5c1d8ae29bbb6df30c9cf8d = L.marker(
+                [-9.12585, -78.55687],
+                {
+}
+            ).addTo(marker_cluster_350e944e5171be5de6817071c16d3fc0);
+        
+    
+            var div_icon_a8ff10ef1a34dcbbf5a9b0179b73fbd8 = L.divIcon({
+  "html": "\u003cdiv style=\u0027width:18px;height:18px;border-radius:50%;background:#1baf7a;opacity:0.85;border:2px solid #fcfcfb;box-shadow:0 0 0 1px #52514e\u0027\u003e\u003c/div\u003e",
+  "iconSize": [18.0, 18.0],
+  "iconAnchor": [9.0, 9.0],
+  "className": "empty",
+});
+        
+    
+        var popup_22a9552f779d5f6fa1d8e36d3ada3634 = L.popup({
+  "maxWidth": 420,
+});
+
+        
+            
+                var html_5fe86465e6ba37c2a97d90b7feaa3b9b = $(`<div id="html_5fe86465e6ba37c2a97d90b7feaa3b9b" style="width: 100.0%; height: 100.0%;"><div style='font-family:system-ui,sans-serif;font-size:12px;max-width:380px'><div style='font-size:15px;font-weight:700;margin-bottom:4px'>CA-01</div><div style='color:#1baf7a;font-weight:600;margin-bottom:6px'>solo promedios de 24 h · muestreo manual de 24 h</div><table style='border-collapse:collapse'><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Evaluación</th><td>Calidad del aire en el ámbito de la zona industrial Gran Trapecio</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Actividad</th><td>Zona industrial Gran Trapecio (zona industrial)</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Dpto. / prov. / distrito</th><td>ANCASH / SANTA / CHIMBOTE</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Altitud</th><td>35 m s. n. m.</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Datos</th><td>2019-04-24 a 2019-05-16; años con datos válidos: —</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Horas válidas</th><td>0 (promedios de 24 h con valor: 12)</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Parámetros</th><td>—</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Régimen alto</th><td>no está en el gold (le falta PM2.5 o PM10 horario)</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Días en cero</th><td>—</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Ubicación</th><td>Instalaciones del Servicio Industrial de la Marina</td></tr></table></div></div>`)[0];
+                popup_22a9552f779d5f6fa1d8e36d3ada3634.setContent(html_5fe86465e6ba37c2a97d90b7feaa3b9b);
+            
+        
+
+        marker_148dcc4ab5c1d8ae29bbb6df30c9cf8d.bindPopup(popup_22a9552f779d5f6fa1d8e36d3ada3634)
+        ;
+
+        
+    
+    
+            marker_148dcc4ab5c1d8ae29bbb6df30c9cf8d.bindTooltip(
+                `<div>
+                     <b>CA-01</b> · solo promedios de 24 h · 0 h válidas
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+                marker_148dcc4ab5c1d8ae29bbb6df30c9cf8d.setIcon(div_icon_a8ff10ef1a34dcbbf5a9b0179b73fbd8);
+            
+    
+            var marker_0ea2a22c11deb4efa0a5d23b7395edc9 = L.marker(
+                [-9.1033, -78.56185],
+                {
+}
+            ).addTo(marker_cluster_350e944e5171be5de6817071c16d3fc0);
+        
+    
+            var div_icon_2cc71de987c18a3786c4c842b1257759 = L.divIcon({
+  "html": "\u003cdiv style=\u0027width:36px;height:36px;border-radius:50%;background:#eb6834;opacity:0.85;border:2px solid #fcfcfb;box-shadow:0 0 0 1px #52514e\u0027\u003e\u003c/div\u003e",
+  "iconSize": [36.27375672391772, 36.27375672391772],
+  "iconAnchor": [18.13687836195886, 18.13687836195886],
+  "className": "empty",
+});
+        
+    
+        var popup_483085382e2c7367d91059b69f45e4f8 = L.popup({
+  "maxWidth": 420,
+});
+
+        
+            
+                var html_02c870eab352829926399ee75e808e91 = $(`<div id="html_02c870eab352829926399ee75e808e91" style="width: 100.0%; height: 100.0%;"><div style='font-family:system-ui,sans-serif;font-size:12px;max-width:380px'><div style='font-size:15px;font-weight:700;margin-bottom:4px'>CA-03</div><div style='color:#eb6834;font-weight:600;margin-bottom:6px'>horarias sin PM · serie de meses</div><table style='border-collapse:collapse'><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Evaluación</th><td>Calidad del aire en el ámbito de la zona industrial Gran Trapecio</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Actividad</th><td>Zona industrial Gran Trapecio (zona industrial)</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Dpto. / prov. / distrito</th><td>ANCASH / SANTA / CHIMBOTE</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Altitud</th><td>15 m s. n. m.</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Datos</th><td>2019-04-24 a 2019-12-31; años con datos válidos: 2019</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Horas válidas</th><td>6 048 (100 % con hora inferida)</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Parámetros</th><td>h2s, humedad, precipitacion, presion, so2, temperatura, viento_direccion, viento_velocidad</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Régimen alto</th><td>no está en el gold (le falta PM2.5 o PM10 horario)</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Días en cero</th><td>39.7 % de los días-parámetro</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Ubicación</th><td>Calle San Martín, Mz. B, Lt. 6. Asentamiento Humano 15 de abril, distrito Chimbote, provincia Santa, departamento Ancash.</td></tr></table></div></div>`)[0];
+                popup_483085382e2c7367d91059b69f45e4f8.setContent(html_02c870eab352829926399ee75e808e91);
+            
+        
+
+        marker_0ea2a22c11deb4efa0a5d23b7395edc9.bindPopup(popup_483085382e2c7367d91059b69f45e4f8)
+        ;
+
+        
+    
+    
+            marker_0ea2a22c11deb4efa0a5d23b7395edc9.bindTooltip(
+                `<div>
+                     <b>CA-03</b> · horarias sin PM · 6 048 h válidas
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+                marker_0ea2a22c11deb4efa0a5d23b7395edc9.setIcon(div_icon_2cc71de987c18a3786c4c842b1257759);
+            
+    
+            var marker_2bb1ce814c4d825a0e0214ec6a85ea29 = L.marker(
+                [-9.1033, -78.56185],
+                {
+}
+            ).addTo(marker_cluster_350e944e5171be5de6817071c16d3fc0);
+        
+    
+            var div_icon_2ef6f34edc006c99be4a247c8c2d5a64 = L.divIcon({
+  "html": "\u003cdiv style=\u0027width:48px;height:48px;border-radius:50%;background:#2a78d6;opacity:0.85;border:2px solid #fcfcfb;box-shadow:0 0 0 1px #52514e\u0027\u003e\u003c/div\u003e",
+  "iconSize": [47.55087030292859, 47.55087030292859],
+  "iconAnchor": [23.775435151464293, 23.775435151464293],
+  "className": "empty",
+});
+        
+    
+        var popup_31de455a31ccfd71f8e990304fecbcf9 = L.popup({
+  "maxWidth": 420,
+});
+
+        
+            
+                var html_c9486e4971570e5c6a94ae9131a3a88e = $(`<div id="html_c9486e4971570e5c6a94ae9131a3a88e" style="width: 100.0%; height: 100.0%;"><div style='font-family:system-ui,sans-serif;font-size:12px;max-width:380px'><div style='font-size:15px;font-weight:700;margin-bottom:4px'>CA-CH-03</div><div style='color:#2a78d6;font-weight:600;margin-bottom:6px'>horarias con PM · serie de años</div><table style='border-collapse:collapse'><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Evaluación</th><td>Calidad del aire en el ámbito de la zona industrial Gran Trapecio</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Actividad</th><td>Zona industrial Gran Trapecio (zona industrial)</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Dpto. / prov. / distrito</th><td>ANCASH / SANTA / CHIMBOTE</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Altitud</th><td>15 m s. n. m.</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Datos</th><td>2020-01-01 a 2021-12-31; años con datos válidos: 2020, 2021</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Horas válidas</th><td>15 816 (100 % con hora inferida)</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Parámetros</th><td>h2s, humedad, pm10, pm2_5, precipitacion, presion, so2, temperatura, viento_direccion, viento_velocidad</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Régimen alto</th><td>0.0 % de 1 224 h del gold</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Días en cero</th><td>55.8 % de los días-parámetro</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Ubicación</th><td>Calle San Martín, Mz. B, Lt. 6. Asentamiento Humano 15 de abril, distrito Chimbote, provincia Santa, departamento Ancash.</td></tr></table></div></div>`)[0];
+                popup_31de455a31ccfd71f8e990304fecbcf9.setContent(html_c9486e4971570e5c6a94ae9131a3a88e);
+            
+        
+
+        marker_2bb1ce814c4d825a0e0214ec6a85ea29.bindPopup(popup_31de455a31ccfd71f8e990304fecbcf9)
+        ;
+
+        
+    
+    
+            marker_2bb1ce814c4d825a0e0214ec6a85ea29.bindTooltip(
+                `<div>
+                     <b>CA-CH-03</b> · horarias con PM · 15 816 h válidas
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+                marker_2bb1ce814c4d825a0e0214ec6a85ea29.setIcon(div_icon_2ef6f34edc006c99be4a247c8c2d5a64);
+            
+    
+            marker_cluster_350e944e5171be5de6817071c16d3fc0.addTo(map_db24d80f83829e1fadc305b34ae5f6f5);
+        
+    
+            var marker_cluster_94b156ead84cf78412461ca3f3e81603 = L.markerClusterGroup(
+                {
+  "maxClusterRadius": 120,
+  "spiderfyOnMaxZoom": true,
+  "showCoverageOnHover": false,
+  "disableClusteringAtZoom": 16,
+}
+            );
+            marker_cluster_94b156ead84cf78412461ca3f3e81603.options.iconCreateFunction =
+                function(cluster) {
+  var n = cluster.getChildCount();
+  return L.divIcon({html: '<div style="background:#0b0b0b;color:#fcfcfb;border:2px solid #fcfcfb;border-radius:50%;'
+    + 'width:34px;height:34px;line-height:30px;text-align:center;font:600 13px system-ui;box-shadow:0 0 0 1px #52514e">' + n + '</div>',
+    className: '', iconSize: L.point(34, 34)});
+};
+        
+    
+            var marker_b729b84bd792dc61a87c54841080540e = L.marker(
+                [-10.75083, -76.26363],
+                {
+}
+            ).addTo(marker_cluster_94b156ead84cf78412461ca3f3e81603);
+        
+    
+            var div_icon_b77c2fd0c16f2da0497762e33aaa9556 = L.divIcon({
+  "html": "\u003cdiv style=\u0027width:24px;height:24px;border-radius:50%;background:#2a78d6;opacity:0.85;border:2px solid #fcfcfb;box-shadow:0 0 0 1px #52514e\u0027\u003e\u003c/div\u003e",
+  "iconSize": [24.199070385806742, 24.199070385806742],
+  "iconAnchor": [12.099535192903371, 12.099535192903371],
+  "className": "empty",
+});
+        
+    
+        var popup_6f7cc648c08823ec5541b589aa536f9b = L.popup({
+  "maxWidth": 420,
+});
+
+        
+            
+                var html_79d7fb6758ba0df3aee20dbc8aa972c2 = $(`<div id="html_79d7fb6758ba0df3aee20dbc8aa972c2" style="width: 100.0%; height: 100.0%;"><div style='font-family:system-ui,sans-serif;font-size:12px;max-width:380px'><div style='font-size:15px;font-weight:700;margin-bottom:4px'>CA-COLQ-01</div><div style='color:#2a78d6;font-weight:600;margin-bottom:6px'>horarias con PM · campaña de semanas</div><table style='border-collapse:collapse'><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Evaluación</th><td>Calidad del aire en el ámbito de la unidad Minera Colquijirca</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Actividad</th><td>Unidad Minera Colquijirca (minería)</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Dpto. / prov. / distrito</th><td>PASCO / PASCO / TINYAHUARCO</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Altitud</th><td>4285 m s. n. m.</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Datos</th><td>2021-12-02 a 2021-12-31; años con datos válidos: 2021</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Horas válidas</th><td>696 (100 % con hora inferida)</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Parámetros</th><td>pm10, pm2_5, precipitacion</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Régimen alto</th><td>0.2 % de 624 h del gold</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Días en cero</th><td>74.3 % de los días-parámetro</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Ubicación</th><td>Ubicado en el Centro Poblado de Colquijirca del distrito Tinyahuarco. A 200 metros aproximadamente del borde del Tajo Norte de la Unidad Minera Colquijirca</td></tr></table></div></div>`)[0];
+                popup_6f7cc648c08823ec5541b589aa536f9b.setContent(html_79d7fb6758ba0df3aee20dbc8aa972c2);
+            
+        
+
+        marker_b729b84bd792dc61a87c54841080540e.bindPopup(popup_6f7cc648c08823ec5541b589aa536f9b)
+        ;
+
+        
+    
+    
+            marker_b729b84bd792dc61a87c54841080540e.bindTooltip(
+                `<div>
+                     <b>CA-COLQ-01</b> · horarias con PM · 696 h válidas
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+                marker_b729b84bd792dc61a87c54841080540e.setIcon(div_icon_b77c2fd0c16f2da0497762e33aaa9556);
+            
+    
+            var marker_d5603ecb3aef383d9011cad427297147 = L.marker(
+                [-10.79368, -76.29212],
+                {
+}
+            ).addTo(marker_cluster_94b156ead84cf78412461ca3f3e81603);
+        
+    
+            var div_icon_ed93b720b7f99bc68cd4bf1a240ff348 = L.divIcon({
+  "html": "\u003cdiv style=\u0027width:24px;height:24px;border-radius:50%;background:#2a78d6;opacity:0.85;border:2px solid #fcfcfb;box-shadow:0 0 0 1px #52514e\u0027\u003e\u003c/div\u003e",
+  "iconSize": [23.869677529921926, 23.869677529921926],
+  "iconAnchor": [11.934838764960963, 11.934838764960963],
+  "className": "empty",
+});
+        
+    
+        var popup_06e37a74aa170d4e3521f0de33098ad4 = L.popup({
+  "maxWidth": 420,
+});
+
+        
+            
+                var html_5bab03ab455306dba318ef6057faae6a = $(`<div id="html_5bab03ab455306dba318ef6057faae6a" style="width: 100.0%; height: 100.0%;"><div style='font-family:system-ui,sans-serif;font-size:12px;max-width:380px'><div style='font-size:15px;font-weight:700;margin-bottom:4px'>CA-HUAR-01</div><div style='color:#2a78d6;font-weight:600;margin-bottom:6px'>horarias con PM · campaña de semanas</div><table style='border-collapse:collapse'><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Evaluación</th><td>Calidad del aire en el ámbito de la unidad Minera Colquijirca</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Actividad</th><td>Unidad Minera Colquijirca (minería)</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Dpto. / prov. / distrito</th><td>NA / NA / NA<br><span style='color:#a32626'>ZONA 19 corregida a 18 por la descripción (Huaraucaca, UM Colquijirca, Pasco); departamento NA en el dato</span></td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Altitud</th><td>4166 m s. n. m.</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Datos</th><td>2021-12-04 a 2021-12-31; años con datos válidos: 2021</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Horas válidas</th><td>624 (100 % con hora inferida)</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Parámetros</th><td>pm10, pm2_5, precipitacion</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Régimen alto</th><td>0.3 % de 288 h del gold</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Días en cero</th><td>85.7 % de los días-parámetro</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Ubicación</th><td>Ubicado sobre las oficinas de la Empresa comunal y servicios múltiples (ECOSEM), en la Comunidad Campesina Huaraucaca, aproximadamente a 300 metros en dirección este de la planta de procesos de la UM Colquijirca</td></tr></table></div></div>`)[0];
+                popup_06e37a74aa170d4e3521f0de33098ad4.setContent(html_5bab03ab455306dba318ef6057faae6a);
+            
+        
+
+        marker_d5603ecb3aef383d9011cad427297147.bindPopup(popup_06e37a74aa170d4e3521f0de33098ad4)
+        ;
+
+        
+    
+    
+            marker_d5603ecb3aef383d9011cad427297147.bindTooltip(
+                `<div>
+                     <b>CA-HUAR-01</b> · horarias con PM · 624 h válidas
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+                marker_d5603ecb3aef383d9011cad427297147.setIcon(div_icon_ed93b720b7f99bc68cd4bf1a240ff348);
+            
+    
+            var marker_06b23d71a86338aefd898f25ef43cd74 = L.marker(
+                [-10.67559, -76.2692],
+                {
+}
+            ).addTo(marker_cluster_94b156ead84cf78412461ca3f3e81603);
+        
+    
+            var div_icon_8ef276731bec2012d2564035f46cfb51 = L.divIcon({
+  "html": "\u003cdiv style=\u0027width:62px;height:62px;border-radius:50%;background:#2a78d6;opacity:0.85;border:2px solid #fcfcfb;box-shadow:0 0 0 1px #52514e\u0027\u003e\u003c/div\u003e",
+  "iconSize": [62.0, 62.0],
+  "iconAnchor": [31.0, 31.0],
+  "className": "empty",
+});
+        
+    
+        var popup_583733495fc60841d1da10f5f6431be3 = L.popup({
+  "maxWidth": 420,
+});
+
+        
+            
+                var html_e6b3239bc199e874b705e6c13b4eb369 = $(`<div id="html_e6b3239bc199e874b705e6c13b4eb369" style="width: 100.0%; height: 100.0%;"><div style='font-family:system-ui,sans-serif;font-size:12px;max-width:380px'><div style='font-size:15px;font-weight:700;margin-bottom:4px'>CA-SB-01</div><div style='color:#2a78d6;font-weight:600;margin-bottom:6px'>horarias con PM · serie de años</div><table style='border-collapse:collapse'><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Evaluación</th><td>Calidad del aire en el área de influencia de la unidad minera Cerro de Pasco ubicada en el centro poblado Paragsha<br>Calidad del aire realizada en el distrito de Simón Bolívar</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Actividad</th><td>Unidad minera Cerro de Pasco ubicada en el centro poblado Paragsha | Distrito de Simón Bolívar (minería)</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Dpto. / prov. / distrito</th><td>PASCO / PASCO / SIMON BOLIVAR</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Altitud</th><td>4258 m s. n. m.</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Datos</th><td>2018-01-01 a 2021-12-31; años con datos válidos: 2018, 2019, 2020, 2021</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Horas válidas</th><td>35 064 (100 % con hora inferida)</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Parámetros</th><td>h2s, humedad, pm10, precipitacion, presion, so2, temperatura, viento_direccion, viento_velocidad</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Régimen alto</th><td>no está en el gold (le falta PM2.5 o PM10 horario)</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Días en cero</th><td>27.0 % de los días-parámetro</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Ubicación</th><td>Al costado del Parque Infantil Ecológico del centro poblado Paragsha, distrito Simón Bolívar, provincia y departamento Pasco. Aproximadamente a 100 m de los Stock Piles.</td></tr></table></div></div>`)[0];
+                popup_583733495fc60841d1da10f5f6431be3.setContent(html_e6b3239bc199e874b705e6c13b4eb369);
+            
+        
+
+        marker_06b23d71a86338aefd898f25ef43cd74.bindPopup(popup_583733495fc60841d1da10f5f6431be3)
+        ;
+
+        
+    
+    
+            marker_06b23d71a86338aefd898f25ef43cd74.bindTooltip(
+                `<div>
+                     <b>CA-SB-01</b> · horarias con PM · 35 064 h válidas
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+                marker_06b23d71a86338aefd898f25ef43cd74.setIcon(div_icon_8ef276731bec2012d2564035f46cfb51);
+            
+    
+            marker_cluster_94b156ead84cf78412461ca3f3e81603.addTo(map_db24d80f83829e1fadc305b34ae5f6f5);
+        
+    
+            var marker_cluster_64548f67dd23a631fb88c1e215e49171 = L.markerClusterGroup(
+                {
+  "maxClusterRadius": 120,
+  "spiderfyOnMaxZoom": true,
+  "showCoverageOnHover": false,
+  "disableClusteringAtZoom": 16,
+}
+            );
+            marker_cluster_64548f67dd23a631fb88c1e215e49171.options.iconCreateFunction =
+                function(cluster) {
+  var n = cluster.getChildCount();
+  return L.divIcon({html: '<div style="background:#0b0b0b;color:#fcfcfb;border:2px solid #fcfcfb;border-radius:50%;'
+    + 'width:34px;height:34px;line-height:30px;text-align:center;font:600 13px system-ui;box-shadow:0 0 0 1px #52514e">' + n + '</div>',
+    className: '', iconSize: L.point(34, 34)});
+};
+        
+    
+            var marker_1014bbf4aae233599f6d1793bd0f00bb = L.marker(
+                [-9.52384, -77.02043],
+                {
+}
+            ).addTo(marker_cluster_64548f67dd23a631fb88c1e215e49171);
+        
+    
+            var div_icon_df5e36a11e82d9e8ea7e1f79b605df5f = L.divIcon({
+  "html": "\u003cdiv style=\u0027width:37px;height:37px;border-radius:50%;background:#2a78d6;opacity:0.85;border:2px solid #fcfcfb;box-shadow:0 0 0 1px #52514e\u0027\u003e\u003c/div\u003e",
+  "iconSize": [37.227803277836244, 37.227803277836244],
+  "iconAnchor": [18.613901638918122, 18.613901638918122],
+  "className": "empty",
+});
+        
+    
+        var popup_e32a46debb57470d5e0508fe004f85e7 = L.popup({
+  "maxWidth": 420,
+});
+
+        
+            
+                var html_7ddfa1b1d68ae764c422e67de471dbde = $(`<div id="html_7ddfa1b1d68ae764c422e67de471dbde" style="width: 100.0%; height: 100.0%;"><div style='font-family:system-ui,sans-serif;font-size:12px;max-width:380px'><div style='font-size:15px;font-weight:700;margin-bottom:4px'>CA-AYAS-01</div><div style='color:#2a78d6;font-weight:600;margin-bottom:6px'>horarias con PM · serie de meses</div><table style='border-collapse:collapse'><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Evaluación</th><td>Calidad del aire en el ámbito de la unidad minera Antamina</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Actividad</th><td>Unidad minera Antamina (minería)</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Dpto. / prov. / distrito</th><td>ANCASH / HUARI / SAN MARCOS<br><span style='color:#a32626'>ALTITUD con 2 valores (3728: 79 570 filas, 3784: 4 350 filas)</span></td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Altitud</th><td>3728 m s. n. m.</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Datos</th><td>2021-12-09 a 2022-12-31; años con datos válidos: 2021, 2022</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Horas válidas</th><td>6 696 (100 % con hora inferida)</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Parámetros</th><td>humedad, pm10, pm2_5, precipitacion, presion, temperatura, viento_direccion, viento_velocidad</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Régimen alto</th><td>0.8 % de 6 672 h del gold</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Días en cero</th><td>13.5 % de los días-parámetro</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Ubicación</th><td>Ubicado en la posta medica de Ayash de Huaripampa</td></tr></table></div></div>`)[0];
+                popup_e32a46debb57470d5e0508fe004f85e7.setContent(html_7ddfa1b1d68ae764c422e67de471dbde);
+            
+        
+
+        marker_1014bbf4aae233599f6d1793bd0f00bb.bindPopup(popup_e32a46debb57470d5e0508fe004f85e7)
+        ;
+
+        
+    
+    
+            marker_1014bbf4aae233599f6d1793bd0f00bb.bindTooltip(
+                `<div>
+                     <b>CA-AYAS-01</b> · horarias con PM · 6 696 h válidas
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+                marker_1014bbf4aae233599f6d1793bd0f00bb.setIcon(div_icon_df5e36a11e82d9e8ea7e1f79b605df5f);
+            
+    
+            var marker_f565ed88bbf72408d03459c4668e090b = L.marker(
+                [-9.56169, -77.08438],
+                {
+}
+            ).addTo(marker_cluster_64548f67dd23a631fb88c1e215e49171);
+        
+    
+            var div_icon_53a93d453f2595cf72a73a704e4d8da3 = L.divIcon({
+  "html": "\u003cdiv style=\u0027width:36px;height:36px;border-radius:50%;background:#2a78d6;opacity:0.85;border:2px solid #fcfcfb;box-shadow:0 0 0 1px #52514e\u0027\u003e\u003c/div\u003e",
+  "iconSize": [35.833360519915054, 35.833360519915054],
+  "iconAnchor": [17.916680259957527, 17.916680259957527],
+  "className": "empty",
+});
+        
+    
+        var popup_415489553182563d33bfbc2b3963a3fe = L.popup({
+  "maxWidth": 420,
+});
+
+        
+            
+                var html_67bfa2bcab388ea6003850664af63cc2 = $(`<div id="html_67bfa2bcab388ea6003850664af63cc2" style="width: 100.0%; height: 100.0%;"><div style='font-family:system-ui,sans-serif;font-size:12px;max-width:380px'><div style='font-size:15px;font-weight:700;margin-bottom:4px'>CA-JUPR-01</div><div style='color:#2a78d6;font-weight:600;margin-bottom:6px'>horarias con PM · serie de meses</div><table style='border-collapse:collapse'><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Evaluación</th><td>Calidad del aire en el ámbito de la unidad minera Antamina</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Actividad</th><td>Unidad minera Antamina (minería)</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Dpto. / prov. / distrito</th><td>ANCASH / HUARI / SAN MARCOS</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Altitud</th><td>4138 m s. n. m.</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Datos</th><td>2022-05-01 a 2022-12-31; años con datos válidos: 2022</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Horas válidas</th><td>5 760 (100 % con hora inferida)</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Parámetros</th><td>humedad, pm10, pm2_5, precipitacion, presion, temperatura, viento_direccion, viento_velocidad</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Régimen alto</th><td>0.3 % de 5 448 h del gold</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Días en cero</th><td>0.0 % de los días-parámetro</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Ubicación</th><td>Ubicado en el poblado de Chipta – Piruro Chico de la comunidad Juprog</td></tr></table></div></div>`)[0];
+                popup_415489553182563d33bfbc2b3963a3fe.setContent(html_67bfa2bcab388ea6003850664af63cc2);
+            
+        
+
+        marker_f565ed88bbf72408d03459c4668e090b.bindPopup(popup_415489553182563d33bfbc2b3963a3fe)
+        ;
+
+        
+    
+    
+            marker_f565ed88bbf72408d03459c4668e090b.bindTooltip(
+                `<div>
+                     <b>CA-JUPR-01</b> · horarias con PM · 5 760 h válidas
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+                marker_f565ed88bbf72408d03459c4668e090b.setIcon(div_icon_53a93d453f2595cf72a73a704e4d8da3);
+            
+    
+            marker_cluster_64548f67dd23a631fb88c1e215e49171.addTo(map_db24d80f83829e1fadc305b34ae5f6f5);
+        
+    
+            var marker_cluster_ce328da46b36d8e4e6d58c4044919e3d = L.markerClusterGroup(
+                {
+  "maxClusterRadius": 120,
+  "spiderfyOnMaxZoom": true,
+  "showCoverageOnHover": false,
+  "disableClusteringAtZoom": 16,
+}
+            );
+            marker_cluster_ce328da46b36d8e4e6d58c4044919e3d.options.iconCreateFunction =
+                function(cluster) {
+  var n = cluster.getChildCount();
+  return L.divIcon({html: '<div style="background:#0b0b0b;color:#fcfcfb;border:2px solid #fcfcfb;border-radius:50%;'
+    + 'width:34px;height:34px;line-height:30px;text-align:center;font:600 13px system-ui;box-shadow:0 0 0 1px #52514e">' + n + '</div>',
+    className: '', iconSize: L.point(34, 34)});
+};
+        
+    
+            var marker_98dbc25b237882d83119f494ba3059b3 = L.marker(
+                [-4.91472, -80.96036],
+                {
+}
+            ).addTo(marker_cluster_ce328da46b36d8e4e6d58c4044919e3d);
+        
+    
+            var div_icon_fe4cf3bfdd3fefdae04908ac0056734e = L.divIcon({
+  "html": "\u003cdiv style=\u0027width:39px;height:39px;border-radius:50%;background:#2a78d6;opacity:0.85;border:2px solid #fcfcfb;box-shadow:0 0 0 1px #52514e\u0027\u003e\u003c/div\u003e",
+  "iconSize": [39.293468913947095, 39.293468913947095],
+  "iconAnchor": [19.646734456973547, 19.646734456973547],
+  "className": "empty",
+});
+        
+    
+        var popup_99274fce408f10039a54978bc183cc5f = L.popup({
+  "maxWidth": 420,
+});
+
+        
+            
+                var html_4c6a5b7532460e70e0528f0f0668559c = $(`<div id="html_4c6a5b7532460e70e0528f0f0668559c" style="width: 100.0%; height: 100.0%;"><div style='font-family:system-ui,sans-serif;font-size:12px;max-width:380px'><div style='font-size:15px;font-weight:700;margin-bottom:4px'>CA-HUA-01</div><div style='color:#2a78d6;font-weight:600;margin-bottom:6px'>horarias con PM · serie de meses</div><table style='border-collapse:collapse'><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Evaluación</th><td>Calidad del aire en el ámbito de influencia de la empresa Agroaurora S.A.C.</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Actividad</th><td>Empresa Agroaurora S.A.C (no lo dice el nombre)</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Dpto. / prov. / distrito</th><td>PIURA / PAITA / LA HUACA</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Altitud</th><td>32 m s. n. m.</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Datos</th><td>2021-12-08 a 2022-12-31; años con datos válidos: 2021, 2022</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Horas válidas</th><td>8 212 (0 % con hora inferida)</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Parámetros</th><td>humedad, pm10, pm2_5, precipitacion, presion, temperatura, viento_direccion, viento_velocidad</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Régimen alto</th><td>0.2 % de 7 448 h del gold</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Días en cero</th><td>5.8 % de los días-parámetro</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Ubicación</th><td>Ubicado en el distrito La Huaca, a 12,3 km, al noroeste, de la planta industrial de la empresa Agroaurora S.A.C. y a 0,5 km, al sureste, de la municipalidad distrital La Huaca, provincia Paita.</td></tr></table></div></div>`)[0];
+                popup_99274fce408f10039a54978bc183cc5f.setContent(html_4c6a5b7532460e70e0528f0f0668559c);
+            
+        
+
+        marker_98dbc25b237882d83119f494ba3059b3.bindPopup(popup_99274fce408f10039a54978bc183cc5f)
+        ;
+
+        
+    
+    
+            marker_98dbc25b237882d83119f494ba3059b3.bindTooltip(
+                `<div>
+                     <b>CA-HUA-01</b> · horarias con PM · 8 212 h válidas
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+                marker_98dbc25b237882d83119f494ba3059b3.setIcon(div_icon_fe4cf3bfdd3fefdae04908ac0056734e);
+            
+    
+            var marker_fe1fd87d93de15c9fa57b98e63211a1a = L.marker(
+                [-4.91699, -80.85826],
+                {
+}
+            ).addTo(marker_cluster_ce328da46b36d8e4e6d58c4044919e3d);
+        
+    
+            var div_icon_cbf94ff41f7af6d9494ba14dd1ba6dea = L.divIcon({
+  "html": "\u003cdiv style=\u0027width:39px;height:39px;border-radius:50%;background:#2a78d6;opacity:0.85;border:2px solid #fcfcfb;box-shadow:0 0 0 1px #52514e\u0027\u003e\u003c/div\u003e",
+  "iconSize": [39.33879764036582, 39.33879764036582],
+  "iconAnchor": [19.66939882018291, 19.66939882018291],
+  "className": "empty",
+});
+        
+    
+        var popup_6dfd5170ba129c79f1e9ab6e97072352 = L.popup({
+  "maxWidth": 420,
+});
+
+        
+            
+                var html_dcb27324a60e912eeb94545b5de0c438 = $(`<div id="html_dcb27324a60e912eeb94545b5de0c438" style="width: 100.0%; height: 100.0%;"><div style='font-family:system-ui,sans-serif;font-size:12px;max-width:380px'><div style='font-size:15px;font-weight:700;margin-bottom:4px'>CA-MAC-01</div><div style='color:#2a78d6;font-weight:600;margin-bottom:6px'>horarias con PM · serie de meses</div><table style='border-collapse:collapse'><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Evaluación</th><td>Calidad del aire en el ámbito de influencia de la empresa Agroaurora S.A.C.</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Actividad</th><td>Empresa Agroaurora S.A.C (no lo dice el nombre)</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Dpto. / prov. / distrito</th><td>PIURA / PAITA / LA HUACA</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Altitud</th><td>38 m s. n. m.</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Datos</th><td>2021-12-09 a 2022-12-31; años con datos válidos: 2021, 2022</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Horas válidas</th><td>8 247 (0 % con hora inferida)</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Parámetros</th><td>humedad, pm10, pm2_5, precipitacion, presion, temperatura, viento_direccion, viento_velocidad</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Régimen alto</th><td>0.2 % de 8 236 h del gold</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Días en cero</th><td>6.0 % de los días-parámetro</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Ubicación</th><td>Ubicado en el centro poblado Macacará, a 1,5 km, al noroeste, de la planta industrial de la empresa Agroaurora S.A.C. y a 11,4 km, al sureste, de la municipalidad distrital La Huaca, provincia Paita.</td></tr></table></div></div>`)[0];
+                popup_6dfd5170ba129c79f1e9ab6e97072352.setContent(html_dcb27324a60e912eeb94545b5de0c438);
+            
+        
+
+        marker_fe1fd87d93de15c9fa57b98e63211a1a.bindPopup(popup_6dfd5170ba129c79f1e9ab6e97072352)
+        ;
+
+        
+    
+    
+            marker_fe1fd87d93de15c9fa57b98e63211a1a.bindTooltip(
+                `<div>
+                     <b>CA-MAC-01</b> · horarias con PM · 8 247 h válidas
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+                marker_fe1fd87d93de15c9fa57b98e63211a1a.setIcon(div_icon_cbf94ff41f7af6d9494ba14dd1ba6dea);
+            
+    
+            marker_cluster_ce328da46b36d8e4e6d58c4044919e3d.addTo(map_db24d80f83829e1fadc305b34ae5f6f5);
+        
+    
+            var marker_91db617149476a7cab261624b616ff17 = L.marker(
+                [-14.00867, -72.00126],
+                {
+}
+            ).addTo(map_db24d80f83829e1fadc305b34ae5f6f5);
+        
+    
+            var div_icon_81f8541d334f70c8fa5880f53604fe2a = L.divIcon({
+  "html": "\u003cdiv style=\u0027width:49px;height:49px;border-radius:50%;background:#2a78d6;opacity:0.85;border:2px solid #fcfcfb;box-shadow:0 0 0 1px #52514e\u0027\u003e\u003c/div\u003e",
+  "iconSize": [48.65142614478327, 48.65142614478327],
+  "iconAnchor": [24.325713072391636, 24.325713072391636],
+  "className": "empty",
+});
+        
+    
+        var popup_4c1a6c1615b7bffc0cabd1f5b256c0c0 = L.popup({
+  "maxWidth": 420,
+});
+
+        
+            
+                var html_19f6a02554c9c1f28a924c8872a68d60 = $(`<div id="html_19f6a02554c9c1f28a924c8872a68d60" style="width: 100.0%; height: 100.0%;"><div style='font-family:system-ui,sans-serif;font-size:12px;max-width:380px'><div style='font-size:15px;font-weight:700;margin-bottom:4px'>CA-CP-01</div><div style='color:#2a78d6;font-weight:600;margin-bottom:6px'>horarias con PM · serie de años</div><table style='border-collapse:collapse'><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Evaluación</th><td>Calidad del aire en el corredor vial Apurímac – Cusco</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Actividad</th><td>Corredor vial Apurímac – Cusco (corredor vial)</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Dpto. / prov. / distrito</th><td>CUSCO / CHUMBIVILCAS / CAPACMARCA</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Altitud</th><td>3600 m s. n. m.</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Datos</th><td>2020-01-23 a 2021-12-31; años con datos válidos: 2020, 2021</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Horas válidas</th><td>17 016 (100 % con hora inferida)</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Parámetros</th><td>humedad, pm10, pm2_5, precipitacion, presion, temperatura, viento_direccion, viento_velocidad</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Régimen alto</th><td>3.2 % de 16 896 h del gold</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Días en cero</th><td>3.7 % de los días-parámetro</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Ubicación</th><td>Aproximadamente a 220 metros al sureste de la plaza de armas de Ccapacmarca y contiguo al corredor vial, Distrito de Ccapacmarca, provincia Chumbivilcas, departamento Cusco</td></tr></table></div></div>`)[0];
+                popup_4c1a6c1615b7bffc0cabd1f5b256c0c0.setContent(html_19f6a02554c9c1f28a924c8872a68d60);
+            
+        
+
+        marker_91db617149476a7cab261624b616ff17.bindPopup(popup_4c1a6c1615b7bffc0cabd1f5b256c0c0)
+        ;
+
+        
+    
+    
+            marker_91db617149476a7cab261624b616ff17.bindTooltip(
+                `<div>
+                     <b>CA-CP-01</b> · horarias con PM · 17 016 h válidas
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+                marker_91db617149476a7cab261624b616ff17.setIcon(div_icon_81f8541d334f70c8fa5880f53604fe2a);
+            
+    
+            var marker_0bd80453ed67893557826fd0e6967b6d = L.marker(
+                [-11.51995, -75.90088],
+                {
+}
+            ).addTo(map_db24d80f83829e1fadc305b34ae5f6f5);
+        
+    
+            var div_icon_67cb0caa4572cbce7ce40a53c1970b19 = L.divIcon({
+  "html": "\u003cdiv style=\u0027width:62px;height:62px;border-radius:50%;background:#eb6834;opacity:0.85;border:2px solid #fcfcfb;box-shadow:0 0 0 1px #52514e\u0027\u003e\u003c/div\u003e",
+  "iconSize": [62.0, 62.0],
+  "iconAnchor": [31.0, 31.0],
+  "className": "empty",
+});
+        
+    
+        var popup_5902984b5b9a1eb5a271cc2d65511019 = L.popup({
+  "maxWidth": 420,
+});
+
+        
+            
+                var html_60544ec5ecdfa3e732ecfe85a5ad9e6f = $(`<div id="html_60544ec5ecdfa3e732ecfe85a5ad9e6f" style="width: 100.0%; height: 100.0%;"><div style='font-family:system-ui,sans-serif;font-size:12px;max-width:380px'><div style='font-size:15px;font-weight:700;margin-bottom:4px'>CA-CC-01</div><div style='color:#eb6834;font-weight:600;margin-bottom:6px'>horarias sin PM · serie de años</div><table style='border-collapse:collapse'><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Evaluación</th><td>Calidad del aire en el área de influencia del complejo metalúrgico La Oroya</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Actividad</th><td>Complejo metalúrgico La Oroya (metalurgia (refinación o fundición))</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Dpto. / prov. / distrito</th><td>JUNIN / YAULI / LA OROYA</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Altitud</th><td>3728 m s. n. m.</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Datos</th><td>2018-01-01 a 2021-12-31; años con datos válidos: 2018, 2019, 2020, 2021</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Horas válidas</th><td>35 064 (100 % con hora inferida)</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Parámetros</th><td>humedad, precipitacion, presion, so2, temperatura, viento_direccion, viento_velocidad</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Régimen alto</th><td>no está en el gold (le falta PM2.5 o PM10 horario)</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Días en cero</th><td>4.0 % de los días-parámetro</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Ubicación</th><td>Calle Comandante Zárate cuadra N.° 1 - La Oroya, azotea de la Casa de la Cultura de la Municipalidad Provincial de Yauli, a aproximadamente 700 m del Complejo Metalúrgico de La Oroya (en adelante, CMLO)</td></tr></table></div></div>`)[0];
+                popup_5902984b5b9a1eb5a271cc2d65511019.setContent(html_60544ec5ecdfa3e732ecfe85a5ad9e6f);
+            
+        
+
+        marker_0bd80453ed67893557826fd0e6967b6d.bindPopup(popup_5902984b5b9a1eb5a271cc2d65511019)
+        ;
+
+        
+    
+    
+            marker_0bd80453ed67893557826fd0e6967b6d.bindTooltip(
+                `<div>
+                     <b>CA-CC-01</b> · horarias sin PM · 35 064 h válidas
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+                marker_0bd80453ed67893557826fd0e6967b6d.setIcon(div_icon_67cb0caa4572cbce7ce40a53c1970b19);
+            
+    
+            var marker_e22650a5815134ffb47c11f54efd63c1 = L.marker(
+                [-14.80603, -71.41485],
+                {
+}
+            ).addTo(map_db24d80f83829e1fadc305b34ae5f6f5);
+        
+    
+            var div_icon_ea9f0431ff84693e8fb21fc7a9c429d7 = L.divIcon({
+  "html": "\u003cdiv style=\u0027width:26px;height:26px;border-radius:50%;background:#2a78d6;opacity:0.85;border:2px solid #fcfcfb;box-shadow:0 0 0 1px #52514e\u0027\u003e\u003c/div\u003e",
+  "iconSize": [25.89180775904235, 25.89180775904235],
+  "iconAnchor": [12.945903879521175, 12.945903879521175],
+  "className": "empty",
+});
+        
+    
+        var popup_6200ba640d9ca3406e5e8f9098870784 = L.popup({
+  "maxWidth": 420,
+});
+
+        
+            
+                var html_425ffcec7919826111859b2bb01a8818 = $(`<div id="html_425ffcec7919826111859b2bb01a8818" style="width: 100.0%; height: 100.0%;"><div style='font-family:system-ui,sans-serif;font-size:12px;max-width:380px'><div style='font-size:15px;font-weight:700;margin-bottom:4px'>CA-ESP-01</div><div style='color:#2a78d6;font-weight:600;margin-bottom:6px'>horarias con PM · campaña de semanas</div><table style='border-collapse:collapse'><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Evaluación</th><td>Calidad del aire en el corredor vial Apurímac – Cusco, distrito y provincia de Espinar</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Actividad</th><td>Corredor vial Apurímac – Cusco, distrito y provincia de Espinar (corredor vial)</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Dpto. / prov. / distrito</th><td>CUSCO / ESPINAR / ESPINAR</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Altitud</th><td>3926 m s. n. m.</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Datos</th><td>2021-11-15 a 2021-12-31; años con datos válidos: 2021</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Horas válidas</th><td>1 128 (100 % con hora inferida)</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Parámetros</th><td>pm10, pm2_5, precipitacion</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Régimen alto</th><td>10.3 % de 1 104 h del gold</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Días en cero</th><td>72.0 % de los días-parámetro</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Ubicación</th><td>Av. Circunvalación Mz 1 Lt. 10 - Espinar</td></tr></table></div></div>`)[0];
+                popup_6200ba640d9ca3406e5e8f9098870784.setContent(html_425ffcec7919826111859b2bb01a8818);
+            
+        
+
+        marker_e22650a5815134ffb47c11f54efd63c1.bindPopup(popup_6200ba640d9ca3406e5e8f9098870784)
+        ;
+
+        
+    
+    
+            marker_e22650a5815134ffb47c11f54efd63c1.bindTooltip(
+                `<div>
+                     <b>CA-ESP-01</b> · horarias con PM · 1 128 h válidas
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+                marker_e22650a5815134ffb47c11f54efd63c1.setIcon(div_icon_ea9f0431ff84693e8fb21fc7a9c429d7);
+            
+    
+            var marker_59c4842ac2dbc6d3e93d53326bc580d5 = L.marker(
+                [-16.48757, -71.51915],
+                {
+}
+            ).addTo(map_db24d80f83829e1fadc305b34ae5f6f5);
+        
+    
+            var div_icon_1645a142c5f6668c20310dbdbcb2351c = L.divIcon({
+  "html": "\u003cdiv style=\u0027width:24px;height:24px;border-radius:50%;background:#2a78d6;opacity:0.85;border:2px solid #fcfcfb;box-shadow:0 0 0 1px #52514e\u0027\u003e\u003c/div\u003e",
+  "iconSize": [24.199070385806742, 24.199070385806742],
+  "iconAnchor": [12.099535192903371, 12.099535192903371],
+  "className": "empty",
+});
+        
+    
+        var popup_dbd23b0e1bf5c4bfc025d412fcf8716c = L.popup({
+  "maxWidth": 420,
+});
+
+        
+            
+                var html_74f5550279debc947792b3ab0a6feba9 = $(`<div id="html_74f5550279debc947792b3ab0a6feba9" style="width: 100.0%; height: 100.0%;"><div style='font-family:system-ui,sans-serif;font-size:12px;max-width:380px'><div style='font-size:15px;font-weight:700;margin-bottom:4px'>CA-SOC-01</div><div style='color:#2a78d6;font-weight:600;margin-bottom:6px'>horarias con PM · campaña de semanas</div><table style='border-collapse:collapse'><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Evaluación</th><td>Calidad del aire en el ámbito de influencia de la unidad de producción Cerro Verde S.A.A.</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Actividad</th><td>Unidad de producción Cerro Verde S.A.A (no lo dice el nombre)</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Dpto. / prov. / distrito</th><td>AREQUIPA / AREQUIPA / SOCABAYA</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Altitud</th><td>2384 m s. n. m.</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Datos</th><td>2021-12-02 a 2021-12-31; años con datos válidos: 2021</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Horas válidas</th><td>696 (100 % con hora inferida)</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Parámetros</th><td>humedad, pm10, pm2_5, precipitacion, presion, temperatura, viento_direccion, viento_velocidad</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Régimen alto</th><td>10.1 % de 696 h del gold</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Días en cero</th><td>2.4 % de los días-parámetro</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Ubicación</th><td>Estación de calidad de aire a sotavento de la UP Cerro verde, ubicado la localidad de Socabaya, en el techo de la I.E. Corazón de Jesús.</td></tr></table></div></div>`)[0];
+                popup_dbd23b0e1bf5c4bfc025d412fcf8716c.setContent(html_74f5550279debc947792b3ab0a6feba9);
+            
+        
+
+        marker_59c4842ac2dbc6d3e93d53326bc580d5.bindPopup(popup_dbd23b0e1bf5c4bfc025d412fcf8716c)
+        ;
+
+        
+    
+    
+            marker_59c4842ac2dbc6d3e93d53326bc580d5.bindTooltip(
+                `<div>
+                     <b>CA-SOC-01</b> · horarias con PM · 696 h válidas
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+                marker_59c4842ac2dbc6d3e93d53326bc580d5.setIcon(div_icon_1645a142c5f6668c20310dbdbcb2351c);
+            
+    
+            var marker_57b2731e2c47c7431f541095571e3298 = L.marker(
+                [-4.5758, -81.27732],
+                {
+}
+            ).addTo(map_db24d80f83829e1fadc305b34ae5f6f5);
+        
+    
+            var div_icon_9570e2f71308afbc3594d28ce89c6285 = L.divIcon({
+  "html": "\u003cdiv style=\u0027width:61px;height:61px;border-radius:50%;background:#2a78d6;opacity:0.85;border:2px solid #fcfcfb;box-shadow:0 0 0 1px #52514e\u0027\u003e\u003c/div\u003e",
+  "iconSize": [60.70087608723485, 60.70087608723485],
+  "iconAnchor": [30.350438043617427, 30.350438043617427],
+  "className": "empty",
+});
+        
+    
+        var popup_f495269f643ca0a4e0deb52698487c9a = L.popup({
+  "maxWidth": 420,
+});
+
+        
+            
+                var html_910cf14d690115d458b3daf5a40961b9 = $(`<div id="html_910cf14d690115d458b3daf5a40961b9" style="width: 100.0%; height: 100.0%;"><div style='font-family:system-ui,sans-serif;font-size:12px;max-width:380px'><div style='font-size:15px;font-weight:700;margin-bottom:4px'>CA-TA-01</div><div style='color:#2a78d6;font-weight:600;margin-bottom:6px'>horarias con PM · serie de años</div><table style='border-collapse:collapse'><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Evaluación</th><td>Calidad del aire en el área de influencia de la Refinería Talara</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Actividad</th><td>Refinería Talara (refinería)</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Dpto. / prov. / distrito</th><td>PIURA / TALARA / PARIÑAS</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Altitud</th><td>2 m s. n. m.</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Datos</th><td>2018-03-27 a 2021-12-31; años con datos válidos: 2018, 2019, 2020, 2021</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Horas válidas</th><td>33 024 (100 % con hora inferida)</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Parámetros</th><td>co, h2s, humedad, o3, pm10, precipitacion, presion, so2, temperatura, viento_direccion, viento_velocidad</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Régimen alto</th><td>no está en el gold (le falta PM2.5 o PM10 horario)</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Días en cero</th><td>72.6 % de los días-parámetro</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Ubicación</th><td>Bungalows Huanes en el distrito Pariñas, aproximadamente a 700 m y en dirección noreste de la Refinería de Talara</td></tr></table></div></div>`)[0];
+                popup_f495269f643ca0a4e0deb52698487c9a.setContent(html_910cf14d690115d458b3daf5a40961b9);
+            
+        
+
+        marker_57b2731e2c47c7431f541095571e3298.bindPopup(popup_f495269f643ca0a4e0deb52698487c9a)
+        ;
+
+        
+    
+    
+            marker_57b2731e2c47c7431f541095571e3298.bindTooltip(
+                `<div>
+                     <b>CA-TA-01</b> · horarias con PM · 33 024 h válidas
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+                marker_57b2731e2c47c7431f541095571e3298.setIcon(div_icon_9570e2f71308afbc3594d28ce89c6285);
+            
+    
+            var marker_ff7e9e1e12a7ba74bc3d3250478296e5 = L.marker(
+                [-17.09943, -70.68192],
+                {
+}
+            ).addTo(map_db24d80f83829e1fadc305b34ae5f6f5);
+        
+    
+            var div_icon_884481bb7dd6f7e562adfde690c7050a = L.divIcon({
+  "html": "\u003cdiv style=\u0027width:24px;height:24px;border-radius:50%;background:#2a78d6;opacity:0.85;border:2px solid #fcfcfb;box-shadow:0 0 0 1px #52514e\u0027\u003e\u003c/div\u003e",
+  "iconSize": [23.755692358378653, 23.755692358378653],
+  "iconAnchor": [11.877846179189326, 11.877846179189326],
+  "className": "empty",
+});
+        
+    
+        var popup_c4d809b0a790642652a6978d21da5862 = L.popup({
+  "maxWidth": 420,
+});
+
+        
+            
+                var html_77b7231f48fde2c61375518d878b7f1d = $(`<div id="html_77b7231f48fde2c61375518d878b7f1d" style="width: 100.0%; height: 100.0%;"><div style='font-family:system-ui,sans-serif;font-size:12px;max-width:380px'><div style='font-size:15px;font-weight:700;margin-bottom:4px'>CA-TAL-01</div><div style='color:#2a78d6;font-weight:600;margin-bottom:6px'>horarias con PM · campaña de semanas</div><table style='border-collapse:collapse'><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Evaluación</th><td>Calidad del aire en el ámbito de influencia de la unidad fiscalizable Quellaveco</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Actividad</th><td>Unidad fiscalizable Quellaveco (no lo dice el nombre)</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Dpto. / prov. / distrito</th><td>MOQUEGUA / MARISCAL NIETO / TORATA</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Altitud</th><td>3286 m s. n. m.</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Datos</th><td>2021-12-06 a 2021-12-31; años con datos válidos: 2021</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Horas válidas</th><td>600 (100 % con hora inferida)</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Parámetros</th><td>humedad, pm10, pm2_5, precipitacion, presion, temperatura, viento_direccion, viento_velocidad</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Régimen alto</th><td>0.0 % de 336 h del gold</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Días en cero</th><td>15.9 % de los días-parámetro</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Ubicación</th><td>Punto ubicado a 4 Kilómetros aproximadamente del área de operación de la unidad fiscalizable Quellaveco, en el centro poblado Tala, distrito Torata, provincia Mariscal Nieto, Departamento Moquegua.</td></tr></table></div></div>`)[0];
+                popup_c4d809b0a790642652a6978d21da5862.setContent(html_77b7231f48fde2c61375518d878b7f1d);
+            
+        
+
+        marker_ff7e9e1e12a7ba74bc3d3250478296e5.bindPopup(popup_c4d809b0a790642652a6978d21da5862)
+        ;
+
+        
+    
+    
+            marker_ff7e9e1e12a7ba74bc3d3250478296e5.bindTooltip(
+                `<div>
+                     <b>CA-TAL-01</b> · horarias con PM · 600 h válidas
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+                marker_ff7e9e1e12a7ba74bc3d3250478296e5.setIcon(div_icon_884481bb7dd6f7e562adfde690c7050a);
+            
+    
+            var marker_bd0fc97994be39be34104ae96db2d43d = L.marker(
+                [-17.07541, -70.82763],
+                {
+}
+            ).addTo(map_db24d80f83829e1fadc305b34ae5f6f5);
+        
+    
+            var div_icon_f2e2ffcdd60f3b707899651fa0ece047 = L.divIcon({
+  "html": "\u003cdiv style=\u0027width:56px;height:56px;border-radius:50%;background:#2a78d6;opacity:0.85;border:2px solid #fcfcfb;box-shadow:0 0 0 1px #52514e\u0027\u003e\u003c/div\u003e",
+  "iconSize": [55.53135125695808, 55.53135125695808],
+  "iconAnchor": [27.76567562847904, 27.76567562847904],
+  "className": "empty",
+});
+        
+    
+        var popup_9bd5f315dce4be211400ff4dcd563cd0 = L.popup({
+  "maxWidth": 420,
+});
+
+        
+            
+                var html_8fee7cb29fad39826d0fe08d36f89055 = $(`<div id="html_8fee7cb29fad39826d0fe08d36f89055" style="width: 100.0%; height: 100.0%;"><div style='font-family:system-ui,sans-serif;font-size:12px;max-width:380px'><div style='font-size:15px;font-weight:700;margin-bottom:4px'>CA-TO-01</div><div style='color:#2a78d6;font-weight:600;margin-bottom:6px'>horarias con PM · serie de años</div><table style='border-collapse:collapse'><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Evaluación</th><td>Calidad del aire en el área de influencia de la unidad minera Cuajone</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Actividad</th><td>Unidad minera Cuajone (minería)</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Dpto. / prov. / distrito</th><td>MOQUEGUA / MARISCAL NIETO / TORATA</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Altitud</th><td>2516 m s. n. m.</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Datos</th><td>2018-03-04 a 2021-01-30; años con datos válidos: 2018, 2019, 2020, 2021</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Horas válidas</th><td>25 512 (100 % con hora inferida)</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Parámetros</th><td>co, humedad, o3, pm10, precipitacion, presion, so2, temperatura, viento_direccion, viento_velocidad</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Régimen alto</th><td>no está en el gold (le falta PM2.5 o PM10 horario)</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Días en cero</th><td>32.3 % de los días-parámetro</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Ubicación</th><td>Vivienda El fundo la Pampita, centro poblado Torata Alta, distrito Torata, provincia Mariscal Nieto, departamento Moquegua. Aproximadamente a 6 km de la Unidad Minera Cuajone.</td></tr></table></div></div>`)[0];
+                popup_9bd5f315dce4be211400ff4dcd563cd0.setContent(html_8fee7cb29fad39826d0fe08d36f89055);
+            
+        
+
+        marker_bd0fc97994be39be34104ae96db2d43d.bindPopup(popup_9bd5f315dce4be211400ff4dcd563cd0)
+        ;
+
+        
+    
+    
+            marker_bd0fc97994be39be34104ae96db2d43d.bindTooltip(
+                `<div>
+                     <b>CA-TO-01</b> · horarias con PM · 25 512 h válidas
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+                marker_bd0fc97994be39be34104ae96db2d43d.setIcon(div_icon_f2e2ffcdd60f3b707899651fa0ece047);
+            
+    
+            var marker_ca599a40435bfca8e8a414a027efb3ae = L.marker(
+                [-14.50613, -71.88489],
+                {
+}
+            ).addTo(map_db24d80f83829e1fadc305b34ae5f6f5);
+        
+    
+            var div_icon_4d753288e53aa6ba1a00fc5b80073825 = L.divIcon({
+  "html": "\u003cdiv style=\u0027width:41px;height:41px;border-radius:50%;background:#2a78d6;opacity:0.85;border:2px solid #fcfcfb;box-shadow:0 0 0 1px #52514e\u0027\u003e\u003c/div\u003e",
+  "iconSize": [41.19479750018539, 41.19479750018539],
+  "iconAnchor": [20.597398750092694, 20.597398750092694],
+  "className": "empty",
+});
+        
+    
+        var popup_dc2a2b18da144749063faf5d960ab64c = L.popup({
+  "maxWidth": 420,
+});
+
+        
+            
+                var html_c98aa8ece213fb8408ebabf9b5e38f50 = $(`<div id="html_c98aa8ece213fb8408ebabf9b5e38f50" style="width: 100.0%; height: 100.0%;"><div style='font-family:system-ui,sans-serif;font-size:12px;max-width:380px'><div style='font-size:15px;font-weight:700;margin-bottom:4px'>CA-VE-01</div><div style='color:#2a78d6;font-weight:600;margin-bottom:6px'>horarias con PM · serie de meses</div><table style='border-collapse:collapse'><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Evaluación</th><td>Calidad del aire en el corredor vial Apurímac – Cusco</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Actividad</th><td>Corredor vial Apurímac – Cusco (corredor vial)</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Dpto. / prov. / distrito</th><td>CUSCO / CHUMBIVILCAS / VELILLE</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Altitud</th><td>3768 m s. n. m.</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Datos</th><td>2019-09-22 a 2020-10-31; años con datos válidos: 2019, 2020</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Horas válidas</th><td>9 744 (100 % con hora inferida)</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Parámetros</th><td>humedad, pm10, precipitacion, presion, temperatura, viento_direccion, viento_velocidad</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Régimen alto</th><td>no está en el gold (le falta PM2.5 o PM10 horario)</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Días en cero</th><td>3.7 % de los días-parámetro</td></tr><tr><th style='text-align:left;padding-right:8px;vertical-align:top;color:#52514e'>Ubicación</th><td>En la Av. Pacífico, Urbanización Patacsillo, contiguo al corredor vial y frente al estadio municipal de Velille. Distrito Velille, provincia Chumbivilcas, departamento Cusco</td></tr></table></div></div>`)[0];
+                popup_dc2a2b18da144749063faf5d960ab64c.setContent(html_c98aa8ece213fb8408ebabf9b5e38f50);
+            
+        
+
+        marker_ca599a40435bfca8e8a414a027efb3ae.bindPopup(popup_dc2a2b18da144749063faf5d960ab64c)
+        ;
+
+        
+    
+    
+            marker_ca599a40435bfca8e8a414a027efb3ae.bindTooltip(
+                `<div>
+                     <b>CA-VE-01</b> · horarias con PM · 9 744 h válidas
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+                marker_ca599a40435bfca8e8a414a027efb3ae.setIcon(div_icon_4d753288e53aa6ba1a00fc5b80073825);
+            
+</script>
+</html>
