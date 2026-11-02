@@ -272,3 +272,32 @@ func TestSecuencialLaInerciaFinalUsaLosCentroidesFinales(t *testing.T) {
 		t.Errorf("inercia final = %v, se esperaba 2 (dos puntos a distancia 1 del centro)", r.Inercia)
 	}
 }
+
+func TestSinParoPorToleranciaCorreTodasLasIteraciones(t *testing.T) {
+	// Puntos idénticos con k = 1: el centroide no se mueve nunca. Con tolerancia
+	// 0 el criterio mov <= umbral (0 <= 0) para en la primera iteración; con
+	// SinParoPorTolerancia corren las 10 pedidas, en las dos versiones.
+	d := datosDe(p6(3, 3), p6(3, 3), p6(3, 3), p6(3, 3))
+	cent := p6(3, 3)
+	conParo, err := Secuencial(d, cent, Opciones{K: 1, MaxIter: 10})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if conParo.Iteraciones != 1 || conParo.Paro != ParoTolerancia {
+		t.Fatalf("el caso no discrimina: con tolerancia 0 hizo %d iteraciones (%s)", conParo.Iteraciones, conParo.Paro)
+	}
+	op := Opciones{K: 1, MaxIter: 10, SinParoPorTolerancia: true}
+	sec, err := Secuencial(d, cent, op)
+	if err != nil {
+		t.Fatal(err)
+	}
+	con, err := Concurrente(d, cent, OpcionesConc{Opciones: op, Workers: 3, Chunk: 1})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for nombre, r := range map[string]*Resultado{"secuencial": sec, "concurrente": con} {
+		if r.Iteraciones != 10 || r.Paro != ParoMaxIter || len(r.Inercias) != 10 {
+			t.Errorf("%s: %d iteraciones (%s), %d inercias; se pidieron 10", nombre, r.Iteraciones, r.Paro, len(r.Inercias))
+		}
+	}
+}

@@ -20,6 +20,12 @@ type Opciones struct {
 	MaxIter int
 	TolAbs  float64
 	TolRel  float64
+	// SinParoPorTolerancia, si es true, apaga el criterio de parada: corren
+	// exactamente MaxIter iteraciones aunque los centroides ya no se muevan. Es
+	// el experimento de trabajo fijo del benchmark: con tolerancia 0, un
+	// desplazamiento exactamente 0 (puntos idénticos, un punto fijo exacto)
+	// cumple 0 <= 0 y la corrida pararía antes, midiendo menos trabajo.
+	SinParoPorTolerancia bool
 	// AlIterar, si no es nil, se llama al terminar cada iteración con su número
 	// (desde 1) y la inercia de esa iteración. Es para que quien llama muestre
 	// progreso; el paquete no sabe nada de terminales. Corre en la goroutine que
@@ -95,7 +101,7 @@ func cerrarIteracion(r *Resultado, cent []float64, p Parcial, it int, op Opcione
 	if op.AlIterar != nil {
 		op.AlIterar(it, p.Inercia)
 	}
-	if mov <= umbral {
+	if !op.SinParoPorTolerancia && mov <= umbral {
 		r.Paro = ParoTolerancia
 		return true
 	}

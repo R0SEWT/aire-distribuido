@@ -110,24 +110,28 @@ func TestEnteros(t *testing.T) {
 }
 
 func TestFijasNoParaEnUnPuntoFijoExacto(t *testing.T) {
-	// Dos nubes que convergen exacto en dos iteraciones: con tolerancia 0 el
-	// experimento de trabajo fijo pararía ahí (desplazamiento 0 <= 0) y
-	// mediría menos trabajo del que dice.
-	d := &kmeans.Datos{X: []float64{0, 0, 0, 1, 10, 10, 10, 11}, N: 4, D: 2}
-	cent := []float64{0, 0, 10, 10}
-	r, err := kmeans.Secuencial(d, cent, opcionesFijas(2, 7))
+	// Puntos idénticos con k = 1: el movimiento es exactamente 0 desde la
+	// primera iteración. «fijas» tiene que hacer las 10 pedidas igual, en el
+	// secuencial y en el concurrente, para medir el mismo trabajo.
+	d := &kmeans.Datos{X: []float64{2, 5, 2, 5, 2, 5, 2, 5}, N: 4, D: 2}
+	cent := []float64{2, 5}
+	conv, err := kmeans.Secuencial(d, cent, kmeans.Opciones{K: 1, MaxIter: 10})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if r.Iteraciones != 7 || r.Paro != kmeans.ParoMaxIter {
-		t.Errorf("trabajo fijo: %d iteraciones (paro %s), se pidieron 7", r.Iteraciones, r.Paro)
-	}
-	conv, err := kmeans.Secuencial(d, cent, kmeans.Opciones{K: 2, MaxIter: 7})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if conv.Iteraciones >= 7 {
+	if conv.Iteraciones != 1 {
 		t.Fatalf("el caso no llega a un punto fijo exacto: %d iteraciones", conv.Iteraciones)
+	}
+	sec, err := kmeans.Secuencial(d, cent, opcionesFijas(1, 10))
+	if err != nil {
+		t.Fatal(err)
+	}
+	con, err := kmeans.Concurrente(d, cent, kmeans.OpcionesConc{Opciones: opcionesFijas(1, 10), Workers: 2, Chunk: 1})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if sec.Iteraciones != 10 || con.Iteraciones != 10 || sec.Paro != kmeans.ParoMaxIter {
+		t.Errorf("trabajo fijo: secuencial %d (%s), concurrente %d; se pidieron 10", sec.Iteraciones, sec.Paro, con.Iteraciones)
 	}
 }
 

@@ -403,11 +403,11 @@ func resumir(corridas []corrida, recorte float64, boot int, semilla int64) ([]re
 }
 
 // opcionesFijas es el experimento de trabajo fijo: exactamente iter
-// iteraciones. TolAbs = -1 hace el umbral de parada negativo, y el
-// desplazamiento (>= 0) nunca lo alcanza: con tolerancia 0 una corrida que
-// llega a un punto fijo exacto pararía antes y mediría menos trabajo.
+// iteraciones, con el paro por tolerancia apagado. Con tolerancia 0 no basta:
+// un desplazamiento exactamente 0 cumple 0 <= 0, y una corrida que llega a un
+// punto fijo exacto pararía antes y mediría menos trabajo.
 func opcionesFijas(k, iter int) kmeans.Opciones {
-	return kmeans.Opciones{K: k, MaxIter: iter, TolAbs: -1}
+	return kmeans.Opciones{K: k, MaxIter: iter, SinParoPorTolerancia: true}
 }
 
 // marcarIteraciones compara cada corrida concurrente con el secuencial del
