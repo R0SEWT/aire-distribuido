@@ -95,7 +95,7 @@ pandas 2.2.3, numpy 2.1.3, scikit-learn 1.6.1):
 | Notebook | Local, 12–14 CPU | Local, 2 CPU (`taskset`) | Pico de RAM | Colab |
 |---|---|---|---|---|
 | 01 | 1 min 53 s | — | 3.3 GB | 2 min 30 s desde la autorización (sha256 del CSV en Drive 27 s, lectura 38 s, cascada 24 s; pico 3.0 GB) |
-| 02 | ≈ 9 min (grilla completa: 6 176 s de CPU) | 2 min 40 s (grilla reducida) | 0.5 GB | sin medir de punta a punta: con 8 CPU elige la grilla completa e hizo 25 de sus 216 tareas en 1 min (se interrumpió) |
+| 02 | 8 min 30 s medidos con 14 hilos (grilla completa: 6 176 s de CPU) | 2 min 40 s (grilla reducida) | 0.5 GB | sin medir de punta a punta: con 8 CPU elige la grilla completa e hizo 25 de sus 216 tareas en 1 min (se interrumpió) |
 | 03 | 2 min 9 s | — | 2.4 GB | 1 min 35 s desde la autorización (38 OK, 0 diferencias; pico 3.0 GB) |
 
 En Colab los tiempos cuentan desde la autorización de Drive; leer el CSV desde Drive no pesa (27 s el
@@ -161,6 +161,26 @@ conversión UTM está en `aire_lab`), **memoria** (pico de 3.3 GB en el 01 y 2.4
 2.2.2, como en Colab) y **figuras ocultas** (todas pasan por `guardar()`, que las guarda y hace
 `plt.show()`). El 03 sí escribía y borraba en Drive un silver temporal de 17 MB para el sha256; ahora
 usa el disco local.
+
+## Correr por la CLI de Colab (camino recomendado: sin clics de Drive)
+
+La CLI oficial (`uv tool install google-colab-cli`) abre **una sola sesión** de Colab, de RAM alta
+(8 CPU, 51 GB), y ahí corren todos los notebooks. No monta Drive: los insumos (silver, gold,
+`reports/`, `configs/`, y el bronze solo para el 01) se suben desde la laptop a la máquina virtual y
+las salidas se bajan. La autenticación se hace una vez al crear la sesión. Desde la laptop de Rody:
+
+```bash
+bash ~/Code/personal/aire-lab/colab-correr.sh 03            # auditoría y figuras (43 s en la VM)
+bash ~/Code/personal/aire-lab/colab-correr.sh 02            # calibración, grilla completa con 8 CPU
+bash ~/Code/personal/aire-lab/colab-correr.sh 01 --bronze   # EDA; sube el CSV de 1.3 GB
+bash ~/Code/personal/aire-lab/colab-correr.sh stop          # apaga la sesión (gasta unidades mientras vive)
+```
+
+El script clona o actualiza la rama en la VM, parchea `drive.mount` para que no bloquee, fija
+`AIRE_RAIZ` en el clon, ejecuta el notebook con `colab exec -f`, deja el HTML con salidas en
+`~/Code/personal/aire-lab/html/0X_colab.html` y baja `reports/` y las figuras a
+`~/Code/personal/aire-lab/colab-run/salida/`. La interfaz web sigue siendo útil para abrir un notebook
+y tocar una celda a mano; para correr completo, la CLI.
 
 ## Correrlos en local contra Go
 
