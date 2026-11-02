@@ -23,16 +23,17 @@ al docente el lun 02/11; si sí, participan los tres).
 
 ## Anexo B. Tablero Kanban {.unnumbered}
 
-El seguimiento de las tareas de la PC3 se hizo en un tablero Kanban de GitHub Projects, creado al
-inicio de la semana de la entrega y actualizado durante ella.
+El seguimiento de las tareas de la PC3 se hizo en un tablero Kanban de GitHub Projects, público y
+enlazado al repositorio: <https://github.com/users/R0SEWT/projects/8>. Se creó el 02/11 con una
+tarjeta por tarea del plan y las solicitudes de cambio (PR) del repositorio, y se actualizó durante la
+semana conforme se cerraban las tareas.
 
 ![Tablero Kanban del proyecto en GitHub Projects](capturas/kanban.png){#fig-kanban width=16cm}
 
 :::: {si-falta="capturas/kanban.png"}
 ::: {.callout-warning title="PENDIENTE"}
-Enlace al tablero (GitHub Projects del repositorio) y captura del tablero el día de la entrega, con
-las tarjetas de la PC3 en «Hecho». Va en `docs/informe/capturas/kanban.png`. El tablero se crea el
-lun 02/11: uno armado la noche de la entrega no muestra seguimiento.
+Captura del tablero el día de la entrega, con las tarjetas de la PC3 en «Hecho». Va en
+`docs/informe/capturas/kanban.png`.
 :::
 ::::
 
