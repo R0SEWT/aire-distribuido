@@ -91,11 +91,11 @@ caso, dos capturas). Va en `docs/informe/capturas/go-test-race.png`.
 :::
 ::::
 
-![Integración continua en GitHub Actions: `go test -race`, `go vet` y `gofmt`](capturas/ci.png){#fig-captura-ci width=16cm}
+![Integración continua en GitHub Actions (`go test -race`, `go vet` y `gofmt`): corridas en verde por push y por PR, y las PRs fusionadas, vistas con `gh`](capturas/ci.png){#fig-captura-ci width=16cm}
 
 :::: {si-falta="capturas/ci.png"}
 ::: {.callout-warning title="PENDIENTE"}
-Captura de los checks de GitHub Actions en verde sobre la PR de `release/pc3` a `main`. Va en
+Captura de las corridas de GitHub Actions en verde (`gh run list`) y de las PRs fusionadas. Va en
 `docs/informe/capturas/ci.png`.
 :::
 ::::
@@ -140,11 +140,11 @@ Speedup contra workers, con la diagonal ideal y las barras del IC, desde
 :::
 ::::
 
-![Ejecución de `cmd/benchmark` en gorgo](capturas/benchmark.png){#fig-captura-benchmark width=16cm}
+![Ejecución de `cmd/benchmark` en la laptop de desarrollo (A019803, 14 CPU lógicas): corrida reducida de 3 repeticiones; las cifras del texto salen de la corrida completa de 10](capturas/benchmark.png){#fig-captura-benchmark width=16cm}
 
 :::: {si-falta="capturas/benchmark.png"}
 ::: {.callout-warning title="PENDIENTE"}
-Captura real de `go run ./cmd/benchmark` en gorgo (puede ser una corrida reducida si la completa no
+Captura real de `go run ./cmd/benchmark` (puede ser una corrida reducida si la completa no
 cabe), con el comando a la vista. Va en `docs/informe/capturas/benchmark.png`.
 :::
 ::::
