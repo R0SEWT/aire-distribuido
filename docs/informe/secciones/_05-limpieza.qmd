@@ -30,11 +30,21 @@ con el EDA sin tocar las pruebas.
 Reglas de limpieza y su motivo
 :::
 
-::: {.callout-warning title="PENDIENTE"}
-Los umbrales concretos de las reglas 3, 4 y 6 (centinelas, rango físico y unidad de cada
-parámetro), citados desde `configs/limpieza.json` cuando el EDA los cierre (mar 03/11). Lo ideal es
-que `tablas.py` los lea de ahí y genere la tabla, igual que las demás.
+::: {.callout-note title="Borrador generado con IA, para revisión de Rody"}
+Párrafo y tabla de umbrales agregados por un agente de Claude Code el 02/11; la tabla la genera
+`tablas.py` desde `configs/limpieza.json`. Borrar este aviso al aprobarlo.
 :::
+
+Los umbrales de las reglas 3, 4 y 6 están en la @tbl-umbrales, que `tablas.py` lee de
+`configs/limpieza.json`, el mismo archivo que usó la corrida de este informe (su sha256 coincide con
+el que registra `limpieza.json`: {{< meta cifras.umbrales.config_de_la_corrida >}}). Los rangos son
+físicos, no estadísticos: descartan lo que no puede ser una lectura (una humedad sobre 100 %, una
+presión bajo 400 hPa, que no se da a la altitud de ninguna estación), no lo que es raro, para no
+recortar los episodios que el modelo tiene que ver. Los centinelas ({{< meta cifras.umbrales.centinelas >}}) se
+comparan con el valor crudo, antes de convertir la unidad, y la columna «Día en 0 = sin dato» es la
+regla 3′: solo la precipitación queda fuera, porque un día seco tiene precipitación 0.
+
+{{< include generado/tablas/umbrales.md >}}
 
 ### La hora, reconstruida por posición {#sec-hora}
 
@@ -225,9 +235,3 @@ encuentran una diferencia y {{< meta cifras.auditoria.avisos >}} queda con un av
 modelo de este informe: {{< meta cifras.auditoria.misma_receta >}}.
 
 {{< include generado/tablas/auditoria.md >}}
-
-::: {.callout-warning title="PENDIENTE"}
-Volver a correr el notebook 03 sobre la corrida actual (la de las reglas `sin_valor`,
-`cero_como_faltante` y la hora por bloque físico) para auditar sus cifras y regenerar las figuras del
-modelo; hoy la auditoría valida el código sobre una corrida anterior.
-:::

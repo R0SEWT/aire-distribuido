@@ -113,24 +113,15 @@ suma de sus puntos y cuántos son. Esas dos cantidades se pueden calcular por pa
 reducción es exacta. Es la idea de las versiones de K-Means para memoria distribuida
 [@dhillon2000] y sobre MapReduce [@zhao2009], y es lo que pide el enunciado: cada nodo calcula sumas
 parciales de su partición y el coordinador recalcula los centroides en cada iteración. El código
-expone esa división en tres funciones:
+expone esa división en tres funciones de `kmeans/parciales.go`: `Parciales` calcula las sumas, los
+conteos y la inercia de un tramo de filas; `Fusionar` suma parciales en el orden que se le da
+(@lst-fusionar, en la @sec-evidencias), y `Actualizar` recalcula los centroides desde el parcial
+fusionado. El @lst-firmas copia tal cual la documentación y la firma de la primera y la última.
 
-```go
-// Parciales asigna las filas [desde, hasta) de d a los centroides y devuelve sumas k×D,
-// conteos k e inercia. Es lo que un nodo calcula sobre su partición en cada iteración.
-func Parciales(d *Datos, centroides []float64, desde, hasta int) Parcial
-
-// Fusionar suma parciales en el orden dado. Reducción exacta: el orden fija el resultado bit a bit.
-func Fusionar(ps []Parcial, k, dim int) Parcial
-
-// Actualizar recalcula los centroides a partir de un parcial fusionado y dice cuánto se movieron.
-func Actualizar(cent []float64, p Parcial) (movimiento float64)
-```
+{{< include generado/tablas/frag_firmas.md >}}
 
 La versión de una máquina (PC3) y la distribuida (PC4) ejecutan **el mismo código**: solo cambia
 quién llama a `Parciales`, un worker sobre un chunk o un nodo sobre su partición.
-
-Las tres funciones están en `kmeans/parciales.go`.
 
 **Topología.** Estrella: el coordinador (la API de la parte C) y $K$ nodos de cómputo, cada uno en
 su contenedor. **El nodo se conecta al coordinador, nunca al revés**: así puede unirse un nodo que no

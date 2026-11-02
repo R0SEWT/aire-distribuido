@@ -44,9 +44,15 @@ mapfile -t codigos < <(sed -n 's/^[[:space:]]\{1,\}codigo:[[:space:]]*\(U[0-9]\{
 #    cuadra. Go no marca los datos sintéticos: estas guardas son las que lo impiden.
 if python3 -c 'import pandas' 2>/dev/null; then tablas=(python3 tablas.py --final); else tablas=(uv run --quiet tablas.py --final); fi
 "${tablas[@]}" >/dev/null 2>&1 || problemas+=("quedan cifras PLACEHOLDER o invariantes sin cuadrar (python3 tablas.py --final)")
+# 1b. El informe (tablas, cifras y fragmentos de código) sale del árbol de trabajo y el zip, de la ref: tienen
+#     que ser el mismo commit, o el informe mostraría código que no está en el zip.
+[ "$(git rev-parse HEAD)" = "$commit" ] || problemas+=("HEAD no es $ref: el informe saldría del árbol de trabajo y el zip de $ref (git checkout $ref)")
 # 2. Ningún aviso PENDIENTE en las fuentes.
 n="$(cat informe.qmd secciones/*.qmd _participacion.md | grep -c 'title="PENDIENTE' || true)"
 [ "$n" -eq 0 ] || problemas+=("quedan $n avisos PENDIENTE en las fuentes (grep -n 'title=\"PENDIENTE' secciones/*.qmd)")
+# 2b. Ningún borrador de IA sin revisar: el aviso se borra cuando Rody aprueba la sección.
+n="$(cat informe.qmd secciones/*.qmd | grep -c 'title="Borrador generado con IA' || true)"
+[ "$n" -eq 0 ] || problemas+=("quedan $n secciones marcadas como borrador de IA sin revisar (grep -n 'Borrador generado con IA' secciones/*.qmd)")
 # 3. Ninguna figura faltante: las rutas de los avisos si-falta tienen que existir.
 while IFS= read -r ruta; do
   [ -e "$ruta" ] || problemas+=("falta la figura $ruta")

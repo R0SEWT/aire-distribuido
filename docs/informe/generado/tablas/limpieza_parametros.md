@@ -3,19 +3,19 @@
 ::: {#tbl-limpieza-parametros tbl-colwidths="[35,15,50]"}
 | Parámetro en el archivo | Lecturas | Estado |
 |:---|---:|:---|
-| DIOXIDO_AZUFRE | 432 135 | mapeado |
-| PRESION_BAROMETRICA | 262 448 | mapeado |
+| DIOXIDO\_AZUFRE | 432 135 | mapeado |
+| PRESION\_BAROMETRICA | 262 448 | mapeado |
 | PRECIPITACION | 225 455 | mapeado |
-| DIRECCION_VIENTO | 224 485 | mapeado |
-| VELOCIDAD_VIENTO | 224 485 | mapeado |
+| DIRECCION\_VIENTO | 224 485 | mapeado |
+| VELOCIDAD\_VIENTO | 224 485 | mapeado |
 | TEMPERATURA | 223 493 | mapeado |
-| HUMEDAD_RELATIVA | 223 489 | mapeado |
+| HUMEDAD\_RELATIVA | 223 489 | mapeado |
 | PM10 | 202 057 | mapeado |
-| SULFURO_HIDROGENO | 188 264 | mapeado |
-| MONOXIDO_CARBONO | 183 641 | mapeado |
+| SULFURO\_HIDROGENO | 188 264 | mapeado |
+| MONOXIDO\_CARBONO | 183 641 | mapeado |
 | OZONO | 117 086 | mapeado |
 | PM2.5 | 94 371 | mapeado |
-| RADIACION_SOLAR | 7 602 | mapeado |
+| RADIACION\_SOLAR | 7 602 | mapeado |
 
 Parámetros vistos en el archivo y si tienen mapeo a un parámetro canónico
 :::

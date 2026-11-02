@@ -291,3 +291,36 @@
   date        = {2003-06-24},
   url         = {https://infoaireperu.minam.gob.pe/wp-content/uploads/2017/12/DS_009-2003-SA_Reglamento_Niveles_de_Estados_de_Alerta-1.pdf}
 }
+
+% ---------------------------------------------------------------------------
+% Salud (motivación, @sec del problema). Verificadas el 2026-11-02 con WebFetch:
+%   - oms2021guias: la página de la OMS da título, fecha (22/09/2021) e ISBN 9789240034228, y dice que
+%     la contaminación del aire es factor de riesgo de cardiopatía isquémica, accidente cerebrovascular,
+%     EPOC, asma y cáncer. Los niveles de la guía (PM2.5: 5 anual y 15 en 24 h; PM10: 15 y 45; el de
+%     24 h como percentil 99, 3 a 4 días de excedencia al año) los muestra la OMS solo como imagen, y el
+%     PDF de iris.who.int respondió 403: se cotejaron con la tabla del anexo A de la declaración de
+%     COMEAP (gov.uk) sobre estas guías. PENDIENTE de cotejo humano contra la tabla del PDF de la OMS.
+%   - oms2021comunicado: titular y fecha leídos en la página; de ahí sale que el PM2.5 y el PM10
+%     penetran hasta lo profundo de los pulmones, que el PM2.5 puede entrar al torrente sanguíneo y
+%     que los efectos son sobre todo cardiovasculares y respiratorios.
+% Sin campo publisher: el editor es el mismo autor, y APA 7 lo omite en ese caso.
+% ---------------------------------------------------------------------------
+
+@book{oms2021guias,
+  title     = {{WHO} global air quality guidelines: particulate matter ({PM2.5} and {PM10}), ozone,
+               nitrogen dioxide, sulfur dioxide and carbon monoxide},
+  author    = {{World Health Organization}},
+  year      = {2021},
+  isbn      = {9789240034228},
+  url       = {https://www.who.int/publications/i/item/9789240034228},
+  urldate   = {2026-11-02}
+}
+
+@online{oms2021comunicado,
+  title     = {New {WHO} Global Air Quality Guidelines aim to save millions of lives from air
+               pollution},
+  author    = {{World Health Organization}},
+  date      = {2021-09-22},
+  url       = {https://www.who.int/news/item/22-09-2021-new-who-global-air-quality-guidelines-aim-to-save-millions-of-lives-from-air-pollution},
+  urldate   = {2026-11-02}
+}
