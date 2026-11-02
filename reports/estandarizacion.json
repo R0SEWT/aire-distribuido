@@ -5,24 +5,24 @@
   ],
   "log1p": [],
   "nivel": "absoluto",
-  "n": 64236,
+  "n": 65873,
   "media": [
-    14.032933401830746,
-    31.505261224235625
+    14.113365111654247,
+    31.547649264493792
   ],
   "desv": [
-    13.403818928851493,
-    37.56126031976579
+    13.321236195790332,
+    37.240576817625694
   ],
   "ddof": 0,
   "chunk": 1000,
   "metadatos": {
-    "momento": "2026-11-01T15:02:52.5230438-05:00",
+    "momento": "2026-11-01T23:56:22.680357814-05:00",
     "maquina": "A019803",
     "version_go": "go1.27.3",
     "gomaxprocs": 14,
     "cpus_logicas": 14,
-    "commit": "5306012599785c3a138895a01cb05d7b56fd3239",
+    "commit": "6fb3b002c868d7516ae8fc3fa4d852a9edf56117",
     "arbol_sucio": false
   },
   "configs": {
@@ -33,7 +33,7 @@
     },
     "limpieza": {
       "ruta": "configs/limpieza.json",
-      "sha256": "61800952b5c9a56327c7be7c77d03654a643024abf444724591b208970d86651",
+      "sha256": "bf27c7144a64a8c696b66e4c4ac032d2dcfddfd6bcd7c8ffb1496fcd18fafda6",
       "existe": true
     }
   }
