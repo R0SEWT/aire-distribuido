@@ -14,6 +14,7 @@ después de leer la tabla de decisión.
 | 1 | `01_eda_criba.ipynb` | con el bronze en Drive | Primer MB y sha256; lectura con `configs/limpieza.json` y la **cascada de reglas de Go**; valores vistos; **cada medición de la criba** (Q1–Q9) | `reports/eda_criba.md`, `eda_limpieza_prototipo.json` (esquema de `limpieza.json`), `eda_completitud.csv`, `eda_estaciones.csv`, `eda_bronze.json`, `figuras_eda/`; `data/silver/oefa_ancho_prototipo.csv`; figuras del informe `completitud.png` y `distribuciones.png` |
 | 2 | `02_calibracion.ipynb` | antes de congelar la receta | Grilla de la spec de calibración §3 (24 variantes × k 2–10 × 5 semillas) y regla de elección en su orden; §8, la **decisión del equipo** (se corre sola, sin la grilla) | `reports/calibracion.csv`, `calibracion_resumen.csv`, `calibracion_decision.md` (con la sección «Decisión del equipo»), `kmeans_propuesto.json` (esquema de `configs/kmeans.json`), `centroides_sklearn.json`, `descriptores_regimen.csv`, `figuras_calibracion/` |
 | 3 | `03_auditoria_figuras.ipynb` | cuando Go ya corrió | Recalcula limpieza, silver y gold desde el bronze y los compara con Go; audita `kmeans.json` (y sus semillas, desde `centroides_iniciales.json`), asignaciones, `regimenes.json`, `codo.json` y los benchmarks (que sean del gold y la receta auditados); dibuja las figuras y las muestra | `reports/auditoria.md` y `.json`; figuras del informe `perfiles.png`, `niveles.png`, `regimen-hora.png`, `regimen-estacion.png`, `episodio.png`, `codo.png`, `speedup.png` (y `cobertura.png`) |
+| 4 | `04_procedencia_y_mapa.ipynb` | con el bronze (y, para la ficha, Go) | Lee las 36 columnas; etiqueta cada fila larga con la regla de la cascada de Go que la descarta (cuadrada con `limpieza.json`) y pregunta **por qué** falta cada valor y por qué hay duplicados; ficha por estación y mapas | `reports/estaciones_ficha.csv`, `faltantes_*.csv`, `mapa_estaciones.html`; figuras del informe `faltantes.png`, `calendario.png`, `mapa.png` |
 
 Los nombres de las figuras son los que esperan `docs/informe/secciones/*.qmd`. Cada figura queda
 anotada en `origen.json` (en la misma carpeta) con su fuente y si los datos son sintéticos; con datos
@@ -35,6 +36,7 @@ Specs: `docs/specs/2026-10-31-preguntas-candidatas.md` (01), `docs/specs/2026-10
 - 01: <https://colab.research.google.com/github/R0SEWT/aire-distribuido/blob/feature/spec-pc3/notebooks/01_eda_criba.ipynb>
 - 02: <https://colab.research.google.com/github/R0SEWT/aire-distribuido/blob/feature/spec-pc3/notebooks/02_calibracion.ipynb>
 - 03: <https://colab.research.google.com/github/R0SEWT/aire-distribuido/blob/feature/spec-pc3/notebooks/03_auditoria_figuras.ipynb>
+- 04: <https://colab.research.google.com/github/R0SEWT/aire-distribuido/blob/feature/spec-pc3/notebooks/04_procedencia_y_mapa.ipynb>
 
 Para otra rama, se cambia `feature/spec-pc3` en la URL (`develop` cuando se fusione).
 
@@ -44,14 +46,16 @@ el límite (picos de unos 3 GB en el 01 y en el 03: caben en los 12.7 GB del est
 trae 8 CPU en vez de 2, y con eso el 02 corre la grilla completa.
 
 **Ejecutar**: *Entorno de ejecución → Ejecutar todo* (Ctrl+F9); al aviso de que el notebook no es de
-Google, *Ejecutar de todos modos*. La celda de entorno (§0), la misma en los tres notebooks:
+Google, *Ejecutar de todos modos*. La celda de entorno (§0), la misma en los cuatro notebooks salvo
+`NOTEBOOK`:
 
 1. monta Drive. Cada notebook abre su propio entorno y cada entorno nuevo pide autorizarlo una vez
    (cuadro «Permit this notebook to access your Google Drive files?» → *Connect to Google Drive* → la
    **cuenta personal**, la del `MyDrive/aire-distribuido/`); *Ejecutar todo* espera ahí hasta 15 min;
 2. deja el repo en `/content/aire-distribuido` en la rama de la URL: lo clona la primera vez y en cada
    corrida hace `git fetch` + `git reset --hard origin/<rama>` (si no puede leer la URL, usa `RAMA`);
-3. instala lo que falte (pandas, numpy, matplotlib, scikit-learn, scipy, joblib; Colab los trae) y pone
+3. instala lo que falte (pandas, numpy, matplotlib, scikit-learn, scipy, joblib; Colab los trae; el 04,
+   además, folium y, si se puede, contextily para las teselas del mapa estático) y pone
    el reloj en hora de Lima (Colab corre en UTC: si no, las fechas de los reportes salen +5 h);
 4. imprime si es Colab, las versiones, **rama y commit**, la raíz de los datos, dónde van las figuras,
    CPU y RAM;
@@ -72,6 +76,7 @@ corrió Go; la celda de entorno imprime el que falte):
 | 01 | `data/bronze/*.csv` (el más grande) y `SHA256SUMS` | `rclone copy data/bronze gdrive:aire-distribuido/data/bronze --progress` |
 | 02 | `data/silver/oefa_ancho.csv` (o el prototipo del 01); la §8, además `data/gold/asignaciones.csv` y `reports/regimenes.json` | los tres de abajo |
 | 03 | silver, gold y asignaciones de Go; `reports/` de Go; el bronze (sin él, la auditoría de la limpieza queda OMITIDA) | los tres de abajo y el del bronze |
+| 04 | el bronze con su diccionario (`1c_*.xlsx`) y metadatos (`1b_*.docx`); `reports/limpieza.json` de Go para cuadrar; silver, gold, asignaciones y `regimenes.json` para la ficha (sin ellos corre, con avisos) | el del bronze y los tres de abajo |
 
 ```bash
 rclone copy data/silver gdrive:aire-distribuido/data/silver --include "oefa_ancho.csv"
@@ -85,7 +90,8 @@ Una carpeta `configs/` en Drive pisa a la del repo (la celda avisa si difieren);
 `reports/figuras_eda/`, `data/silver/oefa_ancho_prototipo.csv` y `completitud.png`, `distribuciones.png` en
 `reports/figuras/`; el 02, `reports/calibracion*`, `kmeans_propuesto.json`, `centroides_sklearn.json`,
 `descriptores_regimen.csv` y `reports/figuras_calibracion/`; el 03, `reports/auditoria.{md,json}` y las
-figuras del informe en `reports/figuras/` con su `origen.json`. Al informe se traen con
+figuras del informe en `reports/figuras/` con su `origen.json`; el 04, `reports/estaciones_ficha.csv`,
+`reports/faltantes_*.csv`, `reports/mapa_estaciones.html` y `faltantes.png`, `calendario.png`, `mapa.png`. Al informe se traen con
 `rclone copy gdrive:aire-distribuido/reports/figuras docs/informe/generado/figuras`.
 
 **Tiempos** (CSV de OEFA de 1.3 GB, 2 883 877 filas largas; medidos el 01/11. Local: Python 3.12,
@@ -234,20 +240,32 @@ scikit-learn 1.6.1 + matplotlib 3.10.0.
 
 - **`configs/limpieza.json`** (`datos.ConfigLimpieza`, `datos/doc.go`): `delimitador`, `codificacion`,
   `separador_decimal`, `zona_horaria`, `columnas` (`estacion, fecha, hora, parametro, valor, periodo,
-  unidad` + ubicación; vacío = no existe), `parametros` (real → canónico, o `{"canonico", "factor"}`),
-  `periodos_horarios`, `formatos_fecha` (layouts de Go), `fecha_desde`, `fecha_hasta` (exclusiva),
-  `centinelas` (sobre el valor crudo), `admiten_negativos`, `rangos` (unidad canónica), `unidades`.
+  unidad, tipo_analisis` + ubicación; vacío = no existe), `parametros` (real → canónico, o
+  `{"canonico", "factor"}`), `periodos_horarios`, `formatos_fecha` (layouts de Go), `fecha_desde`,
+  `fecha_hasta` (exclusiva), `centinelas` (sobre el valor crudo), `admiten_negativos`, `rangos` (unidad
+  canónica), `unidades`, `bloques_en_cero_como_faltante`, `cero_como_faltante` (contaminantes cuyo 0
+  exacto es «sin dato» hora a hora) y `correcciones_ubicacion` (estación → {columna de ubicación → valor};
+  hoy CA-HUAR-01, zona 19 → 18).
   Como en Go, el JSON es la config entera y un campo desconocido es un error. Nombres comparados con
   `datos.normalizar` (minúsculas, sin tildes, µ → u, ³ → 3, espacios colapsados).
 - **Cascada** (cada fila cuenta en la primera que falla): `columnas` → `estacion` → `periodo` →
-  `parametro` → `fecha` → `fecha_fuera_de_rango` → `valor_no_numerico` → `centinela` → `unidad` →
-  `negativo` → (factor) → `fuera_de_rango` → `duplicado_exacto` / `duplicado_valor_distinto`.
+  `sin_valor` (ninguna columna de parámetro con valor) → `parametro` (más de una) → `fecha` →
+  `fecha_fuera_de_rango` → `hora_no_en_punto` → `hora` → `valor_no_numerico` → `centinela` → `unidad` →
+  `negativo` → (factor) → `fuera_de_rango` → `bloque_en_cero` → `cero_como_faltante` →
+  `duplicado_unidad` → `duplicado_exacto` / `duplicado_valor_distinto`. La hora que falta es la posición
+  de la fila en su día (estación, parámetro, fecha, unidad, periodo) si el día tiene 24 filas contiguas;
+  si no, la posición en su **bloque físico** (filas contiguas de la misma estación, fecha, unidad, periodo
+  y tipo de análisis, contando las vacías) si este tiene 24 filas de un solo parámetro.
 - **`reports/limpieza.json`**: `filas_largas` {`leidas, procesadas, descartadas,
-  descartadas_por_regla` (las 13), `marcadas_por_regla` {`duplicado_valor_distinto`: celdas},
-  `fuera_de_rango_por_parametro`}, `filas_anchas` {`total, completas_gold, pm2_5_mayor_pm10`},
-  `parametros_presentes`, `estaciones` {`largas_leidas, largas_procesadas, anchas, completas_gold,
-  desde, hasta, ubicacion`}, `vistos` {`parametros, parametros_no_mapeados, periodos, unidades`},
-  `cabecera, bom, delimitador, entrada`.
+  descartadas_por_regla` (las 19), `marcadas_por_regla` {`duplicado_valor_distinto`, `hora_inferida`,
+  `hora_no_en_punto`, `unidad_convertida`, `ubicacion_corregida`}, `fuera_de_rango_por_parametro`,
+  `bloque_en_cero_por_parametro`, `cero_como_faltante_por_parametro`, `hora_explicita`, `hora_inferida`,
+  `hora_por_bloque_fisico`, `unidad_convertida_por_parametro`}, `filas_anchas` {`total, completas_gold,
+  pm2_5_mayor_pm10, hora_inferida`}, `parametros_presentes`, `estaciones` {`largas_leidas,
+  largas_procesadas, anchas, completas_gold, desde, hasta, ubicacion` (ya corregida, con `lat` y `lon`
+  WGS84 de 6 decimales), `ubicacion_original`, `ubicaciones_distintas`}, `vistos` {`parametros,
+  parametros_no_mapeados, periodos, unidades`}, `cabecera, bom, delimitador, entrada`. El prototipo
+  (`aire_lab.limpiar`) reproduce todos estos conteos y el silver byte a byte; el 03 lo audita.
 - **silver** `data/silver/oefa_ancho.csv`: `estacion,fecha_hora,<canónicos presentes en orden de
   bytes>`, coma, vacío = faltante, RFC3339 con `-05:00`, ordenado por estación y fecha-hora,
   `FormatFloat(x, 'g', -1, 64)`. El prototipo lo reproduce **byte a byte**.
@@ -275,18 +293,21 @@ El CSV real (spec PC3 §4.1) no tiene el formato de la muestra: una columna por 
 fila trae un solo parámetro con valor; la hora falta en el 94 %. Mientras `configs/limpieza.json`
 describa la muestra, el 01 detecta el formato real por la cabecera y usa
 `aire_lab.CONFIG_OEFA_REAL`, que deja copiada en `reports/limpieza_propuesta_real.json` para
-compararla con la del cargador de Go. Claves nuevas (nombres acordados para el cargador; las marcadas
-como propuesta aún no están en Go):
+compararla con la del cargador de Go. Claves del formato real (las mismas que lee el cargador):
 
 - `parametros_en_columnas` (columna → canónico; canónico nuevo `h2s`), `hora_prefijo_ignorar`
   (`1899-12-31`, el artefacto de Excel; la fecha sola es las 00:00), `hora_por_posicion`
   (`{"activar", "filas_por_dia": 24, "convencion": "fin"}`).
-- propuestas: `valores_vacios` (`-`, `NA`, vacío), `periodos_horarios_por_grupo` (`-` es horario solo
-  con hora o con su bloque de 24 completo) y `bloques_en_cero_como_faltante` (lista de canónicos).
-- Reglas nuevas en la cascada: `hora` (sin hora y bloque incompleto, después de `fecha`),
-  `bloque_en_cero` (**propuesta**: un bloque del día entero en 0 exacto es un equipo sin medir; después
-  de `fuera_de_rango`) y `duplicado_unidad` (la misma lectura en ppb o mmHg cuando está en µg/m³ o hPa;
-  antes de los duplicados). Marcas: `hora_inferida`, `unidad_convertida`.
+- `valores_vacios` (`-`, `NA`, vacío), `periodos_horarios_por_grupo` (`-` es horario solo con hora o con
+  su bloque de 24 completo), `bloques_en_cero_como_faltante`, `cero_como_faltante` y
+  `correcciones_ubicacion`: todas están en Go.
+- Reglas del formato real en la cascada: `sin_valor` (la fila vacía de la plantilla de 2022, que ocupa
+  su hora en el bloque físico), `hora` (sin hora y ni el día ni el bloque físico completos, después de
+  `fecha`), `bloque_en_cero` (un día entero en 0 exacto es un equipo sin medir; después de
+  `fuera_de_rango`), `cero_como_faltante` (un 0 exacto de un contaminante en un día con datos: OEFA no
+  promedia las horas en 0; el notebook 04 lo muestra) y `duplicado_unidad` (la misma lectura en ppb o
+  mmHg cuando está en µg/m³ o hPa; antes de los duplicados). Marcas: `hora_inferida`,
+  `unidad_convertida`, `ubicacion_corregida`.
 - Silver: columna `hora_inferida` al final (1 si alguna lectura de la fila tuvo la hora inferida).
 - **Convención `fin`**: la lectura de la posición *p* (0 a 23) cubre [*p*, *p*+1) y se etiqueta *p*+1;
   las horas explícitas de `HORA_INICIO` (que son de inicio) también se corren +1 h, o quedan desfasadas
