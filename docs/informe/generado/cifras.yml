@@ -259,8 +259,8 @@ cifras:
     auto_silueta: "0,48"
     auto_recall: "7 %"
   auditoria:
-    ok: "37"
+    ok: "40"
     diferencias: "0"
-    avisos: "1"
-    chequeos: "38"
-    misma_receta: "no"
+    avisos: "0"
+    chequeos: "40"
+    misma_receta: "sí"
