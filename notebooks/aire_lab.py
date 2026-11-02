@@ -1669,3 +1669,189 @@ def registrar_figura(carpeta, nombre: str, sintetico: bool, fuente: str, noteboo
     datos[nombre] = {"sintetico": bool(sintetico), "fuente": str(fuente), "notebook": notebook,
                      "fecha": dt.datetime.now().isoformat(timespec="seconds")}
     ruta.write_text(json.dumps(dict(sorted(datos.items())), indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+
+
+# ---------------------------------------------------------------------------------------------
+# Entorno de los notebooks (Colab o local) e insumos de la raíz de las capas
+# ---------------------------------------------------------------------------------------------
+
+DRIVE_REMOTO = "gdrive:aire-distribuido"  # remoto de rclone con las capas (nunca cipdrive:)
+
+# Salidas de Go que lee el laboratorio, relativas a la raíz de las capas (en local, la del repo).
+SALIDAS_GO = {
+    "silver": "data/silver/oefa_ancho.csv",
+    "gold": "data/gold/oefa_features.csv",
+    "asignaciones": "data/gold/asignaciones.csv",
+    "limpieza": "reports/limpieza.json",
+    "estandarizacion": "reports/estandarizacion.json",
+    "kmeans": "reports/kmeans.json",
+    "regimenes": "reports/regimenes.json",
+    "centroides_iniciales": "reports/centroides_iniciales.json",
+    "codo": "reports/codo.json",
+    "benchmark_cargador": "reports/benchmark_cargador.json",
+    "benchmark_kmeans": "reports/benchmark_kmeans.json",
+}
+# Qué necesita cada notebook de Go: el 02 solo para su §8; el 03 para auditar.
+GO_POR_NOTEBOOK = {
+    "02": ["silver", "asignaciones", "regimenes"],
+    "03": ["silver", "gold", "asignaciones", "limpieza", "estandarizacion", "kmeans", "regimenes"],
+}
+# Cómo se suben a Drive, desde la raíz del repo en la máquina donde están (donde corrió Go).
+_JSON_GO = "{" + ",".join(Path(r).stem for r in SALIDAS_GO.values() if r.endswith(".json")) + "}.json"
+RCLONE = {
+    "bronze": f'rclone copy data/bronze {DRIVE_REMOTO}/data/bronze --progress',
+    "silver": f'rclone copy data/silver {DRIVE_REMOTO}/data/silver --include "oefa_ancho.csv"',
+    "gold": f'rclone copy data/gold {DRIVE_REMOTO}/data/gold --include "{{oefa_features,asignaciones}}.csv"',
+    "reports": f'rclone copy reports {DRIVE_REMOTO}/reports --include "{_JSON_GO}"',
+}
+RCLONE["asignaciones"] = RCLONE["gold"]
+for _c in SALIDAS_GO:
+    RCLONE.setdefault(_c, RCLONE["reports"])
+
+
+def memoria_gb() -> tuple[float, float]:
+    """(RAM total, RAM disponible) en GiB, de /proc/meminfo; NaN si no se puede leer."""
+    try:
+        info = dict(linea.split(":", 1) for linea in Path("/proc/meminfo").read_text().splitlines() if ":" in linea)
+        return tuple(float(info[k].split()[0]) / 2**20 for k in ("MemTotal", "MemAvailable"))
+    except (OSError, KeyError, ValueError):
+        return float("nan"), float("nan")
+
+
+def cpus_disponibles() -> int:
+    """CPU que puede usar este proceso (afinidad incluida: taskset, contenedores); os.cpu_count() si no se sabe."""
+    import os
+    try:
+        return len(os.sched_getaffinity(0))
+    except (AttributeError, OSError):
+        return os.cpu_count() or 1
+
+
+def commit_del_repo(repo) -> str:
+    """«<hash> <fecha> <asunto>» del HEAD del repo, o «?» si no es un repo de git."""
+    import subprocess
+    try:
+        r = subprocess.run(["git", "-C", str(repo), "log", "-1", "--format=%h %cd %s", "--date=format:%Y-%m-%d %H:%M"],
+                           capture_output=True, text=True, timeout=10)
+        return r.stdout.strip() or "?"
+    except (OSError, subprocess.SubprocessError):
+        return "?"
+
+
+def describir_entorno(repo, raiz, figuras, en_colab: bool, rama=None, origen_rama="") -> dict:
+    """Imprime con qué código, qué datos y qué máquina corre el notebook, y lo devuelve."""
+    import os
+    import platform
+    from importlib.metadata import PackageNotFoundError, version
+
+    def v(p):
+        try:
+            return version(p)
+        except PackageNotFoundError:
+            return "no instalado"
+
+    total, libre = memoria_gb()
+    e = {
+        "colab": en_colab, "python": platform.python_version(),
+        "paquetes": {p: v(p) for p in ["pandas", "numpy", "scikit-learn", "matplotlib", "scipy", "joblib"]},
+        "repo": str(repo), "rama": rama, "origen_rama": origen_rama, "commit": commit_del_repo(repo),
+        "raiz": str(raiz), "figuras": str(figuras), "cpus": cpus_disponibles(), "ram_gb": total, "ram_libre_gb": libre,
+    }
+    donde = "Drive" if str(raiz).startswith("/content/drive/") else ("repo" if Path(raiz) == Path(repo) else "AIRE_RAIZ")
+    print(f"Colab: {'sí' if en_colab else 'no'} · Python {e['python']} · "
+          + " · ".join(f"{p} {x}" for p, x in e["paquetes"].items()))
+    print(f"código: {repo}" + (f" · rama {rama} ({origen_rama})" if rama else "") + f" · commit {e['commit']}")
+    print(f"raíz de las capas: {raiz} ({donde})")
+    print(f"figuras del informe: {figuras}")
+    print(f"máquina: {e['cpus']} CPU · RAM {total:.1f} GiB ({libre:.1f} GiB libres)")
+    if total < 6:
+        print("AVISO: poca RAM: el 01 y el 03 llegan a unos 3.5 GiB con el CSV de OEFA. En Colab: Entorno de "
+              "ejecución → Cambiar tipo de entorno → RAM alta.")
+    return e
+
+
+def _sha_gold(js) -> str | None:
+    return ((js or {}).get("gold") or {}).get("sha256")
+
+
+def verificar_insumos(notebook: str, raiz, configs, estricto: bool = True) -> dict:
+    """Antes de correr nada: ¿la raíz de las capas tiene lo que lee el notebook y las salidas de Go son
+    de la receta de configs/kmeans.json? Si falta algo o está desfasado, dice qué subir a Drive y con qué
+    comando de rclone. Con `estricto` (en Colab), lo que falta para el notebook o está desfasado es un
+    error; sin él (en local), un aviso. Devuelve {"faltan", "desfases", "avisos"}."""
+    import os
+    raiz = Path(raiz)
+    faltan, desfases, avisos, cmds = [], [], [], []
+
+    def falta(que, clave):
+        faltan.append(que)
+        if RCLONE[clave] not in cmds:
+            cmds.append(RCLONE[clave])
+
+    # Bronze: el 01 lo necesita; el 03 sin él deja OMITIDA la auditoría de la limpieza.
+    if notebook in ("01", "03") and not os.environ.get("AIRE_BRONZE"):
+        if not any((raiz / "data" / "bronze").glob("*.csv")):
+            if notebook == "01":
+                falta(f"el bronze: ningún CSV en {raiz / 'data' / 'bronze'}", "bronze")
+            else:
+                avisos.append(f"no hay bronze en {raiz / 'data' / 'bronze'}: la auditoría de la limpieza queda OMITIDA "
+                              f"(se sube con: {RCLONE['bronze']})")
+    # Silver: el 02 calibra sobre el de Go o, si no está, sobre el prototipo del 01.
+    if notebook == "02":
+        if not any((raiz / "data" / "silver" / n).exists() for n in ["oefa_ancho.csv", "oefa_ancho_prototipo.csv"]):
+            falta(f"un silver: {raiz / 'data' / 'silver'}/oefa_ancho.csv (Go) u oefa_ancho_prototipo.csv (notebook 01)",
+                  "silver")
+    # Salidas de Go: el 03 las audita; el 02 las describe en su §8 (la grilla corre sin ellas).
+    for clave in GO_POR_NOTEBOOK.get(notebook, []):
+        if not (raiz / SALIDAS_GO[clave]).exists():
+            if notebook == "03":
+                falta(f"{SALIDAS_GO[clave]} (Go)", clave)
+            else:
+                avisos.append(f"falta {SALIDAS_GO[clave]} (Go): la grilla corre, la §8 no "
+                              f"(se sube con: {RCLONE[clave]})")
+    # Desfase: salidas de Go de otra receta o de otro gold (una subida a medias o una corrida vieja).
+    if notebook in ("02", "03"):
+        try:
+            receta, _ = leer_receta([Path(c) / "kmeans.json" for c in configs])
+        except FileNotFoundError:
+            receta = None
+        leer = lambda c: json.loads((raiz / SALIDAS_GO[c]).read_text(encoding="utf-8")) if (raiz / SALIDAS_GO[c]).exists() else None
+        km, est, reg, codo_ = leer("kmeans"), leer("estandarizacion"), leer("regimenes"), leer("codo")
+        claves = ["features", "log1p", "nivel", "k"]
+        if receta and km and any(km.get("receta", {}).get(c) != receta.get(c) for c in claves):
+            desfases.append(f"reports/kmeans.json es de la receta {[km.get('receta', {}).get(c) for c in claves]} y "
+                            f"configs/kmeans.json dice {[receta.get(c) for c in claves]}")
+        if receta and est and est.get("features") != receta.get("features"):
+            desfases.append(f"reports/estandarizacion.json tiene las features {est.get('features')} y "
+                            f"configs/kmeans.json {receta.get('features')}")
+        gold = raiz / SALIDAS_GO["gold"]
+        sha = sha256(gold) if gold.exists() else None
+        for nombre, js in [("kmeans", km), ("regimenes", reg), ("codo", codo_)]:
+            if sha and js and _sha_gold(js) and _sha_gold(js) != sha:
+                desfases.append(f"reports/{nombre}.json se entrenó con otro gold (sha256 {_sha_gold(js)[:12]}…, "
+                                f"el de {SALIDAS_GO['gold']} es {sha[:12]}…)")
+        if desfases:
+            for c in ["silver", "gold", "reports"]:
+                if RCLONE[c] not in cmds:
+                    cmds.append(RCLONE[c])
+    # Una config en la raíz (Drive) pisa a la del repo: avisar si difieren.
+    configs = [Path(c) for c in configs]
+    for nombre in ["limpieza.json", "kmeans.json"]:
+        a, b = configs[0] / nombre, configs[-1] / nombre
+        if len(configs) > 1 and a.exists() and b.exists() and a.read_bytes() != b.read_bytes():
+            avisos.append(f"{a} pisa a {b} y no son iguales: bórrala de Drive si no es a propósito")
+
+    for a in avisos:
+        print("AVISO:", a)
+    if faltan or desfases:
+        texto = "\n".join(
+            ([f"Faltan insumos en {raiz}:"] + [f"  - {f}" for f in faltan] if faltan else [])
+            + (["Las salidas de Go no son de la receta ni del gold actuales (súbelas de nuevo después de correr Go):"]
+               + [f"  - {d}" for d in desfases] if desfases else [])
+            + ["Súbelos a Drive desde la raíz del repo, en la máquina donde están:"] + [f"  {c}" for c in cmds])
+        if estricto:
+            raise FileNotFoundError(texto)
+        print("AVISO:", texto)
+    else:
+        print(f"Insumos del notebook {notebook}: completos" + (" y al día con configs/kmeans.json" if notebook in ("02", "03") else ""))
+    return {"faltan": faltan, "desfases": desfases, "avisos": avisos, "comandos": cmds}
