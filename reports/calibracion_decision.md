@@ -126,7 +126,7 @@ Centroides de scikit-learn sobre todo el silver (63 821 filas, semilla 23, inerc
 
 ## Decisión del equipo (receta congelada en `configs/kmeans.json`)
 
-> Agregado por la §8 de `notebooks/02_calibracion.ipynb` el 2026-11-01 15:00, con las cifras de `reports/calibracion_resumen.csv` (la grilla de arriba, sin volver a correrla) y, para los descriptores, el modelo de Go (`data/gold/asignaciones.csv`, `reports/regimenes.json`) unido al silver de Go.
+> Agregado por la §8 de `notebooks/02_calibracion.ipynb` el 2026-11-02 09:14, con las cifras de `reports/calibracion_resumen.csv` (la grilla de arriba, sin volver a correrla) y, para los descriptores, el modelo de Go (`data/gold/asignaciones.csv`, `reports/regimenes.json`) unido al silver de Go.
 
 La regla automática eligió `F2-M0-T1-N2` con k = 4 (PM10, Fracción fina, nivel por estación). El equipo congeló **`F1-M0-T1-N1` con k = 3**: PM2.5 y PM10 en µg/m³, sin log, nivel absoluto, 10 semillas y chunk 1 000 (`configs/kmeans.json`).
 
@@ -171,24 +171,24 @@ La regla automática eligió `F2-M0-T1-N2` con k = 4 (PM10, Fracción fina, nive
 
 ### Descriptores por régimen (modelo de Go)
 
-Medias sobre las horas del gold de cada régimen (64 236 horas, 17 estaciones). Horas con 24 h sobre el ECA: el promedio móvil de 24 h de PM2.5 o PM10 (ventana que termina en la hora, al menos 18 h con dato) supera 50 o 100 µg/m³; «parte del total» es qué proporción de todas esas horas cae en el régimen. En `reports/descriptores_regimen.csv`, con cuántas horas y estaciones entran en cada media.
+Medias sobre las horas del gold de cada régimen (65 873 horas, 17 estaciones). Horas con 24 h sobre el ECA: el promedio móvil de 24 h de PM2.5 o PM10 (ventana que termina en la hora, al menos 18 h con dato) supera 50 o 100 µg/m³; «parte del total» es qué proporción de todas esas horas cae en el régimen. En `reports/descriptores_regimen.csv`, con cuántas horas y estaciones entran en cada media.
 
 | régimen | horas | PM2.5 / PM10 medios (µg/m³) | ECA (media) | horas con 24 h sobre el ECA | parte del total de esas horas | fracción fina | viento (m/s) | humedad (%) | temperatura (°C) |
 |---|---|---|---|---|---|---|---|---|---|
-| R0 bajo | 47 070 (73.3 %) | 9.0 / 17.5 | no excede | 0.4 % | 16.6 % | 0.600 | 1.99 | 64.9 | 14.4 |
-| R1 medio | 15 651 (24.4 %) | 24.3 / 58.4 | no excede | 2.9 % | 39.2 % | 0.484 | 2.09 | 62.1 | 16.2 |
-| R2 alto | 1 515 (2.4 %) | 65.3 / 187.4 | excede | 34.1 % | 44.1 % | 0.435 | 1.68 | 56.8 | 14.6 |
+| R0 bajo | 48 161 (73.1 %) | 9.0 / 17.6 | no excede | 0.4 % | 15.7 % | 0.601 | 2.00 | 65.4 | 14.4 |
+| R2 medio | 16 176 (24.6 %) | 24.4 / 58.2 | no excede | 2.9 % | 40.0 % | 0.486 | 2.09 | 62.6 | 16.3 |
+| R1 alto | 1 536 (2.3 %) | 65.1 / 186.7 | excede | 34.1 % | 44.3 % | 0.435 | 1.68 | 56.9 | 14.6 |
 
 La meteorología solo existe en 11 de las 17 estaciones del gold (la fracción fina, en 17: falta donde PM10 es 0), así que sus medias mezclan estaciones. La anomalía dentro de la estación (el valor menos la media de su estación sobre las horas del gold) no depende de qué estaciones caen en cada régimen:
 
 | régimen | estaciones con meteorología | horas con viento / humedad / temperatura | viento: anomalía (m/s) | humedad: anomalía (puntos) | temperatura: anomalía (°C) |
 |---|---|---|---|---|---|
-| R0 bajo | 11 de 17 | 31 367 / 31 105 / 31 107 | -0.07 | +2.1 | -0.3 |
-| R1 medio | 11 de 17 | 11 629 / 11 048 / 11 048 | +0.18 | -5.4 | +0.8 |
-| R2 alto | 8 de 15 | 977 / 961 / 961 | -0.03 | -5.1 | +0.5 |
+| R0 bajo | 10 de 15 | 32 058 / 31 703 / 31 705 | -0.07 | +2.1 | -0.3 |
+| R2 medio | 11 de 17 | 12 088 / 11 467 / 11 467 | +0.18 | -5.5 | +0.8 |
+| R1 alto | 9 de 15 | 996 / 977 / 977 | -0.03 | -5.3 | +0.4 |
 
 ### Archivos
 
 - `reports/kmeans_propuesto.json` queda con la receta final (igual a `configs/kmeans.json`) y reemplaza la propuesta automática del bloque «Receta propuesta» de arriba.
-- `reports/centroides_sklearn.json`: scikit-learn 1.9.1 con la receta final sobre todo el silver de Go (64 236 filas, la mejor de 5 semillas, hasta converger; inercia 49658.3579); frente a Go, máx |Δ centroide| 2.7e-15 tras emparejar e inercia relativa 1.0e-15.
+- `reports/centroides_sklearn.json`: scikit-learn 1.9.1 con la receta final sobre todo el silver de Go (65 873 filas, la mejor de 5 semillas, hasta converger; inercia 50950.3669); frente a Go, máx |Δ centroide| 1.8e-15 tras emparejar e inercia relativa 1.4e-16.
 - `reports/descriptores_regimen.csv`: la tabla de descriptores con todas las columnas.
