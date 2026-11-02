@@ -120,7 +120,6 @@ func TestEstandarizacionQueNoEsLaDeLaRecetaSeRechaza(t *testing.T) {
 func TestEstandarizacionInvalidaSeRechaza(t *testing.T) {
 	base := `{"features":["pm10","humedad"],"log1p":["pm10"],"nivel":"absoluto","n":10,"media":[3,70],"desv":[1,8]}`
 	casos := map[string]string{
-		"desviación cero":           strings.Replace(base, `"desv":[1,8]`, `"desv":[0,8]`, 1),
 		"desviación negativa":       strings.Replace(base, `"desv":[1,8]`, `"desv":[1,-8]`, 1),
 		"media de otro largo":       strings.Replace(base, `"media":[3,70]`, `"media":[3]`, 1),
 		"log1p que no es feature":   strings.Replace(base, `"log1p":["pm10"]`, `"log1p":["co"]`, 1),
@@ -158,5 +157,45 @@ func TestInvertirEnNivelEstacionNecesitaLaEstacion(t *testing.T) {
 	}
 	if !sinteticoDe(t, NivelAbsoluto).Est.CentroidesEnUnidades() {
 		t.Error("con nivel = absoluto los centroides sí se pueden des-estandarizar")
+	}
+}
+
+func TestDesviacionCeroSeAceptaYLaInversaEsLaMedia(t *testing.T) {
+	for _, nivel := range []string{NivelAbsoluto, NivelEstacion} {
+		t.Run(nivel, func(t *testing.T) {
+			e := &Estandarizacion{Features: []string{"humedad", "pm10"}, Log1p: []string{"pm10"}, Nivel: nivel,
+				N: 4, Media: []float64{70, 3}, Desv: []float64{0, 0}}
+			if nivel == NivelEstacion {
+				e.PorEstacion = map[string]EstadisticaEstacion{"CA": {N: 4, Media: []float64{70, 3}, Desv: []float64{0, 0}}}
+			}
+			if err := e.Validar(); err != nil {
+				t.Fatalf("desviación 0 rechazada: %v", err)
+			}
+			x := make([]float64, 2)
+			for _, z := range []float64{0, 1.5, -2} {
+				if err := e.Invertir([]float64{z, z}, "CA", x); err != nil {
+					t.Fatal(err)
+				}
+				if x[0] != 70 || x[1] != math.Expm1(3) {
+					t.Errorf("z = %v: invertido %v, se esperaba la media (70 y expm1(3))", z, x)
+				}
+			}
+			// Estandarizar hace lo que el cargador: z = 0 para una feature constante.
+			z := make([]float64, 2)
+			if err := e.Estandarizar([]float64{70, math.Expm1(3)}, "CA", z); err != nil {
+				t.Fatal(err)
+			}
+			if z[0] != 0 || z[1] != 0 {
+				t.Errorf("estandarizar una feature constante: %v, se esperaba 0", z)
+			}
+		})
+	}
+	malas := map[string][]float64{"negativa": {-1, 1}, "infinita": {math.Inf(1), 1}, "NaN": {math.NaN(), 1}}
+	for nombre, desv := range malas {
+		e := &Estandarizacion{Features: []string{"humedad", "pm10"}, Nivel: NivelAbsoluto, N: 4,
+			Media: []float64{70, 3}, Desv: desv}
+		if err := e.Validar(); err == nil {
+			t.Errorf("desviación %s: se esperaba error", nombre)
+		}
 	}
 }

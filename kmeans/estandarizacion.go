@@ -17,6 +17,10 @@ import (
 // Con nivel = estacion cada estación tiene su media y su desviación
 // (PorEstacion); Media y Desv son entonces las del total y no sirven para
 // invertir una fila.
+//
+// Una desviación 0 es válida: el cargador la escribe cuando una feature es
+// constante (en todo el gold o dentro de una estación) y deja z = 0. Al
+// invertir, z*0 + media es exactamente la media, que es el valor original.
 type Estandarizacion struct {
 	Features    []string                       `json:"features"`
 	Log1p       []string                       `json:"log1p"`
@@ -52,8 +56,9 @@ func LeerEstandarizacion(ruta string) (*Estandarizacion, error) {
 	return &e, nil
 }
 
-// Validar comprueba la forma del archivo y que las desviaciones sean
-// positivas: con desviación cero el z-score no está definido.
+// Validar comprueba la forma del archivo y que las desviaciones sean finitas y
+// no negativas. La desviación 0 se acepta: es una feature constante, y el
+// cargador la estandariza a z = 0.
 func (e *Estandarizacion) Validar() error {
 	d := len(e.Features)
 	if d == 0 {
@@ -72,8 +77,9 @@ func (e *Estandarizacion) Validar() error {
 			if math.IsNaN(media[f]) || math.IsInf(media[f], 0) {
 				return fmt.Errorf("estandarización %s: media de %s no finita", quien, e.Features[f])
 			}
-			if !(desv[f] > 0) || math.IsInf(desv[f], 0) {
-				return fmt.Errorf("estandarización %s: desviación de %s inválida (%v)", quien, e.Features[f], desv[f])
+			if !(desv[f] >= 0) || math.IsInf(desv[f], 0) {
+				return fmt.Errorf("estandarización %s: desviación de %s inválida (%v): tiene que ser finita y >= 0",
+					quien, e.Features[f], desv[f])
 			}
 		}
 		return nil
@@ -163,9 +169,10 @@ func (e *Estandarizacion) Invertir(z []float64, estacion string, dst []float64) 
 	return nil
 }
 
-// Estandarizar es la inversa de Invertir: log1p si corresponde y z-score. En
-// el sistema lo hace el cargador; aquí sirve para los datos sintéticos y para
-// comprobar que Invertir lo deshace.
+// Estandarizar es la inversa de Invertir: log1p si corresponde y z-score, con
+// z = 0 si la desviación es 0, como el cargador. En el sistema lo hace el
+// cargador; aquí sirve para los datos sintéticos y para comprobar que
+// Invertir lo deshace.
 func (e *Estandarizacion) Estandarizar(x []float64, estacion string, dst []float64) error {
 	media, desv, err := e.parametros(estacion)
 	if err != nil {
@@ -175,6 +182,10 @@ func (e *Estandarizacion) Estandarizar(x []float64, estacion string, dst []float
 		t := x[f]
 		if slices.Contains(e.Log1p, e.Features[f]) {
 			t = math.Log1p(t)
+		}
+		if desv[f] == 0 {
+			dst[f] = 0 // feature constante: el cargador escribe z = 0
+			continue
 		}
 		dst[f] = (t - media[f]) / desv[f]
 	}
