@@ -47,6 +47,9 @@ if python3 -c 'import pandas' 2>/dev/null; then tablas=(python3 tablas.py --fina
 # 2. Ningún aviso PENDIENTE en las fuentes.
 n="$(cat informe.qmd secciones/*.qmd _participacion.md | grep -c 'title="PENDIENTE' || true)"
 [ "$n" -eq 0 ] || problemas+=("quedan $n avisos PENDIENTE en las fuentes (grep -n 'title=\"PENDIENTE' secciones/*.qmd)")
+# 2b. Ningún borrador de IA sin revisar: el aviso se borra cuando Rody aprueba la sección.
+n="$(cat informe.qmd secciones/*.qmd | grep -c 'title="Borrador generado con IA' || true)"
+[ "$n" -eq 0 ] || problemas+=("quedan $n secciones marcadas como borrador de IA sin revisar (grep -n 'Borrador generado con IA' secciones/*.qmd)")
 # 3. Ninguna figura faltante: las rutas de los avisos si-falta tienen que existir.
 while IFS= read -r ruta; do
   [ -e "$ruta" ] || problemas+=("falta la figura $ruta")

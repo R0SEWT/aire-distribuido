@@ -116,7 +116,10 @@ ellos, nunca al revés. Se copian desde `reports/` (o `python3 tablas.py --entra
 | `codo.json` | `cmd/entrenar -codo` | `kmeans/codo.go` | inercia, semilla, iteraciones y paro por k; el k elegido es el de la receta |
 | `auditoria.json` | notebook 03 | — | los chequeos de Go contra pandas y scikit-learn; si la auditoría corrió con otra receta que `kmeans.json`, el informe lo dice y `--final` falla |
 | `../../reports/calibracion_resumen.csv`, `kmeans_propuesto.json` | notebook 02 | — | la tabla de la calibración: la receta final frente a su versión con log1p, la que prefería la regla automática y la provisional (se leen de `reports/`, no se copian: `*.csv` está ignorado en el repo) |
-| `../../reports/estaciones_ficha.csv` | notebook 04 | — | el tipo de serie de cada estación (años, meses, semanas, manual), para la tabla de tipología; las lecturas y el gold de esa tabla salen de `limpieza.json` |
+| `../../reports/estaciones_ficha.csv` | notebook 04 | — | el tipo de serie de cada estación (años, meses, semanas, manual), para la tabla de tipología, y la actividad fiscalizada y el rubro de cada una, para la tabla de estaciones; las lecturas salen de `limpieza.json` y las horas del gold y del nivel alto, de `regimenes.json` |
+| `../../reports/descriptores_regimen.csv` | §8 del notebook 02 | — | la fracción fina y la meteorología de cada nivel, con su anomalía dentro de la estación (no son features); si sus horas no suman el gold de `kmeans.json`, la tabla y `_estado.md` lo avisan y `--final` falla |
+| `../../configs/limpieza.json` | el equipo | `datos/config.go` | la tabla de umbrales (rangos, unidades, centinelas, ceros); si su sha256 no es el que registra `limpieza.json`, la tabla no es la de la corrida y se avisa |
+| `../../datos/`, `kmeans/`, `protocolo/` (código Go) | — | — | los fragmentos de código de la sección de evidencias (`generado/tablas/frag_*.md`): `tablas.py` los extrae por patrón con su archivo y sus líneas (`FRAGMENTOS`); si el patrón ya no aparece, `--estricto` falla |
 | `eda.json` | transcrito de `reports/eda_criba.md` (notebook 01) y `docs/eda-procedencia.md` (notebook 04) | — | lo que solo miden los notebooks: el control de la hora por posición, los registros multilínea, los episodios de 24 h, y los datos de procedencia (evaluaciones, regiones, regla de las 18 horas, filas idénticas, filas vacías de 2022, % del gold de 2022). Se actualiza desde los `.md` si los notebooks vuelven a correr; la prosa respeta sus etiquetas [dato], [OEFA], [norma] e [inferencia] |
 
 Los siete de Go son copias de `reports/` de la **corrida sobre el CSV completo de OEFA** (01/11).
@@ -138,9 +141,10 @@ anterior a `kmeans.json`: mostraría otro modelo. Con k = 3, `tablas.py` nombra 
 PM10 medio (bajo, medio, alto) y escribe sus cifras como `cifras.bajo.*`, `cifras.medio.*` y
 `cifras.alto.*`, para que la prosa no dependa del número de régimen.
 
-**Lo que el informe querría y no sale de Go** (no se inventa): la banda INCA de cada régimen y su
-meteorología (`regimenes.json` trae el perfil de las features y la etiqueta ECA); y lo que solo mide
-el EDA (`generado/eda.json`, transcrito).
+**Lo que el informe querría y no sale de Go** (no se inventa): la banda INCA de cada régimen
+(`regimenes.json` trae el perfil de las features y la etiqueta ECA); la meteorología de cada régimen,
+que sale de los notebooks (`reports/descriptores_regimen.csv`); y lo que solo mide el EDA
+(`generado/eda.json`, transcrito).
 
 ## Antes de entregar
 

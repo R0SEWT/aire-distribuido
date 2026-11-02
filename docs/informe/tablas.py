@@ -126,6 +126,9 @@ CORTOS = {
     "no2": "NO2", "so2": "SO2", "co": "CO", "o3": "O3", "h2s": "H2S",
 }
 ECA = {"excede": "excede", "no_excede": "no excede", "no_evaluable": "no evaluable"}
+# Unidades tal como las normaliza el cargador (minúsculas, sin tildes ni superíndices) → para mostrar.
+UNIDADES = {"ug/m3": "µg/m³", "mg/m3": "mg/m³", "c": "°C", "°c": "°C", "hpa": "hPa", "mb": "mb", "mbar": "mbar",
+            "mmhg": "mmHg", "w/m2": "W/m²", "grados": "°", "°": "°", "m/s": "m/s", "%": "%", "mm": "mm", "ppb": "ppb"}
 FRANJAS = [("Madrugada (0–5 h)", range(0, 6)), ("Mañana (6–11 h)", range(6, 12)),
            ("Tarde (12–17 h)", range(12, 18)), ("Noche (18–23 h)", range(18, 24))]
 
@@ -165,6 +168,16 @@ def karp_flatt(speedup, p) -> float | None:
     if not speedup or p is None or p <= 1:
         return None
     return (1 / speedup - 1 / p) / (1 - 1 / p)
+
+
+def techo_amdahl(e) -> str:
+    """Amdahl con la fracción serial e: el speedup no pasa de 1/e por más workers que se agreguen."""
+    return "—" if vacio(e) or not e or e <= 0 else decimal(1 / e, 1)
+
+
+def con_signo(x, d=1) -> str:
+    """+2,1 · −5,4 (signo menos tipográfico)."""
+    return "—" if vacio(x) else ("+" if x >= 0 else "\u2212") + decimal(abs(x), d)
 
 
 def lista(xs, fmt=entero) -> str:
@@ -310,10 +323,11 @@ class Informe:
         anchos: porcentaje de cada columna (tbl-colwidths); sin él, Pandoc reparte por igual.
         """
         attr = f' tbl-colwidths="[{",".join(str(a) for a in anchos)}]"' if anchos else ""
-        partes = [f"<!-- Generado por tablas.py desde generado/{origen}. No editar a mano. -->", ""]
+        ruta_origen = origen if "/" in origen else f"generado/{origen}"
+        partes = [f"<!-- Generado por tablas.py desde {ruta_origen}. No editar a mano. -->", ""]
         if d is None:
             partes += ["::: {.callout-warning title=\"PENDIENTE\"}",
-                       f"Falta `generado/{origen}`: esta tabla sale de ahí. Lo escribe "
+                       f"Falta `{ruta_origen}`: esta tabla sale de ahí. Lo escribe "
                        f"`{COMANDOS.get(origen, '¿?')}` (ver `docs/informe/README.md`).", ":::", ""]
             partes += [f"::: {{#{ident}}}", "| (sin datos) |", "|:---|", "| — |", "", titulo, ":::", ""]
         else:
@@ -513,7 +527,7 @@ class Informe:
         ceros = fl.get("bloque_en_cero_por_parametro") or {}
         ceros_h = fl.get("cero_como_faltante_por_parametro") or {}
         z = pd.DataFrame([(corto(k), entero(ceros.get(k, 0)), entero(ceros_h.get(k, 0)) if ceros_h else "—")
-                          for k in sorted(set(ceros) | set(ceros_h), key=lambda q: -(ceros.get(q, 0) + ceros_h.get(q, 0)))],
+                          for k in sorted(set(ceros) | set(ceros_h), key=lambda q: (-(ceros.get(q, 0) + ceros_h.get(q, 0)), q))],
                          columns=["Parámetro", "Días enteros en 0 (lecturas)", "Horas en 0 en días con datos"])
         if ceros:
             self.tabla(tablas[8][0], o, d, tablas[8][1], tablas[8][2], markdown(z, "lrr"), anchos=[34, 33, 33], nota=
@@ -714,6 +728,7 @@ class Informe:
             "mediana_w_s": tiempo(fijo["mediana_s"]),
             "eficiencia": pct(punto(fijo) / fijo["workers"], 0),
             "karp_flatt": pct(karp_flatt(punto(fijo), fijo["workers"]), 0),
+            "techo_amdahl": techo_amdahl(karp_flatt(punto(fijo), fijo["workers"])),
             "workers": lista([m["workers"] for m in med]),
             "bloque": f"{entero(d.get('bloque_bytes', 0) / 2**20)} MiB",
             "repeticiones": entero(d.get("repeticiones")),
@@ -804,8 +819,12 @@ class Informe:
                 "speedup_ic": f"[{decimal(fijo['speedup']['inferior'], 2)}; {decimal(fijo['speedup']['superior'], 2)}]",
                 "mediana_seq_ms": tiempo(sec["mediana_ms"]) if sec else "—",
                 "mediana_w_ms": tiempo(fijo["mediana_ms"]),
+                # Lo que cuesta una iteración: la vara contra la que se mide la barrera de red de la PC4.
+                "ms_iter_seq": tiempo(sec.get("mediana_ms_por_iteracion")) if sec else "—",
+                "ms_iter_w": tiempo(fijo.get("mediana_ms_por_iteracion")),
                 "eficiencia": pct(fijo["eficiencia_por_worker"], 0),
                 "karp_flatt": pct(karp_flatt(fijo["speedup"]["punto"], fijo["workers"]), 0),
+                "techo_amdahl": techo_amdahl(karp_flatt(fijo["speedup"]["punto"], fijo["workers"])),
                 "n_chunks": entero(math.ceil(d.get("datos", {}).get("n", 0) / fijo["chunk"])) if fijo["chunk"] else "—",
                 **otro_chunk(),
                 "workers": lista(pr.get("workers") or [r.get("workers") for r in concs]),
@@ -1169,6 +1188,258 @@ class Informe:
                         "promedios de 24 h, que el K-Means (horario) no usa.")
         self.cifras["tipologia"] = {k: str(v) for k, v in cif.items()}
 
+    # ----------------------------------------------------------------------- umbrales de la limpieza
+    def umbrales(self) -> None:
+        """Los umbrales de las reglas 3, 4 y 6, tal como los lee el cargador de configs/limpieza.json."""
+        ruta = self.reports.parent / "configs" / "limpieza.json"
+        titulo = "Umbrales de la limpieza por parámetro (configs/limpieza.json)"
+        if not ruta.exists():
+            self.faltantes.append("configs/limpieza.json")
+            self.tabla("umbrales.md", "configs/limpieza.json", None, "tbl-umbrales", titulo)
+            return
+        # La tabla tiene que mostrar la config con la que corrió el cargador: limpieza.json guarda su sha256.
+        import hashlib
+        usada = (((self.datos.get("limpieza.json") or {}).get("configs") or {}).get("limpieza") or {}).get("sha256")
+        actual = hashlib.sha256(ruta.read_bytes()).hexdigest()
+        if usada and usada != actual:
+            self.desactualizadas.append("configs/limpieza.json cambió después de la corrida de limpieza.json "
+                                        "(otro sha256): la tabla de umbrales no es la de la corrida")
+        c = json.loads(ruta.read_text(encoding="utf-8"))
+        centinelas = ", ".join(decimal(x, 0).replace("-", "\u2212") for x in c.get("centinelas", []))
+        rangos, unidades = c.get("rangos", {}), c.get("unidades", {})
+        neg = set(c.get("admiten_negativos", []))
+        cero_h = set(c.get("cero_como_faltante", []))
+        cero_d = set(c.get("bloques_en_cero_como_faltante", []))
+        filas = []
+        for q in sorted(set(rangos) | set(unidades), key=lambda q: list(NOMBRES).index(q) if q in NOMBRES else 99):
+            r = rangos.get(q)
+            us = unidades.get(q, {})
+            canon = next((UNIDADES.get(u, u) for u, f in us.items() if f == 1), "—")
+            otras = "; ".join(f"{UNIDADES.get(u, u)} × {decimal(f, 5).rstrip('0').rstrip(',')}" for u, f in us.items() if f != 1)
+            rango = (f"[{decimal(r[0], 0)}; {decimal(r[1], 0)}]".replace("-", "−") if r else "—")
+            filas.append((corto(q), rango, canon, otras or "—",
+                          "sí" if q in neg else "no", "sí" if q in cero_d else "no", "sí" if q in cero_h else "no"))
+        t = pd.DataFrame(filas, columns=["Parámetro", "Rango físico", "Unidad canónica", "Otras unidades (factor)",
+                                         "Negativos", "Día en 0 = sin dato", "Hora en 0 = sin dato"])
+        hp = c.get("hora_por_posicion", {})
+        self.tabla("umbrales.md", "configs/limpieza.json", {"generado_por": "el equipo"}, "tbl-umbrales", titulo,
+                   markdown(t, "llllccc"), anchos=[13, 13, 12, 26, 11, 12, 13],
+                   fuente="Fuente: `configs/limpieza.json`, que `cmd/cargar` lee al arrancar (los cambios no tocan el código).",
+                   nota=f"Centinelas del equipo: {centinelas}. "
+                        f"Periodos horarios: {', '.join('«' + x + '»' for x in c.get('periodos_horarios', []))}; también "
+                        f"«{', '.join(c.get('periodos_horarios_por_grupo', []))}» si el día tiene sus "
+                        f"{hp.get('filas_por_dia', 24)} filas. Valores vacíos: "
+                        f"{', '.join('«' + x + '»' for x in c.get('valores_vacios', []) if x)} y la celda vacía. Fechas "
+                        f"válidas: desde el {c.get('fecha_desde')} hasta antes del {c.get('fecha_hasta')}. Hora por "
+                        f"posición: {'sí' if hp.get('activar') else 'no'}, convención «{hp.get('convencion')}». "
+                        f"Hora con minutos: «{c.get('hora_no_en_punto')}». El rango se compara en la unidad canónica, "
+                        "después de convertir.")
+        self.cifras["umbrales"] = {"centinelas": centinelas, "n_parametros": entero(len(filas)),
+                                   "config_de_la_corrida": "sí" if usada == actual else "no"}
+
+    # ----------------------------------------------------------------------- meteorología por régimen
+    def meteorologia(self) -> None:
+        """reports/descriptores_regimen.csv (notebook 02/03): la meteorología y la fracción fina de cada
+        régimen, que no son features. Si el archivo es de otra corrida (sus horas no suman el gold), se avisa."""
+        o = "descriptores_regimen.csv"
+        ruta = self.reports / o
+        titulo = "Meteorología y fracción fina de cada nivel (no son features: se describen)"
+        km = self.datos.get("kmeans.json")
+        if not ruta.exists():
+            self.faltantes.append(o)
+            self.tabla("meteorologia.md", f"reports/{o}", None, "tbl-meteorologia", titulo)
+            return
+        r = pd.read_csv(ruta)
+        n_gold = (km or {}).get("gold", {}).get("n")
+        al_dia = n_gold is None or int(r["horas"].sum()) == n_gold
+        if not al_dia:
+            self.desactualizadas.append(f"reports/descriptores_regimen.csv es de otra corrida (sus horas suman "
+                                        f"{entero(r['horas'].sum())}, el gold tiene {entero(n_gold)}); se rehace "
+                                        f"con la §8 del notebook 02")
+
+        def con_anomalia(fila, var, d=1):
+            m, a = fila.get(f"{var}_media"), fila.get(f"{var}_anomalia_media")
+            if vacio(m):
+                return "—"
+            return f"{decimal(m, d)} ({'+' if a >= 0 else '−'}{decimal(abs(a), d)})" if not vacio(a) else decimal(m, d)
+
+        filas = []
+        for _, x in r.sort_values("pm10_medio").iterrows():
+            filas.append((x["nombre"], entero(x["horas"]), decimal(x["fraccion_fina_media"], 2),
+                          con_anomalia(x, "viento_velocidad", 2), con_anomalia(x, "humedad"), con_anomalia(x, "temperatura"),
+                          f"{entero(x['viento_velocidad_estaciones'])} de {entero(x['estaciones'])}"))
+        t = pd.DataFrame(filas, columns=["Nivel", "Horas", "Fracción fina media", "Viento (m/s)", "Humedad (%)",
+                                         "Temperatura (°C)", "Estaciones con meteorología"])
+        estado = "" if al_dia else (" **Ojo: el archivo es de una corrida anterior a la de `kmeans.json`; "
+                                    "las cifras se rehacen con la §8 del notebook 02.**")
+        self.tabla("meteorologia.md", f"reports/{o}", {"generado_por": "notebook 02"}, "tbl-meteorologia", titulo,
+                   markdown(t, "lrrrrrr"), anchos=[10, 11, 14, 15, 15, 17, 18],
+                   fuente="Fuente: `reports/descriptores_regimen.csv` (notebooks, sobre las asignaciones de Go y el silver).",
+                   nota="Entre paréntesis, la anomalía media dentro de la estación: cuánto se aparta la hora del promedio "
+                        "de su propia estación, para que la comparación no sea entre lugares. La fracción fina es la media "
+                        "por hora de PM2,5/PM10. La meteorología solo existe en las estaciones que la miden; las demás no "
+                        "entran en esas columnas." + estado)
+        por_nivel = r.sort_values("pm10_medio").reset_index(drop=True)
+        cif = {"estaciones_con_meteo": entero(r["viento_velocidad_estaciones"].max()),
+               "estaciones": entero(r["estaciones"].max()),
+               "al_dia": "sí" if al_dia else "no"}
+        for i, x in por_nivel.iterrows():
+            nivel = ("bajo", "medio", "alto")[i] if len(por_nivel) == 3 else str(x["regimen"])
+            cif.update({f"{nivel}_fraccion_fina": decimal(x["fraccion_fina_media"], 2),
+                        f"{nivel}_humedad_anomalia": con_signo(x["humedad_anomalia_media"], 1),
+                        f"{nivel}_viento_anomalia": con_signo(x["viento_velocidad_anomalia_media"], 2),
+                        f"{nivel}_temperatura_anomalia": con_signo(x["temperatura_anomalia_media"], 1),
+                        f"{nivel}_estaciones_con_meteo": entero(x["viento_velocidad_estaciones"]),
+                        f"{nivel}_estaciones": entero(x["estaciones"])})
+        self.cifras["meteo"] = {k: str(v) for k, v in cif.items()}
+
+    # ----------------------------------------------------------------------- estaciones y su actividad
+    def estaciones_actividad(self) -> None:
+        o = "estaciones_ficha.csv"
+        ruta = self.reports / o
+        titulo = "Las estaciones y la actividad fiscalizada junto a la que miden"
+        if not ruta.exists():
+            self.faltantes.append(o)
+            self.tabla("estaciones_actividad.md", f"reports/{o}", None, "tbl-estaciones-actividad", titulo)
+            return
+        f = pd.read_csv(ruta, dtype=str)
+        lim = (self.datos.get("limpieza.json") or {}).get("estaciones", {})
+        # Horas de cada estación en el gold y en el nivel alto, de regimenes.json (lo que escribió Go).
+        rg = (self.datos.get("regimenes.json") or {}).get("regimenes") or []
+        gold_est: dict[str, int] = {}
+        for x in rg:
+            for e, n in (x.get("por_estacion") or {}).items():
+                gold_est[e] = gold_est.get(e, 0) + n
+        alto_est = (max(rg, key=lambda x: x.get("pm10_medio") or 0).get("por_estacion") or {}) if rg else {}
+
+        def primero(x):
+            return str(x).split(" | ")[0].strip() if isinstance(x, str) else "—"
+
+        filas = []
+        orden = {"serie de años": 0, "serie de meses": 1, "campaña de semanas": 2, "muestreo manual de 24 h": 3}
+        f = f.assign(_o=f["tipo_serie"].map(lambda t: orden.get(t, 9))).sort_values(["_o", "estacion"])
+        for _, x in f.iterrows():
+            e = x["estacion"]
+            horas = lim.get(e, {}).get("anchas")
+            gold = gold_est.get(e, 0)
+            filas.append((e, primero(x["objeto_fiscalizado"]), x.get("tipo_actividad", "—"),
+                          titulo_lugar(x.get("departamento") if isinstance(x.get("departamento"), str) else None),
+                          x.get("tipo_serie", "—"), entero(horas) if horas is not None else "—",
+                          entero(gold) if gold else "—", pct(alto_est.get(e, 0) / gold) if gold else "—"))
+        t = pd.DataFrame(filas, columns=["Estación", "Actividad fiscalizada", "Rubro", "Departamento", "Serie",
+                                         "Horas válidas", "Horas en el gold", "% en nivel alto"])
+        self.tabla("estaciones_actividad.md", f"reports/{o}", {"generado_por": "notebook 04"}, "tbl-estaciones-actividad",
+                   titulo, markdown(t, "lllllrrr"), anchos=[11, 26, 13, 10, 12, 9, 9, 10],
+                   fuente="Fuente: la actividad, el rubro y la serie, de `reports/estaciones_ficha.csv` (notebook 04); "
+                          "las horas válidas (filas anchas), de `generado/limpieza.json`; las del gold y las del nivel "
+                          "alto, de `generado/regimenes.json` (`cmd/entrenar`).",
+                   nota="La actividad sale del nombre de la evaluación de OEFA; el rubro, del mismo nombre, sin adivinar "
+                        "cuando no lo dice. «% en nivel alto»: proporción de las horas de la estación en el gold que el "
+                        "K-Means asignó al nivel alto («—» si la estación no entra al gold). El departamento va como lo "
+                        "escribe el archivo, sin tildes; CA-HUAR-01 lo trae vacío.")
+
+    # ----------------------------------------------------------------------- fragmentos de código
+    # Cada fragmento: (archivo de salida, id del listado, ruta en el repo, tramos, título). Un tramo es
+    # ("bloque", patrón): desde la línea del patrón hasta la llave que la cierra; ("rango", desde, hasta):
+    # de la línea de un patrón a la siguiente de otro; ("firma", patrón): el comentario de documentación y
+    # la línea de la firma. Se copian tal cual del código: si el código cambia, el fragmento cambia solo.
+    FRAGMENTOS = [
+        ("frag_cargador_pool", "lst-cargador-pool", "datos/pipeline.go",
+         [("bloque", r"^\s*for range workers \{")],
+         "El worker pool del cargador: cada goroutine procesa los bloques que le llegan por el canal"),
+        ("frag_cargador_orden", "lst-cargador-orden", "datos/pipeline.go",
+         [("bloque", r"^\s*for p := range resultados \{")],
+         "El recolector: los parciales llegan en cualquier orden y se fusionan en orden de bloque"),
+        ("frag_kmeans_pool", "lst-kmeans-pool", "kmeans/concurrente.go",
+         [("bloque", r"^\s*for w := 0; w < op\.Workers")],
+         "El worker pool del K-Means: cada worker escribe solo el parcial de su chunk"),
+        ("frag_kmeans_iter", "lst-kmeans-iter", "kmeans/concurrente.go",
+         [("bloque", r"^\s*for it := 1; it <= op\.MaxIter"), ("bloque", r"^// repartir manda")],
+         "Una iteración: repartir los chunks, esperar la barrera y fusionar en orden de chunk"),
+        ("frag_fusionar", "lst-fusionar", "kmeans/parciales.go",
+         [("bloque", r"^func Fusionar\(")],
+         "Fusionar: la reducción exacta, en el orden dado"),
+        ("frag_firmas", "lst-firmas", "kmeans/parciales.go",
+         [("firma", r"^func Parciales\("), ("firma", r"^func Actualizar\(")],
+         "Las dos funciones que la versión distribuida reutiliza tal cual: Parciales y Actualizar"),
+        ("frag_parcial", "lst-parcial", "protocolo/mensaje.go",
+         [("rango", r"^// Los tipos de mensaje", r"^\)"), ("rango", r"// ITERAR y PARCIAL", r"Inercia\s+float64")],
+         "Los tipos de mensaje del protocolo y los campos de ITERAR y PARCIAL"),
+    ]
+
+    @staticmethod
+    def bloque_go(lineas: list[str], i: int) -> int:
+        """Índice de la línea que cierra la llave abierta en lineas[i] (sin contar llaves en cadenas ni comentarios)."""
+        prof = 0
+        for j in range(i, len(lineas)):
+            linea, dentro, k = lineas[j], None, 0
+            while k < len(linea):
+                ch = linea[k]
+                if dentro:
+                    if ch == "\\" and dentro != "`":
+                        k += 2
+                        continue
+                    if ch == dentro:
+                        dentro = None
+                elif linea.startswith("//", k):
+                    break
+                elif ch in "\"'`":
+                    dentro = ch
+                elif ch == "{":
+                    prof += 1
+                elif ch == "}":
+                    prof -= 1
+                    if prof == 0:
+                        return j
+                k += 1
+        raise ValueError("llave sin cerrar")
+
+    def fragmentos(self) -> None:
+        import re
+        raiz = self.reports.parent
+        for archivo, ident, ruta, tramos_def, titulo in self.FRAGMENTOS:
+            fuente = raiz / ruta
+            if not fuente.exists():
+                self.faltantes.append(ruta)
+                continue
+            lineas = fuente.read_text(encoding="utf-8").splitlines()
+
+            def buscar(patron, desde=0):
+                return next(n for n, l in enumerate(lineas) if n >= desde and re.search(patron, l))
+
+            tramos = []
+            try:
+                for t in tramos_def:
+                    if t[0] == "bloque":
+                        a = buscar(t[1])
+                        tramos.append((a, self.bloque_go(lineas, a)))
+                    elif t[0] == "rango":
+                        a = buscar(t[1])
+                        tramos.append((a, buscar(t[2], a)))
+                    else:   # firma: el comentario de documentación y la línea de la firma
+                        f = buscar(t[1])
+                        c = f
+                        while c > 0 and lineas[c - 1].startswith("//"):
+                            c -= 1
+                        tramos.append((c, f))
+            except (StopIteration, ValueError):
+                self.problema(ruta, f"no se encontró el fragmento «{ident}»: ¿cambió el código?")
+                continue
+            codigo, rangos = [], []
+            for a, b in tramos:
+                bloque = lineas[a:b + 1]
+                sangria = min((len(l) - len(l.lstrip("\t")) for l in bloque if l.strip()), default=0)
+                codigo += [l[sangria:].replace("\t", "    ") for l in bloque] + [""]
+                rangos.append(f"{a + 1}–{b + 1}")
+            n = sum(b - a + 1 for a, b in tramos)
+            if n > 30:
+                self.problema(ruta, f"el fragmento «{ident}» tiene {n} líneas: ¿cambió el código?")
+            cuerpo = "```go\n" + "\n".join(codigo).rstrip() + "\n```"
+            texto = [f"<!-- Generado por tablas.py desde {ruta}. No editar a mano. -->", "",
+                     f"::: {{#{ident}}}", cuerpo, "",
+                     f"{titulo} (`{ruta}`, líneas {' y '.join(rangos)})", ":::", ""]
+            (self.salida / f"{archivo}.md").write_text("\n".join(texto), encoding="utf-8")
+
     # ----------------------------------------------------------------------- calibración y auditoría
     @staticmethod
     def variante(rec: dict) -> str:
@@ -1334,7 +1605,7 @@ class Informe:
             if self.sinteticos:
                 estado.append("\nDatos sintéticos: " + "; ".join(self.sinteticos) + ".")
             if self.desactualizadas:
-                estado.append("\nDesactualizado (se regenera con el notebook 03): " + "; ".join(self.desactualizadas) + ".")
+                estado.append("\nDesactualizado (se regenera con los notebooks): " + "; ".join(self.desactualizadas) + ".")
             if self.faltantes:
                 estado.append("\nFaltan: " + ", ".join(f"`{p}`" for p in self.faltantes) + ".")
             if self.problemas:
@@ -1387,6 +1658,10 @@ def main() -> int:
     inf.codo()
     inf.csv_oefa()
     inf.tipologia()
+    inf.umbrales()
+    inf.meteorologia()
+    inf.estaciones_actividad()
+    inf.fragmentos()
     inf.calibracion()
     inf.auditoria()
     inf.figuras()
