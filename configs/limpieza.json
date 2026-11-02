@@ -7,6 +7,9 @@
     "fecha_hora del silver es el fin del intervalo (convención de OEFA): la lectura de 00:00 a 01:00 se fecha a las 01:00.",
     "Gases en ppb y ug/m3 a la vez: se prefiere ug/m3; ppb se convierte a 25 °C y 1 atm si es la única (el EDA midió 1.000-1.004 entre gemelas). Presión: mmHg a hPa. DIRECCION_VIENTO trae unidad '°c' por error: son grados.",
     "Un día entero en 0 exacto es equipo sin medir, no una medición (EDA: 95-99.8 % de los ceros vienen así); la precipitación queda fuera: un día seco es 0.",
+    "Desde 2022 un hueco es una fila vacía (todos los parámetros en '-') que ocupa su hora: si el día del parámetro no tiene 24 filas, la posición se cuenta en el bloque físico (filas contiguas de la misma estación, fecha, unidad, periodo y tipo de análisis, con o sin valor) si tiene 24 filas y un solo parámetro; hora = posición en el 100 % de 165,912 filas con hora (notebook 04).",
+    "Un 0 exacto de un contaminante es «sin dato» también hora a hora: OEFA no promedia las horas en 0 (regla de las 18 h, docs/eda-procedencia.md §3.5). La meteorología no (salvo el día entero en 0); la precipitación nunca.",
+    "CA-HUAR-01 trae zona UTM 19 (caería en la Amazonía); su descripción la pone en Huaraucaca (Pasco), zona 18: se corrige en correcciones_ubicacion y el reporte guarda el valor original.",
     "Centinelas, rangos físicos y rango de fechas son provisionales hasta el EDA."
   ],
   "delimitador": ";",
@@ -24,6 +27,7 @@
     "hora": "HORA_INICIO",
     "periodo": "PERIODO",
     "unidad": "UNIDAD_MEDIDA",
+    "tipo_analisis": "TIPO_ANALISIS",
     "departamento": "DEPARTAMENTO",
     "provincia": "PROVINCIA",
     "distrito": "DISTRITO",
@@ -210,5 +214,18 @@
     "viento_direccion",
     "presion",
     "radiacion"
-  ]
+  ],
+  "cero_como_faltante": [
+    "pm2_5",
+    "pm10",
+    "so2",
+    "co",
+    "o3",
+    "h2s"
+  ],
+  "correcciones_ubicacion": {
+    "CA-HUAR-01": {
+      "zona": 18
+    }
+  }
 }

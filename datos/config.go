@@ -71,6 +71,10 @@ type ConfigLimpieza struct {
 	Rangos               map[string][2]float64         `json:"rangos"`
 	Unidades             map[string]map[string]float64 `json:"unidades"`
 	BloquesEnCero        []string                      `json:"bloques_en_cero_como_faltante"`
+	CeroComoFaltante     []string                      `json:"cero_como_faltante"`
+	// CorreccionesUbicacion: estación → {columna de ubicación → valor correcto}.
+	// Se aplica al registrar la ubicación; el valor del CSV queda en el reporte.
+	CorreccionesUbicacion map[string]map[string]ValorUbicacion `json:"correcciones_ubicacion,omitempty"`
 	// Parametros es del modo parámetro/valor, que se retiró. Se acepta vacío
 	// para leer las configs del laboratorio en Python, que aún lo escriben.
 	Parametros map[string]any `json:"parametros,omitempty"`
@@ -78,9 +82,10 @@ type ConfigLimpieza struct {
 
 // HoraPorPosicion reconstruye la hora cuando la fila no la trae: las filas de un
 // mismo (estación, parámetro, fecha, unidad, periodo) son las horas del día en
-// orden, si son exactamente FilasPorDia. Convencion dice qué instante del
-// intervalo horario se escribe en fecha_hora: "fin" (OEFA) o "inicio"; vale
-// también para las horas explícitas.
+// orden, si son exactamente FilasPorDia; si no, las de su bloque físico, con las
+// filas vacías, si son FilasPorDia de un solo parámetro (ver doc.go). Convencion
+// dice qué instante del intervalo horario se escribe en fecha_hora: "fin"
+// (OEFA) o "inicio"; vale también para las horas explícitas.
 type HoraPorPosicion struct {
 	Activar     bool   `json:"activar"`
 	FilasPorDia int    `json:"filas_por_dia"`
@@ -96,6 +101,7 @@ type Columnas struct {
 	Hora         string `json:"hora"`
 	Periodo      string `json:"periodo"`
 	Unidad       string `json:"unidad"`
+	TipoAnalisis string `json:"tipo_analisis"` // clave del bloque físico: separa PM10 de PM2.5 en una fila vacía
 	Departamento string `json:"departamento"`
 	Provincia    string `json:"provincia"`
 	Distrito     string `json:"distrito"`
@@ -110,13 +116,37 @@ type Columnas struct {
 	Valor     string `json:"valor,omitempty"`
 }
 
+// columnasUbicacion son los nombres lógicos de las columnas de ubicación, en
+// el orden en que se leen.
+var columnasUbicacion = []string{"departamento", "provincia", "distrito", "ubigeo", "este", "norte", "altitud", "zona", "datum"}
+
+// ValorUbicacion es un valor de correcciones_ubicacion. En el JSON puede ir
+// como número ({"zona": 18}) o como texto ({"zona": "18"}); se guarda como
+// texto, igual que las columnas de ubicación del CSV.
+type ValorUbicacion string
+
+// UnmarshalJSON acepta un texto o un número.
+func (v *ValorUbicacion) UnmarshalJSON(b []byte) error {
+	var s string
+	if err := json.Unmarshal(b, &s); err == nil {
+		*v = ValorUbicacion(s)
+		return nil
+	}
+	var n json.Number
+	if err := json.Unmarshal(b, &n); err != nil {
+		return fmt.Errorf("correcciones_ubicacion: %s no es un texto ni un número", b)
+	}
+	*v = ValorUbicacion(n.String())
+	return nil
+}
+
 // ubicacion son las columnas que describen dónde está la estación (regla 9,
 // TB2). Que falten no impide cargar: se avisa en el reporte.
 func (c Columnas) ubicacion() [][2]string {
 	return [][2]string{
-		{"departamento", c.Departamento}, {"provincia", c.Provincia}, {"distrito", c.Distrito},
-		{"ubigeo", c.Ubigeo}, {"este", c.Este}, {"norte", c.Norte}, {"altitud", c.Altitud},
-		{"zona", c.Zona}, {"datum", c.Datum},
+		{columnasUbicacion[0], c.Departamento}, {columnasUbicacion[1], c.Provincia}, {columnasUbicacion[2], c.Distrito},
+		{columnasUbicacion[3], c.Ubigeo}, {columnasUbicacion[4], c.Este}, {columnasUbicacion[5], c.Norte},
+		{columnasUbicacion[6], c.Altitud}, {columnasUbicacion[7], c.Zona}, {columnasUbicacion[8], c.Datum},
 	}
 }
 
@@ -134,6 +164,9 @@ func ConfigPorDefecto() ConfigLimpieza {
 			"fecha_hora del silver es el fin del intervalo (convención de OEFA): la lectura de 00:00 a 01:00 se fecha a las 01:00.",
 			"Gases en ppb y ug/m3 a la vez: se prefiere ug/m3; ppb se convierte a 25 °C y 1 atm si es la única (el EDA midió 1.000-1.004 entre gemelas). Presión: mmHg a hPa. DIRECCION_VIENTO trae unidad '°c' por error: son grados.",
 			"Un día entero en 0 exacto es equipo sin medir, no una medición (EDA: 95-99.8 % de los ceros vienen así); la precipitación queda fuera: un día seco es 0.",
+			"Desde 2022 un hueco es una fila vacía (todos los parámetros en '-') que ocupa su hora: si el día del parámetro no tiene 24 filas, la posición se cuenta en el bloque físico (filas contiguas de la misma estación, fecha, unidad, periodo y tipo de análisis, con o sin valor) si tiene 24 filas y un solo parámetro; hora = posición en el 100 % de 165,912 filas con hora (notebook 04).",
+			"Un 0 exacto de un contaminante es «sin dato» también hora a hora: OEFA no promedia las horas en 0 (regla de las 18 h, docs/eda-procedencia.md §3.5). La meteorología no (salvo el día entero en 0); la precipitación nunca.",
+			"CA-HUAR-01 trae zona UTM 19 (caería en la Amazonía); su descripción la pone en Huaraucaca (Pasco), zona 18: se corrige en correcciones_ubicacion y el reporte guarda el valor original.",
 			"Centinelas, rangos físicos y rango de fechas son provisionales hasta el EDA.",
 		},
 		Delimitador:      ";",
@@ -147,6 +180,7 @@ func ConfigPorDefecto() ConfigLimpieza {
 			Hora:         "HORA_INICIO",
 			Periodo:      "PERIODO",
 			Unidad:       "UNIDAD_MEDIDA",
+			TipoAnalisis: "TIPO_ANALISIS",
 			Departamento: "DEPARTAMENTO",
 			Provincia:    "PROVINCIA",
 			Distrito:     "DISTRITO",
@@ -221,6 +255,12 @@ func ConfigPorDefecto() ConfigLimpieza {
 		},
 		BloquesEnCero: []string{"pm10", "pm2_5", "no2", "so2", "co", "o3", "h2s", "temperatura", "humedad",
 			"viento_velocidad", "viento_direccion", "presion", "radiacion"},
+		// Contaminantes: un 0 exacto es «sin dato» también hora a hora. La
+		// meteorología no (un 0 de viento es calma) y la precipitación nunca.
+		CeroComoFaltante: []string{"pm2_5", "pm10", "so2", "co", "o3", "h2s"},
+		// CA-HUAR-01 trae zona 19 (caería en la Amazonía); su descripción la pone
+		// en Huaraucaca, Pasco: zona 18 (docs/eda-procedencia.md §4).
+		CorreccionesUbicacion: map[string]map[string]ValorUbicacion{"CA-HUAR-01": {"zona": "18"}},
 	}
 }
 
@@ -287,9 +327,11 @@ type reglas struct {
 	zona          *time.Location
 	nulos         map[string]bool // valores crudos (recortados) que son «vacío» (valores_vacios)
 	columnas      Columnas
-	paramColumnas map[string]int      // nombre de columna normalizado → índice canónico
-	periodos      map[string]uint8    // periodo normalizado → clase
-	enCero        [numParametros]bool // bloques_en_cero_como_faltante
+	paramColumnas map[string]int               // nombre de columna normalizado → índice canónico
+	periodos      map[string]uint8             // periodo normalizado → clase
+	enCero        [numParametros]bool          // bloques_en_cero_como_faltante
+	ceroFaltante  [numParametros]bool          // cero_como_faltante
+	correcciones  map[string]map[string]string // estación normalizada → columna de ubicación → valor
 	formatosFecha []string
 	formatosHora  []string
 	horaPrefijo   string
@@ -458,6 +500,47 @@ func (c ConfigLimpieza) compilar() (*reglas, error) {
 			continue
 		}
 		r.enCero[i] = true
+	}
+	for _, p := range c.CeroComoFaltante {
+		i := indiceParametro(p)
+		if i < 0 {
+			mal("cero_como_faltante: %q no es un parámetro canónico", p)
+			continue
+		}
+		r.ceroFaltante[i] = true
+	}
+	r.correcciones = map[string]map[string]string{}
+	estaciones := make([]string, 0, len(c.CorreccionesUbicacion))
+	for e := range c.CorreccionesUbicacion {
+		estaciones = append(estaciones, e)
+	}
+	slices.Sort(estaciones) // mensajes de error deterministas
+	for _, e := range estaciones {
+		nombre := nombreEstacion(e)
+		if nombre == "" {
+			mal("correcciones_ubicacion: estación vacía")
+			continue
+		}
+		if _, ok := r.correcciones[nombre]; ok {
+			mal("correcciones_ubicacion: %q aparece dos veces (los nombres se comparan normalizados)", e)
+			continue
+		}
+		campos := map[string]string{}
+		for campo, v := range c.CorreccionesUbicacion[e] {
+			valor := strings.TrimSpace(string(v))
+			switch {
+			case !slices.Contains(columnasUbicacion, campo):
+				mal("correcciones_ubicacion[%q]: %q no es una columna de ubicación (%s)", e, campo,
+					strings.Join(columnasUbicacion, ", "))
+			case valor == "" || r.nulos[valor]:
+				mal("correcciones_ubicacion[%q][%q]: el valor está vacío", e, campo)
+			default:
+				campos[campo] = valor
+			}
+		}
+		if len(campos) > 0 {
+			r.correcciones[nombre] = campos
+		}
 	}
 
 	desde, err1 := parsearLimite(c.FechaDesde, loc)

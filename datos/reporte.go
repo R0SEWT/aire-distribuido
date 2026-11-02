@@ -2,6 +2,9 @@ package datos
 
 import (
 	"fmt"
+	"maps"
+	"slices"
+	"strconv"
 	"time"
 
 	"github.com/R0SEWT/aire-distribuido/kmeans"
@@ -51,12 +54,20 @@ type ConteoLargas struct {
 	// duplicado_valor_distinto (el valor conservado tuvo un duplicado con otro
 	// valor), unidad_convertida (el valor viene de ppb o mmHg), hora_inferida
 	// (la hora salió de la posición en el día; igual a HoraInferida) y
-	// hora_no_en_punto (truncada a la hora, si la política es truncar).
+	// hora_no_en_punto (truncada a la hora, si la política es truncar). Y en
+	// filas largas leídas: ubicacion_corregida (la estación tiene una entrada en
+	// correcciones_ubicacion que cambió algún campo de esa fila).
 	MarcadasPorRegla             map[string]int64 `json:"marcadas_por_regla"`
 	FueraDeRangoPorParametro     map[string]int64 `json:"fuera_de_rango_por_parametro"`
 	BloqueEnCeroPorParametro     map[string]int64 `json:"bloque_en_cero_por_parametro"`
+	CeroComoFaltantePorParametro map[string]int64 `json:"cero_como_faltante_por_parametro"`
 	HoraExplicita                int64            `json:"hora_explicita"`
 	HoraInferida                 int64            `json:"hora_inferida"`
+	// HoraPorBloqueFisico son filas largas cuya hora salió de su posición en el
+	// bloque físico porque el día del parámetro estaba incompleto por filas
+	// vacías (plantilla de 2022). Se cuentan al recibir la hora: después aún
+	// pueden caer en bloque_en_cero, cero_como_faltante o un duplicado.
+	HoraPorBloqueFisico          int64            `json:"hora_por_bloque_fisico"`
 	UnidadConvertidaPorParametro map[string]int64 `json:"unidad_convertida_por_parametro"`
 }
 
@@ -74,9 +85,12 @@ type ConteoAnchas struct {
 
 // ReporteEstacion resume una estación. Una estación con filas leídas y ninguna
 // procesada aparece igual, con ceros: que desaparezca en silencio es peor.
-// Ubicacion es la combinación de columnas de ubicación más frecuente; si hubo
-// más de una, UbicacionesDistintas las lista todas con sus filas (dos puntos
-// con el mismo nombre en lugares distintos se funden: la clave es el nombre).
+// Ubicacion es la combinación de columnas de ubicación más frecuente, ya con
+// correcciones_ubicacion aplicadas, más lat y lon en WGS84 (grados decimales,
+// 6 decimales) calculadas desde este, norte y zona; UbicacionOriginal guarda lo
+// que traía el CSV en los campos corregidos. Si hubo más de una combinación,
+// UbicacionesDistintas las lista todas con sus filas (dos puntos con el mismo
+// nombre en lugares distintos se funden: la clave es el nombre).
 type ReporteEstacion struct {
 	LargasLeidas         int64             `json:"largas_leidas"`
 	LargasProcesadas     int64             `json:"largas_procesadas"`
@@ -85,6 +99,7 @@ type ReporteEstacion struct {
 	Desde                string            `json:"desde,omitempty"`
 	Hasta                string            `json:"hasta,omitempty"`
 	Ubicacion            map[string]string `json:"ubicacion,omitempty"`
+	UbicacionOriginal    map[string]string `json:"ubicacion_original,omitempty"`
 	UbicacionesDistintas []ubicacionVista  `json:"ubicaciones_distintas,omitempty"`
 }
 
@@ -102,7 +117,7 @@ type Vistos struct {
 // armarReporte arma todo lo que sale de la carga y de la tabla ancha; las
 // filas completas del gold se agregan después con contarGold, para poder
 // soltar el acumulador antes de armar el gold.
-func armarReporte(a *acumulador, t *TablaAncha, st estadoTabla, rec Receta) (*ReporteLimpieza, []string) {
+func armarReporte(a *acumulador, t *TablaAncha, st estadoTabla, rec Receta, reg *reglas) (*ReporteLimpieza, []string) {
 	rep := &ReporteLimpieza{
 		FilasLargas: ConteoLargas{
 			Leidas:              a.leidas,
@@ -113,11 +128,14 @@ func armarReporte(a *acumulador, t *TablaAncha, st estadoTabla, rec Receta) (*Re
 				"unidad_convertida":        0,
 				"hora_inferida":            st.inferidas,
 				"hora_no_en_punto":         a.horaTruncada,
+				"ubicacion_corregida":      0,
 			},
 			FueraDeRangoPorParametro:     map[string]int64{},
 			BloqueEnCeroPorParametro:     map[string]int64{},
+			CeroComoFaltantePorParametro: map[string]int64{},
 			HoraInferida:                 st.inferidas,
 			HoraExplicita:                st.procesadas - st.inferidas,
+			HoraPorBloqueFisico:          a.horaFisica,
 			UnidadConvertidaPorParametro: map[string]int64{},
 		},
 		FilasAnchas: ConteoAnchas{
@@ -151,6 +169,11 @@ func armarReporte(a *acumulador, t *TablaAncha, st estadoTabla, rec Receta) (*Re
 			rep.FilasLargas.BloqueEnCeroPorParametro[ParametrosCanonicos[q]] = n
 		}
 	}
+	for q, n := range a.ceroFaltante {
+		if n > 0 {
+			rep.FilasLargas.CeroComoFaltantePorParametro[ParametrosCanonicos[q]] = n
+		}
+	}
 	for q, n := range st.convertidas {
 		if n > 0 {
 			rep.FilasLargas.UnidadConvertidaPorParametro[ParametrosCanonicos[q]] = n
@@ -171,9 +194,18 @@ func armarReporte(a *acumulador, t *TablaAncha, st estadoTabla, rec Receta) (*Re
 			if mas < 0 || u.Filas > e.ubicaciones[mas].Filas {
 				mas = i
 			}
+			if len(u.Original) > 0 {
+				rep.FilasLargas.MarcadasPorRegla["ubicacion_corregida"] += u.Filas
+			}
 		}
 		if mas >= 0 && len(e.ubicaciones[mas].Campos) > 0 {
-			re.Ubicacion = e.ubicaciones[mas].Campos
+			u := e.ubicaciones[mas]
+			re.Ubicacion = maps.Clone(u.Campos) // el mapa es también el de ubicaciones_distintas
+			if lat, lon, ok := latLonDeUbicacion(u.Campos); ok {
+				re.Ubicacion["lat"] = strconv.FormatFloat(lat, 'f', 6, 64)
+				re.Ubicacion["lon"] = strconv.FormatFloat(lon, 'f', 6, 64)
+			}
+			re.UbicacionOriginal = u.Original
 		}
 		if len(e.ubicaciones) > 1 {
 			re.UbicacionesDistintas = e.ubicaciones
@@ -181,6 +213,16 @@ func armarReporte(a *acumulador, t *TablaAncha, st estadoTabla, rec Receta) (*Re
 				"se cargan como una sola estación", e.nombre, len(e.ubicaciones)))
 		}
 		rep.Estaciones[e.nombre] = re
+	}
+	sinEstacion := []string{}
+	for nombre := range reg.correcciones {
+		if _, ok := rep.Estaciones[nombre]; !ok {
+			sinEstacion = append(sinEstacion, nombre)
+		}
+	}
+	slices.Sort(sinEstacion)
+	for _, nombre := range sinEstacion {
+		avisos = append(avisos, fmt.Sprintf("correcciones_ubicacion: la estación %s no está en el archivo; su corrección no se aplica", nombre))
 	}
 	for i := 0; i < t.N; i++ {
 		e := rep.Estaciones[t.Estaciones[t.Estacion[i]]]

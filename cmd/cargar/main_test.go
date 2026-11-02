@@ -17,7 +17,7 @@ import (
 
 const (
 	muestra       = "../../data/sample/oefa_muestra.csv"
-	sha256Muestra = "cdc4d447233ac240a007a74daac1e99ce6b88d590d19b96ffa3653730e464406"
+	sha256Muestra = "3adfb917e562cb8f4488a611ef0ea20ee2cd6f84d4743969b2c99b5c93b92554"
 )
 
 func sha256De(t *testing.T, ruta string) string {
@@ -115,6 +115,8 @@ func TestCargarLaMuestra(t *testing.T) {
 	}
 	resumen := out.String()
 	for _, s := range []string{"leídas", "3,321", "duplicado_unidad", "SINT-C", "receta provisional", "<LD", "hora inferida",
+		"sin_valor", "cero_como_faltante", "cero como faltante por parámetro: pm2_5 (2), pm10 (1), so2 (1)", "bloque físico (día con filas vacías): 35", "ubicacion_corregida 0 filas",
+		"CA-HUAR-01 no está en el archivo",
 		"SINT-D aparece con 2 ubicaciones", sha256Muestra} {
 		if !strings.Contains(resumen, s) {
 			t.Errorf("el resumen no menciona %q:\n%s", s, resumen)
