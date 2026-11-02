@@ -106,7 +106,7 @@ func CargarDesde(r io.ReaderAt, tam int64, nombre string, cfg ConfigLimpieza, re
 	if err != nil {
 		return nil, fmt.Errorf("%s: %w", nombre, err)
 	}
-	rep, avisosEst := armarReporte(acum, ancha, st, rec)
+	rep, avisosEst := armarReporte(acum, ancha, st, rec, reg)
 	tFusion, bloques := acum.tFusion, acum.bloques
 	acum, pivotes = nil, nil // los registros ya no hacen falta: se sueltan antes del gold
 	tTabla := time.Now()

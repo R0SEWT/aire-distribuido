@@ -36,8 +36,15 @@ func TestConfigVersionadaEsValida(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := cfg.compilar(); err != nil {
+	reg, err := cfg.compilar()
+	if err != nil {
 		t.Fatal(err)
+	}
+	// Los tres hallazgos del análisis de procedencia están en la config versionada.
+	if reg.correcciones["CA-HUAR-01"]["zona"] != "18" || !reg.ceroFaltante[idxPM25] || !reg.ceroFaltante[idxPM10] ||
+		reg.ceroFaltante[indiceParametro("precipitacion")] || cfg.Columnas.TipoAnalisis != "TIPO_ANALISIS" {
+		t.Errorf("configs/limpieza.json: correcciones %v, cero_como_faltante %v, tipo_analisis %q",
+			reg.correcciones, cfg.CeroComoFaltante, cfg.Columnas.TipoAnalisis)
 	}
 }
 

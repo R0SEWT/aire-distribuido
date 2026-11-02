@@ -11,7 +11,7 @@ import (
 
 // sha256Muestra es el de data/sample/oefa_muestra.csv, que TestMuestraVersionadaAlDia
 // mantiene fijo. Si la muestra se regenera a propósito, este valor cambia con ella.
-const sha256Muestra = "cdc4d447233ac240a007a74daac1e99ce6b88d590d19b96ffa3653730e464406"
+const sha256Muestra = "3adfb917e562cb8f4488a611ef0ea20ee2cd6f84d4743969b2c99b5c93b92554"
 
 func TestVersionDeArchivo(t *testing.T) {
 	v, err := VersionDeArchivo(rutaMuestra)

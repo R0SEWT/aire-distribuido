@@ -261,14 +261,19 @@ func imprimirResumen(out io.Writer, r rutas, provisional bool, res *datos.Result
 	}
 	fmt.Fprintf(out, "  procesadas con hora explícita %s · con hora inferida por posición %s\n",
 		miles(fl.HoraExplicita), miles(fl.HoraInferida))
-	fmt.Fprintf(out, "  marcadas (se conservan): duplicado_valor_distinto %s · unidad_convertida %s · hora_no_en_punto %s celdas\n",
+	fmt.Fprintf(out, "  hora por posición en el bloque físico (día con filas vacías): %s filas largas\n", miles(fl.HoraPorBloqueFisico))
+	fmt.Fprintf(out, "  marcadas (se conservan): duplicado_valor_distinto %s · unidad_convertida %s · hora_no_en_punto %s celdas"+
+		" · ubicacion_corregida %s filas\n",
 		miles(fl.MarcadasPorRegla["duplicado_valor_distinto"]), miles(fl.MarcadasPorRegla["unidad_convertida"]),
-		miles(fl.MarcadasPorRegla["hora_no_en_punto"]))
+		miles(fl.MarcadasPorRegla["hora_no_en_punto"]), miles(fl.MarcadasPorRegla["ubicacion_corregida"]))
 	if len(fl.UnidadConvertidaPorParametro) > 0 {
 		fmt.Fprintf(out, "  convertidas por parámetro: %s\n", conteos(fl.UnidadConvertidaPorParametro))
 	}
 	if len(fl.FueraDeRangoPorParametro) > 0 {
 		fmt.Fprintf(out, "  fuera de rango por parámetro: %s\n", conteos(fl.FueraDeRangoPorParametro))
+	}
+	if len(fl.CeroComoFaltantePorParametro) > 0 {
+		fmt.Fprintf(out, "  cero como faltante por parámetro: %s\n", conteos(fl.CeroComoFaltantePorParametro))
 	}
 
 	fa := l.FilasAnchas

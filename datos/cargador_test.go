@@ -220,9 +220,9 @@ func TestMismoResultadoConUnoYOchoWorkers(t *testing.T) {
 	for _, receta := range []Receta{RecetaProvisional(), porEstacion} {
 		var ref *Resultado
 		for _, bloque := range []int64{1 << 10, 7 << 10, 64 << 10, 64 << 20} {
-			oraculo := cargarBytes(t, m.csv, ConfigPorDefecto(), receta, Opciones{Workers: 1, Bloque: bloque, Chunk: 97, secuencial: true})
+			oraculo := cargarBytes(t, m.csv, configMuestra(), receta, Opciones{Workers: 1, Bloque: bloque, Chunk: 97, secuencial: true})
 			for _, w := range []int{1, 8} {
-				res := cargarBytes(t, m.csv, ConfigPorDefecto(), receta, Opciones{Workers: w, Bloque: bloque, Chunk: 97})
+				res := cargarBytes(t, m.csv, configMuestra(), receta, Opciones{Workers: w, Bloque: bloque, Chunk: 97})
 				if !bytes.Equal(silverDe(t, oraculo), silverDe(t, res)) || !bytes.Equal(goldDe(t, oraculo), goldDe(t, res)) {
 					t.Fatalf("nivel %s, B=%d, W=%d: silver o gold distinto del oráculo secuencial", receta.Nivel, bloque, w)
 				}
@@ -458,7 +458,8 @@ func TestHoraPorPosicion(t *testing.T) {
 	if res.Limpieza.FilasLargas.DescartadasPorRegla["hora"] != 24 {
 		t.Errorf("24 filas no contiguas: regla hora %d, quiero 24", res.Limpieza.FilasLargas.DescartadasPorRegla["hora"])
 	}
-	// Un día entero en 0 es equipo sin medir; con un valor distinto de 0, no.
+	// Un día entero en 0 es equipo sin medir; con un valor distinto de 0, no
+	// (y sus horas en 0 van a cero_como_faltante, una por una).
 	ceros := dia24(24, func(h int, c map[string]string) { c["NOMBRE_PUNTO"], c["PM10"] = "A", "0" })
 	res = cargarBytes(t, csvOEFA(ceros...), ConfigPorDefecto(), RecetaProvisional(), opMuestra)
 	if res.Limpieza.FilasLargas.DescartadasPorRegla["bloque_en_cero"] != 24 || res.Limpieza.FilasLargas.BloqueEnCeroPorParametro["pm10"] != 24 {
@@ -466,8 +467,9 @@ func TestHoraPorPosicion(t *testing.T) {
 	}
 	ceros[7] = strings.Replace(ceros[7], `"0"`, `"0.5"`, 1)
 	res = cargarBytes(t, csvOEFA(ceros...), ConfigPorDefecto(), RecetaProvisional(), opMuestra)
-	if res.Limpieza.FilasLargas.DescartadasPorRegla["bloque_en_cero"] != 0 || res.Limpieza.FilasLargas.Procesadas != 24 {
-		t.Errorf("un día con un valor distinto de 0 se conserva: %+v", res.Limpieza.FilasLargas.DescartadasPorRegla)
+	if por := res.Limpieza.FilasLargas.DescartadasPorRegla; por["bloque_en_cero"] != 0 || por["cero_como_faltante"] != 23 ||
+		res.Limpieza.FilasLargas.Procesadas != 1 {
+		t.Errorf("un día con un valor distinto de 0 no es bloque_en_cero: %+v", por)
 	}
 	// Desactivada: sin hora, regla hora.
 	cfg := ConfigPorDefecto()
@@ -661,7 +663,7 @@ func TestVistosParaAjustarLaConfig(t *testing.T) {
 
 func TestReportePorEstacion(t *testing.T) {
 	m := generarMuestra()
-	res := cargarBytes(t, m.csv, ConfigPorDefecto(), RecetaProvisional(), opMuestra)
+	res := cargarBytes(t, m.csv, configMuestra(), RecetaProvisional(), opMuestra)
 	c, ok := res.Limpieza.Estaciones["SINT-C"]
 	if !ok {
 		t.Fatalf("falta la estación C: %v", res.Limpieza.Estaciones)
@@ -742,8 +744,11 @@ func TestBordesDeLasReglas(t *testing.T) {
 	}{
 		{"pm2_5 en el máximo", "PM2.5", "ug/m3", "2024-03-04", "1000", "", "1000"},
 		{"pm2_5 sobre el máximo", "PM2.5", "ug/m3", "2024-03-04", "1000.1", "fuera_de_rango", ""},
-		{"pm10 en cero", "PM10", "ug/m3", "2024-03-04", "0", "", "0"},
-		{"pm10 menos cero", "PM10", "ug/m3", "2024-03-04", "-0.0", "", "0"},
+		{"pm10 en cero: sin dato", "PM10", "ug/m3", "2024-03-04", "0", "cero_como_faltante", ""},
+		{"pm10 menos cero: sin dato", "PM10", "ug/m3", "2024-03-04", "-0.0", "cero_como_faltante", ""},
+		{"pm10 casi cero", "PM10", "ug/m3", "2024-03-04", "0.01", "", "0.01"},
+		{"viento en cero: calma", "VELOCIDAD_VIENTO", "m/s", "2024-03-04", "0", "", "0"},
+		{"viento menos cero", "VELOCIDAD_VIENTO", "m/s", "2024-03-04", "-0.0", "", "0"},
 		{"pm10 negativo", "PM10", "ug/m3", "2024-03-04", "-0.1", "negativo", ""},
 		{"temperatura negativa válida", "TEMPERATURA", "°c", "2024-03-04", "-5.5", "", "-5.5"},
 		{"temperatura en el mínimo", "TEMPERATURA", "°c", "2024-03-04", "-30", "", "-30"},
@@ -808,11 +813,15 @@ func TestMuestraReal(t *testing.T) {
 		t.Fatalf("conservación: %+v", fl)
 	}
 	// Presión 0 mmHg (sensor sin dato) cae en fuera_de_rango; cada gas y la
-	// presión de CA-JUPR-01 vienen en dos unidades, así que no queda ninguno convertido.
+	// presión de CA-JUPR-01 vienen en dos unidades, así que no queda ninguno
+	// convertido. Los días de CA-JUPR-01 con filas vacías conservan su hora por el
+	// bloque físico: ninguno queda en la regla hora. Los gases de CA-TA-01 tienen
+	// horas sueltas en 0.
 	if fl.HoraExplicita == 0 || fl.HoraInferida == 0 || fl.DescartadasPorRegla["duplicado_unidad"] == 0 ||
-		fl.DescartadasPorRegla["periodo"] == 0 || fl.DescartadasPorRegla["parametro"] == 0 ||
-		fl.DescartadasPorRegla["hora"] == 0 || fl.FueraDeRangoPorParametro["presion"] == 0 {
-		t.Errorf("la muestra real tiene hora explícita e inferida, gases en dos unidades, móviles, días incompletos y filas vacías: %+v", fl)
+		fl.DescartadasPorRegla["periodo"] == 0 || fl.DescartadasPorRegla["sin_valor"] == 0 ||
+		fl.HoraPorBloqueFisico == 0 || fl.DescartadasPorRegla["hora"] != 0 ||
+		fl.DescartadasPorRegla["cero_como_faltante"] == 0 || fl.FueraDeRangoPorParametro["presion"] == 0 {
+		t.Errorf("la muestra real tiene hora explícita e inferida, gases en dos unidades, móviles, filas vacías y ceros sueltos: %+v", fl)
 	}
 	if len(l.Estaciones["CA-VMP-2"].UbicacionesDistintas) < 2 {
 		t.Errorf("CA-VMP-2 aparece con dos juegos de coordenadas: %+v", l.Estaciones["CA-VMP-2"])

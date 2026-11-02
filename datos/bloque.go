@@ -17,14 +17,15 @@ import (
 // Σ descartadas, sin solapes. Hasta hora_no_en_punto se deciden en el worker,
 // fila por fila; el periodo «-», la hora y las reglas de valor, en el
 // recolector, que ya conoce el día completo de cada fila; bloque_en_cero, por
-// día; los duplicados, al pivotar.
+// día, y cero_como_faltante, después; los duplicados, al pivotar.
 type regla int
 
 const (
 	reglaColumnas               regla = iota // la fila no tiene tantos campos como la cabecera
 	reglaEstacion                            // estación vacía
 	reglaPeriodo                             // regla 1: periodo no horario (o «-» sin hora y con el día incompleto)
-	reglaParametro                           // ninguna columna de parámetro con valor, o más de una
+	reglaSinValor                            // ninguna columna de parámetro con valor: hueco de la plantilla de 2022
+	reglaParametro                           // más de una columna de parámetro con valor
 	reglaFecha                               // regla 2: fecha no parseable
 	reglaFechaFueraDeRango                   // regla 2: fuera de [fecha_desde, fecha_hasta)
 	reglaHoraNoEnPunto                       // regla 2: hora con minutos o segundos (política descartar)
@@ -35,6 +36,7 @@ const (
 	reglaNegativo                            // regla 3: negativo en un parámetro que no los admite
 	reglaFueraDeRango                        // regla 4: fuera del rango físico del parámetro
 	reglaBloqueEnCero                        // un día entero en 0 exacto: equipo sin medir
+	reglaCeroComoFaltante                    // un 0 exacto de un contaminante en un día con datos: «sin dato»
 	reglaDuplicadoUnidad                     // regla 5/6: misma lectura en otra unidad; se prefiere la canónica
 	reglaDuplicadoExacto                     // regla 5: misma (estación, parámetro, fecha-hora) y mismo valor
 	reglaDuplicadoValorDistinto              // regla 5: misma clave, otro valor; se conserva el primero
@@ -42,9 +44,9 @@ const (
 )
 
 var nombresReglas = [numReglas]string{
-	"columnas", "estacion", "periodo", "parametro", "fecha", "fecha_fuera_de_rango",
+	"columnas", "estacion", "periodo", "sin_valor", "parametro", "fecha", "fecha_fuera_de_rango",
 	"hora_no_en_punto", "hora", "valor_no_numerico", "centinela", "unidad", "negativo", "fuera_de_rango",
-	"bloque_en_cero", "duplicado_unidad", "duplicado_exacto", "duplicado_valor_distinto",
+	"bloque_en_cero", "cero_como_faltante", "duplicado_unidad", "duplicado_exacto", "duplicado_valor_distinto",
 }
 
 // Reglas devuelve los nombres de las reglas de descarte en orden de cascada.
@@ -54,14 +56,17 @@ func Reglas() []string { return slices.Clone(nombresReglas[:]) }
 // registro es una fila larga que llegó a tener clave de día: (estación,
 // parámetro, fecha, unidad, periodo). Se guarda aunque una regla de valor la
 // haya descartado, porque ocupa su posición en el día para la hora por posición.
+// Ocupa 32 bytes, como antes de tramo y posTramo (cabían en el relleno).
 type registro struct {
-	t      int64   // instante de fecha_hora si la hora es explícita; medianoche del día si no
-	valor  float64 // ya en la unidad canónica
-	grupo  int32   // índice del día (en el parcial y luego en el acumulador)
-	est    uint16  // estación (índice del bloque y luego global)
-	param  uint8
-	flags  uint8
-	motivo uint8 // regla+1 que la descarta, anotada en el worker y contada en el recolector; 0 = ninguna
+	t        int64   // instante de fecha_hora si la hora es explícita; medianoche del día si no
+	valor    float64 // ya en la unidad canónica
+	grupo    int32   // índice del día (en el parcial y luego en el acumulador)
+	tramo    int32   // índice del bloque físico (en el parcial y luego en el acumulador)
+	est      uint16  // estación (índice del bloque y luego global)
+	param    uint8
+	flags    uint8
+	motivo   uint8 // regla+1 que la descarta, anotada en el worker y contada en el recolector; 0 = ninguna
+	posTramo uint8 // posición en el bloque físico (0 a 23 si está completo), saturada en 255
 }
 
 const (
@@ -88,11 +93,40 @@ type grupoBloque struct {
 	primera, ultima int64 // número de registro (dentro del bloque) de su primera y última fila
 }
 
+// tramoBloque es un bloque físico, o la parte de él que cae en un bloque del
+// archivo: filas contiguas con la misma (estación, fecha, unidad, periodo, tipo
+// de análisis), con valor o vacías. En la plantilla de 2022 un hueco es una fila
+// vacía que ocupa su hora; contadas así, las 24 filas del día dan la hora por
+// posición aunque el día del parámetro tenga menos de 24.
+type tramoBloque struct {
+	n     int32 // filas
+	param int8  // parámetro de sus filas con valor; tramoSinParametro o tramoMixto
+}
+
+const (
+	tramoSinParametro int8 = -1 // ninguna fila con valor (todavía)
+	tramoMixto        int8 = -2 // filas con valor de más de un parámetro: no da hora
+)
+
+// combinarParametro junta el parámetro de dos partes de un mismo bloque físico.
+func combinarParametro(a, b int8) int8 {
+	switch {
+	case a == tramoSinParametro:
+		return b
+	case b == tramoSinParametro || a == b:
+		return a
+	}
+	return tramoMixto
+}
+
 // ubicacionVista es una combinación de columnas de ubicación y cuántas filas
 // la traen. Una estación con más de una es sospechosa (spec: CA-VMP-2).
+// Original guarda, de los campos que corrigió correcciones_ubicacion, el valor
+// del CSV ("" si venía vacío).
 type ubicacionVista struct {
-	Campos map[string]string `json:"campos"`
-	Filas  int64             `json:"filas"`
+	Campos   map[string]string `json:"campos"`
+	Original map[string]string `json:"original,omitempty"`
+	Filas    int64             `json:"filas"`
 }
 
 type estacionBloque struct {
@@ -132,6 +166,12 @@ type parcial struct {
 	periodos   []string // texto de cada índice de periodo
 	grupos     []grupoBloque
 	registros  []registro // en orden de archivo
+	// Bloques físicos en orden de archivo. Solo el primero y el último pueden
+	// seguir en el bloque vecino: claveInicial es la clave del primero si
+	// empieza en la primera fila del bloque, y claveFinal la del último si la
+	// última fila es suya ("" si no). El recolector los une si coinciden.
+	tramos                   []tramoBloque
+	claveInicial, claveFinal string
 
 	leidas       int64
 	descartadas  [numReglas]int64
@@ -184,6 +224,7 @@ type trabajador struct {
 	horas  map[string]horaParseada
 	tmpV   []byte
 	tmpU   []byte
+	tmpT   []byte
 }
 
 func nuevoTrabajador(reg *reglas, cols indicesColumnas, delim byte) *trabajador {
@@ -202,6 +243,12 @@ type estadoBloque struct {
 	grupos     map[claveGrupo]int32
 	ultimo     claveGrupo
 	ultimoID   int32
+	// Bloque físico de la fila anterior (tramo < 0: la fila anterior no tenía
+	// uno, así que la siguiente abre otro) y su clave.
+	tramo      int32
+	tramoEst   uint16
+	tramoDia   int64
+	tramoClave []byte // unidad, periodo y tipo de análisis crudos
 }
 
 // procesar lee el bloque con ReadAt (seguro para uso concurrente sobre el mismo
@@ -229,6 +276,7 @@ func (w *trabajador) procesar(r io.ReaderAt, indice int, rg rango) *parcial {
 		periodos:   map[string]*entradaTexto{},
 		grupos:     map[claveGrupo]int32{},
 		ultimoID:   -1,
+		tramo:      -1,
 	}
 	p.colaAbierta = -1
 	for ini := 0; ini < n; {
@@ -271,6 +319,9 @@ func (w *trabajador) procesar(r io.ReaderAt, indice int, rg rango) *parcial {
 		}
 		w.validarFila(eb, campos)
 	}
+	if eb.tramo >= 0 {
+		p.claveFinal = w.claveTramo(eb)
+	}
 	for _, e := range eb.periodos {
 		p.vistosPeriodos[e.nombre] += e.n
 	}
@@ -307,15 +358,18 @@ func recortarFin(linea []byte) []byte {
 
 // validarFila aplica la cascada de reglas que se deciden con la fila sola. Si
 // la fila llega a tener clave de día, agrega un registro (descartado o no:
-// ocupa su posición en el día); si no, solo cuenta la regla.
+// ocupa su posición en el día); si no, solo cuenta la regla. Toda fila horaria
+// con fecha, tenga valor o no, ocupa además su posición en el bloque físico.
 func (w *trabajador) validarFila(eb *estadoBloque, campos [][]byte) {
 	p, reg, cols := eb.p, w.reg, w.cols
 	if len(campos) != cols.total {
+		eb.tramo = -1
 		p.descartadas[reglaColumnas]++
 		return
 	}
 	crudo := bytes.TrimSpace(campos[cols.estacion])
 	if len(crudo) == 0 || reg.nulos[string(crudo)] {
+		eb.tramo = -1
 		p.descartadas[reglaEstacion]++
 		return
 	}
@@ -345,7 +399,8 @@ func (w *trabajador) validarFila(eb *estadoBloque, campos [][]byte) {
 
 	// Periodo (regla 1) antes que parámetro. Un periodo «por grupo» («-») es
 	// horario con hora explícita o con su día completo; una fila sin parámetro
-	// no tiene día, así que sin hora explícita cae aquí y no en parametro.
+	// no tiene día de parámetro, así que sin hora explícita cae aquí y no en
+	// sin_valor (aunque ocupa su posición en el bloque físico).
 	var flags uint8
 	var per *entradaTexto
 	if cols.periodo >= 0 {
@@ -353,24 +408,43 @@ func (w *trabajador) validarFila(eb *estadoBloque, campos [][]byte) {
 			e.clase = reg.periodos[normalizar(e.nombre)]
 		})
 		per.n++
-		switch per.clase {
-		case periodoDescartado:
+		if per.clase == periodoDescartado {
+			eb.tramo = -1
 			p.descartadas[reglaPeriodo]++
 			return
-		case periodoCondicional:
-			flags |= regCondicional
-			if nvals != 1 && (cols.hora < 0 || w.hora(campos[cols.hora]).estado != horaOK) {
-				p.descartadas[reglaPeriodo]++
-				return
-			}
 		}
 	}
-	if nvals != 1 {
+
+	// Bloque físico: la fila ocupa su posición aunque venga vacía (el hueco de
+	// la plantilla de 2022) o la descarte otra regla. Sin fecha no hay bloque.
+	f := w.fecha(campos[cols.fecha])
+	tramo, posTramo := int32(-1), uint8(0)
+	if f.estado == fechaOK {
+		tramo, posTramo = w.ubicarEnTramo(eb, ei, f.dia, campos)
+		if nvals == 1 {
+			t := &p.tramos[tramo]
+			t.param = combinarParametro(t.param, int8(pi))
+		}
+	} else {
+		eb.tramo = -1
+	}
+
+	if per != nil && per.clase == periodoCondicional {
+		flags |= regCondicional
+		if nvals != 1 && (cols.hora < 0 || w.hora(campos[cols.hora]).estado != horaOK) {
+			p.descartadas[reglaPeriodo]++
+			return
+		}
+	}
+	switch {
+	case nvals == 0:
+		p.descartadas[reglaSinValor]++
+		return
+	case nvals > 1:
 		p.descartadas[reglaParametro]++
 		return
 	}
 
-	f := w.fecha(campos[cols.fecha])
 	switch f.estado {
 	case fechaInvalida:
 		p.descartadas[reglaFecha]++
@@ -419,7 +493,7 @@ func (w *trabajador) validarFila(eb *estadoBloque, campos [][]byte) {
 	// La fila ya tiene día: entra a su grupo aunque una regla la descarte,
 	// porque ocupa una posición. La regla se anota y se cuenta en el
 	// recolector, en el orden de la cascada (la hora va antes que el valor).
-	r := registro{t: t, est: ei, param: uint8(pi), flags: flags}
+	r := registro{t: t, est: ei, param: uint8(pi), flags: flags, tramo: tramo, posTramo: posTramo}
 	r.grupo = eb.grupo(claveGrupo{dia: f.dia, est: ei, unidad: u.id, periodo: idTexto(per), param: uint8(pi)}, p.leidas-1)
 	if m, ok := w.reglasDeValor(p, &r, valor, u, pi); !ok && motivo < 0 {
 		motivo = m
@@ -480,6 +554,42 @@ func idTexto(e *entradaTexto) uint16 {
 		return 0
 	}
 	return e.id
+}
+
+// ubicarEnTramo pone la fila en su bloque físico: sigue en el de la fila
+// anterior si tiene la misma (estación, fecha, unidad, periodo, tipo de
+// análisis); si no, abre otro. Devuelve el bloque y la posición de la fila en
+// él, saturada en 255 (solo se usa si el bloque tiene filas_por_dia filas).
+// Unidad, periodo y tipo se comparan crudos: un bloque físico es un tramo
+// contiguo del archivo, no hace falta normalizar.
+func (w *trabajador) ubicarEnTramo(eb *estadoBloque, est uint16, dia int64, campos [][]byte) (int32, uint8) {
+	w.tmpT = w.tmpT[:0]
+	for _, c := range [...]int{w.cols.unidad, w.cols.periodo, w.cols.tipo} {
+		if c >= 0 {
+			w.tmpT = append(w.tmpT, bytes.TrimSpace(campos[c])...)
+		}
+		w.tmpT = append(w.tmpT, 0x1f)
+	}
+	p := eb.p
+	if eb.tramo < 0 || est != eb.tramoEst || dia != eb.tramoDia || !bytes.Equal(w.tmpT, eb.tramoClave) {
+		eb.tramo = int32(len(p.tramos))
+		p.tramos = append(p.tramos, tramoBloque{param: tramoSinParametro})
+		eb.tramoEst, eb.tramoDia = est, dia
+		eb.tramoClave = append(eb.tramoClave[:0], w.tmpT...)
+		if p.leidas == 1 { // abre en la primera fila del bloque: puede seguir el del bloque anterior
+			p.claveInicial = w.claveTramo(eb)
+		}
+	}
+	t := &p.tramos[eb.tramo]
+	pos := uint8(min(t.n, math.MaxUint8))
+	t.n++
+	return eb.tramo, pos
+}
+
+// claveTramo es la clave del bloque físico actual, con la estación por nombre
+// para que se pueda comparar con la de otro bloque del archivo.
+func (w *trabajador) claveTramo(eb *estadoBloque) string {
+	return eb.p.estaciones[eb.tramoEst].nombre + "\x1f" + strconv.FormatInt(eb.tramoDia, 10) + "\x1f" + string(eb.tramoClave)
 }
 
 // grupo devuelve el índice del día en el bloque y anota el número de registro
@@ -563,6 +673,7 @@ func (w *trabajador) verUbicacion(est *estacionBloque, campos [][]byte) {
 			}
 			vista.Campos[u.nombre] = v
 		}
+		w.corregirUbicacion(est.nombre, &vista)
 		i = len(est.ubicaciones)
 		est.ubicaciones = append(est.ubicaciones, vista)
 		est.porClave[string(w.tmpU)] = i
@@ -570,6 +681,22 @@ func (w *trabajador) verUbicacion(est *estacionBloque, campos [][]byte) {
 	est.ultima = append(est.ultima[:0], w.tmpU...)
 	est.actual = i
 	est.ubicaciones[i].Filas++
+}
+
+// corregirUbicacion aplica correcciones_ubicacion a una combinación nueva de
+// columnas de ubicación y guarda en Original lo que traía el CSV ("" si venía
+// vacío). Cada campo se corrige por separado: el orden del mapa no importa.
+func (w *trabajador) corregirUbicacion(estacion string, u *ubicacionVista) {
+	for campo, v := range w.reg.correcciones[estacion] {
+		if u.Campos[campo] == v {
+			continue
+		}
+		if u.Original == nil {
+			u.Original = map[string]string{}
+		}
+		u.Original[campo] = u.Campos[campo]
+		u.Campos[campo] = v
+	}
 }
 
 // rellenarUbigeo devuelve el UBIGEO como texto de 6 dígitos: el CSV lo trae

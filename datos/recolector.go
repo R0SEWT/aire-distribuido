@@ -31,13 +31,19 @@ type acumulador struct {
 	tamGrupo     []int32
 	primera      []int64 // número de registro (en el archivo) de la primera fila de cada día
 	ultima       []int64 // y de la última: el día es contiguo si ultima-primera+1 == tamGrupo
+	tamTramo     []int32 // filas de cada bloque físico, con o sin valor
+	paramTramo   []int8  // parámetro de sus filas con valor (tramoSinParametro, tramoMixto)
+	tramoAbierto int32   // bloque físico de la última fila del bloque anterior, o -1
+	claveAbierta string  // y su clave: el bloque siguiente lo continúa si empieza con la misma
 	registros    []registro
 	desbordadas  bool // más estaciones o textos de los que caben en un uint16
 	leidas       int64
 	descartadas  [numReglas]int64
 	fueraDeRango [numParametros]int64
 	enCero       [numParametros]int64
+	ceroFaltante [numParametros]int64
 	horaTruncada int64
+	horaFisica   int64 // filas con la hora de su posición en el bloque físico (día de parámetro incompleto)
 	periodos     map[string]int64
 	parametros   map[string]int64
 	unidades     [numParametros]map[string]int64
@@ -48,13 +54,14 @@ type acumulador struct {
 
 func nuevoAcumulador() *acumulador {
 	return &acumulador{
-		porNombre:   map[string]uint16{},
-		porUnidad:   map[string]uint16{},
-		porPeriodo:  map[string]uint16{},
-		grupos:      map[claveGrupo]int32{},
-		periodos:    map[string]int64{},
-		parametros:  map[string]int64{},
-		noNumericos: map[string]int64{},
+		porNombre:    map[string]uint16{},
+		porUnidad:    map[string]uint16{},
+		porPeriodo:   map[string]uint16{},
+		grupos:       map[claveGrupo]int32{},
+		tramoAbierto: -1,
+		periodos:     map[string]int64{},
+		parametros:   map[string]int64{},
+		noNumericos:  map[string]int64{},
 	}
 }
 
@@ -90,12 +97,12 @@ func (a *acumulador) fusionar(p *parcial) {
 		eg := a.estaciones[g]
 		eg.leidas += e.leidas
 		for _, u := range e.ubicaciones {
-			clave := claveUbicacion(u.Campos)
+			clave := claveUbicacion(u.Campos) + "\x1e" + claveUbicacion(u.Original)
 			j, ok := eg.porClave[clave]
 			if !ok {
 				j = len(eg.ubicaciones)
 				eg.porClave[clave] = j
-				eg.ubicaciones = append(eg.ubicaciones, ubicacionVista{Campos: u.Campos})
+				eg.ubicaciones = append(eg.ubicaciones, ubicacionVista{Campos: u.Campos, Original: u.Original})
 			}
 			eg.ubicaciones[j].Filas += u.Filas
 		}
@@ -128,11 +135,38 @@ func (a *acumulador) fusionar(p *parcial) {
 		a.ultima[id] = base + g.ultima
 		grupos[i] = id
 	}
+	// Bloques físicos: todos son nuevos salvo el primero, que sigue al último
+	// del bloque anterior si este terminó dentro de él y la clave coincide.
+	// Entonces sus filas se corren las que ese bloque físico ya tenía.
+	tramos := make([]int32, len(p.tramos))
+	corrimiento := int32(0)
+	for i, t := range p.tramos {
+		if i == 0 && p.claveInicial != "" && a.tramoAbierto >= 0 && p.claveInicial == a.claveAbierta {
+			g := a.tramoAbierto
+			corrimiento = a.tamTramo[g]
+			a.tamTramo[g] += t.n
+			a.paramTramo[g] = combinarParametro(a.paramTramo[g], t.param)
+			tramos[0] = g
+			continue
+		}
+		tramos[i] = int32(len(a.tamTramo))
+		a.tamTramo = append(a.tamTramo, t.n)
+		a.paramTramo = append(a.paramTramo, t.param)
+	}
+	if p.leidas > 0 { // un bloque sin filas no corta el bloque físico
+		a.tramoAbierto, a.claveAbierta = -1, ""
+		if p.claveFinal != "" {
+			a.tramoAbierto, a.claveAbierta = tramos[len(tramos)-1], p.claveFinal
+		}
+	}
 	desde := len(a.registros)
 	a.registros = append(a.registros, p.registros...)
 	for i := desde; i < len(a.registros); i++ {
 		r := &a.registros[i]
-		r.est, r.grupo = estaciones[r.est], grupos[r.grupo]
+		if r.tramo == 0 && corrimiento > 0 {
+			r.posTramo = uint8(min(int32(r.posTramo)+corrimiento, math.MaxUint8))
+		}
+		r.est, r.grupo, r.tramo = estaciones[r.est], grupos[r.grupo], tramos[r.tramo]
 	}
 
 	a.leidas += p.leidas
@@ -177,8 +211,11 @@ func claveUbicacion(campos map[string]string) string {
 // resolverHoras recorre los registros en orden de archivo, que es el orden
 // dentro de cada día, y aplica la parte de la cascada que necesita el día
 // completo. Un día (estación, parámetro, fecha, unidad, periodo) está completo
-// si tiene exactamente filas_por_dia filas contiguas en el archivo. Para cada
-// fila, la primera regla que falla:
+// si tiene exactamente filas_por_dia filas contiguas en el archivo, o si su
+// bloque físico las tiene: filas_por_dia filas contiguas de la misma (estación,
+// fecha, unidad, periodo, tipo de análisis), de un solo parámetro, contando las
+// vacías (en la plantilla de 2022 un hueco es una fila vacía que ocupa su
+// hora). Para cada fila, la primera regla que falla:
 //
 //   - periodo: periodo «-» (por grupo) sin hora explícita y con el día incompleto;
 //   - hora_no_en_punto u hora ilegible, anotadas por el worker;
@@ -186,13 +223,15 @@ func claveUbicacion(campos map[string]string) string {
 //   - las reglas de valor anotadas por el worker (3, 4 y 6).
 //
 // Las que pasan reciben su hora: la explícita ya está en t; la que falta es la
-// posición en el día (0 a 23, hora de inicio) y fecha_hora es el fin (o el
-// inicio) de ese intervalo. Las filas descartadas siguen ocupando su posición:
-// son una hora del día con una lectura inválida, no una hora que falta.
+// posición en el día (0 a 23, hora de inicio; en el día del parámetro si está
+// completo y si no en el bloque físico) y fecha_hora es el fin (o el inicio) de
+// ese intervalo. Las filas descartadas siguen ocupando su posición: son una
+// hora del día con una lectura inválida, no una hora que falta.
 //
 // Después, bloque_en_cero: si todas las lecturas válidas de un día de un
 // parámetro de bloques_en_cero_como_faltante son 0 exacto, el día es un equipo
-// sin medir y se descarta entero.
+// sin medir y se descarta entero. Y cero_como_faltante: en los días que quedan,
+// un 0 exacto de un parámetro de esa lista es una hora sin dato.
 func (a *acumulador) resolverHoras(reg *reglas) {
 	pos := make([]int32, len(a.tamGrupo))
 	validas := make([]int32, len(a.tamGrupo))
@@ -206,8 +245,11 @@ func (a *acumulador) resolverHoras(reg *reglas) {
 		g := r.grupo
 		p := pos[g]
 		pos[g]++
-		completo := reg.filasPorDia > 0 && a.tamGrupo[g] == int32(reg.filasPorDia) &&
+		diaCompleto := reg.filasPorDia > 0 && a.tamGrupo[g] == int32(reg.filasPorDia) &&
 			a.ultima[g]-a.primera[g]+1 == int64(reg.filasPorDia)
+		fisicoCompleto := !diaCompleto && reg.filasPorDia > 0 && a.tamTramo[r.tramo] == int32(reg.filasPorDia) &&
+			a.paramTramo[r.tramo] == int8(r.param)
+		completo := diaCompleto || fisicoCompleto
 		explicita := r.flags&regExplicita != 0
 		var motivo regla = -1
 		switch {
@@ -229,6 +271,10 @@ func (a *acumulador) resolverHoras(reg *reglas) {
 			continue
 		}
 		if !explicita {
+			if fisicoCompleto {
+				p = int32(r.posTramo)
+				a.horaFisica++
+			}
 			r.t += (int64(p) + sello) * 3600
 			r.flags |= regInferida
 		}
@@ -241,11 +287,20 @@ func (a *acumulador) resolverHoras(reg *reglas) {
 	}
 	for i := range a.registros {
 		r := &a.registros[i]
-		if g := r.grupo; r.flags&regDescartada == 0 && reg.enCero[r.param] && ceros[g] == validas[g] {
+		if r.flags&regDescartada != 0 {
+			continue
+		}
+		switch {
+		case reg.enCero[r.param] && ceros[r.grupo] == validas[r.grupo]:
 			a.descartadas[reglaBloqueEnCero]++
 			a.enCero[r.param]++
-			r.flags |= regDescartada
+		case reg.ceroFaltante[r.param] && r.valor == 0:
+			a.descartadas[reglaCeroComoFaltante]++
+			a.ceroFaltante[r.param]++
+		default:
+			continue
 		}
+		r.flags |= regDescartada
 	}
 }
 

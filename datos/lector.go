@@ -133,6 +133,7 @@ func detectarDelimitador(linea []byte) byte {
 // si el CSV no la tiene.
 type indicesColumnas struct {
 	estacion, fecha, hora, periodo, unidad int
+	tipo                                   int // tipo de análisis: solo para la clave del bloque físico
 	params                                 []columnaParametro
 	ubicacion                              []columnaUbicacion
 	total                                  int
@@ -184,6 +185,7 @@ func resolverColumnas(nombres []string, reg *reglas) (indicesColumnas, []string,
 	cols.hora = buscar("hora", c.Hora, false)
 	cols.periodo = buscar("periodo", c.Periodo, false)
 	cols.unidad = buscar("unidad", c.Unidad, false)
+	cols.tipo = buscar("tipo_analisis", c.TipoAnalisis, false)
 	for i, n := range nombres {
 		if q, ok := reg.paramColumnas[normalizar(n)]; ok {
 			cols.params = append(cols.params, columnaParametro{indice: i, param: q, nombre: n})

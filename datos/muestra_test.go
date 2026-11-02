@@ -67,8 +67,17 @@ type estacionSint struct {
 var estacionesSint = []estacionSint{
 	{"SINT-A", "Vigilancia sintética A", "276500", "8682300", "150", "18", "LIMA", "LIMA", "COMAS", "150110", "Punto sintético A, Lima."},
 	{"SINT-B", "Vigilancia sintética B", "226000", "8187000", "2400", "19", "AREQUIPA", "AREQUIPA", "CERRO COLORADO", "40104", "Punto sintético B, Arequipa."},
-	{"SINT-C", "Vigilancia sintética C", "401000", "8724000", "3750", "18", "JUNÍN", "YAULI", "LA OROYA", "120801", "Punto sintético C, Junín."},
+	{"SINT-C", "Vigilancia sintética C", "401000", "8724000", "3750", "19", "JUNÍN", "YAULI", "LA OROYA", "120801", "Punto sintético C, Junín."}, // zona 19: error sembrado
 	{"SINT-D", "Vigilancia sintética D", "552000", "9073000", "155", "18", "UCAYALI", "CORONEL PORTILLO", "CALLERIA", "250101", "Punto sintético D, Ucayali."},
+}
+
+// configMuestra es la config por defecto más la corrección de ubicación que
+// pide la muestra: SINT-C viene con zona 19 (error sembrado, como CA-HUAR-01 en
+// el CSV real), que la sacaría de Junín; su zona es la 18.
+func configMuestra() ConfigLimpieza {
+	cfg := ConfigPorDefecto()
+	cfg.CorreccionesUbicacion["SINT-C"] = map[string]ValorUbicacion{"zona": "18"}
+	return cfg
 }
 
 // filaSint es una fila del CSV más lo que se sabe de ella.
@@ -234,6 +243,20 @@ func generarMuestra() *muestraGenerada {
 		{1, 2, 9}:   {"-3.5", "negativo"},
 		{24, 1, 12}: {"120.5", "fuera_de_rango"},
 		{0, 3, 1}:   {"2500", "fuera_de_rango"},
+		// Un 0 exacto de un contaminante en un día con datos es «sin dato»: PM2.5 = PM10 = 0
+		// a la vez (como las 413 horas del gold real) y SO2 en µg/m³ (queda el de ppb, convertido).
+		{0, 2, 14}: {"0", "cero_como_faltante"},
+		{1, 2, 14}: {"0", "cero_como_faltante"},
+		{3, 3, 8}:  {"0", "cero_como_faltante"},
+		// Plantilla de 2022: filas vacías (todos los parámetros en «-») que ocupan su hora.
+		// PM10 de C, día 1: tres huecos intercalados; presión de B, día 4: el día empieza con
+		// 10 huecos. Sin contar los huecos, esos días quedarían incompletos (regla hora).
+		{19, 1, 5}:  {"-", "sin_valor"},
+		{19, 1, 6}:  {"-", "sin_valor"},
+		{19, 1, 17}: {"-", "sin_valor"},
+	}
+	for h := 0; h < 10; h++ {
+		reemplazos[celdaSint{18, 4, h}] = [2]string{"-", "sin_valor"}
 	}
 	violaciones := map[[3]int]bool{{0, 0, 5}: true, {0, 0, 6}: true} // A, día 0: PM2.5 > PM10
 	faltaUltima := map[[2]int]bool{{19, 2}: true, {23, 3}: true}     // (serie, día) con 23 filas: hora, o periodo si es «-»
@@ -298,6 +321,11 @@ func generarMuestra() *muestraGenerada {
 			if s.factor != 1 {
 				f.valor = float64(crudo * s.factor)
 			}
+			// Un contaminante en 0 exacto que no sembró nadie (el PM2.5 de una hora
+			// sin PM10 sale 0): también es «sin dato».
+			if f.valor == 0 && slices.Contains(ConfigPorDefecto().CeroComoFaltante, s.canon) {
+				f.regla = "cero_como_faltante"
+			}
 		}
 		return f
 	}
@@ -335,12 +363,12 @@ func generarMuestra() *muestraGenerada {
 			default:
 				filas = append(filas, dia(si, d)...)
 			}
-			if si == 21 && d == 0 { // C: un día de meteorología vacía (regla parametro)
+			if si == 21 && d == 0 { // C: un día de meteorología vacía (regla sin_valor)
 				for h := 0; h < 24; h++ {
 					c := base(2)
 					c["TIPO_ANALISIS"], c["PERIODO"], c["UNIDAD_MEDIDA"] = met, "1 hora", "°c"
 					c["FECHA_INICIO"], c["HORA_INICIO"] = fechaDia(1), "NA"
-					filas = append(filas, filaSint{campos: c, regla: "parametro"}) // sin ningún valor
+					filas = append(filas, filaSint{campos: c, regla: "sin_valor"}) // sin ningún valor
 				}
 			}
 		}
