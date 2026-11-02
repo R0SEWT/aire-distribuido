@@ -1,0 +1,69 @@
+{
+  "receta": {
+    "features": [
+      "pm2_5",
+      "pm10"
+    ],
+    "log1p": [],
+    "nivel": "absoluto",
+    "k": 3,
+    "semilla": 42,
+    "semillas": 10,
+    "tolerancia": 1e-06,
+    "max_iter": 100,
+    "workers": 0,
+    "chunk": 1000
+  },
+  "fuente_silver": "oefa_ancho.csv",
+  "sha256_silver": "3e84071aa856327eef8d0167d050b094a006b66f0274ec53ba5d53b0c22e4670",
+  "n": 64236,
+  "media": [
+    14.03293340183075,
+    31.505261224235632
+  ],
+  "desv": [
+    13.4038189288515,
+    37.561260319765815
+  ],
+  "sklearn": "1.9.1",
+  "semilla_sklearn": 57,
+  "n_semillas": 5,
+  "tol": 0,
+  "inercia": 49658.3579315542,
+  "iteraciones": 31,
+  "orden_centroides": "por la primera feature, ascendente",
+  "tamanos": [
+    47070,
+    15651,
+    1515
+  ],
+  "centroides_estandarizados": [
+    [
+      -0.3783711626162823,
+      -0.3720265695411764
+    ],
+    [
+      0.7675366393089746,
+      0.7170023730445182
+    ],
+    [
+      3.826544344900103,
+      4.15147622956002
+    ]
+  ],
+  "centroides_desestandarizados": [
+    [
+      8.961314850223076,
+      17.531474399830046
+    ],
+    [
+      24.320855536387448,
+      58.43677400805062
+    ],
+    [
+      65.32324092409242,
+      187.43994059405938
+    ]
+  ],
+  "origen": "oefa"
+}

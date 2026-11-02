@@ -1,0 +1,38 @@
+# Resumen {.unnumbered}
+
+::: {.callout-warning title="PENDIENTE"}
+Redactar al final (vie 06/11), entre 200 y 250 palabras: problema, pregunta de impacto, datos,
+qué se construyó en Go y qué salió. El borrador de abajo ya toma sus cifras de
+`generado/cifras.yml`; si se reescribe, las cifras siguen yendo como
+`{{</* meta cifras.grupo.clave */>}}`, nunca a mano. Revisar también el título de la carátula cuando
+la pregunta esté elegida (mar 03/11).
+:::
+
+El Organismo de Evaluación y Fiscalización Ambiental (OEFA) publica las lecturas horarias de su red
+de vigilancia de la calidad del aire: material particulado, gases y meteorología de sus estaciones,
+en un CSV de 1,3 GB con un parámetro por fila [@oefa2026aire]. Este primer entregable del Trabajo
+Final carga ese archivo en Go de forma concurrente ({{< meta cifras.limpieza.filas_largas_leidas >}}
+filas leídas, {{< meta cifras.limpieza.filas_largas_descartadas >}} descartadas por las reglas de
+limpieza, entre ellas los días enteros en cero de equipos que no midieron), reconstruye la hora del
+{{< meta cifras.limpieza.pct_hora_inferida >}} de las lecturas por su posición en el día, lo pivota a
+{{< meta cifras.limpieza.filas_anchas >}} horas-estación y deja
+{{< meta cifras.limpieza.filas_completas >}} completas para el modelo, de
+{{< meta cifras.limpieza.n_estaciones_gold >}} estaciones. Sobre ellas, un K-Means
+paralelo con goroutines, portado del Trabajo Parcial, identifica
+{{< meta cifras.kmeans.k >}} regímenes de contaminación que se etiquetan frente al Estándar de
+Calidad Ambiental (ECA) para aire [@minam2017eca] y se ubican por estación y por hora del día.
+
+Con {{< meta cifras.benchmark_cargador.w >}} workers, el cargador alcanza un speedup de
+{{< meta cifras.benchmark_cargador.speedup >}} (IC 95 % {{< meta cifras.benchmark_cargador.speedup_ic >}})
+y, con {{< meta cifras.benchmark_kmeans.w >}}, el K-Means uno de
+{{< meta cifras.benchmark_kmeans.speedup >}} (IC 95 % {{< meta cifras.benchmark_kmeans.speedup_ic >}}),
+con el mismo resultado bit a bit para cualquier número de workers. El diseño de la versión distribuida (coordinador y nodos por TCP, una barrera
+por iteración) queda listo para la PC4. La receta, elegida con una calibración de
+{{< meta cifras.calibracion.n_corridas >}} corridas, usa solo PM2,5 y PM10, y sus tres regímenes son
+niveles de aire: el alto, el {{< meta cifras.alto.pct >}} de las horas, excede el ECA en promedio y
+se concentra de mañana en pocas estaciones ({{< meta cifras.alto.principales >}}). Es la primera
+mitad de la pregunta de impacto; cuánto anticipa ese nivel un episodio se mide en el TB2. La red cubre {{< meta cifras.limpieza.n_departamentos >}}
+departamentos, y el informe lo dice sin rodeos: una zona sin estación no es una zona con aire limpio.
+
+*Palabras clave:* calidad del aire, PM2,5, PM10, K-Means paralelo, Go, goroutines, worker pool,
+MapReduce, OEFA, ECA.

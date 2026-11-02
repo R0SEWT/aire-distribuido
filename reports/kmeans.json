@@ -1,0 +1,287 @@
+{
+  "metadatos": {
+    "momento": "2026-11-01T23:59:16.218568815-05:00",
+    "maquina": "A019803",
+    "version_go": "go1.27.3",
+    "gomaxprocs": 14,
+    "cpus_logicas": 14,
+    "commit": "6fb3b002c868d7516ae8fc3fa4d852a9edf56117",
+    "arbol_sucio": true
+  },
+  "receta": {
+    "features": [
+      "pm2_5",
+      "pm10"
+    ],
+    "log1p": [],
+    "nivel": "absoluto",
+    "k": 3,
+    "semilla": 42,
+    "semillas": 10,
+    "tolerancia": 0.000001,
+    "max_iter": 100,
+    "workers": 0,
+    "chunk": 1000
+  },
+  "gold": {
+    "ruta": "data/gold/oefa_features.csv",
+    "sha256": "2fdace5ad8599149c9ed2b177151881025d895a50738519d9358d537236f87f7",
+    "n": 65873,
+    "d": 2,
+    "estaciones": 17
+  },
+  "estandarizacion": "reports/estandarizacion.json",
+  "k": 3,
+  "k_efectivo": 3,
+  "semilla": 42,
+  "semilla_base": 42,
+  "semillas": 10,
+  "criterio_semillas": "menor inercia final; si empatan bit a bit, la semilla menor",
+  "arranque_elegido": 0,
+  "arranques": [
+    {
+      "semilla": 42,
+      "k_efectivo": 3,
+      "inercia": 50950.36689106275,
+      "iteraciones": 44,
+      "paro": "tolerancia",
+      "clusters_vacios": 0,
+      "centroides_iniciales_sha256": "c5db5fa5ec9c5c044c57e232e562add23a957d0036da3411fb609d244eb20cf7",
+      "workers": 4,
+      "ms_kmeanspp": 3.831239,
+      "ms_lloyd": 48.714216
+    },
+    {
+      "semilla": 43,
+      "k_efectivo": 3,
+      "inercia": 50950.36689106275,
+      "iteraciones": 46,
+      "paro": "tolerancia",
+      "clusters_vacios": 0,
+      "centroides_iniciales_sha256": "82aa8037879aac4312a1c11d43f47338a8ac8e306263c722468de08b5bb814d9",
+      "workers": 5,
+      "ms_kmeanspp": 5.844472,
+      "ms_lloyd": 43.460435
+    },
+    {
+      "semilla": 44,
+      "k_efectivo": 3,
+      "inercia": 50950.36689106275,
+      "iteraciones": 21,
+      "paro": "tolerancia",
+      "clusters_vacios": 0,
+      "centroides_iniciales_sha256": "d1a45861dea160911a104ed59f1597eb29fcff0a15f5913d4ed524a20716a1e5",
+      "workers": 5,
+      "ms_kmeanspp": 6.079702,
+      "ms_lloyd": 20.210063
+    },
+    {
+      "semilla": 45,
+      "k_efectivo": 3,
+      "inercia": 50950.36711963593,
+      "iteraciones": 30,
+      "paro": "tolerancia",
+      "clusters_vacios": 0,
+      "centroides_iniciales_sha256": "80149cd71d1e9d44a1be2ca2bff1cdbceeeaa6f3cb97df692a99115d0f67e03e",
+      "workers": 5,
+      "ms_kmeanspp": 2.648518,
+      "ms_lloyd": 29.440687
+    },
+    {
+      "semilla": 46,
+      "k_efectivo": 3,
+      "inercia": 50950.36711963593,
+      "iteraciones": 26,
+      "paro": "tolerancia",
+      "clusters_vacios": 0,
+      "centroides_iniciales_sha256": "434157f64f49636dc2bb8d77ed0a93a3e0322acf50d07dbe93bd50a5570730c8",
+      "workers": 5,
+      "ms_kmeanspp": 2.728973,
+      "ms_lloyd": 22.20266
+    },
+    {
+      "semilla": 47,
+      "k_efectivo": 3,
+      "inercia": 50950.36689106275,
+      "iteraciones": 50,
+      "paro": "tolerancia",
+      "clusters_vacios": 0,
+      "centroides_iniciales_sha256": "beeb8b8db01eb2e3e0a7864c61efc5a13f32baaf5ee9b8c8c196153215bd2394",
+      "workers": 4,
+      "ms_kmeanspp": 2.422501,
+      "ms_lloyd": 47.606187
+    },
+    {
+      "semilla": 48,
+      "k_efectivo": 3,
+      "inercia": 50950.36711963593,
+      "iteraciones": 28,
+      "paro": "tolerancia",
+      "clusters_vacios": 0,
+      "centroides_iniciales_sha256": "ddf2c5a5a5ed6de5e3f9a599cb9c6c1589486de84c49ecfc36ee0c3ade9eedfa",
+      "workers": 5,
+      "ms_kmeanspp": 2.978694,
+      "ms_lloyd": 25.027039
+    },
+    {
+      "semilla": 49,
+      "k_efectivo": 3,
+      "inercia": 50950.36711963593,
+      "iteraciones": 19,
+      "paro": "tolerancia",
+      "clusters_vacios": 0,
+      "centroides_iniciales_sha256": "08c9be525616280d89ee04a3c53134f032989a4509d43812979c0d2d5f5fa9bd",
+      "workers": 5,
+      "ms_kmeanspp": 2.934037,
+      "ms_lloyd": 18.445385
+    },
+    {
+      "semilla": 50,
+      "k_efectivo": 3,
+      "inercia": 50950.36711963593,
+      "iteraciones": 32,
+      "paro": "tolerancia",
+      "clusters_vacios": 0,
+      "centroides_iniciales_sha256": "76c6ccebda21a0cc39997f3afd02028c3bd3e6c1611b456c89077efb32ed2782",
+      "workers": 5,
+      "ms_kmeanspp": 3.088437,
+      "ms_lloyd": 28.964449
+    },
+    {
+      "semilla": 51,
+      "k_efectivo": 3,
+      "inercia": 50950.36711963593,
+      "iteraciones": 31,
+      "paro": "tolerancia",
+      "clusters_vacios": 0,
+      "centroides_iniciales_sha256": "fd99ec4ac93e7d7596b508d7d69c7d901e12a4c3715b9c3baf7b2ad74e2731c3",
+      "workers": 5,
+      "ms_kmeanspp": 3.420368,
+      "ms_lloyd": 22.697144
+    }
+  ],
+  "corridas_a_la_vez": 3,
+  "workers_por_corrida": [
+    5,
+    5,
+    4
+  ],
+  "centroides_iniciales": {
+    "archivo": "reports/centroides_iniciales.json",
+    "origen": "generados",
+    "sha256": "c5db5fa5ec9c5c044c57e232e562add23a957d0036da3411fb609d244eb20cf7"
+  },
+  "nota_tiempos_arranques": "ms_kmeanspp y ms_lloyd de cada arranque se miden con otras semillas corriendo a la vez y con los workers de su cupo: sirven para comparar semillas entre sí, no para speedup. El speedup del Lloyd concurrente lo mide cmd/benchmark. ms_kmeanspp es 0 si los centroides se leyeron del archivo.",
+  "workers": 14,
+  "chunk": 1000,
+  "tol_abs": 0.000001,
+  "tol_rel": 0.000001,
+  "max_iter": 100,
+  "centroides_iniciales_sha256": "c5db5fa5ec9c5c044c57e232e562add23a957d0036da3411fb609d244eb20cf7",
+  "iteraciones": 44,
+  "paro": "tolerancia",
+  "movimiento_ultima_iteracion": 0,
+  "clusters_vacios": 0,
+  "inercia": 50950.36689106275,
+  "inercias_por_iteracion": [
+    73075.49583192293,
+    57902.13093642956,
+    52392.09736072892,
+    51221.65020639865,
+    51016.41848217332,
+    50973.70619778164,
+    50960.759651894325,
+    50956.46917524798,
+    50954.11888044051,
+    50952.87719383878,
+    50952.06412060858,
+    50951.83892860822,
+    50951.68806969194,
+    50951.454959201146,
+    50951.27761226738,
+    50951.24494234274,
+    50951.129004544055,
+    50950.88931514141,
+    50950.788375860226,
+    50950.72862721378,
+    50950.69179572483,
+    50950.65640358901,
+    50950.62173734866,
+    50950.60454995613,
+    50950.60239975705,
+    50950.601451978946,
+    50950.601049514495,
+    50950.60065124931,
+    50950.60019212867,
+    50950.594176710874,
+    50950.59358233408,
+    50950.59347480231,
+    50950.59337249875,
+    50950.57752318148,
+    50950.49956202014,
+    50950.450602724246,
+    50950.39885730192,
+    50950.391678354536,
+    50950.38940575069,
+    50950.37689492656,
+    50950.36826957308,
+    50950.36716721598,
+    50950.3671018521,
+    50950.36689106275
+  ],
+  "tamanos": [
+    48161,
+    1536,
+    16176
+  ],
+  "features": [
+    "pm2_5",
+    "pm10"
+  ],
+  "centroides_estandarizados": [
+    [
+      -0.3810318622031203,
+      -0.3734783717613215
+    ],
+    [
+      3.82926921964012,
+      4.165192564331025
+    ],
+    [
+      0.7708406277322728,
+      0.7164537638219929
+    ]
+  ],
+  "centroides_des_estandarizados": [
+    [
+      9.037549677124646,
+      17.63909927119453
+    ],
+    [
+      65.12396484375,
+      186.66182291666667
+    ],
+    [
+      24.38191518298714,
+      58.22880069238377
+    ]
+  ],
+  "nota_des_estandarizacion": "Centroides llevados a unidades originales invirtiendo el z-score y luego log1p (reports/estandarizacion.json). En las features con log1p el centroide invertido es la media de los logaritmos llevada de vuelta (del orden de una media geométrica), menor que la media aritmética; la media aritmética de cada régimen está en reports/regimenes.json (perfil).",
+  "ms": {
+    "carga": 67.984439,
+    "arranques": 122.509956,
+    "inicializacion": 3.831239,
+    "clustering": 48.714216,
+    "perfiles": 3.895164,
+    "total": 3798.771667
+  },
+  "recursos": {
+    "max_rss_mb": 25.10546875,
+    "heap_mb": 7.341156005859375,
+    "total_asignado_mb": 183.2394561767578,
+    "sistema_mb": 30.89673614501953,
+    "num_gc": 35,
+    "cpu_usuario_s": 29.740458,
+    "cpu_sistema_s": 0.4001
+  }
+}

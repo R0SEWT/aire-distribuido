@@ -1,0 +1,47 @@
+# Informe de la PC3 (Entregable 1 del Trabajo Final) en Quarto → Word.
+# Cómo se renderiza: README.md. Corto: `bash render.sh` deja los tres .docx en salida/.
+project:
+  type: default
+  output-dir: salida
+  render:
+    - informe.qmd
+    - participacion.qmd
+
+# Motor markdown: el .qmd no tiene celdas ejecutables. Las tablas y cifras se generan antes, con
+# tablas.py (generado/tablas/*.md y generado/cifras.yml), y se incluyen. Así renderizar no depende
+# de un kernel de Python y las cifras del informe salen siempre de los JSON que escribe Go.
+engine: markdown
+
+lang: es
+bibliography: referencias.bib
+csl: apa.csl
+link-citations: true
+number-sections: true
+fig-cap-location: top
+tbl-cap-location: top
+crossref:
+  fig-title: Figura
+  tbl-title: Tabla
+  title-delim: "."
+# generado/local/ no se versiona: lo arma render.sh. equipo.yml sale de equipo.local.yml (con los
+# códigos de alumno reales, tampoco versionado) o, si no existe, de equipo.ejemplo.yml.
+metadata-files:
+  - generado/cifras.yml
+  - generado/local/equipo.yml
+filters:
+  - filtros/informe.lua
+
+# Parámetro del render: `codigo`, el de quien sube el archivo (cambia la carátula), y `equipo`
+# vienen de generado/local/equipo.yml. render.sh renderiza uno por integrante con
+#   quarto render informe.qmd -M codigo:<código>
+indice-titulo: Índice
+indice-niveles: "1-3"
+
+format:
+  docx:
+    reference-doc: recursos/plantilla.docx
+    # El índice no lo pone Pandoc (toc: true lo dejaría antes de la carátula): lo pone el filtro
+    # donde está `::: indice` en informe.qmd, después del resumen, como ordena el enunciado.
+    toc: false
+    number-sections: true
+    highlight-style: github

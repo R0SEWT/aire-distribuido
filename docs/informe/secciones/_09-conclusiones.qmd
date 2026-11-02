@@ -1,0 +1,15 @@
+<!-- g) Conclusiones. -->
+
+# Conclusiones
+
+::: {.callout-warning title="PENDIENTE"}
+Se escriben al final (vie 06/11), una por objetivo específico, cada una con su evidencia y su cifra
+(`{{</* meta cifras... */>}}`): qué se logró y qué no, sin adjetivos. Como mínimo:
+
+1. La carga concurrente: cuántas filas, cuánto descartó cada regla, si cuadró la conservación.
+2. El speedup del cargador y del K-Means, y qué lo limita.
+3. El determinismo: bit a bit para cualquier número de workers, probado con `-race`.
+4. Qué respondieron los regímenes de la pregunta de impacto (dónde, cuándo, de qué tipo) y qué no
+   pueden responder todavía (la anticipación, en el TB2).
+5. La cobertura: qué parte del territorio no ve la red.
+:::

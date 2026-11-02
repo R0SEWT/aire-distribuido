@@ -1,0 +1,26 @@
+{
+  "archivo": "1a_Vigilancia y Seguimiento ambiental en la calidad del aire.csv",
+  "bytes": 1317949839,
+  "modificado": "2026-11-01T12:32:17",
+  "sha256": "1f09a8064ee0aed0b3a9a0a90b96f63ce226b45a969dace49f73e45134f26d92",
+  "primer_mb": {
+    "bytes_leidos": 1048576,
+    "bom_utf8": false,
+    "codificacion_probable": "utf-8",
+    "delimitador_probable": ";",
+    "conteo_delimitadores_cabecera": {
+      ";": 35,
+      ",": 0,
+      "\t": 0,
+      "|": 0
+    },
+    "cabecera": "\"NOMBRE_EVALUACION\";\"COMPONENTE_AMBIENTAL\";\"PROCEDENCIA_MUESTRA\";\"NOMBRE_PUNTO\";\"ESTE\";\"NORTE\";\"ALTITUD\";\"ZONA\";\"DATUM\";\"DEPARTAMENTO\";\"PROVINCIA\";\"DISTRITO\";\"UBIGEO\";\"DESCRIPCION_UBICACION\";\"TIPO_MUESTRA\";\"TIPO_ANALISIS\";\"PERIODO\";\"FECHA_INICIO\";\"HORA_INICIO\";\"FECHA_FIN\";\"HORA_FIN\";\"UNIDAD_MEDIDA\";\"DIOXIDO_AZUFRE\";\"DIRECCION_VIENTO\";\"HUMEDAD_RELATIVA\";\"PM10\";\"PM2.5\";\"MONOXIDO_CARBONO\";\"OZONO\";\"PRECIPITACION\";\"PRESION_BAROMETRICA\";\"RADIACION_SOLAR\";\"SULFURO_HIDROGENO\";\"TEMPERATURA\";\"VELOCIDAD_VIENTO\";\"FECHA_CORTE\"",
+    "fin_de_linea": "CRLF",
+    "lineas_en_el_mb": 2009,
+    "hay_comillas": true,
+    "lineas_con_comillas_impares": 0,
+    "columnas_por_fila": {
+      "36": 2009
+    }
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "features": [
+    "pm2_5",
+    "pm10"
+  ],
+  "log1p": [],
+  "nivel": "absoluto",
+  "k": 3,
+  "semilla": 42,
+  "semillas": 10,
+  "tolerancia": 1e-06,
+  "max_iter": 100,
+  "workers": 0,
+  "chunk": 1000
+}

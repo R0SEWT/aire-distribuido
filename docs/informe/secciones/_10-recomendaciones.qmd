@@ -1,0 +1,15 @@
+<!-- h) Recomendaciones. -->
+
+# Recomendaciones
+
+::: {.callout-warning title="PENDIENTE"}
+Recomendaciones accionables, cada una con el hallazgo que la motiva. Candidatas que ya salen del
+diseño (confirmar o descartar con los resultados):
+
+- Para la PC4: medir el costo de la barrera por iteración con nodos reales y compararlo con el
+  paralelismo por semillas; implementar el timeout antes que cualquier otra cosa del protocolo.
+- Para el TB2: medir la anticipación de cada régimen con un split temporal y compararla con las dos
+  referencias ingenuas; mostrar la advertencia de cobertura junto al mapa.
+- Sobre el dato: lo que el EDA encuentre de huecos, centinelas o unidades que convenga reportar a
+  OEFA.
+:::

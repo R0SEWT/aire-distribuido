@@ -1,0 +1,231 @@
+{
+  "_supuestos": [
+    "Formato verificado el 01/11 sobre el CSV completo: 36 columnas, ';', textos entre comillas, UTF-8 sin BOM, punto decimal.",
+    "Una columna por parámetro y cada fila con un solo valor; '-' y 'NA' son vacíos.",
+    "HORA_INICIO es el inicio del intervalo: 1899-12-31 HH:00:00 (artefacto de Excel); 1899-12-31 solo es la medianoche (posición 0 del día, verificado en 4,691 días).",
+    "Sin hora (NA, 94 %): la hora es la posición dentro del (estación, parámetro, fecha, unidad, periodo) si tiene 24 filas; en los días con hora explícita, hora = posición en el 100 %.",
+    "fecha_hora del silver es el fin del intervalo (convención de OEFA): la lectura de 00:00 a 01:00 se fecha a las 01:00.",
+    "Gases en ppb y ug/m3 a la vez: se prefiere ug/m3; ppb se convierte a 25 °C y 1 atm si es la única (el EDA midió 1.000-1.004 entre gemelas). Presión: mmHg a hPa. DIRECCION_VIENTO trae unidad '°c' por error: son grados.",
+    "Un día entero en 0 exacto es equipo sin medir, no una medición (EDA: 95-99.8 % de los ceros vienen así); la precipitación queda fuera: un día seco es 0.",
+    "Desde 2022 un hueco es una fila vacía (todos los parámetros en '-') que ocupa su hora: si el día del parámetro no tiene 24 filas, la posición se cuenta en el bloque físico (filas contiguas de la misma estación, fecha, unidad, periodo y tipo de análisis, con o sin valor) si tiene 24 filas y un solo parámetro; hora = posición en el 100 % de 165,912 filas con hora (notebook 04).",
+    "Un 0 exacto de un contaminante es «sin dato» también hora a hora: OEFA no promedia las horas en 0 (regla de las 18 h, docs/eda-procedencia.md §3.5). La meteorología no (salvo el día entero en 0); la precipitación nunca.",
+    "CA-HUAR-01 trae zona UTM 19 (caería en la Amazonía); su descripción la pone en Huaraucaca (Pasco), zona 18: se corrige en correcciones_ubicacion y el reporte guarda el valor original.",
+    "Centinelas, rangos físicos y rango de fechas son provisionales hasta el EDA."
+  ],
+  "delimitador": ";",
+  "codificacion": "utf-8",
+  "separador_decimal": ".",
+  "zona_horaria": "America/Lima",
+  "valores_vacios": [
+    "-",
+    "NA",
+    ""
+  ],
+  "columnas": {
+    "estacion": "NOMBRE_PUNTO",
+    "fecha": "FECHA_INICIO",
+    "hora": "HORA_INICIO",
+    "periodo": "PERIODO",
+    "unidad": "UNIDAD_MEDIDA",
+    "tipo_analisis": "TIPO_ANALISIS",
+    "departamento": "DEPARTAMENTO",
+    "provincia": "PROVINCIA",
+    "distrito": "DISTRITO",
+    "ubigeo": "UBIGEO",
+    "este": "ESTE",
+    "norte": "NORTE",
+    "altitud": "ALTITUD",
+    "zona": "ZONA",
+    "datum": "DATUM"
+  },
+  "parametros_en_columnas": {
+    "DIOXIDO_AZUFRE": "so2",
+    "DIRECCION_VIENTO": "viento_direccion",
+    "HUMEDAD_RELATIVA": "humedad",
+    "MONOXIDO_CARBONO": "co",
+    "OZONO": "o3",
+    "PM10": "pm10",
+    "PM2.5": "pm2_5",
+    "PRECIPITACION": "precipitacion",
+    "PRESION_BAROMETRICA": "presion",
+    "RADIACION_SOLAR": "radiacion",
+    "SULFURO_HIDROGENO": "h2s",
+    "TEMPERATURA": "temperatura",
+    "VELOCIDAD_VIENTO": "viento_velocidad"
+  },
+  "periodos_horarios": [
+    "1 hora"
+  ],
+  "periodos_horarios_por_grupo": [
+    "-"
+  ],
+  "formatos_fecha": [
+    "2006-01-02"
+  ],
+  "formatos_hora": [
+    "15:04:05",
+    "15:04"
+  ],
+  "hora_prefijo_ignorar": "1899-12-31",
+  "hora_solo_prefijo": "medianoche",
+  "hora_explicita": "inicio",
+  "hora_no_en_punto": "descartar",
+  "hora_por_posicion": {
+    "activar": true,
+    "filas_por_dia": 24,
+    "convencion": "fin"
+  },
+  "fecha_desde": "2000-01-01",
+  "fecha_hasta": "2026-07-01",
+  "centinelas": [
+    -999,
+    -9999,
+    9999,
+    99999
+  ],
+  "admiten_negativos": [
+    "temperatura"
+  ],
+  "rangos": {
+    "co": [
+      0,
+      50000
+    ],
+    "h2s": [
+      0,
+      5000
+    ],
+    "humedad": [
+      0,
+      100
+    ],
+    "no2": [
+      0,
+      2000
+    ],
+    "o3": [
+      0,
+      1000
+    ],
+    "pm10": [
+      0,
+      2000
+    ],
+    "pm2_5": [
+      0,
+      1000
+    ],
+    "precipitacion": [
+      0,
+      200
+    ],
+    "presion": [
+      400,
+      1100
+    ],
+    "radiacion": [
+      0,
+      1500
+    ],
+    "so2": [
+      0,
+      10000
+    ],
+    "temperatura": [
+      -30,
+      50
+    ],
+    "viento_direccion": [
+      0,
+      360
+    ],
+    "viento_velocidad": [
+      0,
+      60
+    ]
+  },
+  "unidades": {
+    "co": {
+      "mg/m3": 1000,
+      "ppb": 1.145,
+      "ug/m3": 1
+    },
+    "h2s": {
+      "ppb": 1.39,
+      "ug/m3": 1
+    },
+    "humedad": {
+      "%": 1
+    },
+    "no2": {
+      "ppb": 1.88,
+      "ug/m3": 1
+    },
+    "o3": {
+      "ppb": 1.96,
+      "ug/m3": 1
+    },
+    "pm10": {
+      "ug/m3": 1
+    },
+    "pm2_5": {
+      "ug/m3": 1
+    },
+    "precipitacion": {
+      "mm": 1
+    },
+    "presion": {
+      "hpa": 1,
+      "mb": 1,
+      "mbar": 1,
+      "mmhg": 1.33322
+    },
+    "radiacion": {
+      "w/m2": 1
+    },
+    "so2": {
+      "ppb": 2.62,
+      "ug/m3": 1
+    },
+    "temperatura": {
+      "c": 1,
+      "°c": 1
+    },
+    "viento_direccion": {
+      "grados": 1,
+      "°": 1,
+      "°c": 1
+    },
+    "viento_velocidad": {
+      "m/s": 1
+    }
+  },
+  "bloques_en_cero_como_faltante": [
+    "pm10",
+    "pm2_5",
+    "no2",
+    "so2",
+    "co",
+    "o3",
+    "h2s",
+    "temperatura",
+    "humedad",
+    "viento_velocidad",
+    "viento_direccion",
+    "presion",
+    "radiacion"
+  ],
+  "cero_como_faltante": [
+    "pm2_5",
+    "pm10",
+    "so2",
+    "co",
+    "o3",
+    "h2s"
+  ],
+  "correcciones_ubicacion": {
+    "CA-HUAR-01": {
+      "zona": 18
+    }
+  }
+}

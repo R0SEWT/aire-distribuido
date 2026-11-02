@@ -1,0 +1,16 @@
+# Salidas del render y del empaquetado: se regeneran con render.sh y empaquetar-pc3.sh.
+salida/
+.quarto/
+*_files/
+# Ningún .docx se versiona salvo la plantilla de estilos (la plantilla oficial del curso es del
+# docente y no entra al repo).
+*.docx
+!recursos/plantilla.docx
+# Datos personales y archivos que arma render.sh: los códigos de alumno reales, la participación
+# llenada y el historial de git del momento no se versionan (el repositorio es público).
+equipo.local.yml
+participacion.local.md
+generado/local/
+
+/.quarto/
+**/*.quarto_ipynb

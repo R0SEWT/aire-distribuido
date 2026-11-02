@@ -1,0 +1,75 @@
+<!-- j) Anexos: repositorio y video, Kanban, historial de git, participación, uso de IA. -->
+
+# Anexos {.unnumbered}
+
+## Anexo A. Repositorio, video y datos {.unnumbered}
+
+- **Repositorio (público):** <https://github.com/R0SEWT/aire-distribuido>. La versión que se
+  entrega es la rama `main` en el tag `pc3`, a la que se llega por `release/pc3`.
+- **Video:** PENDIENTE.
+- **Datos:** no se versionan (1,3 GB). Ficha y descarga en la Plataforma Nacional de Datos Abiertos
+  [@oefa2026aire]; instrucciones en `data/README.md`.
+- **Archivo que produjo los resultados** (de `generado/limpieza.json`):
+  {{< meta cifras.limpieza.entrada >}}, {{< meta cifras.limpieza.bytes >}} bytes, sha256
+  {{< meta cifras.limpieza.sha256 >}}.
+- **Configuración usada:** `configs/limpieza.json`, sha256
+  {{< meta cifras.limpieza.sha256_config_limpieza >}}; `configs/kmeans.json`, sha256
+  {{< meta cifras.limpieza.sha256_config_kmeans >}}.
+
+::: {.callout-warning title="PENDIENTE"}
+Crear el tag `pc3` en `main` después del release. Enlace del video si la PC3 lo lleva (se pregunta
+al docente el lun 02/11; si sí, participan los tres).
+:::
+
+## Anexo B. Tablero Kanban {.unnumbered}
+
+El seguimiento de las tareas de la PC3 se hizo en un tablero Kanban de GitHub Projects, creado al
+inicio de la semana de la entrega y actualizado durante ella.
+
+![Tablero Kanban del proyecto en GitHub Projects](capturas/kanban.png){#fig-kanban width=16cm}
+
+:::: {si-falta="capturas/kanban.png"}
+::: {.callout-warning title="PENDIENTE"}
+Enlace al tablero (GitHub Projects del repositorio) y captura del tablero el día de la entrega, con
+las tarjetas de la PC3 en «Hecho». Va en `docs/informe/capturas/kanban.png`. El tablero se crea el
+lun 02/11: uno armado la noche de la entrega no muestra seguimiento.
+:::
+::::
+
+## Anexo C. Historial de versiones por integrante {.unnumbered}
+
+{{< include generado/local/historial.md >}}
+
+## Anexo D. Reporte de participación {.unnumbered}
+
+{{< include generado/local/_participacion.md >}}
+
+## Anexo E. Declaración de uso de inteligencia artificial {.unnumbered}
+
+El sílabo del curso incorpora la ingeniería de prompts como herramienta, siempre contrastada con la
+teoría. En este entregable, **el código, las specs, los notebooks y el borrador del informe los
+generaron agentes de Claude Code (Anthropic), con el modelo Claude Opus 5.5**, bajo la dirección de
+Rody, que definió qué construir, tomó las decisiones abiertas y revisó lo generado. La @tbl-uso-ia lo
+declara pieza por pieza. Las cifras del informe no salen de la redacción: salen de los JSON que
+escriben los comandos de Go. La última columna registra qué integrante revisó cada pieza; se llena
+a medida que la revisión ocurre, y aquí no se afirma ninguna que no haya pasado.
+
+::: {#tbl-uso-ia tbl-colwidths="[20,24,24,17,15]"}
+| Pieza | Qué generó la IA | Verificación automática | Dirección | Revisado por |
+|:---|:---|:---|:---|:---|
+| Specs (`docs/specs/`) | Las specs de la PC3, de la calibración y de las preguntas candidatas | — | Rody: decisiones abiertas, aceptadas o revertidas una por una | PENDIENTE (Rody · Dayana · Julio) |
+| Cargador (`datos/`, `cmd/cargar`) | Código y pruebas | `go test -race`, una fila de la muestra por regla, integración continua | Rody | PENDIENTE (Rody · Dayana · Julio) |
+| K-Means (`kmeans/`, `cmd/entrenar`, `cmd/benchmark`) | Port del TP, sumas parciales, semillas, regímenes, benchmark | `go test -race`, las pruebas del TP como red del port, auditoría contra scikit-learn | Rody | PENDIENTE (Rody · Dayana · Julio) |
+| Protocolo (`protocolo/`) | Mensajes, codificación y barrera del coordinador | `go test -race` | Rody | PENDIENTE (Rody · Dayana · Julio) |
+| Diseño y diagramas (`docs/diseno.md`, `docs/diagramas/`) | Texto del diseño distribuido y los dos diagramas | — | Rody | PENDIENTE (Rody · Dayana · Julio) |
+| Notebooks (`notebooks/`) | EDA, calibración, auditoría y figuras, en pandas y scikit-learn | Auditoría cruzada: Go contra pandas y scikit-learn | Rody | PENDIENTE (Rody · Dayana · Julio) |
+| Informe (`docs/informe/`) | Esqueleto en Quarto, borrador de la prosa, `tablas.py`, scripts y plantilla | Cifras desde los JSON de Go; referencias verificadas por DOI o en el documento oficial | Rody | PENDIENTE (Rody · Dayana · Julio) |
+
+Uso de IA generativa en la PC3
+:::
+
+::: {.callout-warning title="PENDIENTE"}
+Llenar «Revisado por» con quien revisó de verdad cada pieza, cuando lo haga, y que Dayana y Julio
+declaren su propio uso de IA (herramienta, para qué y qué verificó), como en el TP. Los commits no llevan la marca de IA (convención del repositorio): el
+uso se declara solo aquí, así que el historial del Anexo C no basta para rastrearlo.
+:::
