@@ -41,7 +41,10 @@ from datetime import datetime, timedelta
 import sys
 from pathlib import Path
 
-import pandas as pd
+try:
+    import pandas as pd
+except ImportError:  # el python3 del sistema puede no tenerlo
+    sys.exit("tablas.py necesita pandas: `uv run tablas.py` lo instala al vuelo (o pip install pandas)")
 
 AQUI = Path(__file__).resolve().parent
 MARCA = "[PLACEHOLDER]"
@@ -62,7 +65,8 @@ REGLAS = {
     "columnas": ("—", "La fila no tiene tantos campos como la cabecera"),
     "estacion": ("—", "Estación vacía"),
     "periodo": ("1", "Periodo no horario (24 horas, medias móviles); «-» sin hora y con el día incompleto"),
-    "parametro": ("—", "Ninguna columna de parámetro con valor, o más de una"),
+    "sin_valor": ("—", "Ninguna columna de parámetro con valor: el hueco de la plantilla de 2022"),
+    "parametro": ("—", "Más de una columna de parámetro con valor"),
     "fecha": ("2", "Fecha no parseable"),
     "fecha_fuera_de_rango": ("2", "Fecha fuera del rango configurado"),
     "hora_no_en_punto": ("2", "Hora con minutos o segundos"),
@@ -73,6 +77,7 @@ REGLAS = {
     "negativo": ("3", "Negativo en un parámetro que no los admite"),
     "fuera_de_rango": ("4", "Fuera del rango físico, ya en la unidad canónica"),
     "bloque_en_cero": ("3′", "Un día entero en 0 exacto: equipo sin medir, no aire limpio"),
+    "cero_como_faltante": ("3′", "Un 0 exacto de un contaminante en un día con datos: hora sin dato"),
     "duplicado_unidad": ("5/6", "La misma lectura en otra unidad (ppb, mmHg): se conserva la canónica"),
     "duplicado_exacto": ("5", "Misma (estación, parámetro, fecha-hora) y mismo valor"),
     "duplicado_valor_distinto": ("5", "Misma clave con otro valor: se conserva el primero"),
@@ -83,6 +88,7 @@ MARCAS = {
     "unidad_convertida": "Convertida a la unidad canónica (mmHg → hPa, ppb → µg/m³)",
     "duplicado_valor_distinto": "Celda cuyo valor conservado tuvo un duplicado con otro valor",
     "hora_no_en_punto": "Hora truncada a la hora en punto",
+    "ubicacion_corregida": "Fila leída de una estación con la ubicación corregida (sobre las leídas)",
 }
 # Fases de la carga (datos/cargador.go): cuál es paralela y cuál serial, para leer Amdahl.
 FASES = [
@@ -334,7 +340,7 @@ class Informe:
                   ("cobertura.md", "tbl-cobertura", "Cobertura de la red por departamento"),
                   ("limpieza_marcas.md", "tbl-limpieza-marcas", "Lo que se conserva pero se marca"),
                   ("limpieza_hora.md", "tbl-limpieza-hora", "La hora de cada lectura: explícita o reconstruida por posición"),
-                  ("limpieza_ceros.md", "tbl-limpieza-ceros", "Días enteros en cero descartados, por parámetro"),
+                  ("limpieza_ceros.md", "tbl-limpieza-ceros", "Ceros descartados por parámetro: días enteros y horas sueltas"),
                   ("limpieza_fases.md", "tbl-limpieza-fases", "Tiempo de cada fase de la carga"))
         if d is None:
             for a, i, t in tablas:
@@ -431,7 +437,11 @@ class Informe:
                    + (" Con más de una ubicación en el archivo (se cargan como una sola estación): "
                       + ", ".join(f"{n} ({len(x['ubicaciones_distintas'])})" for n, x in sorted(est.items())
                                   if x.get("ubicaciones_distintas")) + "."
-                      if any(x.get("ubicaciones_distintas") for x in est.values()) else ""))
+                      if any(x.get("ubicaciones_distintas") for x in est.values()) else "")
+                   + ("".join(f" Ubicación corregida: {n} ("
+                              + ", ".join(f"{c} {v} → {(x.get('ubicacion') or {}).get(c, '?')}"
+                                          for c, v in sorted(x["ubicacion_original"].items())) + ")."
+                              for n, x in sorted(est.items()) if x.get("ubicacion_original"))))
 
         par = vistos.get("parametros", {})
         nomap = vistos.get("parametros_no_mapeados", {})
@@ -464,8 +474,9 @@ class Informe:
         self.tabla(tablas[5][0], o, d, tablas[5][1], tablas[5][2], markdown(c, "lrrrr"), anchos=[34, 15, 15, 15, 21], nota=
                    "Un departamento que no aparece no tiene estación en el dataset: no hay dato, no aire limpio.")
 
+        base_marca = {"ubicacion_corregida": leidas}
         filas_m = [(f"`{k}`", MARCAS.get(k, "(sin descripción en tablas.py)"), entero(v),
-                    pct(v / fl["procesadas"], 1) if fl["procesadas"] else "—")
+                    pct(v / base_marca.get(k, fl["procesadas"]), 1) if base_marca.get(k, fl["procesadas"]) else "—")
                    for k, v in sorted(marc.items(), key=lambda kv: -kv[1])]
         filas_m.append(("filas anchas con PM2,5 > PM10", "Se conservan; en el gold la fracción fina se recorta a 1",
                         entero(fa.get("pm2_5_mayor_pm10")), "—"))
@@ -473,7 +484,7 @@ class Informe:
         nota_conv = ("Conversiones de unidad por parámetro: "
                      + "; ".join(f"{corto(k)} {entero(v)}" for k, v in sorted(conv.items(), key=lambda kv: -kv[1])) + ".") if conv else ""
         self.tabla(tablas[6][0], o, d, tablas[6][1], tablas[6][2],
-                   markdown(pd.DataFrame(filas_m, columns=["Marca", "Qué es", "Lecturas", "% de procesadas"]), "llrr"),
+                   markdown(pd.DataFrame(filas_m, columns=["Marca", "Qué es", "Lecturas", "% (de procesadas)"]), "llrr"),
                    anchos=[24, 46, 15, 15], nota=nota_conv)
 
         hi, he = fl.get("hora_inferida"), fl.get("hora_explicita")
@@ -481,6 +492,9 @@ class Informe:
             filas_h = [
                 ("Lecturas procesadas con hora explícita (HORA_INICIO)", entero(he), pct(he / fl["procesadas"])),
                 ("Lecturas procesadas con hora inferida por posición", entero(hi), pct(hi / fl["procesadas"])),
+                ("… de ellas, con la hora por su posición en el bloque físico (días de 2022 con filas vacías)",
+                 entero(fl.get("hora_por_bloque_fisico")), pct(fl.get("hora_por_bloque_fisico", 0) / fl["procesadas"])
+                 if fl.get("hora_por_bloque_fisico") is not None else "—"),
                 ("Descartadas por la regla `hora` (día incompleto u hora ilegible)", entero(desc.get("hora", 0)),
                  pct(desc.get("hora", 0) / leidas)),
                 ("Filas anchas con al menos una celda de hora inferida", entero(fa.get("hora_inferida")),
@@ -490,19 +504,23 @@ class Informe:
                        markdown(pd.DataFrame(filas_h, columns=["Concepto", "Lecturas", "Proporción"]), "lrr"),
                        anchos=[62, 20, 18], nota=
                        f"Convención de hora: «{d.get('convencion_hora', '?')}» (la lectura de 00:00 a 01:00 se fecha a "
-                       "las 01:00). La proporción de las dos primeras filas es sobre las procesadas; la de la "
-                       "regla, sobre las leídas; la última, sobre las filas anchas.")
+                       "las 01:00). Las proporciones de las tres primeras filas son sobre las procesadas; la de la "
+                       "regla, sobre las leídas; la última, sobre las filas anchas. La hora por bloque físico se "
+                       "cuenta al asignarla: alguna de esas lecturas pudo caer después en otra regla.")
         else:
             self.tabla(tablas[7][0], o, None, tablas[7][1], tablas[7][2])
 
         ceros = fl.get("bloque_en_cero_por_parametro") or {}
-        z = pd.DataFrame([(corto(k), entero(v), pct(v / desc["bloque_en_cero"]) if desc.get("bloque_en_cero") else "—")
-                          for k, v in sorted(ceros.items(), key=lambda kv: -kv[1])],
-                         columns=["Parámetro", "Lecturas descartadas", "% de la regla"])
+        ceros_h = fl.get("cero_como_faltante_por_parametro") or {}
+        z = pd.DataFrame([(corto(k), entero(ceros.get(k, 0)), entero(ceros_h.get(k, 0)) if ceros_h else "—")
+                          for k in sorted(set(ceros) | set(ceros_h), key=lambda q: -(ceros.get(q, 0) + ceros_h.get(q, 0)))],
+                         columns=["Parámetro", "Días enteros en 0 (lecturas)", "Horas en 0 en días con datos"])
         if ceros:
-            self.tabla(tablas[8][0], o, d, tablas[8][1], tablas[8][2], markdown(z, "lrr"), anchos=[40, 30, 30], nota=
-                       "Un día completo de un parámetro con todas sus lecturas en 0 exacto es un equipo que no midió, "
-                       "no un día de aire limpio: se descarta entero (regla `bloque_en_cero`).")
+            self.tabla(tablas[8][0], o, d, tablas[8][1], tablas[8][2], markdown(z, "lrr"), anchos=[34, 33, 33], nota=
+                       "Un día completo de un parámetro con todas sus lecturas en 0 exacto es un equipo que no midió "
+                       "(regla `bloque_en_cero`); en los días con datos, un 0 exacto de un contaminante es una hora sin "
+                       "dato (regla `cero_como_faltante`), como lo trata OEFA. La meteorología no: un viento de 0 m/s "
+                       "es calma, y una hora seca tiene precipitación 0.")
         else:
             self.tabla(tablas[8][0], o, None, tablas[8][1], tablas[8][2])
 
@@ -538,14 +556,25 @@ class Informe:
             "n_estaciones_sin_datos": entero(sum(1 for x in est.values() if x["largas_procesadas"] == 0)),
             "n_ubicaciones_distintas": entero(sum(1 for x in est.values() if x.get("ubicaciones_distintas"))),
             "estacion_gold_max": max(est.items(), key=lambda kv: kv[1]["completas_gold"])[0] if est else "—",
+            "departamento_gold_max": titulo_lugar((max(est.values(), key=lambda x: x["completas_gold"]).get("ubicacion") or {}).get("departamento")) if est else "—",
             "pct_estacion_gold_max": pct(max(x["completas_gold"] for x in est.values()) / fa["completas_gold"], 0)
                                      if est and fa["completas_gold"] else "—",
             "estaciones_ubicaciones_distintas": ", ".join(sorted(n for n, x in est.items() if x.get("ubicaciones_distintas"))) or "ninguna",
             "fuera_de_rango_presion": entero((fl.get("fuera_de_rango_por_parametro") or {}).get("presion", 0)),
             "pct_descartadas_parametro": pct(desc.get("parametro", 0) / leidas) if leidas else "—",
+            "sin_valor": entero(desc.get("sin_valor", 0)),
+            "pct_sin_valor": pct(desc.get("sin_valor", 0) / leidas) if leidas else "—",
+            "cero_como_faltante": entero(desc.get("cero_como_faltante", 0)),
+            "cero_como_faltante_pm": entero(sum(v for q, v in (fl.get("cero_como_faltante_por_parametro") or {}).items()
+                                                if q in ("pm10", "pm2_5"))),
+            "hora_por_bloque_fisico": entero(fl.get("hora_por_bloque_fisico")),
+            "ubicacion_corregida": entero(marc.get("ubicacion_corregida", 0)),
+            "n_estaciones_inicio_fin_2021": entero(sum(1 for x in est.values() if (x.get("desde") or "")[:7] in ("2021-11", "2021-12"))),
+            **self.grupo_vmp(est),
             "pct_descartadas_periodo": pct(desc.get("periodo", 0) / leidas) if leidas else "—",
             "pct_duplicado_unidad": pct(desc.get("duplicado_unidad", 0) / leidas) if leidas else "—",
             "duplicado_unidad": entero(desc.get("duplicado_unidad", 0)),
+            "duplicado_exacto": entero(desc.get("duplicado_exacto", 0) + desc.get("duplicado_valor_distinto", 0)),
             "unidad_convertida": entero(marc.get("unidad_convertida", 0)),
             "convencion_hora": d.get("convencion_hora", "?"),
             "columnas": entero(len(d.get("cabecera", []))),
@@ -578,6 +607,21 @@ class Informe:
             "sha256_config_limpieza": ((d.get("configs") or {}).get("limpieza") or {}).get("sha256") or "—",
             "sha256_config_kmeans": ((d.get("configs") or {}).get("kmeans") or {}).get("sha256") or "—",
         })
+
+    @staticmethod
+    def grupo_vmp(est: dict) -> dict:
+        """El grupo de Ventanilla y Mi Perú (CA-VMP-*): cuántas estaciones tienen lecturas horarias."""
+        vmp = {n: x for n, x in est.items() if n.startswith("CA-VMP")}
+        con = {n: x for n, x in vmp.items() if x["largas_procesadas"] > 0}
+        return {
+            "vmp_estaciones": entero(len(vmp)),
+            "vmp_con_horarias": entero(len(con)),
+            "vmp_horarias_cuales": ", ".join(sorted(con)) or "ninguna",
+            "vmp_lecturas": entero(sum(x["largas_procesadas"] for x in con.values())),
+            "vmp_horas": entero(sum(x["anchas"] for x in con.values())),
+            "vmp_desde": min((x.get("desde") or "")[:10] for x in con.values()) if con else "—",
+            "vmp_hasta": max((x.get("hasta") or "")[:10] for x in con.values()) if con else "—",
+        }
 
     # ----------------------------------------------------------------------- estandarización
     def estandarizacion(self) -> None:
@@ -968,6 +1012,17 @@ class Informe:
                 "n_estaciones": entero(sum(1 for c in x["por_estacion"].values() if c > 0)),
                 "cociente": decimal(x["pm2_5_medio"] / x["pm10_medio"], 2) if x.get("pm2_5_medio") and x.get("pm10_medio") else "—",
             })
+        if niveles:
+            alto = next(x for x in rg if niveles[x["regimen"]] == "alto")
+            lima = {n for n, e in lim.items() if ((e.get("ubicacion") or {}).get("departamento") or "").upper() == "LIMA"}
+            de_lima = {e: c for e, c in alto["por_estacion"].items() if e in lima and c > 0}
+            self.cifras["alto"].update({k: self.cifra(d, v) for k, v in {
+                "horas_lima": entero(sum(de_lima.values())),
+                "pct_lima": pct(sum(de_lima.values()) / alto["tamano"], 0) if alto["tamano"] else "—",
+                "estaciones_lima": ", ".join(f"{e} ({entero(c)})" for e, c in sorted(de_lima.items(), key=lambda kv: -kv[1])) or "ninguna",
+                "lima_desde_hasta": "; ".join(f"{e}: {fecha((lim.get(e) or {}).get('desde'))} a {fecha((lim.get(e) or {}).get('hasta'))}"
+                                             for e in sorted(de_lima, key=lambda e: -de_lima[e])),
+            }.items()})
         excede = [x for x in rg if x["eca"] == "excede"]
         self.guardar_cifras("regimenes", d, {
             "pm10_max": decimal(max((x.get("pm10_medio") or 0) for x in rg), 1),
@@ -1035,13 +1090,14 @@ class Informe:
              f"{entero(sum(1 for x in est.values() if x['completas_gold'] > 0))}"),
             ("Periodos horarios («1 hora» y «-») · otros (24 h, móviles)",
              f"{entero(horarios)} · {entero(sum(per.values()) - horarios)}"),
-            ("Filas sin un único parámetro con valor (regla `parametro`)", entero(desc.get("parametro", 0))),
+            ("Filas sin ningún valor (regla `sin_valor`: la plantilla de 2022)", entero(desc.get("sin_valor", 0))),
             ("Lecturas procesadas con hora inferida por posición", f"{entero(fl.get('hora_inferida'))} "
              f"({pct(fl.get('hora_inferida', 0) / fl['procesadas'])})" if fl.get("procesadas") else "—"),
-            ("Control: hora de inicio = posición, en días completos con hora explícita",
-             f"{pct(ch['filas_en_bloques_completos_posicion'] / ch['filas_en_bloques_completos'])} de "
-             f"{entero(ch['filas_en_bloques_completos'])} filas ({entero(ch['dias_en_bloques_completos'])} días)" if ch else "—"),
+            ("Control: hora de inicio = posición en el bloque físico, donde hay hora explícita",
+             f"{pct(ch['filas_bloque_fisico_posicion'] / ch['filas_bloque_fisico'])} de "
+             f"{entero(ch['filas_bloque_fisico'])} filas" if ch.get("filas_bloque_fisico") else "—"),
             ("Días enteros en 0 exacto (regla `bloque_en_cero`)", entero(desc.get("bloque_en_cero", 0))),
+            ("Horas en 0 exacto de un contaminante en días con datos (`cero_como_faltante`)", entero(desc.get("cero_como_faltante", 0))),
             ("Lecturas gemelas en otra unidad (regla `duplicado_unidad`)", entero(desc.get("duplicado_unidad", 0))),
         ]
         t = pd.DataFrame(filas, columns=["Característica", "Valor"])
@@ -1065,7 +1121,53 @@ class Informe:
                 "control_pct_todas": pct(ch["filas_posicion"] / ch["filas_con_hora_inicio"]) if ch else "—",
                 "estaciones_episodios": entero(ep.get("estaciones_con_episodios_24h")),
                 "episodios_24h": entero(ep.get("episodios_24h")),
+                "control_fisico": pct(ch["filas_bloque_fisico_posicion"] / ch["filas_bloque_fisico"]) if ch.get("filas_bloque_fisico") else "—",
+                "control_fisico_filas": entero(ch.get("filas_bloque_fisico")),
+                "control_fisico_huecos": entero(ch.get("filas_bloque_fisico_con_huecos")),
+                **{k: (entero(v) if isinstance(v, int) else (decimal(v, 2 if v < 99.9 else 2).rstrip("0").rstrip(",")
+                                                               if isinstance(v, float) else str(v)))
+                   for k, v in (eda.get("procedencia") or {}).items()},
             }.items()}
+
+    # ----------------------------------------------------------------------- tipología de estaciones
+    def tipologia(self) -> None:
+        """Cuatro tipos de serie (notebook 04, reports/estaciones_ficha.csv), con las lecturas válidas y las
+        filas del gold de la corrida actual (limpieza.json): la clasificación no depende de la corrida."""
+        o = "estaciones_ficha.csv"
+        ruta = self.reports / o
+        titulo = "Tipos de serie: cuánto pesa cada uno en lo que ve el modelo"
+        lim = self.datos.get("limpieza.json")
+        if not ruta.exists() or lim is None:
+            self.faltantes.append(o)
+            self.tabla("tipologia.md", o, None, "tbl-tipologia", titulo)
+            return
+        f = pd.read_csv(ruta, dtype=str)
+        est = lim["estaciones"]
+        sin_ficha = sorted(set(est) - set(f["estacion"]))
+        if sin_ficha:
+            self.problema(o, "estaciones de limpieza.json sin ficha: " + ", ".join(sin_ficha))
+        gold_total = sum(x["completas_gold"] for x in est.values())
+        orden = ["serie de años", "serie de meses", "campaña de semanas", "muestreo manual de 24 h"]
+        filas, cif = [], {}
+        for tipo in sorted(f["tipo_serie"].dropna().unique(), key=lambda t: orden.index(t) if t in orden else 99):
+            ests = sorted(f.loc[f["tipo_serie"] == tipo, "estacion"])
+            proc = sum(est.get(e, {}).get("largas_procesadas", 0) for e in ests)
+            gold = sum(est.get(e, {}).get("completas_gold", 0) for e in ests)
+            filas.append((tipo, entero(len(ests)), ", ".join(ests), entero(proc), entero(gold),
+                          pct(gold / gold_total) if gold_total else "—"))
+            clave = {"serie de años": "anios", "serie de meses": "meses", "campaña de semanas": "semanas",
+                     "muestreo manual de 24 h": "manual"}.get(tipo, tipo)
+            cif[clave] = entero(len(ests))
+            cif[f"{clave}_pct_gold"] = pct(gold / gold_total) if gold_total else "—"
+        t = pd.DataFrame(filas, columns=["Tipo", "Estaciones", "Cuáles", "Lecturas válidas", "Filas del gold", "% del gold"])
+        self.tabla("tipologia.md", o, {"generado_por": "notebook 04"}, "tbl-tipologia", titulo,
+                   markdown(t, "lrlrrr"), anchos=[16, 10, 38, 12, 12, 12],
+                   fuente="Fuente: la clasificación, de `reports/estaciones_ficha.csv` (notebook 04, procedencia del "
+                          "dato); las lecturas y el gold, de `generado/limpieza.json` (`cmd/cargar`).",
+                   nota="Las series de años cubren varios años de una estación; las de meses, casi todas de diciembre "
+                        "de 2021 a diciembre de 2022; las campañas, unas semanas; los puntos manuales solo traen "
+                        "promedios de 24 h, que el K-Means (horario) no usa.")
+        self.cifras["tipologia"] = {k: str(v) for k, v in cif.items()}
 
     # ----------------------------------------------------------------------- calibración y auditoría
     @staticmethod
@@ -1094,9 +1196,17 @@ class Informe:
         rec = km["receta"]
         final = (self.variante(rec), rec["k"])
         con_log = (final[0].replace("-T1-", "-T2-"), rec["k"])
-        prop = self.reports / "kmeans_propuesto.json"
+        # La elección de la regla automática del notebook 02 está en calibracion_decision.md («Variante
+        # elegida: `X` con k = N»); kmeans_propuesto.json puede ya traer la decisión del equipo.
         auto = None
-        if prop.exists():
+        dec = self.reports / "calibracion_decision.md"
+        if dec.exists():
+            import re
+            m = re.search(r"Variante elegida: `([^`]+)` con k = (\d+)", dec.read_text(encoding="utf-8"))
+            if m:
+                auto = (m.group(1), int(m.group(2)))
+        prop = self.reports / "kmeans_propuesto.json"
+        if auto is None and prop.exists():
             pr = json.loads(prop.read_text(encoding="utf-8"))
             auto = (self.variante(pr), pr["k"])
         provisional = ("F2-M1-T2-N1", 5)     # la receta provisional de la spec de la PC3 (§4.3)
@@ -1190,6 +1300,13 @@ class Informe:
         misma = all(d.get("receta", {}).get(c) == rec_km.get(c) for c in claves) if rec_km else False
         if not misma:
             self.desactualizadas.append("la auditoría (auditoria.json) corrió con otra receta que la de kmeans.json")
+        # Misma receta no basta: el gold tiene que ser el mismo (una limpieza nueva cambia el gold).
+        sha = ((self.datos.get("kmeans.json") or {}).get("gold") or {}).get("sha256", "")[:12]
+        det = " ".join(c.get("detalle", "") for c in ch if "gold" in c.get("chequeo", "") and "entren" in c.get("chequeo", ""))
+        mismo_gold = bool(sha) and sha in det
+        if misma and not mismo_gold:
+            self.desactualizadas.append("la auditoría (auditoria.json) corrió sobre otro gold que el de kmeans.json")
+        misma = misma and mismo_gold
         t = pd.DataFrame([(c["chequeo"], c["estado"], c.get("detalle", "")) for c in ch],
                          columns=["Chequeo", "Estado", "Detalle"])
         self.tabla("auditoria.md", o, {**d, "generado_por": "notebook 03"}, "tbl-auditoria", titulo,
@@ -1197,9 +1314,9 @@ class Informe:
                    fuente=f"Fuente: `generado/auditoria.json` (notebook 03, {d.get('fecha', '¿?')}).", nota=
                    f"OK: {cuenta['OK']}; "
                    f"DIFERENCIA (bug): {cuenta['DIFERENCIA']}; AVISO: {cuenta['AVISO']}; OMITIDO: {cuenta['OMITIDO']}. "
-                   + ("" if misma else "La auditoría corrió con una receta anterior a la de `kmeans.json`: valida la "
-                      "limpieza y el silver, que no dependen de la receta, y el código del gold y del K-Means con "
-                      "aquella receta."))
+                   + ("" if misma else "La auditoría no corrió sobre la misma receta y el mismo gold que el modelo "
+                      "de `kmeans.json`: valida el código de la limpieza, del gold y del K-Means sobre una corrida "
+                      "anterior, no las cifras de esta."))
         self.cifras["auditoria"] = {k: str(v) for k, v in {
             "ok": entero(cuenta["OK"]), "diferencias": entero(cuenta["DIFERENCIA"]),
             "avisos": entero(cuenta["AVISO"]), "chequeos": entero(len(ch)),
@@ -1269,6 +1386,7 @@ def main() -> int:
     inf.regimenes()
     inf.codo()
     inf.csv_oefa()
+    inf.tipologia()
     inf.calibracion()
     inf.auditoria()
     inf.figuras()

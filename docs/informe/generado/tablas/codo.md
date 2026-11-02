@@ -3,17 +3,17 @@
 ::: {#tbl-codo tbl-colwidths="[9,11,17,11,18,15,19]"}
 | k | k efectivo | Inercia | Semilla | Caída frente a k − 1 | Iteraciones | Paro |
 |---:|---:|---:|---:|---:|---:|:---|
-| 2 | 2 | 72 440,0 | 44 | — | 23 | tolerancia |
-| 3 | 3 | 49 658,4 | 42 | 31,4 % | 24 | tolerancia |
-| 4 | 4 | 40 126,1 | 44 | 19,2 % | 92 | tolerancia |
-| 5 | 5 | 32 224,3 | 46 | 19,7 % | 39 | tolerancia |
-| 6 | 6 | 27 333,1 | 43 | 15,2 % | 73 | tolerancia |
-| 7 | 7 | 22 546,3 | 45 | 17,5 % | 100 | tolerancia |
-| 8 | 8 | 19 274,9 | 45 | 14,5 % | 52 | tolerancia |
-| 9 | 9 | 16 583,8 | 51 | 14,0 % | 100 | max_iter |
-| 10 | 10 | 14 707,6 | 45 | 11,3 % | 100 | max_iter |
+| 2 | 2 | 74 444,0 | 42 | — | 35 | tolerancia |
+| 3 | 3 | 50 950,4 | 42 | 31,6 % | 44 | tolerancia |
+| 4 | 4 | 41 194,7 | 43 | 19,1 % | 58 | tolerancia |
+| 5 | 5 | 33 126,0 | 43 | 19,6 % | 90 | tolerancia |
+| 6 | 6 | 28 104,4 | 48 | 15,2 % | 46 | tolerancia |
+| 7 | 7 | 23 183,7 | 51 | 17,5 % | 43 | tolerancia |
+| 8 | 8 | 19 793,8 | 42 | 14,6 % | 87 | tolerancia |
+| 9 | 9 | 17 043,4 | 45 | 13,9 % | 90 | tolerancia |
+| 10 | 10 | 15 128,8 | 47 | 11,2 % | 88 | tolerancia |
 
 Inercia por número de clusters (método del codo)
 :::
 
-*Nota.* Fuente: `generado/codo.json`, escrito por `cmd/entrenar -codo` (commit `11cef5a`, 2026-11-01, máquina A019803). n = 64 236 filas. Inercia con los centroides finales sobre una submuestra sistemática del gold; para cada k, la mejor de 10 semillas desde la de la receta, igual que el modelo final. La silueta va en la PC4. k de la receta: 3.
+*Nota.* Fuente: `generado/codo.json`, escrito por `cmd/entrenar -codo` (commit `6fb3b00`, 2026-11-01, máquina A019803). n = 65 873 filas. Inercia con los centroides finales sobre una submuestra sistemática del gold; para cada k, la mejor de 10 semillas desde la de la receta, igual que el modelo final. La silueta va en la PC4. k de la receta: 3.

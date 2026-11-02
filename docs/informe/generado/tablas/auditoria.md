@@ -13,32 +13,36 @@
 | estaciones (leídas, procesadas, anchas, fechas, ubicación) | OK | 33 estaciones iguales |
 | valores vistos (parámetros, periodos, unidades) | OK | iguales |
 | silver byte a byte | OK | idéntico (sha256 3e84071aa856327e…) |
-| cabecera del gold | OK | go ['estacion', 'fecha_hora', 'pm10', 'fraccion_fina', 'viento_velocidad', 'humedad'] |
-| filas del gold (regla 8) | OK | python 41,991 · go 41,991 · 0 claves en un solo lado |
-| valores del gold | OK | diferencia máxima 1.69e-14 (tolerancia 1e-09); 0 filas fuera |
-| gold desde el silver de Go | OK | 0 claves en un solo lado; diferencia máxima 1.69e-14 |
-| completas para el gold (total y por estación) | OK | python 41,991 · go 41991 |
-| receta en estandarizacion.json | OK | go features=['pm10', 'fraccion_fina', 'viento_velocidad', 'humedad'] log1p=['pm10'] nivel=absoluto ddof=0 |
-| n de la estandarización | OK | python 41,991 · go 41991 |
-| medias de la estandarización | OK | diferencia relativa máxima 3.26e-15 |
-| desviaciones de la estandarización | OK | diferencia relativa máxima 8.88e-16 |
-| el modelo se entrenó con este gold | OK | gold 1a93989d9af8… · kmeans 1a93989d9af8…, regimenes 1a93989d9af8…, codo 1a93989d9af8… |
+| cabecera del gold | OK | go ['estacion', 'fecha_hora', 'pm2_5', 'pm10'] |
+| filas del gold (regla 8) | OK | python 64,236 · go 64,236 · 0 claves en un solo lado |
+| valores del gold | OK | diferencia máxima 2.13e-14 (tolerancia 1e-09); 0 filas fuera |
+| gold desde el silver de Go | OK | 0 claves en un solo lado; diferencia máxima 2.13e-14 |
+| completas para el gold (total y por estación) | OK | python 64,236 · go 64236 |
+| receta en estandarizacion.json | OK | go features=['pm2_5', 'pm10'] log1p=[] nivel=absoluto ddof=0 |
+| n de la estandarización | OK | python 64,236 · go 64236 |
+| medias de la estandarización | OK | diferencia relativa máxima 2.53e-16 |
+| desviaciones de la estandarización | OK | diferencia relativa máxima 5.68e-16 |
+| el modelo se entrenó con este gold | OK | gold ce1fd2a036e1… · kmeans ce1fd2a036e1…, regimenes ce1fd2a036e1…, codo ce1fd2a036e1… |
 | receta de kmeans.json = configs/kmeans.json | OK | iguales |
-| forma de los centroides | OK | go (5, 4) · k efectivo 5, D 4 |
-| asignaciones | OK | 0 filas con otro régimen · 0 claves en un solo lado de 41,991 |
-| tamaños | OK | python [6227, 7004, 7845, 7647, 13268] · go [6227, 7004, 7845, 7647, 13268] |
-| inercia con los centroides finales | OK | python 59232.845147643 · go 59232.845147643 (rel 6.1e-16) |
-| la inercia no crece entre iteraciones | OK | 21 iteraciones, paro «tolerancia», 0 subidas |
-| punto fijo de Lloyd | OK | máx \|media de las filas − centroide\| = 7.11e-15 (umbral de paro de Go 2.6e-06, paro «tolerancia») |
-| scikit-learn desde los centroides de Go | OK | se mueven 2.22e-15 en 2 iteraciones |
-| centroides frente a scikit-learn | AVISO | máx \|Δ\| tras emparejar 8.17e-03 (tolerancia 0.001); ARI 0.9962; inercia sklearn/go − 1 = +0.00%. Otro mínimo local de igual calidad: no es un bug |
+| forma de los centroides | OK | go (3, 2) · k efectivo 3, D 2 |
+| asignaciones | OK | 0 filas con otro régimen · 0 claves en un solo lado de 64,236 |
+| tamaños | OK | python [47070, 15651, 1515] · go [47070, 15651, 1515] |
+| inercia con los centroides finales | OK | python 49658.357931554 · go 49658.357931554 (rel 1.5e-16) |
+| la inercia no crece entre iteraciones | OK | 24 iteraciones, paro «tolerancia», 0 subidas |
+| punto fijo de Lloyd | OK | máx \|media de las filas − centroide\| = 1.10e-14 (umbral de paro de Go 5.2e-06, paro «tolerancia») |
+| scikit-learn desde los centroides de Go | OK | se mueven 5.55e-16 en 2 iteraciones |
+| centroides frente a scikit-learn | OK | máx \|Δ\| tras emparejar 5.55e-16 (tolerancia 0.001); ARI 1.0000; inercia sklearn/go − 1 = -0.00% |
 | centroides des-estandarizados | OK | diferencia relativa máxima 0.00e+00 |
-| regimenes.json (perfil, PM medio, ECA, horas, estaciones) | OK | iguales |
-| codo.json frente a scikit-learn | OK | inercia de Go / mejor de scikit-learn: máximo 1.000 en k = 3 |
+| arranque elegido entre las semillas | OK | 10 arranques (semillas 42–51); elegida la 42, inercia 49658.357932 = la menor; 6 semillas empatan bit a bit en ella; inercias distintas: [49658.357932, 49658.363217] |
+| Lloyd desde los centroides iniciales de Go | OK | 10 de 10 arranques reproducen la inercia de Go (diferencia relativa máxima 1.5e-16); semilla elegida: máx \|Δ centroide\| 5.6e-16 |
+| regimenes.json (perfil, PM medio, ECA, horas, estaciones) | OK | iguales; convención de la hora «fin» |
+| codo.json frente a scikit-learn | OK | inercia de Go / mejor de scikit-learn: máximo 1.000 en k = 2 |
 | cargador: mismo silver y gold para todo W | OK | identicos=True; 5 valores de W; sha del silver = el auditado |
+| cargador: el benchmark es de la receta auditada | AVISO | el benchmark del cargador (2026-11-01T13:15:42-05:00) corrió con otra receta: gold ≠ el auditado, configs/kmeans.json ≠ el actual; el silver es el mismo. No es un bug: sus tiempos son de esa corrida (bronze → silver → gold con la receta de entonces); conviene repetirlo con la receta final antes de citarlo |
 | K-Means: idéntico bit a bit para todo W | OK | convergencia chunk 1000: True; convergencia chunk 10000: True; fijas chunk 1000: True; fijas chunk 10000: True |
+| K-Means: el benchmark es del gold y la receta auditados | OK | reports/benchmark_kmeans.json: gold = el auditado; receta igual; inercia de «convergencia» con chunk 1000 frente a kmeans.json: diferencia relativa 0.0e+00 |
 
 Auditoría de las salidas de Go contra una segunda implementación
 :::
 
-*Nota.* Fuente: `generado/auditoria.json` (notebook 03, 2026-11-01 14:05). OK: 33; DIFERENCIA (bug): 0; AVISO: 1; OMITIDO: 0. La auditoría corrió con una receta anterior a la de `kmeans.json`: valida la limpieza y el silver, que no dependen de la receta, y el código del gold y del K-Means con aquella receta.
+*Nota.* Fuente: `generado/auditoria.json` (notebook 03, 2026-11-01 15:00). OK: 37; DIFERENCIA (bug): 0; AVISO: 1; OMITIDO: 0. La auditoría no corrió sobre la misma receta y el mismo gold que el modelo de `kmeans.json`: valida el código de la limpieza, del gold y del K-Means sobre una corrida anterior, no las cifras de esta.

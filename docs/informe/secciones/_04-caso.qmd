@@ -18,41 +18,123 @@ contraste entre redes en Lima para el TB2.
 Fuentes de datos del Trabajo Final
 :::
 
+### Cómo se recolecta el dato {#sec-procedencia}
+
+Antes de limpiar el dato hay que saber de dónde sale, porque eso decide qué puede responder. Lo que
+sigue resume el análisis de procedencia del equipo (`docs/eda-procedencia.md`, notebook 04), con
+la misma convención: se dice si cada afirmación sale del **dato**, de un documento de **OEFA**, de
+una **norma** o es una **inferencia** nuestra.
+
+**No es una red: son evaluaciones de actividades fiscalizadas.** Según la ficha de metadatos que
+acompaña al CSV (OEFA), el conjunto reúne las Evaluaciones Ambientales de Seguimiento (EAS) de la
+Dirección de Evaluación Ambiental. El Reglamento de Evaluación del OEFA (norma) define la EAS como
+intervenciones periódicas o continuas para observar los componentes ambientales en el tiempo
+mediante la vigilancia, con el fin de alertar impactos negativos, priorizadas por el plan anual de
+fiscalización [@oefa2020reglamento]; antes de 2020 los informes la llamaban «vigilancia ambiental»
+[@oefa2019ventanilla]. En el dato, cada estación pertenece a la evaluación de una actividad:
+{{< meta cifras.eda.evaluaciones >}} evaluaciones, todas «calidad del aire en el ámbito de influencia
+de» una unidad minera, un complejo metalúrgico, una refinería, una agroindustria, una zona
+industrial o una zona ladrillera, y la descripción de cada punto lo sitúa respecto de la fuente
+(«a 700 m del Complejo Metalúrgico de La Oroya»). OEFA ubica las estaciones a sotavento de la fuente
+[@oefa2019ventanilla] y a veces empieza a medir por quejas de la población [@oefa2019champamarca].
+
+**Lo que eso implica** (inferencia nuestra, a validar): las estaciones están donde hay algo que
+fiscalizar y, dentro de su zona, a favor del viento, y miden mientras hay un motivo para medir. No son
+una muestra del aire del país ni de la exposición de su población: cubren
+{{< meta cifras.eda.regiones >}} de las {{< meta cifras.eda.regiones_total >}} regiones, ninguna en
+la Amazonía, y {{< meta cifras.eda.estaciones_sobre_3000m >}} están por encima de los 3000 m (dato).
+Describen el aire **junto a una fuente fiscalizada, en el periodo en que se la vigiló**
+(@fig-mapa).
+
+![Ubicación de las estaciones de OEFA del dataset, con los recuadros de Ventanilla–Mi Perú y Huachipa–Cajamarquilla](generado/figuras/mapa.png){#fig-mapa width=15cm}
+
+:::: {si-falta="generado/figuras/mapa.png"}
+::: {.callout-warning title="PENDIENTE"}
+Falta `generado/figuras/mapa.png` (la dibuja el notebook 04).
+:::
+::::
+
+**Cómo se mide.** Las estaciones de las EAS son de monitoreo continuo con equipos automáticos; en
+CA-AYAS-01, por ejemplo, un monitor de partículas por dispersión de luz, bajo el Protocolo Nacional
+de Monitoreo de la Calidad Ambiental del Aire (OEFA) [@oefa2021antamina; @minam2019protocolo]. Las
+de Ventanilla–Mi Perú son otra cosa: muestreadores manuales de alto y bajo volumen, con la pesada del
+filtro en laboratorio, que solo dan promedios de 24 horas [@oefa2019ventanilla]. El archivo trae,
+además de las horas, los promedios con los que OEFA compara contra el ECA y contra los niveles de
+estado de alerta: los promedios móviles de 3 horas de SO2 y de 8 horas de CO son justo los periodos
+de esos niveles (norma [@minsa2003alerta]; que OEFA los publique por eso es inferencia nuestra).
+
+**Por qué un 0 quiere decir «sin dato».** OEFA solo compara un día contra el ECA si tiene al menos
+{{< meta cifras.eda.regla_horas_validas >}} horas válidas, el 75 % de 24 [@oefa2021antamina]. En el
+dato, cuando un día tiene menos de {{< meta cifras.eda.regla_horas_validas >}} horas no nulas, el
+promedio de 24 horas que publica OEFA vale 0 en el
+{{< meta cifras.eda.pct_dias_24h_cero_bajo_18h >}} % de los casos; con {{< meta cifras.eda.regla_horas_validas >}} o más, es la media de las horas
+**no nulas** en el {{< meta cifras.eda.pct_dias_24h_media_desde_18h >}} %. Para OEFA, un 0 es un
+faltante, y la limpieza lo trata igual (@sec-hora).
+
+**Cuatro tipos de serie.** Las estaciones no miden lo mismo ni durante el mismo tiempo (@tbl-tipologia,
+@fig-calendario, dato): {{< meta cifras.tipologia.anios >}} series de varios años,
+{{< meta cifras.tipologia.meses >}} series de meses, {{< meta cifras.tipologia.semanas >}}
+campañas de semanas y {{< meta cifras.tipologia.manual >}} puntos de muestreo manual de 24 horas.
+{{< meta cifras.limpieza.n_estaciones_inicio_fin_2021 >}} estaciones arrancan en noviembre o
+diciembre de 2021, y las series de meses aportan el {{< meta cifras.tipologia.meses_pct_gold >}} de
+lo que ve el modelo. El dato permite comparar dentro de una estación y entre estaciones de la misma
+ventana, no tendencias multianuales del país (inferencia nuestra).
+
+{{< include generado/tablas/tipologia.md >}}
+
+![Calendario de las estaciones: qué días tiene cada una lecturas válidas, días en cero y filas vacías](generado/figuras/calendario.png){#fig-calendario width=16cm}
+
+:::: {si-falta="generado/figuras/calendario.png"}
+::: {.callout-warning title="PENDIENTE"}
+Falta `generado/figuras/calendario.png` (la dibuja el notebook 04).
+:::
+::::
+
 ### Lo que el CSV de OEFA es de verdad {#sec-csv}
 
-El CSV se descargó el 01/11 y se exploró con el notebook 01 antes de adaptar el cargador; las cifras
-de esta sección son las de la corrida de `cmd/cargar` sobre el archivo completo (@tbl-csv-oefa). El
-dato no es lo que la ficha del portal hacía suponer, y lo que mostró cambió el diseño:
+El CSV se descargó el 01/11 y se exploró con los notebooks 01 y 04 antes de adaptar el cargador; las
+cifras de esta sección son las de la corrida de `cmd/cargar` sobre el archivo completo
+(@tbl-csv-oefa), salvo las que solo miden los notebooks. El dato no es lo que la ficha del portal
+hacía suponer, y lo que mostró cambió el diseño:
 
 - **Una columna por parámetro, un valor por fila.** Las {{< meta cifras.limpieza.filas_largas_leidas >}}
   filas tienen {{< meta cifras.limpieza.columnas >}} columnas, una por parámetro (PM10, PM2.5, gases
   y meteorología), pero cada fila trae un solo valor y el resto en «-». El parámetro de la fila es su
   única columna con valor, así que el pivot a una fila por estación y hora sigue siendo necesario.
-  {{< meta cifras.limpieza.descartadas_parametro >}} filas no traen ningún valor (o traen más de uno)
-  y se descartan.
-- **Estaciones y años.** El archivo nombra {{< meta cifras.limpieza.n_estaciones >}} estaciones en
-  {{< meta cifras.limpieza.n_departamentos >}} departamentos, entre {{< meta cifras.limpieza.anios >}},
-  pero solo {{< meta cifras.limpieza.n_estaciones_con_datos >}} tienen alguna lectura horaria válida:
-  las demás solo traen promedios de 24 horas o días en cero.
-- **La hora casi nunca viene.** El {{< meta cifras.limpieza.pct_hora_inferida >}} de las lecturas que
-  llegan al silver no trae hora: se reconstruye por la posición de la fila dentro de su día, porque
-  las lecturas de un día vienen en bloques contiguos de 24 en el orden de las horas. El control que lo
-  sostiene: en los {{< meta cifras.eda.control_dias >}} días completos que sí traen la hora explícita,
-  la hora de inicio coincide con la posición en el {{< meta cifras.eda.control_hora >}} de las
-  {{< meta cifras.eda.control_filas >}} filas (@sec-hora).
+- **El hueco cambió de forma en 2022.** Hasta 2021, una hora o un día sin medición vienen como 0;
+  desde enero de 2022, como una **fila vacía**, con todas las columnas de parámetro en «-»: el
+  {{< meta cifras.eda.pct_vacias_2022 >}} % de las {{< meta cifras.limpieza.sin_valor >}} filas sin
+  valor son de 2022, año en que no hay ni un día en cero (dato).
+- **La hora casi nunca viene, y se puede reconstruir.** El {{< meta cifras.limpieza.pct_hora_inferida >}}
+  de las lecturas que llegan al silver no trae hora: falta por evaluación, no por parámetro ni por
+  periodo, porque solo una exportación la conservó (dato). Las lecturas de un día vienen en bloques
+  de 24 en el orden de las horas, así que la hora sale de la posición; donde sí hay hora explícita,
+  coincide con la posición en el {{< meta cifras.eda.control_fisico >}} de
+  {{< meta cifras.eda.control_fisico_filas >}} filas. Y un reporte de OEFA lo confirma desde afuera:
+  el corte de luz que documenta en CA-AYAS-01 en diciembre de 2021 aparece, hora por hora, en las
+  posiciones del CSV [@oefa2021antamina] (@sec-hora).
 - **Hora final.** OEFA fecha cada lectura al **final** de su hora: la de 00:00 a 01:00 es «la de las
   01:00» y la última del día cae a las 00:00 del siguiente. El cargador usa la misma convención
   (`{{< meta cifras.limpieza.convencion_hora >}}`), así que una «hora pico» del informe es la hora en
   que termina la lectura.
-- **Días enteros en cero.** {{< meta cifras.limpieza.bloque_en_cero >}} lecturas
-  ({{< meta cifras.limpieza.pct_bloque_en_cero >}} del archivo) pertenecen a días en que un equipo
-  reportó 0 exacto las 24 horas. Un día así es un equipo apagado, no aire limpio, y se descarta entero.
-- **Gases gemelos.** SO2, CO, O3 y H2S vienen dos veces, en ppb y en µg/m³, con la misma estación y
-  hora: {{< meta cifras.limpieza.duplicado_unidad >}} lecturas son la gemela en otra unidad de una que
-  se conserva. La presión viene en mmHg y en hPa, y se lleva a hPa.
+- **Ceros que son faltantes.** {{< meta cifras.limpieza.bloque_en_cero >}} lecturas
+  ({{< meta cifras.limpieza.pct_bloque_en_cero >}} del archivo) son días enteros en 0 exacto: un
+  equipo apagado o un sensor que la estación no tiene, no aire limpio. Dentro de los días con datos
+  quedan además {{< meta cifras.limpieza.cero_como_faltante >}} horas sueltas en 0 de un contaminante.
+- **Los «duplicados» casi nunca lo son.** El {{< meta cifras.eda.pct_filas_identicas >}} % de las
+  filas ({{< meta cifras.eda.filas_identicas >}}) es textualmente idéntico a otra, porque sin hora
+  24 lecturas iguales de un día son el mismo texto; con la hora reconstruida, los duplicados de
+  estación, parámetro y hora son {{< meta cifras.limpieza.duplicado_exacto >}} (dato). Lo que sí se
+  repite es la misma lectura en dos unidades: SO2, CO, O3 y H2S vienen en ppb y en µg/m³, y la presión
+  en mmHg y en hPa; {{< meta cifras.limpieza.duplicado_unidad >}} lecturas son la gemela de una que se
+  conserva.
 - **Registros multilínea.** {{< meta cifras.eda.multilinea >}} registros tienen un salto de línea
   dentro de un campo entrecomillado, lo que obliga al cargador a unir líneas antes de partir el archivo
   en bloques (@sec-paralelizacion).
+- **Una ubicación mal cargada.** CA-HUAR-01 trae la zona UTM 19, que la pondría en la Amazonía; su
+  descripción la sitúa junto a una unidad minera de Pasco, en la zona 18. El cargador la corrige
+  ({{< meta cifras.limpieza.ubicacion_corregida >}} filas marcadas) y conserva el valor original
+  (dato e inferencia).
 
 {{< include generado/tablas/csv_oefa.md >}}
 

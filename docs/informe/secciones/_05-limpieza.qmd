@@ -17,8 +17,8 @@ con el EDA sin tocar las pruebas.
 |:---|:---|:---|
 | 1 | Solo filas con `Periodo` horario; los promedios diarios o mensuales se descartan | La unidad de análisis es la lectura horaria |
 | 2 | Fecha y hora parseables, en hora local de Lima (UTC−5); fuera del rango del dataset, se descarta | Evitar basura histórica |
-| 2′ | Hora: si falta, se reconstruye por posición en los días de 24 filas contiguas (hora final) y se marca como inferida; si el día no está completo, se descarta (@sec-hora) | El {{< meta cifras.limpieza.pct_hora_inferida >}} de las lecturas no trae hora |
-| 3′ | Un día entero de un parámetro en 0 exacto se descarta: el equipo no midió | Un cero de relleno no es aire limpio |
+| 2′ | Hora: si falta, se reconstruye por posición en los días de 24 filas contiguas (hora final), o en el bloque físico si el día de 2022 tiene filas vacías, y se marca como inferida; si no, se descarta (@sec-hora) | El {{< meta cifras.limpieza.pct_hora_inferida >}} de las lecturas no trae hora |
+| 3′ | Un día entero de un parámetro en 0 exacto se descarta: el equipo no midió; en un día con datos, una hora en 0 exacto de un contaminante también | Para OEFA, un 0 es un faltante, no aire limpio |
 | 3 | Valor numérico; negativos (salvo temperatura) y centinelas del equipo se descartan | Lectura inválida del sensor |
 | 4 | Fuera del rango físico del parámetro, se descarta y se cuenta por parámetro | Rango del equipo |
 | 5 | Duplicados exactos (estación, parámetro, fecha-hora): se conserva el primero en orden de archivo; con valor distinto, se marcan | Reenvíos del sistema de captura |
@@ -42,17 +42,24 @@ El {{< meta cifras.limpieza.pct_hora_inferida >}} de las lecturas que llegan al 
 (@sec-csv). Sin hora no hay lectura horaria, y sin lectura horaria no hay ni pivot ni régimen. La
 decisión del 01/11 fue reconstruirla por **posición**: dentro de cada día de una misma estación,
 parámetro, unidad y periodo, la fila *i* (contando desde cero) es la hora que empieza a las *i*:00 y
-se fecha al final de su hora, a las *i* + 1. Solo se aplica cuando el día tiene exactamente 24 filas
-contiguas en el archivo; si no, la fila se descarta por la regla `hora`
+se fecha al final de su hora, a las *i* + 1. Se aplica cuando el día tiene exactamente 24 filas
+contiguas en el archivo. En 2022 un hueco es una fila vacía que ocupa su hora: un día con 23 lecturas y
+una fila vacía sigue teniendo sus 24 filas físicas, y la posición se cuenta en ese **bloque físico**;
+así se recuperan {{< meta cifras.limpieza.hora_por_bloque_fisico >}} lecturas que antes se perdían. Si
+ni así el día está completo, la fila se descarta por la regla `hora`
 ({{< meta cifras.limpieza.descartadas_hora >}} lecturas). Cada hora reconstruida se marca como
 inferida y se cuenta (@tbl-limpieza-hora).
 
-**La evidencia del control.** La regla se probó donde se puede comprobar. En los
-{{< meta cifras.eda.control_dias >}} días completos que traen la hora explícita, la hora de inicio
-coincide con la posición de la fila en el {{< meta cifras.eda.control_hora >}} de las
-{{< meta cifras.eda.control_filas >}} filas; contando también los días incompletos, en el
-{{< meta cifras.eda.control_pct_todas >}} de las {{< meta cifras.eda.control_filas_con_hora >}}
-filas con hora (notebook 01, `reports/eda_criba.md`).
+**La evidencia del control.** La regla se probó donde se puede comprobar. Donde el archivo trae la
+hora explícita, la hora de inicio coincide con la posición de la fila en su bloque físico en el
+{{< meta cifras.eda.control_fisico >}} de {{< meta cifras.eda.control_fisico_filas >}} filas, incluidas
+{{< meta cifras.eda.control_fisico_huecos >}} de días con huecos (notebook 04); en los
+{{< meta cifras.eda.control_dias >}} días completos con hora, en el {{< meta cifras.eda.control_hora >}}
+de {{< meta cifras.eda.control_filas >}} filas (notebook 01). Y hay un control externo: el reporte de
+OEFA de diciembre de 2021 en CA-AYAS-01 documenta el inicio del monitoreo el 9/12 a las 14:35 y un
+corte de luz del 10/12 a las 15:45 al 11/12 a las 15:05 [@oefa2021antamina]; en el CSV, sin hora, el
+9/12 tiene 10 filas y el corte aparece en las posiciones 16 del 10/12 a 15 del 11/12, al minuto de la
+hora (dato y OEFA).
 
 **Esto es un supuesto fuerte, y el informe lo dice con esas palabras.** Que la hora sea la posición
 en los días que traen hora no prueba que lo sea en los que no la traen: si OEFA ordenara distinto
@@ -64,7 +71,7 @@ hora pico) hereda este supuesto.
 
 {{< include generado/tablas/limpieza_hora.md >}}
 
-### Días en cero, gases gemelos y conversiones
+### Ceros, gases gemelos y conversiones
 
 **Días enteros en cero.** {{< meta cifras.limpieza.bloque_en_cero >}} lecturas
 ({{< meta cifras.limpieza.pct_bloque_en_cero >}} del archivo, @tbl-limpieza-ceros) pertenecen a días
@@ -73,6 +80,15 @@ exactamente cero un día entero: es un equipo que no midió y rellenó con ceros
 medición haría pasar un equipo apagado por aire limpio, que es justo el error que la advertencia de
 cobertura quiere evitar; por eso se descartan enteros (regla `bloque_en_cero`). Solo en PM10 son
 {{< meta cifras.limpieza.bloque_en_cero_pm10 >}} lecturas.
+
+**Horas sueltas en cero.** Dentro de un día con datos, un 0 exacto de un contaminante también es un
+faltante: con un equipo automático siempre hay partículas en el aire, y cerca del límite de detección
+el equipo da valores pequeños, no un 0 exacto; y OEFA no cuenta las horas en 0 al promediar el día
+(@sec-procedencia). La regla `cero_como_faltante` descarta
+{{< meta cifras.limpieza.cero_como_faltante >}} de esas horas, {{< meta cifras.limpieza.cero_como_faltante_pm >}}
+de PM. La meteorología no entra en esta regla: un viento de 0 m/s es calma, y una hora seca tiene
+precipitación 0. En los gases, un 0 podría ser «bajo el límite de detección»: se trata como faltante,
+igual que OEFA, en vez de imputarlo.
 
 {{< include generado/tablas/limpieza_ceros.md >}}
 
@@ -122,25 +138,29 @@ completo, con el comando a la vista y la salida de conteos. Va en `docs/informe/
 :::
 ::::
 
+![Por qué falta el dato: destino de cada fila del archivo y la regla de las 18 horas de OEFA](generado/figuras/faltantes.png){#fig-faltantes width=16cm}
+
+:::: {si-falta="generado/figuras/faltantes.png"}
+::: {.callout-warning title="PENDIENTE"}
+Falta `generado/figuras/faltantes.png` (la dibuja el notebook 04).
+:::
+::::
+
 **Qué dicen los conteos.** Se descarta la mitad del archivo
 ({{< meta cifras.limpieza.pct_descartadas >}}), y casi todo por tres razones que no son ruido de
 medición sino forma del dato: los días en cero ({{< meta cifras.limpieza.pct_bloque_en_cero >}} de
-las filas leídas), las filas sin un único parámetro con valor
-({{< meta cifras.limpieza.pct_descartadas_parametro >}}) y los periodos que no son horarios
+las filas leídas), las filas vacías de la plantilla de 2022
+({{< meta cifras.limpieza.pct_sin_valor >}}) y los periodos que no son horarios
 ({{< meta cifras.limpieza.pct_descartadas_periodo >}}: promedios de 24 horas y medias móviles que
 el archivo mezcla con las horarias). Las gemelas en otra unidad suman otro
 {{< meta cifras.limpieza.pct_duplicado_unidad >}}. De las {{< meta cifras.limpieza.fuera_de_rango >}}
-lecturas fuera de rango, {{< meta cifras.limpieza.fuera_de_rango_presion >}} son de presión, lo que
-apunta más a un problema de unidad o de rango configurado que a lecturas malas: hay que revisarlo
-en `configs/limpieza.json`. Al final, de {{< meta cifras.limpieza.n_estaciones_con_datos >}}
+lecturas fuera de rango, {{< meta cifras.limpieza.fuera_de_rango_presion >}} son de presión, y el
+análisis de procedencia muestra que {{< meta cifras.eda.presion_cero_fuera_de_rango >}} de ellas son
+presión en 0 exacto (días en cero), que la regla del rango físico atrapa antes que `bloque_en_cero`
+porque 0 hPa está fuera de rango: no son lecturas malas ni un problema de unidad. Al final, de {{< meta cifras.limpieza.n_estaciones_con_datos >}}
 estaciones con datos, solo {{< meta cifras.limpieza.n_estaciones_gold >}} tienen horas completas en
 las cuatro features de la receta (@tbl-limpieza-estaciones): el modelo ve una parte chica de la red,
 y la advertencia de cobertura (@sec-cobertura) vale con más razón.
-
-::: {.callout-warning title="PENDIENTE"}
-Confirmar si las {{< meta cifras.limpieza.fuera_de_rango_presion >}} lecturas de presión fuera de
-rango son un problema de unidad (mmHg frente a hPa) o del rango de `configs/limpieza.json`.
-:::
 
 ### Análisis exploratorio
 
@@ -168,8 +188,8 @@ Distribuciones de PM2,5 y PM10 (escala log, con las líneas del ECA). Las dibuja
 
 **Lo que mostró el EDA** (notebook 01 sobre el bronze, `reports/eda_criba.md`). Los episodios
 sobre el ECA existen pero son raros: {{< meta cifras.eda.episodios_24h >}} episodios de 24 horas en
-{{< meta cifras.eda.estaciones_episodios >}} estaciones. PM2,5 y PM10 son coherentes entre sí: solo
-{{< meta cifras.limpieza.violaciones_pm >}} filas anchas tienen PM2,5 > PM10. Algunas estaciones no
+{{< meta cifras.eda.estaciones_episodios >}} estaciones. PM2,5 y PM10 son coherentes entre sí: las
+filas anchas con PM2,5 > PM10 son {{< meta cifras.limpieza.violaciones_pm >}}. Algunas estaciones no
 sirven para todo: el complejo de La Oroya (CA-CC-01) no trae PM en el dataset, solo SO2 y
 meteorología, y en CA-03 y CA-TA-01 el ciclo diario de la temperatura no es creíble (máximo de la
 temperatura antes del mediodía o mínimo cerca de la medianoche), así que su meteorología no se usa como feature tal como viene. Además,
@@ -201,13 +221,13 @@ El patrón es el del TP: dos implementaciones independientes, y si discrepan hay
 los compara con lo que escribió Go (@tbl-auditoria): {{< meta cifras.auditoria.ok >}} de
 {{< meta cifras.auditoria.chequeos >}} chequeos dan OK, {{< meta cifras.auditoria.diferencias >}}
 encuentran una diferencia y {{< meta cifras.auditoria.avisos >}} queda con un aviso, que no es un bug
-(el detalle está en la tabla). El silver es idéntico byte a byte. La auditoría
-se corrió con la misma receta que el modelo de este informe: {{< meta cifras.auditoria.misma_receta >}}.
+(el detalle está en la tabla). La auditoría corrió sobre la misma receta y el mismo gold que el
+modelo de este informe: {{< meta cifras.auditoria.misma_receta >}}.
 
 {{< include generado/tablas/auditoria.md >}}
 
 ::: {.callout-warning title="PENDIENTE"}
-Volver a correr el notebook 03 con la receta final para auditar el gold y el K-Means de esta
-corrida (hoy valida la limpieza y el silver, que no dependen de la receta, y el código del gold y del
-K-Means con la receta provisional) y regenerar sus figuras.
+Volver a correr el notebook 03 sobre la corrida actual (la de las reglas `sin_valor`,
+`cero_como_faltante` y la hora por bloque físico) para auditar sus cifras y regenerar las figuras del
+modelo; hoy la auditoría valida el código sobre una corrida anterior.
 :::

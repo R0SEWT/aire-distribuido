@@ -77,14 +77,26 @@ mediciones que lo sostienen, con sus umbrales, están en `reports/eda_criba.md`.
 ### La pregunta elegida
 
 La criba dejó como base **Q3 apoyada en Q1**: hay episodios sobre el ECA con los que estimar cuánto
-avisa cada régimen, y hay estaciones con PM horario suficiente para decir dónde y cuándo ocurren. Como
-diferencial, **Q5**, que solo permite una red como la de OEFA: hay estaciones vecinas, la más densa
-el grupo de Ventanilla y Mi Perú, en el Callao, con las que distinguir un episodio local, que apunta a
-una fuente fiscalizable, de uno de toda la zona. El equipo la adoptó el 01/11:
+avisa cada régimen, y hay estaciones con PM horario suficiente para decir dónde y cuándo ocurren. El
+equipo la adoptó el 01/11:
 
 > **¿En qué estaciones de OEFA y a qué horas el aire entra en el nivel alto de PM2,5/PM10, y con
 > cuánta anticipación eso avisa de un episodio que supera el ECA?** Y, como diferencial: ¿esos
-> episodios son locales o de toda la zona?
+> episodios son de combustión o de polvo?
+
+**Por qué el diferencial es Q2 y no Q5.** El primer diferencial elegido fue Q5, si los episodios son
+locales o de toda la zona, con el grupo de estaciones vecinas de Ventanilla y Mi Perú, en el Callao.
+El análisis de procedencia lo descartó: de las {{< meta cifras.limpieza.vmp_estaciones >}} estaciones
+del grupo, {{< meta cifras.limpieza.vmp_con_horarias >}} tiene lecturas horarias
+({{< meta cifras.limpieza.vmp_horarias_cuales >}}: {{< meta cifras.limpieza.vmp_horas >}} horas entre
+el {{< meta cifras.limpieza.vmp_desde >}} y el {{< meta cifras.limpieza.vmp_hasta >}}); las demás son
+puntos de muestreo manual que solo dan promedios de 24 horas (@sec-procedencia). Sin horas simultáneas
+en estaciones vecinas no hay con qué distinguir un episodio local de uno de zona. El diferencial pasa
+a **Q2**, que la criba aprobó (la mayoría de las estaciones con PM mide PM2,5 y PM10 a la vez) y que
+también aprovecha lo propio de OEFA: la **fracción fina** (PM2,5/PM10) separa la combustión (fracción
+alta: tráfico, quema, fundición) del polvo (fracción baja: suelo, minería, viento), y eso apunta a
+qué tipo de fuente intervenir. La fracción fina no es una feature del K-Means: se describe por
+régimen.
 
 Tres advertencias van con ella: la cobertura, porque una zona sin estación no es una zona con aire
 limpio (@sec-cobertura); que los huecos del dato no esconden episodios (Q9, abajo); y que
@@ -94,15 +106,15 @@ estaciones del archivo no tienen ninguna lectura horaria válida.
 La pregunta se responde por partes, una por entregable. Esta PC3 responde **dónde y cuándo** el aire
 entra en el nivel alto: los regímenes del K-Means, su etiqueta frente al ECA y su distribución por
 estación y hora (@sec-resultados-kmeans). **Con cuánta anticipación y con qué acierto** avisa es la
-evaluación experimental del TB2: aquí solo se diseña (@sec-eca-inca), igual que el análisis de
-episodios locales o de zona, que depende de que las estaciones vecinas tengan lecturas horarias a la
-vez; cuántas las tienen está en la @tbl-limpieza-estaciones.
+evaluación experimental del TB2: aquí solo se diseña (@sec-eca-inca). El diferencial tiene una primera
+lectura en esta PC3: la fracción fina de cada régimen (@sec-resultados-kmeans).
 
 ### Lo que este dato no puede responder
 
 La criba descartó Q9, y el resultado es favorable: los huecos del dato no coinciden con los episodios
 (llegan después de horas de PM bajo), así que el dato no subestima los episodios por dejar de medir
-justo entonces. Q1, Q4 y Q8 quedaron dudosas: con tan pocas estaciones completas durante un año,
+justo entonces. Q5 pasó la criba pero no la procedencia: las estaciones vecinas más densas no tienen
+horas simultáneas. Q1, Q4 y Q8 quedaron dudosas: con tan pocas estaciones completas durante un año,
 comparar la exposición anual entre lugares (Q4) mediría cobertura más que aire, y el contraste con
 SENAMHI (Q8) espera al TB2. Q1 entra solo como apoyo de la base, sin pedirle un año completo por
 estación.
@@ -127,8 +139,20 @@ Falta `generado/figuras/cobertura.png` (la dibuja el notebook 03).
 ::::
 
 Esta advertencia no es un pie de página: es la responsabilidad ética del caso (ABET SO4). Un sistema
-de alertas que solo ve {{< meta cifras.limpieza.n_estaciones >}} puntos y no lo dice puede dejar sin aviso, con apariencia de normalidad, a
-la mayoría del territorio. Por eso acompaña a cualquier resultado de este informe y al mapa del TB2.
+de alertas que solo ve {{< meta cifras.limpieza.n_estaciones >}} puntos y no lo dice puede dejar sin
+aviso, con apariencia de normalidad, a la mayoría del territorio. Por eso acompaña a cualquier
+resultado de este informe y al mapa del TB2.
+
+**Y no todas las horas valen lo mismo.** Las estaciones no son una red: están junto a una actividad
+fiscalizada, a sotavento, y miden en campañas (@sec-procedencia). Eso pesa en lo que ve el modelo.
+El {{< meta cifras.alto.pct_lima >}} de las horas del nivel alto sale de estaciones de Lima cuyas
+horas con PM2,5 y PM10 son de unas semanas de diciembre de 2021 ({{< meta cifras.alto.estaciones_lima >}}
+horas; las fechas, del notebook 04);
+{{< meta cifras.limpieza.n_estaciones_inicio_fin_2021 >}} estaciones arrancan en noviembre o
+diciembre de 2021, y la mayor parte del gold es de 2022 (el {{< meta cifras.eda.gold_2022_pct >}} %,
+medido por el notebook 04 sobre la corrida del 01/11). Presentar el nivel alto de Lima como la
+exposición de un año sería falso: es lo que midieron unas semanas de diciembre. Comparar estaciones
+solo tiene sentido en ventanas comunes, y cualquier mapa de «zonas de riesgo» tiene que decirlo.
 
 ## Motivación del enfoque
 

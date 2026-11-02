@@ -1,16 +1,33 @@
 {
-  "transcrito": "reports/eda_criba.md",
-  "_fuente": "reports/eda_criba.md, generado por notebooks/01_eda_criba.ipynb el 2026-11-01 sobre el bronze real (sha256 1f09a806…f26d92); los 4 691 días, de datos/doc.go. El notebook no los escribe en JSON: si se vuelve a correr, actualizar este archivo desde el .md.",
+  "transcrito": "reports/eda_criba.md y docs/eda-procedencia.md",
+  "_fuente": "Lo que solo miden los notebooks 01 (criba, reports/eda_criba.md) y 04 (procedencia, docs/eda-procedencia.md) sobre el bronze real (sha256 1f09a806…f26d92); ninguno lo escribe en JSON. Las cifras de procedencia marcadas como [dato] en el documento. gold_2022_pct se calculó sobre el gold de la corrida del 01/11 (64 236 filas), antes de cero_como_faltante y de la hora por bloque físico. Si los notebooks vuelven a correr, se actualiza desde los .md.",
   "multilinea": 100,
   "control_hora": {
     "filas_con_hora_inicio": 118596,
     "filas_posicion": 116558,
     "filas_en_bloques_completos": 112584,
     "filas_en_bloques_completos_posicion": 112584,
-    "dias_en_bloques_completos": 4691
+    "dias_en_bloques_completos": 4691,
+    "filas_bloque_fisico": 165912,
+    "filas_bloque_fisico_posicion": 165912,
+    "filas_bloque_fisico_con_huecos": 53328
   },
   "episodios": {
     "estaciones_con_episodios_24h": 9,
     "episodios_24h": 108
+  },
+  "procedencia": {
+    "evaluaciones": 19,
+    "regiones": 10,
+    "regiones_total": 25,
+    "estaciones_sobre_3000m": 10,
+    "filas_identicas": 1577173,
+    "pct_filas_identicas": 54.7,
+    "pct_vacias_2022": 99.94,
+    "regla_horas_validas": 18,
+    "pct_dias_24h_cero_bajo_18h": "90–98",
+    "pct_dias_24h_media_desde_18h": "89–91",
+    "gold_2022_pct": 61,
+    "presion_cero_fuera_de_rango": 50002
   }
 }

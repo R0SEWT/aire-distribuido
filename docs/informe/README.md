@@ -13,7 +13,7 @@ FETCH=1 bash render.sh                   # además hace git fetch antes del hist
 ```
 
 Requisitos: Quarto ≥ 1.4 (probado con 1.10.19), Python 3 con pandas (o `uv`, que lo instala al
-vuelo) y git. Para renderizar no hace falta Jupyter ni LaTeX; para **regenerar las figuras** en
+vuelo: `uv run tablas.py`; `render.sh` lo usa solo si el `python3` del sistema no tiene pandas) y git. Para renderizar no hace falta Jupyter ni LaTeX; para **regenerar las figuras** en
 local sí: los notebooks se corren con `jupyter nbconvert` (ver `notebooks/README.md`). El índice es un
 campo de Word: `render.sh` marca el `.docx` para que Word pregunte al abrirlo si actualiza los
 campos; hay que aceptar (o clic derecho sobre el índice → Actualizar campo).
@@ -107,7 +107,7 @@ ellos, nunca al revés. Se copian desde `reports/` (o `python3 tablas.py --entra
 
 | Archivo | Lo escribe | Esquema en | Qué toma el informe |
 |---|---|---|---|
-| `limpieza.json` | `cmd/cargar` | `datos/reporte.go`, reglas en `datos/doc.go` | `metadatos`, `sha256` del CSV y de las `configs`, `convencion_hora`; filas largas (leídas, procesadas, descartadas por regla en el orden de la cascada, marcadas: hora inferida, unidad convertida; hora explícita e inferida; días en cero y fuera de rango por parámetro; conversiones por parámetro); filas anchas (total, completas del gold, PM2.5 > PM10, con hora inferida); por estación (leídas, procesadas, anchas, gold, desde, hasta, ubicación y ubicaciones distintas); parámetros, periodos y unidades vistos; avisos; workers, bloques, duración y `fases_s` (para Amdahl) |
+| `limpieza.json` | `cmd/cargar` | `datos/reporte.go`, reglas en `datos/doc.go` | `metadatos`, `sha256` del CSV y de las `configs`, `convencion_hora`; filas largas (leídas, procesadas, descartadas por regla en el orden de la cascada, marcadas: hora inferida, unidad convertida, ubicación corregida; hora explícita, inferida y por bloque físico; días en cero, horas en cero y fuera de rango por parámetro; conversiones por parámetro); filas anchas (total, completas del gold, PM2.5 > PM10, con hora inferida); por estación (leídas, procesadas, anchas, gold, desde, hasta, ubicación con lat/lon, ubicación original y ubicaciones distintas); parámetros, periodos y unidades vistos; avisos; workers, bloques, duración y `fases_s` (para Amdahl) |
 | `estandarizacion.json` | `cmd/cargar` | `datos/estandarizar.go` | `metadatos`, features, log1p, nivel, n, media, desv, ddof, chunk |
 | `benchmark_cargador.json` | `cmd/cargar -bench` | `datos/medicion.go` | `metadatos`, `protocolo` (con `nota_recorte` si las repeticiones no alcanzan para el recorte); por W: tiempos, mediana, media recortada, speedup con IC bootstrap (`speedup_ic`, cociente de medias recortadas) y cociente de medianas (`speedup`), sha256 del silver y del gold; `identicos` |
 | `benchmark_kmeans.json` | `cmd/benchmark` | `cmd/benchmark/main.go` | `resumen` por experimento (iteraciones fijas y hasta converger), modo, W y chunk: mediana, media recortada, ms por iteración, speedup con IC bootstrap, eficiencia; `determinismo` |
@@ -116,7 +116,8 @@ ellos, nunca al revés. Se copian desde `reports/` (o `python3 tablas.py --entra
 | `codo.json` | `cmd/entrenar -codo` | `kmeans/codo.go` | inercia, semilla, iteraciones y paro por k; el k elegido es el de la receta |
 | `auditoria.json` | notebook 03 | — | los chequeos de Go contra pandas y scikit-learn; si la auditoría corrió con otra receta que `kmeans.json`, el informe lo dice y `--final` falla |
 | `../../reports/calibracion_resumen.csv`, `kmeans_propuesto.json` | notebook 02 | — | la tabla de la calibración: la receta final frente a su versión con log1p, la que prefería la regla automática y la provisional (se leen de `reports/`, no se copian: `*.csv` está ignorado en el repo) |
-| `eda.json` | transcrito de `reports/eda_criba.md` (notebook 01) | — | lo que solo mide el EDA: el control de la hora por posición (días completos con hora explícita), los registros multilínea y los episodios de 24 h sobre el ECA. Si el notebook 01 vuelve a correr, se actualiza desde el `.md` |
+| `../../reports/estaciones_ficha.csv` | notebook 04 | — | el tipo de serie de cada estación (años, meses, semanas, manual), para la tabla de tipología; las lecturas y el gold de esa tabla salen de `limpieza.json` |
+| `eda.json` | transcrito de `reports/eda_criba.md` (notebook 01) y `docs/eda-procedencia.md` (notebook 04) | — | lo que solo miden los notebooks: el control de la hora por posición, los registros multilínea, los episodios de 24 h, y los datos de procedencia (evaluaciones, regiones, regla de las 18 horas, filas idénticas, filas vacías de 2022, % del gold de 2022). Se actualiza desde los `.md` si los notebooks vuelven a correr; la prosa respeta sus etiquetas [dato], [OEFA], [norma] e [inferencia] |
 
 Los siete de Go son copias de `reports/` de la **corrida sobre el CSV completo de OEFA** (01/11).
 Para actualizarlos, se vuelven a copiar desde `reports/` después de correr los comandos. Si alguna

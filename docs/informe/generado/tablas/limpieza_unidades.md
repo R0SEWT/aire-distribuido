@@ -20,4 +20,4 @@
 Unidades vistas por parámetro canónico
 :::
 
-*Nota.* Fuente: `generado/limpieza.json`, escrito por `cmd/cargar` (commit `5306012`, 2026-11-01, máquina A019803). Las unidades con factor en `configs/limpieza.json` se convierten a la canónica (regla 6); las que no figuran se descartan (regla `unidad`).
+*Nota.* Fuente: `generado/limpieza.json`, escrito por `cmd/cargar` (commit `6fb3b00`, 2026-11-01, máquina A019803). Las unidades con factor en `configs/limpieza.json` se convierten a la canónica (regla 6); las que no figuran se descartan (regla `unidad`).

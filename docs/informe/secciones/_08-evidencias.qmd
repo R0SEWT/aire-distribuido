@@ -177,7 +177,8 @@ de material particulado:
 - **Nivel bajo** (régimen {{< meta cifras.bajo.regimen >}}): el {{< meta cifras.bajo.pct >}} de las
   horas, con PM2,5 medio de {{< meta cifras.bajo.pm2_5 >}} µg/m³ y PM10 de
   {{< meta cifras.bajo.pm10 >}}. Aparece a toda hora, con algo más de peso en la
-  {{< meta cifras.bajo.franja >}}, y en las {{< meta cifras.bajo.n_estaciones >}} estaciones.
+  {{< meta cifras.bajo.franja >}}, y en {{< meta cifras.bajo.n_estaciones >}} de las
+  {{< meta cifras.limpieza.n_estaciones_gold >}} estaciones.
 - **Nivel medio** (régimen {{< meta cifras.medio.regimen >}}): el {{< meta cifras.medio.pct >}},
   con PM2,5 de {{< meta cifras.medio.pm2_5 >}} y PM10 de {{< meta cifras.medio.pm10 >}} µg/m³; más
   frecuente de {{< meta cifras.medio.franja >}} (pico a las {{< meta cifras.medio.hora_pico >}}).
@@ -194,16 +195,33 @@ aire entra en él. Que su media supere el ECA no significa que cada hora suya se
 (el ECA es un promedio de 24 horas), pero en la calibración este régimen recogió el
 {{< meta cifras.calibracion.recall >}} de las horas en que el promedio de 24 horas sí lo superó: es
 la señal de partida para medir, en el TB2, con cuánta anticipación avisa. Los episodios son raros, y
-eso se ve en su tamaño. La fracción fina, como cociente PM2,5/PM10 de las medias, es de
-{{< meta cifras.alto.cociente >}} en el nivel alto frente a {{< meta cifras.bajo.cociente >}} en el
-bajo: si es menor, los episodios traen más partícula gruesa, lo que apunta a polvo antes que a
-combustión; es una lectura a confirmar con la meteorología por régimen.
+eso se ve en su tamaño.
 
-**Una advertencia de peso.** {{< meta cifras.limpieza.estacion_gold_max >}}
-({{< meta cifras.bajo.departamento >}}) aporta el {{< meta cifras.limpieza.pct_estacion_gold_max >}}
-de las horas completas del gold y es la estación principal de los tres niveles: lo que el modelo dice
-del aire «en general» está cargado hacia esa estación. Y vale la advertencia de cobertura: el nivel
-de un lugar sin estación no se conoce (@sec-cobertura).
+**Combustión o polvo: el diferencial.** La fracción fina, como cociente PM2,5/PM10 de las medias, es
+de {{< meta cifras.alto.cociente >}} en el nivel alto, {{< meta cifras.medio.cociente >}} en el
+medio y {{< meta cifras.bajo.cociente >}} en el bajo. Si baja a medida que sube el nivel, los episodios
+traen más partícula gruesa que el aire de fondo, lo que apunta a polvo (suelo, minería, viento) antes
+que a combustión. Es la primera lectura de Q2, el diferencial de la pregunta; la respuesta por
+estación, y con la meteorología de cada régimen, queda para el TB2.
+
+**Advertencias de peso.** Estos niveles no describen el aire del Perú, y hay que leerlos con tres
+cuidados:
+
+- **Una estación pesa mucho.** {{< meta cifras.limpieza.estacion_gold_max >}}
+  ({{< meta cifras.limpieza.departamento_gold_max >}}) aporta el
+  {{< meta cifras.limpieza.pct_estacion_gold_max >}} de las horas completas del gold y es la estación
+  principal de los tres niveles: lo que el modelo dice del aire «en general» está cargado hacia ella.
+- **El nivel alto mezcla sitio y época.** El {{< meta cifras.alto.pct_lima >}} de sus horas sale de
+  estaciones de Lima ({{< meta cifras.alto.estaciones_lima >}} horas) cuyas horas con PM2,5 y PM10 son
+  de unas semanas de diciembre de 2021. Que una estación de Lima pase muchas de sus horas en el nivel
+  alto describe esas semanas, no la exposición de un año, y no se puede comparar con un año entero de
+  otra estación (inferencia nuestra).
+- **El gold es sobre todo reciente.** {{< meta cifras.limpieza.n_estaciones_inicio_fin_2021 >}}
+  estaciones arrancan en noviembre o diciembre de 2021, y el {{< meta cifras.eda.gold_2022_pct >}} %
+  del gold es de 2022 (notebook 04, sobre la corrida del 01/11). Las series largas con más horas no
+  entran al gold porque no miden PM2,5 (@tbl-tipologia).
+
+Y vale la advertencia de cobertura: el nivel de un lugar sin estación no se conoce (@sec-cobertura).
 
 ::: {.callout-warning title="PENDIENTE"}
 La descripción de la meteorología por régimen (viento, humedad, temperatura), que el modelo no usa
