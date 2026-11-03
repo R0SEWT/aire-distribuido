@@ -36,3 +36,5 @@ coverage.*
 
 # Docker Compose
 .env
+
+docs/video/build/
