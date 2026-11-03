@@ -1,0 +1,75 @@
+<mxGraphModel adaptiveColors="auto" grid="0" page="0">
+  <root>
+    <mxCell id="0"/>
+    <mxCell id="1" parent="0"/>
+    <mxCell id="loop" value="loop" style="shape=umlFrame;whiteSpace=wrap;html=1;width=52;height=22;fontSize=11;fontStyle=1;fillColor=none;strokeColor=#1f5fa8;dashed=1;dashPattern=3 3;fontColor=#13355e;" vertex="1" parent="1">
+      <mxGeometry x="24" y="228" width="722" height="364" as="geometry"/>
+    </mxCell>
+    <mxCell id="loop_t" value="[ronda t, hasta converger o max_iter]" style="text;html=1;align=left;verticalAlign=middle;fontSize=11;fontColor=#13355e;" vertex="1" parent="1">
+      <mxGeometry x="112" y="228" width="260" height="22" as="geometry"/>
+    </mxCell>
+    <mxCell id="opt" value="opt" style="shape=umlFrame;whiteSpace=wrap;html=1;width=46;height=22;fontSize=11;fontStyle=1;fillColor=none;strokeColor=#1f5fa8;dashed=1;dashPattern=3 3;fontColor=#13355e;" vertex="1" parent="1">
+      <mxGeometry x="40" y="480" width="692" height="98" as="geometry"/>
+    </mxCell>
+    <mxCell id="opt_t" value="[vence el plazo de la ronda t]" style="text;html=1;align=left;verticalAlign=middle;fontSize=11;fontColor=#13355e;" vertex="1" parent="1">
+      <mxGeometry x="112" y="480" width="240" height="22" as="geometry"/>
+    </mxCell>
+    <mxCell id="lc" value="" style="endArrow=none;html=1;strokeColor=#1f5fa8;strokeWidth=1.5;" edge="1" parent="1">
+      <mxGeometry width="50" height="50" relative="1" as="geometry"><mxPoint x="100" y="60" as="sourcePoint"/><mxPoint x="100" y="646" as="targetPoint"/></mxGeometry>
+    </mxCell>
+    <mxCell id="l1" value="" style="endArrow=none;html=1;strokeColor=#1f5fa8;strokeWidth=1.5;" edge="1" parent="1">
+      <mxGeometry width="50" height="50" relative="1" as="geometry"><mxPoint x="385" y="60" as="sourcePoint"/><mxPoint x="385" y="646" as="targetPoint"/></mxGeometry>
+    </mxCell>
+    <mxCell id="lk" value="" style="endArrow=none;html=1;strokeColor=#1f5fa8;strokeWidth=1.5;" edge="1" parent="1">
+      <mxGeometry width="50" height="50" relative="1" as="geometry"><mxPoint x="670" y="60" as="sourcePoint"/><mxPoint x="670" y="646" as="targetPoint"/></mxGeometry>
+    </mxCell>
+    <mxCell id="hc" value="Coordinador" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#e6eef9;strokeColor=#1f5fa8;fontColor=#13355e;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+      <mxGeometry x="40" y="24" width="120" height="36" as="geometry"/>
+    </mxCell>
+    <mxCell id="h1" value="Nodo 1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#e6eef9;strokeColor=#1f5fa8;fontColor=#13355e;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+      <mxGeometry x="325" y="24" width="120" height="36" as="geometry"/>
+    </mxCell>
+    <mxCell id="hk" value="Nodo K" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#e6eef9;strokeColor=#1f5fa8;fontColor=#13355e;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+      <mxGeometry x="610" y="24" width="120" height="36" as="geometry"/>
+    </mxCell>
+    <mxCell id="n_hola" value="Apretón de manos, nodo por nodo: el nodo abre la conexión (Colab no acepta entrantes)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#fff8e1;strokeColor=#c9a227;fontColor=#333333;fontSize=11;" vertex="1" parent="1">
+      <mxGeometry x="40" y="78" width="690" height="26" as="geometry"/>
+    </mxCell>
+    <mxCell id="m_hola" value="HOLA {version, nodo, workers}" style="endArrow=block;endFill=1;html=1;strokeColor=#333333;fontSize=12;fontColor=#222222;verticalAlign=bottom;" edge="1" parent="1">
+      <mxGeometry width="50" height="50" relative="1" as="geometry"><mxPoint x="385" y="132" as="sourcePoint"/><mxPoint x="100" y="132" as="targetPoint"/></mxGeometry>
+    </mxCell>
+    <mxCell id="m_cargar" value="CARGAR {rango [0, n₁), huella del gold}" style="endArrow=block;endFill=1;html=1;strokeColor=#333333;fontSize=12;fontColor=#222222;verticalAlign=bottom;" edge="1" parent="1">
+      <mxGeometry width="50" height="50" relative="1" as="geometry"><mxPoint x="100" y="166" as="sourcePoint"/><mxPoint x="385" y="166" as="targetPoint"/></mxGeometry>
+    </mxCell>
+    <mxCell id="m_listo" value="LISTO {n, huella}" style="endArrow=block;endFill=1;html=1;strokeColor=#333333;fontSize=12;fontColor=#222222;verticalAlign=bottom;" edge="1" parent="1">
+      <mxGeometry width="50" height="50" relative="1" as="geometry"><mxPoint x="385" y="200" as="sourcePoint"/><mxPoint x="100" y="200" as="targetPoint"/></mxGeometry>
+    </mxCell>
+    <mxCell id="m_it1" value="ITERAR {t, centroides k×D}" style="endArrow=block;endFill=1;html=1;strokeColor=#333333;fontSize=12;fontColor=#222222;verticalAlign=bottom;" edge="1" parent="1">
+      <mxGeometry width="50" height="50" relative="1" as="geometry"><mxPoint x="100" y="276" as="sourcePoint"/><mxPoint x="385" y="276" as="targetPoint"/></mxGeometry>
+    </mxCell>
+    <mxCell id="m_itk" value="ITERAR {t, centroides k×D}" style="endArrow=block;endFill=1;html=1;strokeColor=#333333;fontSize=12;fontColor=#222222;verticalAlign=bottom;" edge="1" parent="1">
+      <mxGeometry width="50" height="50" relative="1" as="geometry"><mxPoint x="100" y="308" as="sourcePoint"/><mxPoint x="670" y="308" as="targetPoint"/></mxGeometry>
+    </mxCell>
+    <mxCell id="n_fanout" value="fan-out con el mismo plazo para todos · cada nodo corre Parciales(su rango) con su worker pool" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#fff8e1;strokeColor=#c9a227;fontColor=#333333;fontSize=11;" vertex="1" parent="1">
+      <mxGeometry x="40" y="324" width="690" height="26" as="geometry"/>
+    </mxCell>
+    <mxCell id="m_p1" value="PARCIAL {t, sumas k×D, conteos k, inercia}" style="endArrow=block;endFill=1;html=1;strokeColor=#333333;fontSize=12;fontColor=#222222;verticalAlign=bottom;" edge="1" parent="1">
+      <mxGeometry width="50" height="50" relative="1" as="geometry"><mxPoint x="385" y="384" as="sourcePoint"/><mxPoint x="100" y="384" as="targetPoint"/></mxGeometry>
+    </mxCell>
+    <mxCell id="m_pk" value="PARCIAL {t, sumas k×D, conteos k, inercia}" style="endArrow=block;endFill=1;html=1;strokeColor=#333333;fontSize=12;fontColor=#222222;verticalAlign=bottom;" edge="1" parent="1">
+      <mxGeometry width="50" height="50" relative="1" as="geometry"><mxPoint x="670" y="418" as="sourcePoint"/><mxPoint x="100" y="418" as="targetPoint"/></mxGeometry>
+    </mxCell>
+    <mxCell id="n_fanin" value="&lt;b&gt;barrera completa (fan-in)&lt;/b&gt;: Fusionar en orden de nodo 1…K, no de llegada · Actualizar los centroides · ¿convergió?" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#fff8e1;strokeColor=#c9a227;fontColor=#333333;fontSize=11;" vertex="1" parent="1">
+      <mxGeometry x="40" y="436" width="690" height="26" as="geometry"/>
+    </mxCell>
+    <mxCell id="n_plazo" value="«ronda t abortada: el nodo K no envió su PARCIAL dentro del plazo» · el operador relanza la corrida" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#fff8e1;strokeColor=#c9a227;fontColor=#333333;fontSize=11;" vertex="1" parent="1">
+      <mxGeometry x="56" y="510" width="660" height="26" as="geometry"/>
+    </mxCell>
+    <mxCell id="m_rez" value="PARCIAL {t} rezagado: su ronda ya pasó, se descarta" style="endArrow=open;endFill=0;dashed=1;dashPattern=4 3;html=1;strokeColor=#333333;fontSize=12;fontColor=#222222;verticalAlign=bottom;" edge="1" parent="1">
+      <mxGeometry width="50" height="50" relative="1" as="geometry"><mxPoint x="670" y="562" as="sourcePoint"/><mxPoint x="100" y="562" as="targetPoint"/></mxGeometry>
+    </mxCell>
+    <mxCell id="m_fin" value="FIN (a cada nodo)" style="endArrow=block;endFill=1;html=1;strokeColor=#333333;fontSize=12;fontColor=#222222;verticalAlign=bottom;" edge="1" parent="1">
+      <mxGeometry width="50" height="50" relative="1" as="geometry"><mxPoint x="100" y="624" as="sourcePoint"/><mxPoint x="385" y="624" as="targetPoint"/></mxGeometry>
+    </mxCell>
+  </root>
+</mxGraphModel>

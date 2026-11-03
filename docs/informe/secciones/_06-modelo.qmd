@@ -190,8 +190,8 @@ parciales de todos los nodos (la barrera) y recién entonces actualiza.
 
 :::: {si-falta="../diagramas/secuencia-iteracion.png"}
 ::: {.callout-warning title="PENDIENTE"}
-Falta `docs/diagramas/secuencia-iteracion.png` (lo genera `docs/diagramas/renderizar.sh` desde
-`secuencia-iteracion.mmd`).
+Falta `docs/diagramas/secuencia-iteracion.png` (se exporta con draw.io desde
+`secuencia-iteracion.drawio`; ver `docs/diagramas/renderizar.sh`).
 :::
 ::::
 

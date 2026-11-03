@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
 # Renderiza cada .mmd de esta carpeta a un PNG con el mismo nombre.
 #
-# arquitectura.png NO sale de aquí: su fuente es arquitectura.drawio (draw.io, editable; el PNG
-# lleva el XML embebido). Se exporta con el draw.io de escritorio:
+# arquitectura.png y secuencia-iteracion.png NO salen de aquí: su fuente es el .drawio del mismo
+# nombre (draw.io, editable; el PNG lleva el XML embebido). Se exportan con el draw.io de escritorio:
 #   drawio -x -f png -e -b 12 -s 2 -o arquitectura.png arquitectura.drawio
+#   drawio -x -f png -e -b 12 -s 3 -o secuencia-iteracion.png secuencia-iteracion.drawio
 #
 # Usa el Mermaid que trae Quarto (el mismo que dibuja los diagramas del informe)
 # en una página HTML mínima, la captura con Chrome sin cabeza y recorta el
