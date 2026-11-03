@@ -30,19 +30,13 @@ con el EDA sin tocar las pruebas.
 Reglas de limpieza y su motivo
 :::
 
-::: {.callout-note title="Borrador generado con IA, para revisión de Rody"}
-Párrafo y tabla de umbrales agregados por un agente de Claude Code el 02/11; la tabla la genera
-`tablas.py` desde `configs/limpieza.json`. Borrar este aviso al aprobarlo.
-:::
-
-Los umbrales de las reglas 3, 4 y 6 están en la @tbl-umbrales, que `tablas.py` lee de
-`configs/limpieza.json`, el mismo archivo que usó la corrida de este informe (su sha256 coincide con
-el que registra `limpieza.json`: {{< meta cifras.umbrales.config_de_la_corrida >}}). Los rangos son
-físicos, no estadísticos: descartan lo que no puede ser una lectura (una humedad sobre 100 %, una
-presión bajo 400 hPa, que no se da a la altitud de ninguna estación), no lo que es raro, para no
-recortar los episodios que el modelo tiene que ver. Los centinelas ({{< meta cifras.umbrales.centinelas >}}) se
-comparan con el valor crudo, antes de convertir la unidad, y la columna «Día en 0 = sin dato» es la
-regla 3′: solo la precipitación queda fuera, porque un día seco tiene precipitación 0.
+La @tbl-umbrales resume los umbrales de las reglas 3, 4 y 6, tomados de la misma configuración con
+la que corrió el cargador (`configs/limpieza.json`). Los rangos son físicos, no estadísticos: descartan
+lo que no puede ser una lectura (una humedad sobre 100 %, una presión bajo 400 hPa, que no se da a la
+altitud de ninguna estación), no lo que es raro, para no recortar los episodios que el modelo tiene
+que ver. Los centinelas ({{< meta cifras.umbrales.centinelas >}}) se comparan con el valor crudo,
+antes de convertir la unidad. La columna «Día en 0 = sin dato» aplica la regla 3′ a todos los
+parámetros menos la precipitación, porque un día seco tiene precipitación 0.
 
 {{< include generado/tablas/umbrales.md >}}
 

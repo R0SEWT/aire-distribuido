@@ -55,12 +55,6 @@ Falta `generado/figuras/mapa.png` (la dibuja el notebook 04).
 :::
 ::::
 
-::: {.callout-note title="Borrador generado con IA, para revisión de Rody"}
-Párrafo y tabla de estaciones agregados por un agente de Claude Code el 02/11 (la tabla la genera
-`tablas.py` desde `reports/estaciones_ficha.csv` y `regimenes.json`); también se corrigió arriba la
-lista de actividades, que no nombraba el corredor vial de Cusco. Borrar este aviso al aprobarlo.
-:::
-
 La @tbl-estaciones-actividad pone cada estación junto a la actividad que vigila, con su tipo de serie,
 sus horas válidas y cuántas llegan al gold. Se lee de un vistazo lo que el modelo puede y no puede
 ver: las series largas de La Oroya, Paragsha, Talara y Cuajone no llegan al gold (no miden PM2,5), los

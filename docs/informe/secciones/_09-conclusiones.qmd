@@ -28,7 +28,7 @@ equipo sostiene en la exposición y borrar este aviso al aprobarlas.
    {{< meta cifras.benchmark_cargador.speedup >}} (IC 95 %
    {{< meta cifras.benchmark_cargador.speedup_ic >}}), con eficiencia de
    {{< meta cifras.benchmark_cargador.eficiencia >}}, y el silver y el gold salen con el mismo sha256
-   para todo número de workers (idénticos: {{< meta cifras.benchmark_cargador.identicos >}}). La lectura de
+   para todo número de workers. La lectura de
    Amdahl sale de las fases medidas (@tbl-limpieza-fases): la hora por posición y el orden de la tabla,
    seriales, pesan el {{< meta cifras.limpieza.fraccion_serial >}} de la carga, y la fusión en orden de
    bloque, serial aunque solapada con la lectura, otros {{< meta cifras.limpieza.fusion_s >}} s. La
@@ -40,7 +40,7 @@ equipo sostiene en la exposición y borrar este aviso al aprobarlas.
 3. **El K-Means del Trabajo Parcial se portó sin perder su contrato, y es reproducible bit a bit.**
    Conserva el contrato numérico del TP y sus pruebas; con el chunk fijo, la reducción en orden de
    chunk da los mismos centroides para cualquier número de workers (`go test -race` lo fija y el
-   benchmark lo confirma para todos los W medidos: {{< meta cifras.benchmark_kmeans.identico >}}). Las
+   benchmark lo confirma para todos los W medidos). Las
    {{< meta cifras.kmeans.semillas_cerca_del_minimo >}} de {{< meta cifras.kmeans.semillas >}} semillas
    llegan a menos de 0,001 % de la misma inercia, y scikit-learn reproduce asignaciones, inercia y
    centroides (@tbl-auditoria). Su speedup, {{< meta cifras.benchmark_kmeans.speedup >}} con

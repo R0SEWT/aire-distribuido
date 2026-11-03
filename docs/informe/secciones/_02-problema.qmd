@@ -12,14 +12,6 @@ siete veces al año [@minam2017eca]. La Resolución Ministerial N.° 181-2016-MI
 Calidad del Aire (INCA), que traduce las concentraciones a cuatro bandas (buena, moderada, mala y
 umbral de cuidado) para comunicarlas a la población [@minam2016inca]. Ver la @sec-eca-inca.
 
-::: {.callout-note title="Borrador generado con IA, para revisión de Rody"}
-Párrafo de salud redactado por un agente de Claude Code el 02/11. Las frases de la OMS se leyeron en
-sus páginas (guía y comunicado del 22/09/2021). Los niveles de la guía (5 y 15 µg/m³ de PM2,5; 15 y
-45 de PM10) la OMS los publica como imagen y su PDF no se pudo descargar: se cotejaron con la tabla
-que reproduce la declaración de COMEAP (gov.uk). Cotejarlos una vez con la tabla del PDF de la OMS y
-borrar este aviso.
-:::
-
 Según la Organización Mundial de la Salud (OMS), tanto el PM10 como el PM2,5 penetran hasta lo
 profundo de los pulmones, y el PM2,5 puede pasar al torrente sanguíneo; sus efectos son sobre todo
 cardiovasculares y respiratorios, y alcanzan a otros órganos [@oms2021comunicado]. La contaminación

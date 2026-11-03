@@ -26,17 +26,8 @@ vista, en `docs/informe/capturas/`.
 Estructura del repositorio
 :::
 
-::: {.callout-note title="Borrador generado con IA, para revisión de Rody"}
-Los fragmentos los extrae `tablas.py` del código en cada render (función `fragmentos`, por patrón), con
-su archivo y sus líneas; el texto que los presenta lo redactó un agente de Claude Code el 02/11. Antes
-de entregar, renderizar desde `release/pc3` para que las líneas sean las de la versión entregada, y
-borrar este aviso. El mismo agente cambió el bloque de firmas de la @sec-distribuido por la copia
-literal (@lst-firmas) y agregó las referencias a los listados en la @sec-paralelizacion.
-:::
-
-Los fragmentos que siguen sostienen la @sec-paralelizacion. No se copian a mano: `tablas.py` los
-extrae del código en cada render y anota sus líneas, así que si el código cambia, el informe cambia
-con él.
+Los fragmentos que siguen sostienen la @sec-paralelizacion. Se toman del código del repositorio en
+cada render, con su archivo y sus líneas, de modo que el informe muestra la versión entregada.
 
 **Cargador.** Cada worker del pool (@lst-cargador-pool) toma índices de bloque del canal `trabajos` y
 manda su parcial por `resultados`; el `select` con `fin` lo deja salir ante el primer error sin quedar
@@ -114,7 +105,7 @@ recortadas, como en el K-Means) fue {{< meta cifras.benchmark_cargador.speedup >
 {{< meta cifras.benchmark_cargador.speedup_medianas >}} (de
 {{< meta cifras.benchmark_cargador.mediana_base_s >}} s a
 {{< meta cifras.benchmark_cargador.mediana_w_s >}} s). El silver y el gold salieron idénticos
-(mismo sha256) para todo número de workers: {{< meta cifras.benchmark_cargador.identicos >}}.
+(mismo sha256) para todo número de workers.
 
 {{< include generado/tablas/benchmark_cargador.md >}}
 
@@ -127,7 +118,7 @@ resultado) (@tbl-bench-kmeans). Con el mismo criterio de un W fijo, hasta conver
 {{< meta cifras.benchmark_kmeans.speedup >}} (IC 95 %
 {{< meta cifras.benchmark_kmeans.speedup_ic >}}), con una eficiencia de
 {{< meta cifras.benchmark_kmeans.eficiencia >}}. El resultado fue idéntico bit a bit para todo
-número de workers: {{< meta cifras.benchmark_kmeans.identico >}}.
+número de workers.
 
 {{< include generado/tablas/benchmark_kmeans.md >}}
 
@@ -256,15 +247,6 @@ cuidados:
 
 Y vale la advertencia de cobertura: el nivel de un lugar sin estación no se conoce (@sec-cobertura).
 
-::: {.callout-note title="Borrador generado con IA, para revisión de Rody"}
-Los párrafos «La meteorología de cada nivel» y «La auditoría del modelo» los redactó un agente de
-Claude Code el 02/11. `reports/descriptores_regimen.csv` es de la corrida anterior (sus horas no suman
-el gold actual) y `tablas.py` lo avisa: hay que correr la §8 del notebook 02 sobre las salidas de Go
-del 01/11. El agente la recalculó aparte, sin escribir en el repo, y el patrón se mantiene (humedad
-+2,1, −5,5 y −5,3 puntos; fracción fina 0,601, 0,486 y 0,435), pero las cifras de la tabla cambian un
-poco. Borrar este aviso al aprobarlo.
-:::
-
 **La meteorología de cada nivel.** El modelo no usa la meteorología; la @tbl-meteorologia la
 describe por nivel, junto con la fracción fina media por hora, cruzando las asignaciones de Go con el
 silver (notebook 02). Solo {{< meta cifras.meteo.estaciones_con_meteo >}} de las
@@ -347,7 +329,7 @@ Captura real de `go run ./cmd/entrenar` con la receta de `configs/kmeans.json`. 
 ::::
 
 **La auditoría del modelo.** El notebook 03 corrió sobre estas mismas salidas (misma receta y mismo
-gold: {{< meta cifras.auditoria.misma_receta >}}) y comparó el K-Means de Go con scikit-learn
+gold que este informe) y comparó el K-Means de Go con scikit-learn
 (@tbl-auditoria): las asignaciones, los tamaños, la inercia, los centroides (después de emparejar las
 etiquetas de los dos modelos) y el codo coinciden, y Lloyd desde los centroides iniciales de Go
 reproduce la inercia de cada semilla. Las diferencias son del orden del redondeo de la coma flotante,
