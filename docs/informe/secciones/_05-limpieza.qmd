@@ -142,11 +142,19 @@ completo, con el comando a la vista y la salida de conteos. Va en `docs/informe/
 :::
 ::::
 
-![Por qué falta el dato: destino de cada fila del archivo y la regla de las 18 horas de OEFA](generado/figuras/faltantes.png){#fig-faltantes width=16cm}
+![Por qué falta el dato: destino de cada fila larga del archivo, por estación, según la primera regla del cargador que la descarta (entre paréntesis, filas de la estación). «Día en cero» incluye la presión en 0, que la regla de rango atrapa antes; «hora en cero» es un 0 de un contaminante en un día con datos. Los colores son los del calendario de la @fig-calendario](generado/figuras/faltantes.png){#fig-faltantes width=16cm}
 
 :::: {si-falta="generado/figuras/faltantes.png"}
 ::: {.callout-warning title="PENDIENTE"}
 Falta `generado/figuras/faltantes.png` (la dibuja el notebook 04).
+:::
+::::
+
+![La regla de las 18 horas de OEFA: días con 24 filas horarias y promedio de 24 horas publicado, según cuántas horas del día tienen valor distinto de 0 (encima de cada barra, los días comparados). Con menos de 18 horas no nulas, OEFA publica 0 (dato insuficiente); con 18 o más, la media de las horas no nulas. El 0 es «sin dato», también dentro de un día](generado/figuras/regla18.png){#fig-regla18 width=16cm}
+
+:::: {si-falta="generado/figuras/regla18.png"}
+::: {.callout-warning title="PENDIENTE"}
+Falta `generado/figuras/regla18.png` (la dibuja el notebook 04).
 :::
 ::::
 
