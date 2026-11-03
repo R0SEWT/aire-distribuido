@@ -9,13 +9,13 @@
     "sintetico": false,
     "fuente": "limpieza.json (estaciones) y silver",
     "notebook": "03_auditoria_figuras",
-    "fecha": "2026-11-03T14:58:25"
+    "fecha": "2026-11-03T16:26:50"
   },
   "codo.png": {
     "sintetico": false,
     "fuente": "codo.json (Go)",
     "notebook": "03_auditoria_figuras",
-    "fecha": "2026-11-03T14:58:22"
+    "fecha": "2026-11-03T16:26:49"
   },
   "completitud.png": {
     "sintetico": false,
@@ -33,7 +33,7 @@
     "sintetico": false,
     "fuente": "silver y asignaciones (Go), CA-CP-01, 2020-09-22 a 2020-09-28",
     "notebook": "03_auditoria_figuras",
-    "fecha": "2026-11-03T14:57:51"
+    "fecha": "2026-11-03T16:26:37"
   },
   "faltantes.png": {
     "sintetico": false,
@@ -51,25 +51,25 @@
     "sintetico": false,
     "fuente": "asignaciones, silver, kmeans.json y estandarizacion.json (Go)",
     "notebook": "03_auditoria_figuras",
-    "fecha": "2026-11-03T14:57:48"
+    "fecha": "2026-11-03T16:26:36"
   },
   "perfiles.png": {
     "sintetico": false,
     "fuente": "regimenes.json (Go)",
     "notebook": "03_auditoria_figuras",
-    "fecha": "2026-11-03T14:57:46"
+    "fecha": "2026-11-03T16:26:35"
   },
   "regimen-estacion.png": {
     "sintetico": false,
     "fuente": "regimenes.json, por_estacion (Go)",
     "notebook": "03_auditoria_figuras",
-    "fecha": "2026-11-03T14:57:50"
+    "fecha": "2026-11-03T16:26:37"
   },
   "regimen-hora.png": {
     "sintetico": false,
     "fuente": "regimenes.json, por_hora (Go)",
     "notebook": "03_auditoria_figuras",
-    "fecha": "2026-11-03T14:57:49"
+    "fecha": "2026-11-03T16:26:36"
   },
   "regla18.png": {
     "sintetico": false,
@@ -81,6 +81,6 @@
     "sintetico": false,
     "fuente": "benchmark_cargador.json y benchmark_kmeans.json",
     "notebook": "03_auditoria_figuras",
-    "fecha": "2026-11-03T14:58:23"
+    "fecha": "2026-11-03T16:26:50"
   }
 }
