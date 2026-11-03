@@ -9,11 +9,22 @@ El video del Entregable 1 se arma solo, sin grabar la pantalla a mano, a partir 
 | `armar.sh` | Monta el mp4: diapositivas con las figuras del informe, grabaciones de terminal, narración y concatenación con ffmpeg. |
 | `montar.py` | El montador que `armar.sh` ejecuta (Pillow + edge-tts + ffmpeg). |
 | `casts/*.cast` | Las grabaciones de terminal (texto, pesan KB; se versionan). |
+| `remotion/` | Proyecto Remotion de la escena animada del pipeline del cargador (`PipelineCargador`, 24 s). Su render `remotion/out/pipeline-cargador.mp4` no se versiona. |
+| `guion-cursed.md` | La variante shitpost (no es la entrega): mismas cifras, tono cursed, efectos y voz tipo Loquendo. |
 
 ```bash
 bash docs/video/armar.sh            # → docs/video/build/video-pc3.mp4 (1080p, H.264 + AAC)
 bash docs/video/armar.sh --grabar   # vuelve a grabar la terminal antes (necesita el CSV en data/bronze/)
 ```
+
+`bash docs/video/armar.sh --cursed` arma la variante cursed en `docs/video/build/cursed/video-pc3-cursed.mp4`
+(3 a 5 min) sin tocar la seria: voz `es-ES-AlvaroNeural` a +30 % y −10 Hz, deep-fry con Pillow,
+punch-ins y sacudidas con `zoompan`, rótulos con borde negro, ojos rojos y efectos de sonido
+sintetizados con ffmpeg (`aevalsrc`: boom, bocina, metralleta y «bruh»; nada con derechos, sin música).
+
+La escena 5 del video serio es la animación de Remotion: `armar.sh` usa `remotion/out/pipeline-cargador.mp4`
+si existe y, si no, la renderiza con `npx remotion render` (necesita Node 22; el primer render descarga el
+Chrome de Remotion) o avisa que falta Node.
 
 `build/` no se versiona (mp4, audios, GIF, fotogramas). El mp4 entregado está en Drive:
 `gdrive:aire-distribuido/video/video-pc3.mp4` (`rclone copy docs/video/build/video-pc3.mp4 gdrive:aire-distribuido/video/`).

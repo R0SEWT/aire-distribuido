@@ -25,6 +25,8 @@ que se dice de viva voz.
 - `terminal NOMBRE | pie`: la grabación real `docs/video/casts/NOMBRE.cast` (hecha con
   `grabar.sh`), reproducida a una velocidad que cabe en la narración.
 - `texto Título | línea ; línea ; …`: una tarjeta de texto.
+- `video RUTA | pie`: una escena animada ya renderizada (Remotion, `docs/video/remotion/`), a
+  pantalla completa; si la narración dura más que el clip, el último cuadro se congela.
 
 ---
 
@@ -92,18 +94,19 @@ salen las cifras del informe.
 
 ## Escena 5 · Arquitectura concurrente del cargador
 
-- Pantalla: `figura docs/diagramas/arquitectura.png | Parte A del diagrama de arquitectura: lector → workers → recolector → z-score (docs/diagramas/arquitectura.mmd) | crop=120,350,2180,760`
-- Qué se ve: el tramo del diagrama de arquitectura con el CSV, el lector por bloques, los
-  workers, el recolector y la estandarización.
+- Pantalla: `video docs/video/remotion/out/pipeline-cargador.mp4 | Escena animada del pipeline del cargador (Remotion, docs/video/remotion/)`
+- Qué se ve: la animación de Remotion del pipeline (24 s): el CSV (1,5–4 s), los bloques (4–8 s),
+  los workers (8–14 s), la fusión y el pivot (14–18 s), el gold (18–21,5 s) y las tarjetas finales
+  con 1,33 s, 4,94× e «idéntico» (21,6–24 s). Si la narración dura más, el último cuadro se congela.
 - Cifras: bloque de 64 MiB [benchmark_cargador.bloque].
 
 ```narración
-El cargador es un pipeline de goroutines. Un lector parte el archivo en bloques de 64 megabytes y
-manda sus índices por un canal. Cada worker lee
-su bloque con ReadAt, aplica las reglas por fila y acumula en su propia memoria, sin candados. El
-recolector fusiona los parciales en orden de bloque, no de llegada: por eso el resultado no depende
-del número de workers. Luego una fase serial reconstruye las horas, el pivot corre en paralelo por
-estación, y la estandarización usa Welford por chunk con la fusión de Chan.
+El cargador es un pipeline de goroutines. El CSV se parte en bloques de 64 megabytes y sus índices
+van por un canal. Cada worker lee su bloque con ReadAt, aplica las reglas por fila y acumula en su
+propia memoria, sin candados. El recolector fusiona los parciales en orden de bloque, no de llegada,
+y el pivot corre en paralelo por estación. El gold sale estandarizado con Welford por chunk y la
+fusión de Chan. El resultado: 1,33 segundos para todo el archivo, un speedup de 4,94 con 12 workers,
+e idéntico para cualquier número de workers.
 ```
 
 ## Escena 6 · K-Means: la receta y su calibración
