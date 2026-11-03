@@ -380,11 +380,10 @@ tiene `ENTRYPOINT`: se elige el comando (`cargar`, `entrenar` o `benchmark`) al 
 `feature/cargador`, `feature/kmeans`, `feature/diseno`, `feature/informe` y `feature/notebooks`.
 Como las piezas dependen unas de otras (el informe lee lo que escriben el cargador y el K-Means; los
 notebooks, lo que escribe Go), no se fusionaron una por una en `develop`: se fusionaron varias veces
-en una rama de integración, `feature/spec-pc3`, que es la que entra a `develop` con una sola PR. La
-entrega sale de una rama `release/pc3` hacia `main`. Las tareas se siguen en un tablero Kanban de
+en una rama de integración, `feature/spec-pc3`, que es la que entra a `develop` con una sola PR
+(la [#3](https://github.com/R0SEWT/aire-distribuido/pull/3)); el cierre del informe, los
+descriptores por régimen, las capturas y el video entraron después en PRs más chicas (de la
+[#4](https://github.com/R0SEWT/aire-distribuido/pull/4) a la
+[#8](https://github.com/R0SEWT/aire-distribuido/pull/8)). La entrega sale de una rama
+`release/pc3` hacia `main`, con el tag `pc3`. Las tareas se siguen en un tablero Kanban de
 GitHub Projects (Anexo B), y el historial de commits por integrante y de PR está en el Anexo C.
-
-::: {.callout-warning title="PENDIENTE"}
-Número y enlace de la PR de `feature/spec-pc3` a `develop` y de la de `release/pc3` a `main` cuando
-existan; el Anexo C las lista solas al regenerar el historial.
-:::

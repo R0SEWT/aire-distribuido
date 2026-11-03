@@ -229,22 +229,21 @@ decir: el INCA de PM2,5 se calcula como $I = [\mathrm{PM}_{2,5}] \cdot 100 / 25$
 concentración de 30 µg/m³ es «mala» para el INCA y cumple el ECA. Por eso la etiqueta ECA y la banda
 INCA se reportan por separado y no se mezclan.
 
-::: {#tbl-inca tbl-colwidths="[40,30,30]"}
-| Banda | PM10, 24 h (µg/m³) | PM2,5, 24 h (µg/m³) |
-|:---|:---|:---|
-| Buena (INCA 0–50) | 0–75 | 0–12,5 |
-| Moderada (INCA 51–100) | 76–150 | 12,6–25 |
-| Mala (INCA 101 al umbral de cuidado) | 151–250 | 25,1–125 |
-| Umbral de cuidado (VUEC) | > 250 | > 125 |
+::: {#tbl-inca tbl-colwidths="[22,20,19,20,19]"}
+| Banda | INCA (PM10) | PM10, 24 h (µg/m³) | INCA (PM2,5) | PM2,5, 24 h (µg/m³) |
+|:---|:---|:---|:---|:---|
+| Buena | 0–50 | 0–75 | 0–50 | 0–12,5 |
+| Moderada | 51–100 | 76–150 | 51–100 | 12,6–25 |
+| Mala | 101–167 | 151–250 | 101–500 | 25,1–125 |
+| Umbral de cuidado (VUEC) | > 167 | > 250 | > 500 | > 125 |
 
-Bandas del Índice de Calidad del Aire para material particulado (RM 181-2016-MINAM, tabla 3)
+Bandas del Índice de Calidad del Aire para material particulado (RM 181-2016-MINAM, tabla 3): $I(\mathrm{PM}_{10}) = [\mathrm{PM}_{10}] \cdot 100 / 150$ e $I(\mathrm{PM}_{2,5}) = [\mathrm{PM}_{2,5}] \cdot 100 / 25$; el umbral de cuidado de PM2,5 (125 µg/m³) es la mitad del de PM10, por recomendación de la OMS
 :::
 
-::: {.callout-warning title="PENDIENTE"}
-Las tablas del ECA y del INCA se transcribieron de los PDF oficiales el 31/10. Que alguien las
-coteje una vez más contra `DS-003-2017-MINAM.pdf` y `RM-N°-181-2016-MINAM.pdf` (enlaces en la
-bibliografía) antes de entregar.
-:::
+Las dos tablas se transcribieron de los PDF oficiales el 31/10 y se cotejaron de nuevo el 03/11
+contra `DS-003-2017-MINAM.pdf` (anexo, filas de PM2,5 y PM10) y `RM-N°-181-2016-MINAM.pdf`
+(tablas 1 y 3), con los enlaces de la bibliografía: los valores, los periodos y los criterios
+coinciden.
 
 **Anticipación (diseñada aquí, medida en el TB2).** Para cada régimen, en una parte temporal de
 evaluación, se medirá la proporción de veces en que el promedio móvil de 24 horas de PM2,5 o PM10
