@@ -282,7 +282,7 @@ Dispersión PM2,5 frente a PM10 por régimen, con las líneas del ECA. La dibuja
 :::
 ::::
 
-![Perfil de cada régimen: media de cada parámetro, estandarizada](generado/figuras/perfiles.png){#fig-perfiles width=15cm}
+![Perfil de cada régimen: media de PM10 (barra llena) y de PM2,5 (barra clara) de sus horas, en unidades originales, frente al ECA de 24 horas. La media horaria de un régimen sobre la línea dice que el régimen es peligroso, no que haya un incumplimiento; los centroides estandarizados están en la @tbl-centroides-z](generado/figuras/perfiles.png){#fig-perfiles width=15cm}
 
 :::: {si-falta="generado/figuras/perfiles.png"}
 ::: {.callout-warning title="PENDIENTE"}
