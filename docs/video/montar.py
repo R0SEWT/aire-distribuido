@@ -316,6 +316,19 @@ def huella(*partes: str) -> str:
     return hashlib.sha256("\n".join(partes).encode("utf-8")).hexdigest()[:16]
 
 
+def huella_insumos(rutas: list[str]) -> str:
+    """Hash del contenido de los archivos fuente de una escena (figuras, grabaciones, videos), para
+    que la clave de la caché cambie cuando cambia el insumo y no solo su ruta."""
+    h = hashlib.sha256()
+    for r in rutas:
+        for candidato in (RAIZ / r, CASTS / f"{r}.cast"):
+            if candidato.is_file():
+                h.update(candidato.name.encode("utf-8"))
+                h.update(candidato.read_bytes())
+                break
+    return h.hexdigest()[:16]
+
+
 def narracion(esc: Escena) -> Path:
     """Devuelve la pista de voz de la escena: la propia si existe, si no edge-tts (cacheada)."""
     for ext in ("wav", "mp3", "m4a", "ogg", "flac"):
@@ -356,7 +369,7 @@ def render_terminal(nombre: str, objetivo: float, velocidad: float | None = None
     real = duracion_cast(cast)
     if velocidad is None:
         velocidad = min(2.0, max(0.3, real / max(objetivo, 1.0)))
-    gif = BUILD / f"term-{nombre}-{huella(str(real), f'{velocidad:.3f}')}.gif"
+    gif = BUILD / f"term-{nombre}-{huella(str(real), f'{velocidad:.3f}', huella_insumos([nombre]))}.gif"
     if not gif.exists():
         correr([
             AGG, "--cols", "120", "--rows", "30", "--font-family", "DejaVu Sans Mono",
@@ -892,9 +905,8 @@ def montar() -> None:
         voz = narracion(esc)
         dur_voz = duracion(voz)
         base = f"escena-{esc.numero:02d}"
-        claves = [esc.titulo, esc.pantalla, str(voz), f"{dur_voz:.3f}", str(total), " ".join(equipo)]
-        if tipo == "video" and (RAIZ / rutas[0]).exists():
-            claves.append(hashlib.sha256((RAIZ / rutas[0]).read_bytes()).hexdigest())
+        claves = [esc.titulo, esc.pantalla, str(voz), f"{dur_voz:.3f}", str(total), " ".join(equipo),
+                  huella_insumos(rutas)]
         if CURSED:
             claves += [esc.efectos, json.dumps(esc.textos, ensure_ascii=False), "cursed-v4"]
         clip = BUILD / f"{base}-{huella(*claves)}.mp4"
