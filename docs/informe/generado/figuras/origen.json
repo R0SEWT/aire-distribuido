@@ -3,7 +3,7 @@
     "sintetico": false,
     "fuente": "bronze 1a_Vigilancia y Seguimiento ambiental en la calidad del aire.csv (todas las columnas), cascada de Go replicada fila por fila",
     "notebook": "04_procedencia_y_mapa",
-    "fecha": "2026-11-03T15:10:33"
+    "fecha": "2026-11-03T15:30:11"
   },
   "cobertura.png": {
     "sintetico": false,
@@ -39,13 +39,13 @@
     "sintetico": false,
     "fuente": "bronze 1a_Vigilancia y Seguimiento ambiental en la calidad del aire.csv (todas las columnas), cascada de Go replicada fila por fila",
     "notebook": "04_procedencia_y_mapa",
-    "fecha": "2026-11-03T15:10:27"
+    "fecha": "2026-11-03T15:30:06"
   },
   "mapa.png": {
     "sintetico": false,
     "fuente": "bronze (ubicación por estación) y silver/gold de Go (horas válidas)",
     "notebook": "04_procedencia_y_mapa",
-    "fecha": "2026-11-03T15:10:36"
+    "fecha": "2026-11-03T15:31:21"
   },
   "niveles.png": {
     "sintetico": false,

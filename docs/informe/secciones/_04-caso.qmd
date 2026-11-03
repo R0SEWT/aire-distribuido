@@ -47,7 +47,7 @@ la Amazonía, y {{< meta cifras.eda.estaciones_sobre_3000m >}} están por encima
 Describen el aire **junto a una fuente fiscalizada, en el periodo en que se la vigiló**
 (@fig-mapa).
 
-![Las 33 estaciones de OEFA del dataset: color por categoría de serie, tamaño por horas válidas, con los recuadros de Ventanilla–Mi Perú (8 puntos de muestreo de 24 horas en 1,5 km) y Huachipa–Cajamarquilla. Por departamento: Callao 8, Áncash 5, Lima 4, La Libertad 3, Cusco 3, Piura 3, Pasco 2, Moquegua 2, Arequipa 1, Junín 1 y una sin departamento en el dato (CA-HUAR-01, Pasco). Coordenadas UTM WGS84 del dataset, la combinación más frecuente por estación; fondo Esri World Gray Canvas (Esri, HERE, Garmin, colaboradores de OpenStreetMap)](generado/figuras/mapa.png){#fig-mapa width=15cm}
+![Las 33 estaciones de OEFA del dataset: color por categoría de serie, tamaño por horas válidas, con los recuadros de Ventanilla–Mi Perú (8 puntos de muestreo de 24 horas en 1,5 km) y Huachipa–Cajamarquilla. Por departamento: Callao 8, Áncash 5, Lima 4, La Libertad 3, Cusco 3, Piura 3, Pasco 2, Moquegua 2, Arequipa 1, Junín 1 y una sin departamento en el dato (CA-HUAR-01, Pasco). Coordenadas UTM WGS84 del dataset, la combinación más frecuente por estación; fondo OpenTopoMap (datos de colaboradores de OpenStreetMap y relieve SRTM; estilo CC-BY-SA)](generado/figuras/mapa.png){#fig-mapa width=15cm}
 
 :::: {si-falta="generado/figuras/mapa.png"}
 ::: {.callout-warning title="PENDIENTE"}
