@@ -26,7 +26,9 @@ for mmd in "$dir"/*.mmd; do
     cat > "$tmp/$nombre.html" <<HTML
 <!doctype html>
 <html><head><meta charset="utf-8">
-<style>body { margin: 40px; background: #fff; } svg { max-width: none !important; }</style>
+<style>body { margin: 40px; background: #fff; } svg { max-width: none !important; }
+/* halo blanco detrás de los rótulos para que las líneas de vida no los atraviesen */
+svg .messageText, svg .loopText, svg .noteText, svg text.labelText { paint-order: stroke; stroke: #ffffff; stroke-width: 5px; stroke-linejoin: round; }</style>
 <script src="file://$mermaid"></script>
 </head><body><div id="d"></div>
 <script>
@@ -35,6 +37,8 @@ for mmd in "$dir"/*.mmd; do
     document.getElementById("d").innerHTML = svg;
     // Tamaño natural (el del viewBox), no el ancho de la ventana.
     const s = document.querySelector("#d svg"), vb = s.viewBox.baseVal;
+    // Las líneas de vida van al fondo del SVG, para que no pasen por encima de los rótulos.
+    s.querySelectorAll("line.actor-line, .actor-line").forEach((l) => s.insertBefore(l, s.firstChild));
     s.setAttribute("width", vb.width);
     s.setAttribute("height", vb.height);
   }).catch((e) => { document.body.textContent = "ERROR DE MERMAID: " + e; });

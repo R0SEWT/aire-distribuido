@@ -186,7 +186,7 @@ haya deadlock y que toda iteración termine o aborte.
 La @fig-secuencia muestra una iteración: el coordinador manda los centroides, espera los
 parciales de todos los nodos (la barrera) y recién entonces actualiza.
 
-![Una iteración del K-Means distribuido: `ITERAR`, `PARCIAL`, la barrera y el timeout](../diagramas/secuencia-iteracion.png){#fig-secuencia width=15cm}
+![Una iteración del K-Means distribuido: `ITERAR`, `PARCIAL`, la barrera y el timeout](../diagramas/secuencia-iteracion.png){#fig-secuencia width=16cm}
 
 :::: {si-falta="../diagramas/secuencia-iteracion.png"}
 ::: {.callout-warning title="PENDIENTE"}

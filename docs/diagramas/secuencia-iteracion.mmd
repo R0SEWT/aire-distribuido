@@ -1,42 +1,32 @@
 %% Secuencia de una corrida del K-Means distribuido: apretón de manos, una
 %% ronda por iteración con su barrera y su plazo, y el PARCIAL rezagado.
 %% Fuente de secuencia-iteracion.png (se renderiza con
-%% docs/diagramas/renderizar.sh).
-%%{init: {"theme": "base", "themeVariables": {"primaryColor": "#e6eef9", "primaryBorderColor": "#1f5fa8", "noteBkgColor": "#fff8e1", "noteBorderColor": "#c9a227", "actorBkg": "#e6eef9", "actorBorder": "#1f5fa8", "signalColor": "#333333", "lineColor": "#555555"}, "sequence": {"mirrorActors": false, "noteMargin": 12, "boxMargin": 8}}}%%
+%% docs/diagramas/renderizar.sh). Dos nodos a la vista: lo que se dibuja para
+%% el nodo 1 vale para cada uno de los K nodos. Ojo: en Mermaid el «;» corta
+%% la línea; dentro de los textos va «·».
+%%{init: {"theme": "base", "themeVariables": {"primaryColor": "#e6eef9", "primaryBorderColor": "#1f5fa8", "noteBkgColor": "#fff8e1", "noteBorderColor": "#c9a227", "actorBkg": "#e6eef9", "actorBorder": "#1f5fa8", "signalColor": "#333333", "lineColor": "#555555", "fontSize": "13px"}, "sequence": {"mirrorActors": false, "noteMargin": 8, "boxMargin": 6, "messageMargin": 22, "width": 130, "height": 40, "actorMargin": 60, "wrap": false}}}%%
 sequenceDiagram
-    participant C as Coordinador (api)
+    participant C as Coordinador
     participant N1 as Nodo 1
-    participant N2 as Nodo 2
     participant NK as Nodo K
 
-    Note over C,NK: Apretón de manos. El nodo abre la conexión (Colab no acepta entrantes).
+    Note over C,NK: Apretón de manos, nodo por nodo (el nodo abre la conexión)
     N1->>C: HOLA {version, nodo, workers}
-    C->>N1: CARGAR {rango [0, n₁), huella del gold}
+    C->>N1: CARGAR {rango [0, n₁), huella}
     N1->>C: LISTO {n, huella}
-    Note over C,NK: lo mismo con cada nodo: rangos contiguos, cargados una sola vez
 
-    loop ronda t = 1, 2, … hasta converger o max_iter
-        par fan-out: el mismo instante límite para todos
-            C->>N1: ITERAR {t, centroides k×D}
-        and
-            C->>N2: ITERAR {t, centroides k×D}
-        and
-            C->>NK: ITERAR {t, centroides k×D}
-        end
-        Note over N1,NK: cada nodo: Parciales(su rango) con su worker pool<br/>(chunks por canal, barrera local con WaitGroup)
-        N2->>C: PARCIAL {t, sumas k×D, conteos k, inercia}
+    loop ronda t, hasta converger o max_iter
+        C->>N1: ITERAR {t, centroides k×D}
+        C->>NK: ITERAR {t, centroides k×D}
+        Note over C,NK: fan-out con el mismo plazo para todos · cada nodo corre Parciales(su rango) con su worker pool
         N1->>C: PARCIAL {t, sumas, conteos, inercia}
         alt los K parciales llegan antes del plazo
             NK->>C: PARCIAL {t, sumas, conteos, inercia}
-            Note over C,N2: barrera completa (fan-in)<br/>Fusionar en orden de nodo 1, 2, …, K, no de llegada<br/>Actualizar los centroides → ¿convergió?
+            Note over C,N1: fan-in: Fusionar en orden de nodo, no de llegada<br/>Actualizar los centroides · ¿convergió?
         else vence el plazo de la ronda t
-            Note over C,N2: error claro: «ronda t abortada: nodo "K" no envió<br/>su PARCIAL dentro del plazo» → el operador relanza
-            NK-->>C: PARCIAL {t} rezagado, llega en una ronda posterior
-            Note over C,N2: su iter es menor que la ronda en curso → se descarta
+            Note over C,N1: «ronda t abortada: nodo K sin PARCIAL en el plazo»<br/>el operador relanza
+            NK-->>C: PARCIAL {t} rezagado: se descarta
         end
     end
 
-    C->>N1: FIN
-    C->>N2: FIN
-    C->>NK: FIN
-    Note over N1,NK: liberan su rango y esperan otro CARGAR
+    C->>N1: FIN (a cada nodo)
