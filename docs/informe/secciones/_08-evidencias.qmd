@@ -122,7 +122,7 @@ número de workers.
 
 {{< include generado/tablas/benchmark_kmeans.md >}}
 
-![Speedup del cargador y del K-Means por número de workers, con su intervalo de confianza](generado/figuras/speedup.png){#fig-speedup width=15cm}
+![Speedup del cargador y del K-Means frente al número de workers, con el intervalo de confianza bootstrap al 95 % del cociente y la diagonal ideal. En el K-Means, el color distingue el experimento (trabajo fijo o hasta converger) y el trazo, el tamaño del chunk. Laptop de desarrollo, 14 CPU lógicas](generado/figuras/speedup.png){#fig-speedup width=15cm}
 
 :::: {si-falta="generado/figuras/speedup.png"}
 ::: {.callout-warning title="PENDIENTE"}
@@ -291,7 +291,7 @@ Perfiles de los regímenes desde `generado/kmeans.json`. Notebook 03, en
 :::
 ::::
 
-![Régimen por hora del día: proporción de las horas de cada régimen](generado/figuras/regimen-hora.png){#fig-regimen-hora width=15cm}
+![Régimen por hora del día (hora de fin del promedio horario, en Lima): porcentaje de las horas de cada régimen que cae en cada hora. Cada fila suma 100 %; una fila plana es un régimen sin hora preferida](generado/figuras/regimen-hora.png){#fig-regimen-hora width=15cm}
 
 :::: {si-falta="generado/figuras/regimen-hora.png"}
 ::: {.callout-warning title="PENDIENTE"}
@@ -300,7 +300,7 @@ Heatmap régimen × hora desde `generado/regimenes.json` (`por_hora`). Notebook 
 :::
 ::::
 
-![Régimen por estación: proporción de las horas de cada estación en cada régimen](generado/figuras/regimen-estacion.png){#fig-regimen-estacion width=15cm}
+![Régimen por estación: porcentaje de las horas de cada estación en cada régimen, con las estaciones agrupadas por departamento (CA-HUAR-01 viene sin departamento en el dato; está en Pasco). Cada fila suma 100 %](generado/figuras/regimen-estacion.png){#fig-regimen-estacion width=13cm}
 
 :::: {si-falta="generado/figuras/regimen-estacion.png"}
 ::: {.callout-warning title="PENDIENTE"}
@@ -309,7 +309,7 @@ Heatmap régimen × estación desde `generado/regimenes.json` (`por_estacion`). 
 :::
 ::::
 
-![Un episodio: PM2,5 y PM10 horarios de una estación, coloreados por régimen, con las líneas del ECA](generado/figuras/episodio.png){#fig-episodio width=16cm}
+![Un episodio en CA-CP-01 (Cusco), del 22 al 28 de setiembre de 2020: PM2,5 y PM10 horarios con el fondo y la franja «régimen» coloreados por régimen, las líneas del ECA de 24 h y la franja «24 h > ECA», que marca las horas cuyo promedio de las 24 h anteriores supera el ECA. Es la estación con más horas en el nivel alto y la ventana de siete días con más horas en ese nivel y sobre el ECA. Sin fondo: horas sin régimen](generado/figuras/episodio.png){#fig-episodio width=16cm}
 
 :::: {si-falta="generado/figuras/episodio.png"}
 ::: {.callout-warning title="PENDIENTE"}

@@ -96,7 +96,7 @@ decir dónde y cuándo aparece cada régimen.
 
 {{< include generado/tablas/codo.md >}}
 
-![Método del codo: inercia por número de clusters](generado/figuras/codo.png){#fig-codo width=13cm}
+![Método del codo: inercia del K-Means de Go y silueta media de scikit-learn por número de regímenes, sobre una submuestra sistemática del gold. La línea marca el k de la receta](generado/figuras/codo.png){#fig-codo width=13cm}
 
 :::: {si-falta="generado/figuras/codo.png"}
 ::: {.callout-warning title="PENDIENTE"}

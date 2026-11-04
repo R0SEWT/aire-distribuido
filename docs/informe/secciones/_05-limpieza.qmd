@@ -180,7 +180,7 @@ El análisis exploratorio se hizo en el notebook 01 (Colab) sobre la capa silver
 fue la criba de preguntas (@sec-pregunta); el segundo, decidir las features: se prefiere **menos
 features con más estaciones** a más features con pocas estaciones.
 
-![Completitud por estación y parámetro: proporción de horas con dato](generado/figuras/completitud.png){#fig-completitud width=16cm}
+![Completitud por estación y parámetro después de la limpieza: porcentaje de las horas del rango de cada estación con dato válido (las celdas en blanco son 0). A la derecha de la línea, las filas completas para cada conjunto de features de la calibración (F1/F2, M0–M2)](generado/figuras/completitud.png){#fig-completitud width=16cm}
 
 :::: {si-falta="generado/figuras/completitud.png"}
 ::: {.callout-warning title="PENDIENTE"}
@@ -189,7 +189,7 @@ Heatmap estación × parámetro de completitud. Lo dibuja el notebook 01 en
 :::
 ::::
 
-![Distribución de PM2,5 y PM10 por estación, en escala logarítmica](generado/figuras/distribuciones.png){#fig-distribuciones width=16cm}
+![Distribución de PM2,5 y PM10 por estación, en escala logarítmica, y de la fracción fina PM2,5/PM10, para las estaciones con material particulado. Cajas: cuartiles; bigotes: 1,5 veces el rango intercuartil; sin atípicos. El ECA es un promedio de 24 h: una lectura horaria sobre la línea no es por sí sola un incumplimiento](generado/figuras/distribuciones.png){#fig-distribuciones width=16cm}
 
 :::: {si-falta="generado/figuras/distribuciones.png"}
 ::: {.callout-warning title="PENDIENTE"}

@@ -3,43 +3,43 @@
     "sintetico": false,
     "fuente": "bronze 1a_Vigilancia y Seguimiento ambiental en la calidad del aire.csv (todas las columnas), cascada de Go replicada fila por fila",
     "notebook": "04_procedencia_y_mapa",
-    "fecha": "2026-11-03T15:38:31"
+    "fecha": "2026-11-04T10:22:09"
   },
   "cobertura.png": {
     "sintetico": false,
     "fuente": "limpieza.json (estaciones) y silver",
     "notebook": "03_auditoria_figuras",
-    "fecha": "2026-11-02T00:17:53"
+    "fecha": "2026-11-04T10:21:25"
   },
   "codo.png": {
     "sintetico": false,
     "fuente": "codo.json (Go)",
     "notebook": "03_auditoria_figuras",
-    "fecha": "2026-11-03T16:26:49"
+    "fecha": "2026-11-04T10:21:24"
   },
   "completitud.png": {
     "sintetico": false,
     "fuente": "bronze 1a_Vigilancia y Seguimiento ambiental en la calidad del aire.csv",
     "notebook": "01_eda_criba",
-    "fecha": "2026-11-02T00:15:22"
+    "fecha": "2026-11-04T10:23:30"
   },
   "distribuciones.png": {
     "sintetico": false,
     "fuente": "bronze 1a_Vigilancia y Seguimiento ambiental en la calidad del aire.csv",
     "notebook": "01_eda_criba",
-    "fecha": "2026-11-02T00:15:29"
+    "fecha": "2026-11-04T10:23:32"
   },
   "episodio.png": {
     "sintetico": false,
     "fuente": "silver y asignaciones (Go), CA-CP-01, 2020-09-22 a 2020-09-28",
     "notebook": "03_auditoria_figuras",
-    "fecha": "2026-11-03T16:26:37"
+    "fecha": "2026-11-04T10:21:15"
   },
   "faltantes.png": {
     "sintetico": false,
     "fuente": "bronze 1a_Vigilancia y Seguimiento ambiental en la calidad del aire.csv (todas las columnas), cascada de Go replicada fila por fila",
     "notebook": "04_procedencia_y_mapa",
-    "fecha": "2026-11-03T15:38:26"
+    "fecha": "2026-11-04T10:22:05"
   },
   "mapa.png": {
     "sintetico": false,
@@ -51,36 +51,36 @@
     "sintetico": false,
     "fuente": "asignaciones, silver, kmeans.json y estandarizacion.json (Go)",
     "notebook": "03_auditoria_figuras",
-    "fecha": "2026-11-03T16:26:36"
+    "fecha": "2026-11-04T10:21:13"
   },
   "perfiles.png": {
     "sintetico": false,
     "fuente": "regimenes.json (Go)",
     "notebook": "03_auditoria_figuras",
-    "fecha": "2026-11-03T16:26:35"
+    "fecha": "2026-11-04T10:21:13"
   },
   "regimen-estacion.png": {
     "sintetico": false,
     "fuente": "regimenes.json, por_estacion (Go)",
     "notebook": "03_auditoria_figuras",
-    "fecha": "2026-11-03T16:26:37"
+    "fecha": "2026-11-04T10:21:14"
   },
   "regimen-hora.png": {
     "sintetico": false,
     "fuente": "regimenes.json, por_hora (Go)",
     "notebook": "03_auditoria_figuras",
-    "fecha": "2026-11-03T16:26:36"
+    "fecha": "2026-11-04T10:21:14"
   },
   "regla18.png": {
     "sintetico": false,
     "fuente": "bronze 1a_Vigilancia y Seguimiento ambiental en la calidad del aire.csv: días con 24 filas horarias y promedio de 24 h publicado",
     "notebook": "04_procedencia_y_mapa",
-    "fecha": "2026-11-03T15:38:27"
+    "fecha": "2026-11-04T10:22:05"
   },
   "speedup.png": {
     "sintetico": false,
     "fuente": "benchmark_cargador.json y benchmark_kmeans.json",
     "notebook": "03_auditoria_figuras",
-    "fecha": "2026-11-03T16:26:50"
+    "fecha": "2026-11-04T10:21:25"
   }
 }

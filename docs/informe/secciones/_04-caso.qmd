@@ -91,7 +91,7 @@ ventana, no tendencias multianuales del país (inferencia nuestra).
 
 {{< include generado/tablas/tipologia.md >}}
 
-![Calendario de las estaciones: qué días tiene cada una lecturas válidas, días en cero y filas vacías](generado/figuras/calendario.png){#fig-calendario width=16cm}
+![Calendario de las estaciones, 2018–2022, ordenadas por su primer día: dos franjas por estación, la superior para el material particulado y la inferior para la meteorología. «Lectura válida»: alguna lectura horaria que pasa la cascada del cargador; «solo 24 h»: promedio diario sin serie horaria (muestreo manual de Ventanilla–Mi Perú y CA-01); «fila sin valor»: hueco de la plantilla de exportación de 2022; «otra regla»: día incompleto o intercalado hora a hora, o fuera de rango. Fuente: OEFA, corte 2024-04-29](generado/figuras/calendario.png){#fig-calendario width=16cm}
 
 :::: {si-falta="generado/figuras/calendario.png"}
 ::: {.callout-warning title="PENDIENTE"}
