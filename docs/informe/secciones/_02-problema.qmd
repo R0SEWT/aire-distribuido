@@ -138,7 +138,7 @@ leerse como «aquí el aire es bueno» fuera del entorno de una estación.
 
 {{< include generado/tablas/cobertura.md >}}
 
-![Cobertura de la red: estaciones con datos válidos y horas con PM2,5 o PM10, por departamento. Solo aparecen los 10 departamentos con alguna estación, más CA-HUAR-01, que está en Pasco pero viene sin departamento en el dato. Los otros 15 no tienen ninguna: Amazonas, Apurímac, Ayacucho, Cajamarca, Huancavelica, Huánuco, Ica, Lambayeque, Loreto, Madre de Dios, Puno, San Martín, Tacna, Tumbes y Ucayali. Una región sin estación no es una región con aire limpio: es una región sin medición](generado/figuras/cobertura.png){#fig-cobertura width=14cm}
+![Cobertura de la red: estaciones y horas completas por departamento](generado/figuras/cobertura.png){#fig-cobertura width=14cm}
 
 :::: {si-falta="generado/figuras/cobertura.png"}
 ::: {.callout-warning title="PENDIENTE"}

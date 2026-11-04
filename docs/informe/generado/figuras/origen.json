@@ -9,7 +9,7 @@
     "sintetico": false,
     "fuente": "limpieza.json (estaciones) y silver",
     "notebook": "03_auditoria_figuras",
-    "fecha": "2026-11-03T16:26:50"
+    "fecha": "2026-11-02T00:17:53"
   },
   "codo.png": {
     "sintetico": false,
@@ -45,7 +45,7 @@
     "sintetico": false,
     "fuente": "bronze (ubicación por estación) y silver/gold de Go (horas válidas)",
     "notebook": "04_procedencia_y_mapa",
-    "fecha": "2026-11-03T15:39:43"
+    "fecha": "2026-11-02T00:20:29"
   },
   "niveles.png": {
     "sintetico": false,
