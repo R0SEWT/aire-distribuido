@@ -1,12 +1,5 @@
 # Resumen {.unnumbered}
 
-::: {.callout-note title="Borrador generado con IA, para revisión de Rody"}
-Redactado por un agente de Claude Code (Claude Opus 5.5) el 02/11. Todas las cifras van con el
-shortcode `meta` desde `generado/cifras.yml`; ninguna está escrita a mano. Tiene unas 400 palabras:
-revisar que quepa en una página y que el título de la carátula siga la pregunta elegida. Borrar este aviso al aprobarlo:
-`empaquetar-pc3.sh` no arma la entrega mientras quede.
-:::
-
 El Organismo de Evaluación y Fiscalización Ambiental (OEFA) publica las lecturas horarias de calidad
 del aire que toma junto a las actividades que fiscaliza: un CSV de 1,3 GB con
 {{< meta cifras.limpieza.filas_largas_leidas >}} filas de {{< meta cifras.limpieza.n_estaciones >}}
@@ -17,8 +10,8 @@ entregable responde el dónde y el cuándo.
 
 En Go, solo con la biblioteca estándar, se construyó un cargador concurrente que reparte el archivo en
 bloques entre goroutines y fusiona en orden de bloque. Reconstruye por su posición la hora del
-{{< meta cifras.limpieza.pct_hora_inferida >}} de las lecturas (validada en el
-{{< meta cifras.eda.control_fisico >}} de las que sí la traen) y trata como faltante el 0 con que OEFA
+{{< meta cifras.limpieza.pct_hora_inferida >}} de las lecturas (la regla coincide con la hora
+explícita en todas las que sí la traen) y trata como faltante el 0 con que OEFA
 marca lo no medido: quedan {{< meta cifras.limpieza.filas_largas_procesadas >}} lecturas válidas y
 {{< meta cifras.limpieza.filas_completas >}} horas-estación con PM2,5 y PM10, de
 {{< meta cifras.limpieza.n_estaciones_gold >}} estaciones. Con {{< meta cifras.benchmark_cargador.w >}}

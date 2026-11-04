@@ -1788,7 +1788,11 @@ def marca_sintetico(fig, activo: bool):
 
 
 def nota_al_pie(fig, texto: str, tamano=7.5):
-    """Nota debajo de todos los ejes (con sus etiquetas), sin pisar nada."""
+    """Nota debajo de todos los ejes (con sus etiquetas), sin pisar nada. El texto se parte en líneas
+    que quepan en el ancho de la figura, así la nota no la ensancha (savefig.bbox="tight")."""
+    import textwrap
+    ancho_car = max(40, int(fig.get_figwidth() * 72 / (tamano * 0.52)))
+    texto = "\n".join(textwrap.fill(parrafo, ancho_car) for parrafo in texto.split("\n"))
     fig.canvas.draw()
     r = fig.canvas.get_renderer()
     inv = fig.transFigure.inverted()

@@ -1,6 +1,11 @@
 #!/usr/bin/env bash
 # Renderiza cada .mmd de esta carpeta a un PNG con el mismo nombre.
 #
+# arquitectura.png y secuencia-iteracion.png NO salen de aquí: su fuente es el .drawio del mismo
+# nombre (draw.io, editable; el PNG lleva el XML embebido). Se exportan con el draw.io de escritorio:
+#   drawio -x -f png -e -b 12 -s 2 -o arquitectura.png arquitectura.drawio
+#   drawio -x -f png -e -b 12 -s 3 -o secuencia-iteracion.png secuencia-iteracion.drawio
+#
 # Usa el Mermaid que trae Quarto (el mismo que dibuja los diagramas del informe)
 # en una página HTML mínima, la captura con Chrome sin cabeza y recorta el
 # blanco con ImageMagick. No se usa la salida docx de Quarto porque recorta los
@@ -9,6 +14,7 @@
 # Uso: docs/diagramas/renderizar.sh
 # Requiere: quarto (por su mermaid.min.js), google-chrome o chromium, magick.
 set -euo pipefail
+shopt -s nullglob  # sin .mmd, el bucle no corre (hoy los dos diagramas son .drawio)
 
 dir="$(cd "$(dirname "$0")" && pwd)"
 mermaid="$(quarto --paths | sed -n 2p)/formats/html/mermaid/mermaid.min.js"
@@ -16,13 +22,20 @@ chrome="$(command -v google-chrome || command -v chromium || command -v chromium
 tmp="$(mktemp -d)"
 trap 'rm -rf "$tmp"' EXIT
 
-for mmd in "$dir"/*.mmd; do
+mmds=("$dir"/*.mmd)
+if [ "${#mmds[@]}" -eq 0 ]; then
+    echo "no hay .mmd en $dir: los diagramas son .drawio (ver la cabecera de este script)"
+    exit 0
+fi
+for mmd in "${mmds[@]}"; do
     nombre="$(basename "$mmd" .mmd)"
     fuente="$(python3 -c 'import json, sys; print(json.dumps(open(sys.argv[1], encoding="utf-8").read()))' "$mmd")"
     cat > "$tmp/$nombre.html" <<HTML
 <!doctype html>
 <html><head><meta charset="utf-8">
-<style>body { margin: 40px; background: #fff; } svg { max-width: none !important; }</style>
+<style>body { margin: 40px; background: #fff; } svg { max-width: none !important; }
+/* halo blanco detrás de los rótulos para que las líneas de vida no los atraviesen */
+svg .messageText, svg .loopText, svg .noteText, svg text.labelText { paint-order: stroke; stroke: #ffffff; stroke-width: 5px; stroke-linejoin: round; }</style>
 <script src="file://$mermaid"></script>
 </head><body><div id="d"></div>
 <script>
@@ -31,6 +44,8 @@ for mmd in "$dir"/*.mmd; do
     document.getElementById("d").innerHTML = svg;
     // Tamaño natural (el del viewBox), no el ancho de la ventana.
     const s = document.querySelector("#d svg"), vb = s.viewBox.baseVal;
+    // Las líneas de vida van al fondo del SVG, para que no pasen por encima de los rótulos.
+    s.querySelectorAll("line.actor-line, .actor-line").forEach((l) => s.insertBefore(l, s.firstChild));
     s.setAttribute("width", vb.width);
     s.setAttribute("height", vb.height);
   }).catch((e) => { document.body.textContent = "ERROR DE MERMAID: " + e; });

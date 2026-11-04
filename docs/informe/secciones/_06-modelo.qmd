@@ -96,7 +96,7 @@ decir dónde y cuándo aparece cada régimen.
 
 {{< include generado/tablas/codo.md >}}
 
-![Método del codo: inercia por número de clusters](generado/figuras/codo.png){#fig-codo width=13cm}
+![Método del codo: inercia del K-Means de Go y silueta media de scikit-learn por número de regímenes, sobre una submuestra sistemática del gold. La línea marca el k de la receta](generado/figuras/codo.png){#fig-codo width=13cm}
 
 :::: {si-falta="generado/figuras/codo.png"}
 ::: {.callout-warning title="PENDIENTE"}
@@ -186,12 +186,12 @@ haya deadlock y que toda iteración termine o aborte.
 La @fig-secuencia muestra una iteración: el coordinador manda los centroides, espera los
 parciales de todos los nodos (la barrera) y recién entonces actualiza.
 
-![Una iteración del K-Means distribuido: `ITERAR`, `PARCIAL`, la barrera y el timeout](../diagramas/secuencia-iteracion.png){#fig-secuencia width=15cm}
+![Una iteración del K-Means distribuido: `ITERAR`, `PARCIAL`, la barrera y el timeout](../diagramas/secuencia-iteracion.png){#fig-secuencia width=16cm}
 
 :::: {si-falta="../diagramas/secuencia-iteracion.png"}
 ::: {.callout-warning title="PENDIENTE"}
-Falta `docs/diagramas/secuencia-iteracion.png` (lo genera `docs/diagramas/renderizar.sh` desde
-`secuencia-iteracion.mmd`).
+Falta `docs/diagramas/secuencia-iteracion.png` (se exporta con draw.io desde
+`secuencia-iteracion.drawio`; ver `docs/diagramas/renderizar.sh`).
 :::
 ::::
 

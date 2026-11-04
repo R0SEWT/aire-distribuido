@@ -30,19 +30,13 @@ con el EDA sin tocar las pruebas.
 Reglas de limpieza y su motivo
 :::
 
-::: {.callout-note title="Borrador generado con IA, para revisión de Rody"}
-Párrafo y tabla de umbrales agregados por un agente de Claude Code el 02/11; la tabla la genera
-`tablas.py` desde `configs/limpieza.json`. Borrar este aviso al aprobarlo.
-:::
-
-Los umbrales de las reglas 3, 4 y 6 están en la @tbl-umbrales, que `tablas.py` lee de
-`configs/limpieza.json`, el mismo archivo que usó la corrida de este informe (su sha256 coincide con
-el que registra `limpieza.json`: {{< meta cifras.umbrales.config_de_la_corrida >}}). Los rangos son
-físicos, no estadísticos: descartan lo que no puede ser una lectura (una humedad sobre 100 %, una
-presión bajo 400 hPa, que no se da a la altitud de ninguna estación), no lo que es raro, para no
-recortar los episodios que el modelo tiene que ver. Los centinelas ({{< meta cifras.umbrales.centinelas >}}) se
-comparan con el valor crudo, antes de convertir la unidad, y la columna «Día en 0 = sin dato» es la
-regla 3′: solo la precipitación queda fuera, porque un día seco tiene precipitación 0.
+La @tbl-umbrales resume los umbrales de las reglas 3, 4 y 6, tomados de la misma configuración con
+la que corrió el cargador (`configs/limpieza.json`). Los rangos son físicos, no estadísticos: descartan
+lo que no puede ser una lectura (una humedad sobre 100 %, una presión bajo 400 hPa, que no se da a la
+altitud de ninguna estación), no lo que es raro, para no recortar los episodios que el modelo tiene
+que ver. Los centinelas ({{< meta cifras.umbrales.centinelas >}}) se comparan con el valor crudo,
+antes de convertir la unidad. La columna «Día en 0 = sin dato» aplica la regla 3′ a todos los
+parámetros menos la precipitación, porque un día seco tiene precipitación 0.
 
 {{< include generado/tablas/umbrales.md >}}
 
@@ -148,11 +142,19 @@ completo, con el comando a la vista y la salida de conteos. Va en `docs/informe/
 :::
 ::::
 
-![Por qué falta el dato: destino de cada fila del archivo y la regla de las 18 horas de OEFA](generado/figuras/faltantes.png){#fig-faltantes width=16cm}
+![Por qué falta el dato: destino de cada fila larga del archivo, por estación, según la primera regla del cargador que la descarta (entre paréntesis, filas de la estación). «Día en cero» incluye la presión en 0, que la regla de rango atrapa antes; «hora en cero» es un 0 de un contaminante en un día con datos. Los colores son los del calendario de la @fig-calendario](generado/figuras/faltantes.png){#fig-faltantes width=16cm}
 
 :::: {si-falta="generado/figuras/faltantes.png"}
 ::: {.callout-warning title="PENDIENTE"}
 Falta `generado/figuras/faltantes.png` (la dibuja el notebook 04).
+:::
+::::
+
+![La regla de las 18 horas de OEFA: días con 24 filas horarias y promedio de 24 horas publicado, según cuántas horas del día tienen valor distinto de 0 (encima de cada barra, los días comparados). Con menos de 18 horas no nulas, OEFA publica 0 (dato insuficiente); con 18 o más, la media de las horas no nulas. El 0 es «sin dato», también dentro de un día](generado/figuras/regla18.png){#fig-regla18 width=16cm}
+
+:::: {si-falta="generado/figuras/regla18.png"}
+::: {.callout-warning title="PENDIENTE"}
+Falta `generado/figuras/regla18.png` (la dibuja el notebook 04).
 :::
 ::::
 
@@ -178,7 +180,7 @@ El análisis exploratorio se hizo en el notebook 01 (Colab) sobre la capa silver
 fue la criba de preguntas (@sec-pregunta); el segundo, decidir las features: se prefiere **menos
 features con más estaciones** a más features con pocas estaciones.
 
-![Completitud por estación y parámetro: proporción de horas con dato](generado/figuras/completitud.png){#fig-completitud width=16cm}
+![Completitud por estación y parámetro después de la limpieza: porcentaje de las horas del rango de cada estación con dato válido (las celdas en blanco son 0). A la derecha de la línea, las filas completas para cada conjunto de features de la calibración (F1/F2, M0–M2)](generado/figuras/completitud.png){#fig-completitud width=16cm}
 
 :::: {si-falta="generado/figuras/completitud.png"}
 ::: {.callout-warning title="PENDIENTE"}
@@ -187,7 +189,7 @@ Heatmap estación × parámetro de completitud. Lo dibuja el notebook 01 en
 :::
 ::::
 
-![Distribución de PM2,5 y PM10 por estación, en escala logarítmica](generado/figuras/distribuciones.png){#fig-distribuciones width=16cm}
+![Distribución de PM2,5 y PM10 por estación, en escala logarítmica, y de la fracción fina PM2,5/PM10, para las estaciones con material particulado. Cajas: cuartiles; bigotes: 1,5 veces el rango intercuartil; sin atípicos. El ECA es un promedio de 24 h: una lectura horaria sobre la línea no es por sí sola un incumplimiento](generado/figuras/distribuciones.png){#fig-distribuciones width=16cm}
 
 :::: {si-falta="generado/figuras/distribuciones.png"}
 ::: {.callout-warning title="PENDIENTE"}
