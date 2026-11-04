@@ -14,6 +14,7 @@
 # Uso: docs/diagramas/renderizar.sh
 # Requiere: quarto (por su mermaid.min.js), google-chrome o chromium, magick.
 set -euo pipefail
+shopt -s nullglob  # sin .mmd, el bucle no corre (hoy los dos diagramas son .drawio)
 
 dir="$(cd "$(dirname "$0")" && pwd)"
 mermaid="$(quarto --paths | sed -n 2p)/formats/html/mermaid/mermaid.min.js"
@@ -21,7 +22,12 @@ chrome="$(command -v google-chrome || command -v chromium || command -v chromium
 tmp="$(mktemp -d)"
 trap 'rm -rf "$tmp"' EXIT
 
-for mmd in "$dir"/*.mmd; do
+mmds=("$dir"/*.mmd)
+if [ "${#mmds[@]}" -eq 0 ]; then
+    echo "no hay .mmd en $dir: los diagramas son .drawio (ver la cabecera de este script)"
+    exit 0
+fi
+for mmd in "${mmds[@]}"; do
     nombre="$(basename "$mmd" .mmd)"
     fuente="$(python3 -c 'import json, sys; print(json.dumps(open(sys.argv[1], encoding="utf-8").read()))' "$mmd")"
     cat > "$tmp/$nombre.html" <<HTML
