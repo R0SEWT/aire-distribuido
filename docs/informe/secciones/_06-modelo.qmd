@@ -78,7 +78,7 @@ decidieron la receta:
   estable (ARI {{< meta cifras.calibracion.ari_semillas >}} entre semillas y
   {{< meta cifras.calibracion.ari_dias >}} por bloques de días), no aprende geografía (NMI con la
   estación {{< meta cifras.calibracion.nmi_estacion >}}, por debajo de la línea base de
-  {{< meta cifras.calibracion.nmi_base >}}), tiene {{< meta cifras.calibracion.silueta_frase >}} silueta
+  {{< meta cifras.calibracion.nmi_base >}}), tiene {{< meta cifras.calibracion.silueta_frase >}}
   ({{< meta cifras.calibracion.silueta >}}) y su régimen alto coincide con el ECA: recoge el
   {{< meta cifras.calibracion.recall >}} de las horas en que el promedio de 24 horas lo supera.
 

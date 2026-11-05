@@ -1630,7 +1630,8 @@ class Informe:
             "ari_dias": decimal(x["ari_dias"], 2), "pureza": decimal(x["pureza"], 2),
             "recall": pct(x["recall"], 0), "nmi_estacion": decimal(x["nmi_estacion"], 3),
             "nmi_base": decimal(x["nmi_estacion_base"], 3), "estaciones": entero(x["n_estaciones"]),
-            "silueta_frase": (f"la más alta" if rango == 1 else f"la {rango}.ª mayor"),
+            "silueta_frase": (f"la silueta más alta de la grilla con k ≥ {final[1]}" if rango == 1
+                              else f"la {rango}.ª silueta más alta de la grilla con k ≥ {final[1]}"),
             "n_variantes": entero(r["variante"].nunique()),
             "n_corridas": entero(n_corridas) if n_corridas else "—",
         }
