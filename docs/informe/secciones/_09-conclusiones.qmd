@@ -2,12 +2,6 @@
 
 # Conclusiones
 
-::: {.callout-note title="Borrador generado con IA, para revisión de Rody"}
-Redactadas por un agente de Claude Code (Claude Opus 5.5) el 02/11, una por resultado, cada una con
-su evidencia; las cifras van con `meta` desde `generado/cifras.yml`. Revisar que digan lo que el
-equipo sostiene en la exposición y borrar este aviso al aprobarlas.
-:::
-
 1. **La carga concurrente cumple el millón de registros y no pierde ni una fila sin contarla.** De
    {{< meta cifras.limpieza.filas_largas_leidas >}} filas leídas,
    {{< meta cifras.limpieza.filas_largas_procesadas >}} pasaron las reglas y

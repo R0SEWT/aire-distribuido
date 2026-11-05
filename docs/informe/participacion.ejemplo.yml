@@ -2,7 +2,7 @@
 # llenar-participacion.py los escribe sobre la plantilla del docente (recursos/plantilla-participacion.docx,
 # no versionada: es material del curso; se copia desde el Aula Virtual).
 entrega: PC3
-grupo: Nombre del grupo
+grupo: "Nombre del grupo"   # entre comillas si lleva dos puntos
 solucion: Nombre de la solución
 lider: Nombre completo del team leader
 comentario: Comentario del team leader.

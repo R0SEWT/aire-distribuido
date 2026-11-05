@@ -14,8 +14,7 @@
 # como rama de origen). El zip lleva solo lo versionado: el CSV de OEFA (1,3 GB) nunca lo está, y
 # de data/ entran el README y la muestra de las pruebas. No entran la base de tareas ni la
 # configuración de los agentes (.beads/, .claude/, .codex/, .agents/, CLAUDE.md, AGENTS.md) ni el
-# montaje del video (docs/video/, que es del TB2): no son la solución (el uso de IA se declara en
-# el Anexo E del informe).
+# montaje del video (docs/video/, que es del TB2): no son la solución.
 #
 # Los códigos de alumno salen de equipo.local.yml (no versionado). Sin él solo se arma una entrega
 # --preliminar, con los códigos de ejemplo.

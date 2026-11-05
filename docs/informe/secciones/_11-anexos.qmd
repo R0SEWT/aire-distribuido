@@ -1,4 +1,4 @@
-<!-- j) Anexos: repositorio y video, Kanban, historial de git, participación, uso de IA. -->
+<!-- j) Anexos: repositorio y video, Kanban, historial de git, participación. -->
 
 # Anexos {.unnumbered}
 
@@ -54,33 +54,3 @@ commit de merge y no aparecen en `git log --merges`.
 ## Anexo D. Reporte de participación {.unnumbered}
 
 {{< include generado/local/_participacion.md >}}
-
-## Anexo E. Declaración de uso de inteligencia artificial {.unnumbered}
-
-El sílabo del curso incorpora la ingeniería de prompts como herramienta, siempre contrastada con la
-teoría. En este entregable, **el código, las specs, los notebooks y el borrador del informe los
-generaron agentes de Claude Code (Anthropic), con el modelo Claude Opus 5.5**, bajo la dirección de
-Rody, que definió qué construir, tomó las decisiones abiertas y revisó lo generado. La @tbl-uso-ia lo
-declara pieza por pieza. Las cifras del informe no salen de la redacción: salen de los JSON que
-escriben los comandos de Go. La última columna registra qué integrante revisó cada pieza; se llena
-a medida que la revisión ocurre, y aquí no se afirma ninguna que no haya pasado.
-
-::: {#tbl-uso-ia tbl-colwidths="[20,24,24,17,15]"}
-| Pieza | Qué generó la IA | Verificación automática | Dirección | Revisado por |
-|:---|:---|:---|:---|:---|
-| Specs (`docs/specs/`) | Las specs de la PC3, de la calibración y de las preguntas candidatas | — | Rody: decisiones abiertas, aceptadas o revertidas una por una | PENDIENTE (Rody · Dayana · Julio) |
-| Cargador (`datos/`, `cmd/cargar`) | Código y pruebas | `go test -race`, una fila de la muestra por regla, integración continua | Rody | PENDIENTE (Rody · Dayana · Julio) |
-| K-Means (`kmeans/`, `cmd/entrenar`, `cmd/benchmark`) | Port del TP, sumas parciales, semillas, regímenes, benchmark | `go test -race`, las pruebas del TP como red del port, auditoría contra scikit-learn | Rody | PENDIENTE (Rody · Dayana · Julio) |
-| Protocolo (`protocolo/`) | Mensajes, codificación y barrera del coordinador | `go test -race` | Rody | PENDIENTE (Rody · Dayana · Julio) |
-| Diseño y diagramas (`docs/diseno.md`, `docs/diagramas/`) | Texto del diseño distribuido y los dos diagramas | — | Rody | PENDIENTE (Rody · Dayana · Julio) |
-| Notebooks (`notebooks/`) | EDA, calibración, auditoría y figuras, en pandas y scikit-learn | Auditoría cruzada: Go contra pandas y scikit-learn | Rody | PENDIENTE (Rody · Dayana · Julio) |
-| Informe (`docs/informe/`) | Esqueleto en Quarto, borrador de la prosa, `tablas.py`, scripts y plantilla | Cifras desde los JSON de Go; referencias verificadas por DOI o en el documento oficial | Rody | PENDIENTE (Rody · Dayana · Julio) |
-
-Uso de IA generativa en la PC3
-:::
-
-::: {.callout-warning title="PENDIENTE"}
-Llenar «Revisado por» con quien revisó de verdad cada pieza, cuando lo haga, y que Dayana y Julio
-declaren su propio uso de IA (herramienta, para qué y qué verificó), como en el TP. Los commits no llevan la marca de IA (convención del repositorio): el
-uso se declara solo aquí, así que el historial del Anexo C no basta para rastrearlo.
-:::

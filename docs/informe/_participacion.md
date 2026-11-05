@@ -29,7 +29,7 @@ la tabla dice quién hizo qué. También falta el nombre del grupo.
 
 | Nro | Estudiante | Responsabilidades | Cumplió | Cumplimiento parcial | No cumplió |
 |:---|:-----------|:---------------------|:----:|:-----:|:----:|
-| 1 | Rody Sebastian Vilchez Marin | Coordinación. Dirigió y revisó el trabajo generado con IA (specs, cargador, K-Means, protocolo, diseño, notebooks e informe; ver el Anexo E) | | | |
+| 1 | Rody Sebastian Vilchez Marin | Coordinación; specs, cargador, K-Means, protocolo, diseño, notebooks e informe | | | |
 | 2 | Dayana Kety Gómez Rodriguez | Ofrecida: EDA y evidencias de limpieza (`docs/limpieza.md`, completitud por estación). PENDIENTE: confirmar | | | |
 | 3 | Julio Cesar Meza Alfaro | Ofrecida: benchmark del cargador en gorgo y capturas de las ejecuciones. PENDIENTE: confirmar | | | |
 
