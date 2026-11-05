@@ -12,4 +12,4 @@
 La hora de cada lectura: explícita o reconstruida por posición
 :::
 
-*Nota.* Fuente: `generado/limpieza.json`, escrito por `cmd/cargar` (commit `6fb3b00`, 2026-11-01, máquina A019803). Convención de hora: «fin» (la lectura de 00:00 a 01:00 se fecha a las 01:00). Las proporciones de las tres primeras filas son sobre las procesadas; la de la regla, sobre las leídas; la última, sobre las filas anchas. La hora por bloque físico se cuenta al asignarla: alguna de esas lecturas pudo caer después en otra regla.
+*Nota.* Fuente: `generado/limpieza.json`, escrito por `cmd/cargar` (commit `6fb3b00`, 2026-11-01, laptop de desarrollo). Convención de hora: «fin» (la lectura de 00:00 a 01:00 se fecha a las 01:00). Las proporciones de las tres primeras filas son sobre las procesadas; la de la regla, sobre las leídas; la última, sobre las filas anchas. La hora por bloque físico se cuenta al asignarla: alguna de esas lecturas pudo caer después en otra regla.

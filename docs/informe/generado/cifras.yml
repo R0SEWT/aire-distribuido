@@ -275,7 +275,7 @@ cifras:
     nmi_estacion: "0,077"
     nmi_base: "0,087"
     estaciones: "17"
-    silueta_frase: "la más alta de la grilla con k ≥ 3"
+    silueta_frase: "la silueta más alta de la grilla con k ≥ 3"
     n_variantes: "24"
     n_corridas: "1 080"
     log_pureza: "0,00"

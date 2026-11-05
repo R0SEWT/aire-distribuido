@@ -27,4 +27,4 @@
 Filas largas descartadas por regla, en el orden de la cascada
 :::
 
-*Nota.* Fuente: `generado/limpieza.json`, escrito por `cmd/cargar` (commit `6fb3b00`, 2026-11-01, máquina A019803). Cada fila descartada se cuenta en la primera regla que falla, en el orden de la cascada de Go (`datos/doc.go`), así que la suma no tiene solapes. «Spec» es el número de regla de la @tbl-reglas; «—» son controles de estructura. Lo que se conserva y se marca está en la @tbl-limpieza-marcas. Fuera de rango por parámetro: O3 744; Precip. 2; Presión 50 472; Temp. 1.
+*Nota.* Fuente: `generado/limpieza.json`, escrito por `cmd/cargar` (commit `6fb3b00`, 2026-11-01, laptop de desarrollo). Cada fila descartada se cuenta en la primera regla que falla, en el orden de la cascada de Go (`datos/doc.go`), así que la suma no tiene solapes. «Spec» es el número de regla de la @tbl-reglas; «—» son controles de estructura. Lo que se conserva y se marca está en la @tbl-limpieza-marcas. Fuera de rango por parámetro: O3 744; Precip. 2; Presión 50 472; Temp. 1.

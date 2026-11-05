@@ -112,7 +112,20 @@ fi
   echo '::: {#tbl-prs tbl-colwidths="[15,8,50,27]"}'
   echo '| Fecha | PR | Rama de origen | Fusionada por |'
   echo '|:---|:---|:---|:---|'
-  if [ -n "$prs" ]; then
+  # Las PR salen de GitHub cuando gh está disponible: varias se fusionaron sin commit de merge y no
+  # aparecen en git log --merges. Si gh falla, se usan los merges del log.
+  prs_gh=""
+  if command -v gh >/dev/null 2>&1; then
+    repo_gh="$(git remote get-url origin 2>/dev/null | sed -n 's#.*github.com[:/]\(.*\)\.git$#\1#p; s#.*github.com[:/]\([^/]*/[^/]*\)$#\1#p' | head -1)"
+    [ -n "$repo_gh" ] && prs_gh="$(gh pr list --repo "$repo_gh" --state merged --limit 200 \
+      --json number,headRefName,baseRefName,mergedAt,mergedBy \
+      --jq 'sort_by(.number) | .[] | "\(.mergedAt[0:10])|\(.number)|\(.headRefName) → \(.baseRefName)|\(.mergedBy.login)"' 2>/dev/null || true)"
+  fi
+  if [ -n "$prs_gh" ]; then
+    while IFS='|' read -r fecha num rama quien; do
+      printf '| %s | #%s | %s | %s |\n' "$fecha" "$num" "$(printf '%s' "$rama" | escapar)" "$(printf '%s' "$quien" | unificar | escapar)"
+    done <<< "$prs_gh"
+  elif [ -n "$prs" ]; then
     while IFS='|' read -r fecha autor msg; do
       num="$(printf '%s' "$msg" | sed -n 's/^Merge pull request #\([0-9]*\).*/\1/p')"
       rama="$(printf '%s' "$msg" | sed -n 's/^Merge pull request #[0-9]* from [^/]*\/\(.*\)$/\1/p')"

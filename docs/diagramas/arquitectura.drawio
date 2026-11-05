@@ -5,7 +5,7 @@
     <mxCell id="oefa" value="&lt;b&gt;CSV de OEFA&lt;/b&gt;&lt;br&gt;1,3 GB · formato largo&lt;br&gt;33 estaciones" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=12;fillColor=#f1f1f1;strokeColor=#666666;fontColor=#222222;fontSize=12;" vertex="1" parent="1">
       <mxGeometry x="20" y="170" width="140" height="100" as="geometry"/>
     </mxCell>
-    <mxCell id="extra" value="&lt;b&gt;Medición extra · PC4&lt;/b&gt;&lt;br&gt;nodos reales por Tailscale: gorgo, caja 4060, Pixel 9a, Colab" style="rounded=0;whiteSpace=wrap;html=1;dashed=1;dashPattern=4 3;fillColor=#ffffff;strokeColor=#888888;fontColor=#333333;fontSize=11;" vertex="1" parent="1">
+    <mxCell id="extra" value="&lt;b&gt;Medición extra · PC4&lt;/b&gt;&lt;br&gt;nodos físicos del grupo por VPN y un nodo en Colab" style="rounded=0;whiteSpace=wrap;html=1;dashed=1;dashPattern=4 3;fillColor=#ffffff;strokeColor=#888888;fontColor=#333333;fontSize=11;" vertex="1" parent="1">
       <mxGeometry x="1230" y="16" width="300" height="60" as="geometry"/>
     </mxCell>
     <mxCell id="t_hola" value="HOLA: el nodo se conecta al coordinador" style="text;html=1;align=left;verticalAlign=middle;fontSize=10;fontColor=#444444;" vertex="1" parent="1">

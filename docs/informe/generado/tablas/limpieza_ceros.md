@@ -18,4 +18,4 @@
 Ceros descartados por parámetro: días enteros y horas sueltas
 :::
 
-*Nota.* Fuente: `generado/limpieza.json`, escrito por `cmd/cargar` (commit `6fb3b00`, 2026-11-01, máquina A019803). Un día completo de un parámetro con todas sus lecturas en 0 exacto es un equipo que no midió (regla `bloque_en_cero`); en los días con datos, un 0 exacto de un contaminante es una hora sin dato (regla `cero_como_faltante`), como lo trata OEFA. La meteorología no: un viento de 0 m/s es calma, y una hora seca tiene precipitación 0.
+*Nota.* Fuente: `generado/limpieza.json`, escrito por `cmd/cargar` (commit `6fb3b00`, 2026-11-01, laptop de desarrollo). Un día completo de un parámetro con todas sus lecturas en 0 exacto es un equipo que no midió (regla `bloque_en_cero`); en los días con datos, un 0 exacto de un contaminante es una hora sin dato (regla `cero_como_faltante`), como lo trata OEFA. La meteorología no: un viento de 0 m/s es calma, y una hora seca tiene precipitación 0.

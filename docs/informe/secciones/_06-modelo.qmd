@@ -40,7 +40,7 @@ meteorología, son el día y la noche; con estaciones de ciudades distintas, son
 eso la receta (features, transformación, nivel y $k$) se calibró en Colab antes de escribirla en Go,
 con una grilla que mide cuatro criterios además de la inercia: que el régimen separe las lecturas
 que exceden el ECA, que no sea la estación o la hora disfrazadas, que sea estable entre semillas y
-entre remuestreos por bloques de días, y que sus perfiles sean distinguibles.
+entre remuestreos por bloques de días, y que sus perfiles sean distinguibles (@tbl-grilla).
 
 ::: {#tbl-grilla tbl-colwidths="[20,80]"}
 | Eje | Variantes |
@@ -69,30 +69,38 @@ decidieron la receta:
   cola, ayudaría a separarlos. El dato dice lo contrario: con la misma receta y log1p, la pureza del
   régimen «excede» cae a {{< meta cifras.calibracion.log_pureza >}} y el recall a
   {{< meta cifras.calibracion.log_recall >}}. Los episodios viven justo en esa cola, y el logaritmo
-  los mezcla con el aire normal. Es un hallazgo que corrige la spec.
+  los mezcla con el aire normal. Es un hallazgo que corrigió la especificación de diseño.
 - **La regla automática y la decisión del equipo no coinciden.** Aplicando los criterios en el orden
-  de la spec, la regla prefería `{{< meta cifras.calibracion.auto_variante >}}` (PM10 y fracción
+  de la especificación, la regla prefería `{{< meta cifras.calibracion.auto_variante >}}` (PM10 y fracción
   fina, estandarizadas por estación) con $k$ = {{< meta cifras.calibracion.auto_k >}}. El equipo
   eligió la receta más simple: un K-Means relativo a cada estación obliga a calcular la etiqueta ECA
   aparte, en absoluto, y dos capas no se explican ni se defienden como un solo modelo. La simple es
   estable (ARI {{< meta cifras.calibracion.ari_semillas >}} entre semillas y
   {{< meta cifras.calibracion.ari_dias >}} por bloques de días), no aprende geografía (NMI con la
   estación {{< meta cifras.calibracion.nmi_estacion >}}, por debajo de la línea base de
-  {{< meta cifras.calibracion.nmi_base >}}), tiene la silueta {{< meta cifras.calibracion.silueta_frase >}}
+  {{< meta cifras.calibracion.nmi_base >}}), tiene {{< meta cifras.calibracion.silueta_frase >}}
   ({{< meta cifras.calibracion.silueta >}}) y su régimen alto coincide con el ECA: recoge el
   {{< meta cifras.calibracion.recall >}} de las horas en que el promedio de 24 horas lo supera.
 
 {{< include generado/tablas/calibracion.md >}}
+
+La calibración corrió el 01/11 sobre el silver de ese día (233 707 filas anchas; 64 236 horas
+completas en las 17 estaciones). El cargador final recupera más lecturas (las filas vacías de 2022
+y la hora por bloque físico, @sec-limpieza): 236 001 filas anchas y 65 873 horas en el gold. La
+receta se congeló antes de ese cambio, así que el recall del nivel alto que cita este informe es el
+medido en la calibración; el modelo final se entrenó sobre el gold final con esa misma receta.
 
 **La receta final**, congelada en `configs/kmeans.json`, que Go lee sin decidir nada: features
 {{< meta cifras.kmeans.features >}}, sin log, nivel {{< meta cifras.kmeans.nivel >}},
 $k$ = {{< meta cifras.kmeans.k >}}, {{< meta cifras.kmeans.semillas >}} semillas desde
 {{< meta cifras.kmeans.semilla_base >}} y chunk de {{< meta cifras.kmeans.chunk >}} filas. Con solo
 PM2,5 y PM10 en su unidad, los tres regímenes son **niveles de aire** (bajo, medio y alto), que es
-lo que una alerta necesita. Ninguna variante cumplió el criterio de separar el ECA con pureza > 0,6:
-se dice y no se esconde. La fracción fina y la meteorología no son features: se describen por
+lo que una alerta necesita. Ninguna variante cumplió el criterio de separar el ECA con pureza > 0,6, y el
+informe lo registra así. La fracción fina y la meteorología no son features: se describen por
 régimen. La hora, la estación y el mes tampoco lo son en ninguna variante: se usan después, para
-decir dónde y cuándo aparece cada régimen.
+decir dónde y cuándo aparece cada régimen. El método del codo (@tbl-codo y @fig-codo) da la inercia
+y la silueta para cada $k$; la receta fija $k$ = 3 por la calibración, no por el codo, que en esta
+variante está en $k$ = 5.
 
 {{< include generado/tablas/codo.md >}}
 
@@ -136,7 +144,8 @@ viajan centroides y parciales.
 su propio worker pool y responde; el coordinador espera a los $K$, fusiona **en orden de nodo** y
 actualiza. Es una **barrera por iteración a través de la red**: a diferencia de un bosque aleatorio
 distribuido, con un solo *reduce* al final, aquí la sincronización se paga en cada vuelta y es el
-costo dominante. Medirla es el experimento central de la PC4.
+costo dominante. Medirla es el experimento central de la PC4. Los mensajes del protocolo están en la
+@tbl-protocolo.
 
 ::: {#tbl-protocolo tbl-colwidths="[13,20,33,34]"}
 | Mensaje | Sentido | Contenido | Para qué |
@@ -197,7 +206,7 @@ Falta `docs/diagramas/secuencia-iteracion.png` (se exporta con draw.io desde
 
 ### Regímenes frente al ECA y al INCA {#sec-eca-inca}
 
-Cada cluster es un **régimen**: una combinación típica de material particulado y meteorología. Su
+Cada cluster es un **régimen**: un nivel típico de PM2,5 y PM10. Su
 **perfil** es la media aritmética, en unidades originales, de las lecturas que lo forman: cada
 lectura se des-estandariza (z-score y log1p invertidos) y después se promedia
 (`kmeans/regimenes.go`). En general **no es el centroide des-estandarizado**: con log1p, invertir el
@@ -224,7 +233,7 @@ Estándares de Calidad Ambiental para aire, material particulado (DS 003-2017-MI
 
 Para nombrar los regímenes ante la población se usan las bandas del INCA (@tbl-inca), que la
 norma define sobre promedios de 24 horas [@minam2016inca]. Hay un desfase que el informe tiene que
-decir: el INCA de PM2,5 se calcula como $I = [\mathrm{PM}_{2,5}] \cdot 100 / 25$, es decir, toma
+decir: el INCA de PM2,5 se calcula como $I = [\mathrm{PM}_{2{,}5}] \cdot 100 / 25$, es decir, toma
 25 µg/m³ como su valor 100, mientras que el ECA de 24 horas vigente desde 2017 es 50 µg/m³. Una
 concentración de 30 µg/m³ es «mala» para el INCA y cumple el ECA. Por eso la etiqueta ECA y la banda
 INCA se reportan por separado y no se mezclan.
@@ -237,7 +246,7 @@ INCA se reportan por separado y no se mezclan.
 | Mala | 101–167 | 151–250 | 101–500 | 25,1–125 |
 | Umbral de cuidado (VUEC) | > 167 | > 250 | > 500 | > 125 |
 
-Bandas del Índice de Calidad del Aire para material particulado (RM 181-2016-MINAM, tabla 3): $I(\mathrm{PM}_{10}) = [\mathrm{PM}_{10}] \cdot 100 / 150$ e $I(\mathrm{PM}_{2,5}) = [\mathrm{PM}_{2,5}] \cdot 100 / 25$; el umbral de cuidado de PM2,5 (125 µg/m³) es la mitad del de PM10, por recomendación de la OMS
+Bandas del Índice de Calidad del Aire para material particulado (RM 181-2016-MINAM, tabla 3): $I(\mathrm{PM}_{10}) = [\mathrm{PM}_{10}] \cdot 100 / 150$ e $I(\mathrm{PM}_{2{,}5}) = [\mathrm{PM}_{2{,}5}] \cdot 100 / 25$; el umbral de cuidado de PM2,5 (125 µg/m³) es la mitad del de PM10, por recomendación de la OMS
 :::
 
 Las dos tablas se transcribieron de los PDF oficiales el 31/10 y se cotejaron de nuevo el 03/11

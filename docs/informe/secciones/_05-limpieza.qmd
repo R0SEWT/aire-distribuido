@@ -65,7 +65,7 @@ corte de luz del 10/12 a las 15:45 al 11/12 a las 15:05 [@oefa2021antamina]; en 
 9/12 tiene 10 filas y el corte aparece en las posiciones 16 del 10/12 a 15 del 11/12, al minuto de la
 hora (dato y OEFA).
 
-**Esto es un supuesto fuerte, y el informe lo dice con esas palabras.** Que la hora sea la posición
+**Es un supuesto fuerte.** Que la hora sea la posición
 en los días que traen hora no prueba que lo sea en los que no la traen: si OEFA ordenara distinto
 esos días, o si faltara una lectura dentro de un bloque de 24, las horas se correrían sin que nada lo
 delate. Por eso se exige el día completo y se marca cada hora inferida: el
@@ -75,7 +75,7 @@ hora pico) hereda este supuesto.
 
 {{< include generado/tablas/limpieza_hora.md >}}
 
-### Ceros, gases gemelos y conversiones
+### Ceros, gases gemelos y conversiones {#sec-ceros}
 
 **Días enteros en cero.** {{< meta cifras.limpieza.bloque_en_cero >}} lecturas
 ({{< meta cifras.limpieza.pct_bloque_en_cero >}} del archivo, @tbl-limpieza-ceros) pertenecen a días
@@ -127,7 +127,9 @@ estación.
 El cargador también registra lo que el archivo trae tal cual, sin interpretar: los nombres de
 parámetro con su frecuencia (@tbl-limpieza-parametros) y las unidades de cada parámetro
 (@tbl-limpieza-unidades). Con eso se cierran los mapeos de `configs/limpieza.json` contra el CSV
-real. Parámetros sin mapeo en esta corrida: {{< meta cifras.limpieza.no_mapeados >}}.
+real. Parámetros sin mapeo en esta corrida: {{< meta cifras.limpieza.no_mapeados >}}. La
+@fig-captura-cargar es la corrida de `cmd/cargar` sobre el CSV completo, con los conteos por regla a
+la vista.
 
 {{< include generado/tablas/limpieza_parametros.md >}}
 
@@ -158,7 +160,8 @@ Falta `generado/figuras/regla18.png` (la dibuja el notebook 04).
 :::
 ::::
 
-**Qué dicen los conteos.** Se descarta la mitad del archivo
+**Qué dicen los conteos.** La @fig-faltantes muestra el destino de cada fila por estación y la
+@fig-regla18, la regla con que OEFA publica el promedio diario. Se descarta la mitad del archivo
 ({{< meta cifras.limpieza.pct_descartadas >}}), y casi todo por tres razones que no son ruido de
 medición sino forma del dato: los días en cero ({{< meta cifras.limpieza.pct_bloque_en_cero >}} de
 las filas leídas), las filas vacías de la plantilla de 2022
@@ -171,14 +174,16 @@ análisis de procedencia muestra que {{< meta cifras.eda.presion_cero_fuera_de_r
 presión en 0 exacto (días en cero), que la regla del rango físico atrapa antes que `bloque_en_cero`
 porque 0 hPa está fuera de rango: no son lecturas malas ni un problema de unidad. Al final, de {{< meta cifras.limpieza.n_estaciones_con_datos >}}
 estaciones con datos, solo {{< meta cifras.limpieza.n_estaciones_gold >}} tienen horas completas en
-las cuatro features de la receta (@tbl-limpieza-estaciones): el modelo ve una parte chica de la red,
+las dos features de la receta (@tbl-limpieza-estaciones): el modelo ve una parte chica de la red,
 y la advertencia de cobertura (@sec-cobertura) vale con más razón.
 
 ### Análisis exploratorio
 
 El análisis exploratorio se hizo en el notebook 01 (Colab) sobre la capa silver. Su primer objetivo
 fue la criba de preguntas (@sec-pregunta); el segundo, decidir las features: se prefiere **menos
-features con más estaciones** a más features con pocas estaciones.
+features con más estaciones** a más features con pocas estaciones. La @fig-completitud muestra la
+completitud por estación y parámetro, y la @fig-distribuciones, la distribución de PM2,5, PM10 y la
+fracción fina por estación.
 
 ![Completitud por estación y parámetro después de la limpieza: porcentaje de las horas del rango de cada estación con dato válido (las celdas en blanco son 0). A la derecha de la línea, las filas completas para cada conjunto de features de la calibración (F1/F2, M0–M2)](generado/figuras/completitud.png){#fig-completitud width=16cm}
 
@@ -214,7 +219,7 @@ estaciones con horas completas (@sec-modelo).
 ### Estandarización
 
 Las features de la receta se estandarizan con z-score antes del K-Means, para que ninguna domine la
-distancia euclídea por su escala. El cargador admite log1p antes del z-score (la spec lo proponía
+distancia euclídea por su escala. El cargador admite log1p antes del z-score (la especificación de diseño lo proponía
 para las colas largas de PM2,5 y PM10), pero la receta final no lo usa: la calibración mostró que el
 logaritmo comprime justo la cola donde viven los episodios y borra su separación (@sec-modelo). La media y la desviación se calculan sobre la tabla ancha ya
 deduplicada y filtrada por completitud, para que sean las de la matriz que ve el modelo. No se usa
@@ -232,7 +237,7 @@ El patrón es el del TP: dos implementaciones independientes, y si discrepan hay
 03 rehace en pandas la limpieza, el silver y el gold desde el bronze, y en scikit-learn el K-Means, y
 los compara con lo que escribió Go (@tbl-auditoria): {{< meta cifras.auditoria.ok >}} de
 {{< meta cifras.auditoria.chequeos >}} chequeos dan OK, {{< meta cifras.auditoria.diferencias >}}
-encuentran una diferencia y {{< meta cifras.auditoria.avisos >}} queda con un aviso, que no es un bug
+encuentran una diferencia; {{< meta cifras.auditoria.avisos >}} termina con un aviso (no es un error
 (el detalle está en la tabla). La auditoría corrió sobre la misma receta y el mismo gold que el
 modelo de este informe: {{< meta cifras.auditoria.misma_receta >}}.
 

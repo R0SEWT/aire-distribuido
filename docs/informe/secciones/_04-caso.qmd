@@ -78,7 +78,7 @@ dato, cuando un día tiene menos de {{< meta cifras.eda.regla_horas_validas >}} 
 promedio de 24 horas que publica OEFA vale 0 en el
 {{< meta cifras.eda.pct_dias_24h_cero_bajo_18h >}} % de los casos; con {{< meta cifras.eda.regla_horas_validas >}} o más, es la media de las horas
 **no nulas** en el {{< meta cifras.eda.pct_dias_24h_media_desde_18h >}} %. Para OEFA, un 0 es un
-faltante, y la limpieza lo trata igual (@sec-hora).
+faltante, y la limpieza lo trata igual (@sec-ceros).
 
 **Cuatro tipos de serie.** Las estaciones no miden lo mismo ni durante el mismo tiempo (@tbl-tipologia,
 @fig-calendario, dato): {{< meta cifras.tipologia.anios >}} series de varios años,
@@ -169,6 +169,8 @@ Falta `docs/diagramas/arquitectura.png`. Lo produce el diagrama de arquitectura 
 `docs/diagramas/` (rama del diseño); este aviso desaparece solo cuando el PNG existe.
 :::
 ::::
+
+La @tbl-partes dice qué hace cada parte y en qué entregable se construye.
 
 ::: {#tbl-partes tbl-colwidths="[22,52,26]"}
 | Parte | Qué hace | Entregable |

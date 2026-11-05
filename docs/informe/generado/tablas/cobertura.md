@@ -18,4 +18,4 @@
 Cobertura de la red por departamento
 :::
 
-*Nota.* Fuente: `generado/limpieza.json`, escrito por `cmd/cargar` (commit `6fb3b00`, 2026-11-01, máquina A019803). Un departamento que no aparece no tiene estación en el dataset: no hay dato, no aire limpio.
+*Nota.* Fuente: `generado/limpieza.json`, escrito por `cmd/cargar` (commit `6fb3b00`, 2026-11-01, laptop de desarrollo). Un departamento que no aparece no tiene estación en el dataset: no hay dato, no aire limpio.

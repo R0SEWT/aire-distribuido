@@ -327,7 +327,7 @@ class Informe:
         if momento:
             partes.append(fecha(momento))
         if maquina:
-            partes.append(f"máquina {maquina}")
+            partes.append("laptop de desarrollo")
         return " (" + ", ".join(partes) + ")" if partes else " (el JSON no registra commit ni fecha)"
 
     def tabla(self, archivo: str, origen: str, d: dict | None, ident: str, titulo: str,
@@ -337,6 +337,10 @@ class Informe:
         anchos: porcentaje de cada columna (tbl-colwidths); sin él, Pandoc reparte por igual.
         """
         attr = f' tbl-colwidths="[{",".join(str(a) for a in anchos)}]"' if anchos else ""
+        # Las notas que Go escribe en los JSON nombran campos; en el informe van en prosa.
+        for campo, prosa in (("ms_kmeanspp y ms_lloyd", "Los tiempos de k-means++ y de Lloyd"), ("ms_kmeanspp es 0", "El de k-means++ es 0"),
+                             ("ms_kmeanspp", "el tiempo de k-means++"), ("ms_lloyd", "el tiempo de Lloyd")):
+            nota = nota.replace(campo, prosa)
         ruta_origen = origen if "/" in origen else f"generado/{origen}"
         partes = [f"<!-- Generado por tablas.py desde {ruta_origen}. No editar a mano. -->", ""]
         if d is None:
@@ -422,7 +426,7 @@ class Informe:
                    f"({entero(d.get('bytes'))} bytes, sha256 `{(d.get('sha256') or '¿?')[:12]}`, "
                    f"delimitador «{d.get('delimitador', '?')}», "
                    f"{'con' if d.get('bom') else 'sin'} BOM), {d.get('workers')} workers, "
-                   f"{entero(d.get('bloques'))} bloque(s) de {entero(d.get('bloque_bytes', 0) / 2**20)} MiB, "
+                   f"{entero(d.get('bloques'))} bloques de {entero(d.get('bloque_bytes', 0) / 2**20)} MiB, "
                    f"{tiempo(d.get('duracion_s'))} s.")
 
         filas = []
@@ -722,14 +726,14 @@ class Informe:
         self.tabla("benchmark_cargador.md", o, d, "tbl-bench-cargador", titulo, markdown(t, "rrrrrrrl"),
                    anchos=[9, 11, 12, 11, 9, 15, 11, 22], nota=
                    f"Carga completa (lectura, limpieza, pivot y gold, sin escribir los CSV) de `{Path(str(d.get('entrada'))).name}` "
-                   f"({entero(d.get('filas_largas'))} filas largas, {entero(d.get('bloques'))} bloque(s) de "
+                   f"({entero(d.get('filas_largas'))} filas largas, {entero(d.get('bloques'))} bloques de "
                    f"{entero(d.get('bloque_bytes', 0) / 2**20)} MiB). {d.get('repeticiones')} repeticiones por W, orden "
                    f"{d.get('orden', '¿?')}. Speedup: {pr.get('speedup_ic', 'media recortada con la base / media recortada con W')}, "
                    f"{entero(pr.get('replicas_bootstrap'))} réplicas, recorte de {pct(pr.get('recorte_por_extremo'), 0)} "
-                   f"por extremo; al lado, el cociente de medianas. Base: {base['workers']} worker(s). "
+                   f"por extremo; al lado, el cociente de medianas. Base: {base['workers']} worker. "
                    f"Eficiencia = speedup / workers. {d.get('cpus')} CPU, {d.get('go', '')}, {d.get('plataforma', '')}. "
                    + (f"{pr['nota_recorte']}. " if pr.get("nota_recorte") else "") +
-                   f"Silver y gold idénticos para todo W: {'sí' if d.get('identicos') else 'NO'}.")
+                   ("El silver y el gold salieron idénticos para todo W." if d.get("identicos") else "El silver y el gold NO salieron idénticos para todo W."))
         # El resumen reporta un W fijado de antemano (el máximo medido), no el mejor de la tabla: elegir
         # el máximo entre configuraciones ruidosas sesga el speedup hacia arriba.
         fijo = max(med, key=lambda m: m["workers"])
@@ -793,9 +797,8 @@ class Informe:
                 f"n = {entero(d.get('datos', {}).get('n'))} filas, k = {d.get('receta', {}).get('k')}"
                 f"{', gold sintético' if d.get('datos', {}).get('sintetico') else ''}. "
                 f"{m.get('cpus_logicas', '¿?')} CPU lógicas, {m.get('version_go', '')}. "
-                + ("Idéntico bit a bit para todo W: "
-                   + "; ".join(f"{exp.get(x['experimento'], x['experimento'])} "
-                               f"{'sí' if x.get('identico_bit_a_bit_para_todo_w') else 'NO'}" for x in det) + "."
+                + (("El resultado fue idéntico bit a bit para todo W en los dos experimentos." if all(x.get("identico_bit_a_bit_para_todo_w") for x in det)
+                    else "El resultado NO fue idéntico bit a bit para todo W en: " + ", ".join(exp.get(x["experimento"], x["experimento"]) for x in det if not x.get("identico_bit_a_bit_para_todo_w")) + ".")
                    if det else ""))
         self.tabla("benchmark_kmeans.md", o, d, "tbl-bench-kmeans", titulo, markdown(t, "llrrrrrrrr"),
                    anchos=[14, 7, 5, 8, 11, 12, 10, 9, 15, 9], nota=nota)
@@ -1008,7 +1011,7 @@ class Informe:
         self.tabla(archivos[1][0], o, d, archivos[1][1], archivos[1][2], markdown(pd.DataFrame(h), "rrrrrr"),
                    anchos=[12, 18, 18, 18, 18, 16], nota=
                    "Proporción de las filas de cada régimen en cada franja (hora de Lima, UTC−5). La "
-                   "distribución hora a hora está en la figura del heatmap régimen × hora.")
+                   "distribución hora a hora está en la @fig-regimen-hora.")
 
         s = []
         for x in rg:
@@ -1615,7 +1618,7 @@ class Informe:
                    fuente=f"Fuente: `reports/calibracion_resumen.csv` (notebook 02: {entero(r['variante'].nunique())} "
                           f"variantes × k de 2 a 10 × 5 semillas{', ' + entero(n_corridas) + ' corridas' if n_corridas else ''}).",
                    nota=
-                   "Umbrales entre paréntesis, los de la spec de calibración. La línea base de NMI es la de "
+                   "Umbrales entre paréntesis, los de la especificación de la calibración. La línea base de NMI es la de "
                    "partir solo por el nivel de PM10: un régimen por debajo de ella no aprendió geografía. "
                    "Pureza y recall usan la etiqueta del promedio móvil de 24 h sobre el ECA.")
         x = filas_r["Final (elegida)"]
@@ -1627,8 +1630,8 @@ class Informe:
             "ari_dias": decimal(x["ari_dias"], 2), "pureza": decimal(x["pureza"], 2),
             "recall": pct(x["recall"], 0), "nmi_estacion": decimal(x["nmi_estacion"], 3),
             "nmi_base": decimal(x["nmi_estacion_base"], 3), "estaciones": entero(x["n_estaciones"]),
-            "silueta_frase": (f"la más alta de la grilla con k ≥ {final[1]}" if rango == 1
-                              else f"la {rango}.ª de la grilla con k ≥ {final[1]}"),
+            "silueta_frase": (f"la silueta más alta de la grilla con k ≥ {final[1]}" if rango == 1
+                              else f"la {rango}.ª silueta más alta de la grilla con k ≥ {final[1]}"),
             "n_variantes": entero(r["variante"].nunique()),
             "n_corridas": entero(n_corridas) if n_corridas else "—",
         }

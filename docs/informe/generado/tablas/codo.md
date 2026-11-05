@@ -16,4 +16,4 @@
 Inercia por número de clusters (método del codo)
 :::
 
-*Nota.* Fuente: `generado/codo.json`, escrito por `cmd/entrenar -codo` (commit `6fb3b00`, 2026-11-01, máquina A019803). n = 65 873 filas. Inercia con los centroides finales sobre una submuestra sistemática del gold; para cada k, la mejor de 10 semillas desde la de la receta, igual que el modelo final. La silueta va en la PC4. k de la receta: 3.
+*Nota.* Fuente: `generado/codo.json`, escrito por `cmd/entrenar -codo` (commit `6fb3b00`, 2026-11-01, laptop de desarrollo). n = 65 873 filas. Inercia con los centroides finales sobre una submuestra sistemática del gold; para cada k, la mejor de 10 semillas desde la de la receta, igual que el modelo final. La silueta va en la PC4. k de la receta: 3.

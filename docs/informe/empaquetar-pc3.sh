@@ -13,8 +13,9 @@
 # La versión final sale del tag pc3, después del release a main por release/pc3 (nunca con develop
 # como rama de origen). El zip lleva solo lo versionado: el CSV de OEFA (1,3 GB) nunca lo está, y
 # de data/ entran el README y la muestra de las pruebas. No entran la base de tareas ni la
-# configuración de los agentes (.beads/, .claude/, .codex/, .agents/, CLAUDE.md, AGENTS.md): no
-# son la solución (el uso de IA se declara en el Anexo E del informe).
+# configuración de los agentes (.beads/, .claude/, .codex/, .agents/, CLAUDE.md, AGENTS.md) ni el
+# montaje del video (docs/video/, que es del TB2): no son la solución (el uso de IA se declara en
+# el Anexo E del informe).
 #
 # Los códigos de alumno salen de equipo.local.yml (no versionado). Sin él solo se arma una entrega
 # --preliminar, con los códigos de ejemplo.
@@ -84,7 +85,7 @@ for c in "${codigos[@]}"; do
   cp "salida/1ACC0065_PC3_202610_Informe_${c}.docx" "$destino/"
   git -C "$raiz" archive --format=zip --prefix=aire-distribuido/ -o "$destino/1ACC0065_PC3_${c}.zip" "$commit" \
     -- . ':(exclude).beads' ':(exclude).claude' ':(exclude).codex' ':(exclude).agents' \
-    ':(exclude)CLAUDE.md' ':(exclude)AGENTS.md'
+    ':(exclude)CLAUDE.md' ':(exclude)AGENTS.md' ':(exclude)docs/video'
 done
 cp "salida/1ACC0065-202620_Participación_PC3.docx" "$destino/"
 

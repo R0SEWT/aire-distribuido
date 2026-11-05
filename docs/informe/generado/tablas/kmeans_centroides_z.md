@@ -10,4 +10,4 @@
 Centroides en el espacio estandarizado (z-score) en que corre el K-Means
 :::
 
-*Nota.* Fuente: `generado/kmeans.json`, escrito por `cmd/entrenar` (commit `6fb3b00`, 2026-11-01, máquina A019803). k = 3 (efectivo 3), semilla elegida 42, 44 iteraciones (convergió por tolerancia), inercia 50 950,4, n = 65 873, chunk 1 000, clusters vacíos: 0. El perfil de cada cluster en unidades originales está en la tabla de regímenes: es la media aritmética de sus lecturas, no este centroide invertido.
+*Nota.* Fuente: `generado/kmeans.json`, escrito por `cmd/entrenar` (commit `6fb3b00`, 2026-11-01, laptop de desarrollo). k = 3 (efectivo 3), semilla elegida 42, 44 iteraciones (convergió por tolerancia), inercia 50 950,4, n = 65 873, chunk 1 000, clusters vacíos: 0. El perfil de cada cluster en unidades originales está en la tabla de regímenes: es la media aritmética de sus lecturas, no este centroide invertido.

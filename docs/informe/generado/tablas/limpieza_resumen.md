@@ -13,4 +13,4 @@
 Conservación de filas en la carga
 :::
 
-*Nota.* Fuente: `generado/limpieza.json`, escrito por `cmd/cargar` (commit `6fb3b00`, 2026-11-01, máquina A019803). Leídas = procesadas + descartadas, en filas largas. Archivo `1a_Vigilancia y Seguimiento ambiental en la calidad del aire.csv` (1 317 949 839 bytes, sha256 `1f09a8064ee0`, delimitador «;», sin BOM), 12 workers, 20 bloque(s) de 64 MiB, 1,33 s.
+*Nota.* Fuente: `generado/limpieza.json`, escrito por `cmd/cargar` (commit `6fb3b00`, 2026-11-01, laptop de desarrollo). Leídas = procesadas + descartadas, en filas largas. Archivo `1a_Vigilancia y Seguimiento ambiental en la calidad del aire.csv` (1 317 949 839 bytes, sha256 `1f09a8064ee0`, delimitador «;», sin BOM), 12 workers, 20 bloques de 64 MiB, 1,33 s.
