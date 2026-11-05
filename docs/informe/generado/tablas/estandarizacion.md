@@ -9,4 +9,4 @@
 Media y desviación usadas en el z-score de cada feature
 :::
 
-*Nota.* Fuente: `generado/estandarizacion.json`, escrito por `cmd/cargar` (commit `6fb3b00`, 2026-11-01, máquina A019803). Nivel absoluto, n = 65 873 filas anchas completas, ddof = 0, chunk de 1 000 filas. Con log1p, la media y la desviación son de log(1 + x).
+*Nota.* Fuente: `generado/estandarizacion.json`, escrito por `cmd/cargar` (commit `6fb3b00`, 2026-11-01, laptop de desarrollo). Nivel absoluto, n = 65 873 filas anchas completas, ddof = 0, chunk de 1 000 filas. Con log1p, la media y la desviación son de log(1 + x).

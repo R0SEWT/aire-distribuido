@@ -10,4 +10,4 @@
 Distribución de cada régimen por franja horaria
 :::
 
-*Nota.* Fuente: `generado/regimenes.json`, escrito por `cmd/entrenar` (commit `6fb3b00`, 2026-11-01, máquina A019803). Proporción de las filas de cada régimen en cada franja (hora de Lima, UTC−5). La distribución hora a hora está en la figura del heatmap régimen × hora.
+*Nota.* Fuente: `generado/regimenes.json`, escrito por `cmd/entrenar` (commit `6fb3b00`, 2026-11-01, laptop de desarrollo). Proporción de las filas de cada régimen en cada franja (hora de Lima, UTC−5). La distribución hora a hora está en la @fig-regimen-hora.

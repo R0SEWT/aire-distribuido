@@ -10,4 +10,4 @@
 Estaciones donde más aparece cada régimen
 :::
 
-*Nota.* Fuente: `generado/regimenes.json`, escrito por `cmd/entrenar` (commit `6fb3b00`, 2026-11-01, máquina A019803). Las tres estaciones con más filas de cada régimen. Que un régimen se concentre en una estación no dice que esa estación tenga peor aire que una zona sin estación.
+*Nota.* Fuente: `generado/regimenes.json`, escrito por `cmd/entrenar` (commit `6fb3b00`, 2026-11-01, laptop de desarrollo). Las tres estaciones con más filas de cada régimen. Que un régimen se concentre en una estación no dice que esa estación tenga peor aire que una zona sin estación.

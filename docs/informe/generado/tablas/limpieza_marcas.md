@@ -13,4 +13,4 @@
 Lo que se conserva pero se marca
 :::
 
-*Nota.* Fuente: `generado/limpieza.json`, escrito por `cmd/cargar` (commit `6fb3b00`, 2026-11-01, máquina A019803). Conversiones de unidad por parámetro: Presión 135 872; SO2 4 227; CO 4 082; H2S 3 864; O3 3 479.
+*Nota.* Fuente: `generado/limpieza.json`, escrito por `cmd/cargar` (commit `6fb3b00`, 2026-11-01, laptop de desarrollo). Conversiones de unidad por parámetro: Presión 135 872; SO2 4 227; CO 4 082; H2S 3 864; O3 3 479.

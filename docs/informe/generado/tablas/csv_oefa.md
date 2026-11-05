@@ -19,4 +19,4 @@
 El CSV de OEFA tal como viene
 :::
 
-*Nota.* Fuente: `generado/limpieza.json`, escrito por `cmd/cargar` (commit `6fb3b00`, 2026-11-01, máquina A019803); el control de la hora y los registros multilínea, de `reports/eda_criba.md` (notebook 01 sobre el mismo archivo), transcritos en `generado/eda.json`.
+*Nota.* Fuente: `generado/limpieza.json`, escrito por `cmd/cargar` (commit `6fb3b00`, 2026-11-01, laptop de desarrollo); el control de la hora y los registros multilínea, de `reports/eda_criba.md` (notebook 01 sobre el mismo archivo), transcritos en `generado/eda.json`.

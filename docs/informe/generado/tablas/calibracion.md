@@ -18,4 +18,4 @@
 Calibración: la receta final frente a las alternativas
 :::
 
-*Nota.* Fuente: `reports/calibracion_resumen.csv` (notebook 02: 24 variantes × k de 2 a 10 × 5 semillas, 1 080 corridas). Umbrales entre paréntesis, los de la spec de calibración. La línea base de NMI es la de partir solo por el nivel de PM10: un régimen por debajo de ella no aprendió geografía. Pureza y recall usan la etiqueta del promedio móvil de 24 h sobre el ECA.
+*Nota.* Fuente: `reports/calibracion_resumen.csv` (notebook 02: 24 variantes × k de 2 a 10 × 5 semillas, 1 080 corridas). Umbrales entre paréntesis, los de la especificación de la calibración. La línea base de NMI es la de partir solo por el nivel de PM10: un régimen por debajo de ella no aprendió geografía. Pureza y recall usan la etiqueta del promedio móvil de 24 h sobre el ECA.

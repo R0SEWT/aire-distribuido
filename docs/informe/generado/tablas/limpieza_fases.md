@@ -13,4 +13,4 @@
 Tiempo de cada fase de la carga
 :::
 
-*Nota.* Fuente: `generado/limpieza.json`, escrito por `cmd/cargar` (commit `6fb3b00`, 2026-11-01, máquina A019803). Carga de 1,33 s con 12 workers y 20 bloques de 64 MiB. Las fases sin la fusión suman el total; la fusión está dentro de la lectura. Fuera de la medición, la escritura del silver y el gold (`salida`): 0,225 s.
+*Nota.* Fuente: `generado/limpieza.json`, escrito por `cmd/cargar` (commit `6fb3b00`, 2026-11-01, laptop de desarrollo). Carga de 1,33 s con 12 workers y 20 bloques de 64 MiB. Las fases sin la fusión suman el total; la fusión está dentro de la lectura. Fuera de la medición, la escritura del silver y el gold (`salida`): 0,225 s.

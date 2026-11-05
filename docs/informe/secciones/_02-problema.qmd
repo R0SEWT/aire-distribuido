@@ -136,6 +136,9 @@ ausencia de dato no dice nada sobre el aire. Ningún mapa, tabla o alerta de est
 leerse como «aquí el aire es bueno» fuera del entorno de una estación.
 :::
 
+La @tbl-cobertura y la @fig-cobertura muestran en qué departamentos hay estaciones y cuántas horas
+con material particulado aporta cada uno.
+
 {{< include generado/tablas/cobertura.md >}}
 
 ![Cobertura de la red: estaciones y horas completas por departamento](generado/figuras/cobertura.png){#fig-cobertura width=14cm}
@@ -146,7 +149,7 @@ Falta `generado/figuras/cobertura.png` (la dibuja el notebook 03).
 :::
 ::::
 
-Esta advertencia no es un pie de página: es la responsabilidad ética del caso (ABET SO4). Un sistema
+Esta advertencia es la responsabilidad ética del caso (ABET SO4). Un sistema
 de alertas que solo ve {{< meta cifras.limpieza.n_estaciones >}} puntos y no lo dice puede dejar sin
 aviso, con apariencia de normalidad, a la mayoría del territorio. Por eso acompaña a cualquier
 resultado de este informe y al mapa del TB2.
@@ -171,7 +174,7 @@ Trabajo Parcial, en Go, con equivalencia bit a bit entre workers probada con `-r
 cada nodo calcula sumas parciales de su partición y el coordinador recalcula los centroides en cada
 iteración.
 
-Hay que decir con honestidad qué puede y qué no puede hacer: el K-Means **no pronostica**, clasifica
+Conviene dejar claro qué puede y qué no puede hacer: el K-Means **no pronostica**, clasifica
 el régimen en que está una estación ahora. Llamar «alerta temprana» a esa clasificación sin decir qué
 anticipa ni con qué tasa de acierto sería engañoso. La alerta sale del régimen más los umbrales del
 ECA, y cuánto anticipa cada régimen se mide en el TB2.

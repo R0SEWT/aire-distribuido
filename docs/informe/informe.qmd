@@ -36,7 +36,24 @@ lang: es
 
 Esta sección recorre los cinco puntos que el enunciado pide para el Entregable 1, en su orden:
 la presentación del caso, la limpieza y el análisis de los datos, el diseño del modelo de ML
-distribuido, la paralelización del cálculo en Go y las evidencias de la implementación.
+distribuido, la paralelización del cálculo en Go y las evidencias de la implementación. Los otros
+tres (los cambios en GitHub, el tablero Kanban y el reporte de participación) van en los anexos. La
+@tbl-mapa-enunciado dice dónde está cada uno.
+
+::: {#tbl-mapa-enunciado tbl-colwidths="[48,52]"}
+| Punto del Entregable 1 (enunciado) | Dónde está en este informe |
+|:---|:---|
+| Presentación del caso: problema, motivación y pregunta de impacto social | @sec-caso, con la pregunta en la @sec-pregunta y la cobertura en la @sec-cobertura |
+| Limpieza y análisis de datos: procedimiento y evidencias | @sec-limpieza (reglas, hora por posición, ceros, conteos, EDA, estandarización y auditoría) |
+| Diseño del modelo ML distribuido | @sec-modelo (K-Means, calibración, sumas parciales, protocolo y secuencia, ECA e INCA) |
+| Paralelización del cálculo: justificación, técnicas y patrones en Go | @sec-paralelizacion |
+| Evidencias de la implementación: código en Go y pruebas | @sec-evidencias (código, pruebas, rendimiento, resultados, Docker, gestión del proyecto) |
+| Cambios subidos a GitHub | Anexo A (repositorio, tag) y Anexo C (historial y PRs) |
+| Tablero Kanban actualizado | Anexo B |
+| Reporte de participación | Anexo D y el archivo aparte `1ACC0065-202620_Participación_PC3.docx` |
+
+Dónde está cada punto del enunciado
+:::
 
 {{< include secciones/_04-caso.qmd >}}
 

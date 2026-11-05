@@ -7,6 +7,8 @@ vista, en `docs/informe/capturas/`.
 
 ### Código
 
+La @tbl-repo resume qué hay en cada carpeta del repositorio.
+
 ::: {#tbl-repo tbl-colwidths="[28,72]"}
 | Ruta | Contenido |
 |:---|:---|
@@ -73,6 +75,9 @@ descarta el parcial rezagado de una ronda que ya abortó, en vez de fusionarlo c
 Pruebas que sostienen la corrección de la concurrencia
 :::
 
+La @fig-captura-tests muestra la corrida de `go test -race ./...` sobre todo el módulo, y la
+@fig-captura-ci, los mismos checks corriendo en GitHub Actions en cada PR.
+
 ![`go test -race ./...` sobre todo el módulo](capturas/go-test-race.png){#fig-captura-tests width=16cm}
 
 :::: {si-falta="capturas/go-test-race.png"}
@@ -122,6 +127,14 @@ número de workers.
 
 {{< include generado/tablas/benchmark_kmeans.md >}}
 
+Dos lecturas de la @tbl-bench-kmeans. Con W = 1 la versión concurrente iguala o supera a la secuencial
+(eficiencia de 102 % y 114 %): el bucle por chunks recorre los datos en bloques que caben en caché,
+mientras que el secuencial los recorre de corrido, y con una sola iteración de referencia el ruido
+del cronómetro pesa; no es paralelismo. Y las mediciones de rendimiento se hicieron con el
+toolchain `go1.27.3` (el que trae la laptop); el módulo exige Go 1.26 como mínimo (`go.mod`) y la
+imagen de Docker compila con `golang:1.26`. La @fig-speedup dibuja los dos speedups con su intervalo,
+y la @fig-captura-benchmark es la corrida reducida de `cmd/benchmark` en la terminal.
+
 ![Speedup del cargador y del K-Means frente al número de workers, con el intervalo de confianza bootstrap al 95 % del cociente y la diagonal ideal. En el K-Means, el color distingue el experimento (trabajo fijo o hasta converger) y el trazo, el tamaño del chunk. Laptop de desarrollo, 14 CPU lógicas](generado/figuras/speedup.png){#fig-speedup width=15cm}
 
 :::: {si-falta="generado/figuras/speedup.png"}
@@ -131,7 +144,7 @@ Speedup contra workers, con la diagonal ideal y las barras del IC, desde
 :::
 ::::
 
-![Ejecución de `cmd/benchmark` en la laptop de desarrollo (A019803, 14 CPU lógicas): corrida reducida de 3 repeticiones; las cifras del texto salen de la corrida completa de 10](capturas/benchmark.png){#fig-captura-benchmark width=16cm}
+![Ejecución de `cmd/benchmark` en la laptop de desarrollo (14 CPU lógicas): corrida reducida de 3 repeticiones; las cifras del texto salen de la corrida completa de 10](capturas/benchmark.png){#fig-captura-benchmark width=16cm}
 
 :::: {si-falta="capturas/benchmark.png"}
 ::: {.callout-warning title="PENDIENTE"}
@@ -267,7 +280,11 @@ estación: con tan pocas estaciones con meteorología, una media de nivel no bas
 {{< include generado/tablas/meteorologia.md >}}
 
 **Dónde y cuándo, en detalle.** La @tbl-regimenes-hora reparte cada nivel por franja horaria (en hora
-final) y la @tbl-regimenes-estacion dice en qué estaciones aparece más.
+final) y la @tbl-regimenes-estacion dice en qué estaciones aparece más. Las figuras lo muestran: la
+@fig-niveles, las horas en el plano PM2,5–PM10 coloreadas por régimen; la @fig-perfiles, el perfil
+de cada régimen frente al ECA; la @fig-regimen-hora y la @fig-regimen-estacion, los repartos por
+hora y por estación; la @fig-episodio, una semana de CA-CP-01 con cada hora coloreada por su
+régimen; y la @fig-captura-entrenar, la corrida de `cmd/entrenar` que produjo estas salidas.
 
 {{< include generado/tablas/regimenes_hora.md >}}
 
@@ -348,7 +365,8 @@ entero llega en la PC4). Va en
 :::
 ::::
 
-El `Dockerfile` compila en dos etapas. La primera, sobre `golang:1.26`, compila todo el módulo (si
+El `Dockerfile` compila en dos etapas (la @fig-captura-docker muestra la construcción de la imagen y
+una corrida del cargador dentro del contenedor). La primera, sobre `golang:1.26`, compila todo el módulo (si
 algo no compila, la imagen no se construye) y los comandos de `cmd/` como binarios estáticos
 (`CGO_ENABLED=0`, `-trimpath`). La segunda copia solo esos binarios y `configs/` a una imagen
 distroless sin shell, con la zona horaria de Lima y un usuario sin privilegios. Los datos no entran
