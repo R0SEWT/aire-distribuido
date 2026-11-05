@@ -29,7 +29,8 @@ Renderizar se hace con `render.sh`, no con `quarto render` a secas: el script ar
 | `informe.qmd` | Esqueleto en el orden del enunciado, a) a j); incluye las secciones |
 | `secciones/_NN-*.qmd` | Una sección por archivo, para escribir en paralelo sin pisarse |
 | `equipo.ejemplo.yml` | Nombres y códigos **de ejemplo**; los reales van en `equipo.local.yml`, no versionado |
-| `_participacion.md` | Plantilla del reporte de participación, sin niveles de cumplimiento; la llenada va en `participacion.local.md`, no versionado |
+| `_participacion.md` | Plantilla del Anexo D (participación dentro del informe), sin niveles; la llenada va en `participacion.local.md`, no versionado |
+| `llenar-participacion.py`, `participacion.ejemplo.yml` | El reporte de participación suelto se llena sobre la plantilla del docente (`recursos/plantilla-participacion.docx`, no versionada: se copia del Aula Virtual) con los datos de `participacion.local.yml`, no versionado |
 | `filtros/informe.lua` | Carátula por código, índice, figuras faltantes, avisos condicionales, tablas |
 | `tablas.py` | `generado/*.json` → `generado/tablas/*.md` y `generado/cifras.yml` |
 | `generado/` | JSON de Go, tablas y cifras derivadas, figuras, `historial.ejemplo.md` y `local/` (no versionado: equipo, participación e historial del momento) |
@@ -150,7 +151,7 @@ que sale de los notebooks (`reports/descriptores_regimen.csv`); y lo que solo mi
 
 ## Antes de entregar
 
-- `equipo.local.yml` con los códigos reales y `participacion.local.md` con los niveles marcados.
+- `equipo.local.yml` con los códigos reales, `participacion.local.md` con los niveles marcados (Anexo D) y `participacion.local.yml` más `recursos/plantilla-participacion.docx` para el reporte suelto en el formato del curso.
 - `grep -rn 'title="PENDIENTE' secciones/` vacío, `python3 tablas.py --final` sin errores.
 - Push de todas las ramas y `FETCH=1 bash render.sh` con `main` ya en el tag `pc3`.
 - Tablero Kanban y video (si la PC3 lo lleva) publicados.
