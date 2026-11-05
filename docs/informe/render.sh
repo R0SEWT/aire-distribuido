@@ -100,8 +100,15 @@ done
 if [ "$#" -eq 0 ]; then
   participacion="1ACC0065-202620_Participación_PC3.docx"
   echo "→ $participacion"
-  quarto render participacion.qmd --output "$participacion" --quiet
-  mover "$participacion" || { echo "error: quarto no produjo $participacion" >&2; exit 1; }
+  # Con la plantilla del docente y los datos locales, se llena el .docx del curso tal cual (logo,
+  # tablas y estilos del formato); si falta alguno, se renderiza la versión de Quarto como respaldo.
+  if [ -f "${PLANTILLA_PARTICIPACION:-recursos/plantilla-participacion.docx}" ] && [ -f participacion.local.yml ] && command -v uv >/dev/null 2>&1; then
+    uv run --quiet --with python-docx --with pyyaml llenar-participacion.py "salida/$participacion"
+  else
+    echo "aviso: sin recursos/plantilla-participacion.docx o participacion.local.yml: participación desde Quarto (no es el formato del curso)" >&2
+    quarto render participacion.qmd --output "$participacion" --quiet
+    mover "$participacion" || { echo "error: quarto no produjo $participacion" >&2; exit 1; }
+  fi
 fi
 
 n_pendiente="$(cat informe.qmd secciones/*.qmd _participacion.md | grep -c 'title="PENDIENTE' || true)"

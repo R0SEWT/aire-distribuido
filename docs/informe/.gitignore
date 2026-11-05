@@ -14,3 +14,5 @@ generado/local/
 
 /.quarto/
 **/*.quarto_ipynb
+recursos/plantilla-participacion.docx
+participacion.local.yml
