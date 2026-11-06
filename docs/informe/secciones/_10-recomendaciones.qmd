@@ -1,0 +1,74 @@
+<!-- h) Recomendaciones. -->
+
+# Recomendaciones
+
+## Para la PC4: el clúster
+
+1. **Montar el clúster sobre lo que ya está probado.** La barrera de una ronda a través de la red
+   (`protocolo.Ronda`: fan-out de `ITERAR`, fan-in de `PARCIAL` en orden de nodo, plazo con error
+   claro y descarte de rezagados) y las funciones `Parciales`, `Fusionar` y `Actualizar` ya tienen sus
+   pruebas con `-race` (@sec-distribuido). Lo que falta es el listener TCP, el reparto de rangos y el
+   bucle de Lloyd. Conviene escribir antes el modelo en Promela de la barrera y verificar con Spin que
+   no hay deadlock y que toda ronda termina o aborta: el curso pide las dos cosas, el modelo para el
+   algoritmo y el test para la implementación.
+2. **Medir el costo de la barrera, no solo el speedup.** Una iteración secuencial sobre todo el gold
+   cuesta {{< meta cifras.benchmark_kmeans.ms_iter_seq >}} ms, y
+   {{< meta cifras.benchmark_kmeans.ms_iter_w >}} ms con {{< meta cifras.benchmark_kmeans.w >}}
+   workers en una máquina. Una barrera de red cuya ida y vuelta sea de ese orden domina la iteración,
+   y con nodos heterogéneos el más lento marca el paso de todos. Por ronda hay que registrar la ida y
+   vuelta de cada nodo (`Latido`), su tiempo de cálculo y la espera en la barrera, para poder decir
+   qué parte del tiempo es coordinación (inferencia: con este gold, un clúster probablemente no le gane
+   a una sola máquina; el experimento tiene que variar el tamaño del problema para mostrar dónde la
+   distribución empieza a pagar).
+3. **Comparar con el paralelismo por semillas entre nodos.** Cada nodo corre un K-Means entero con su
+   semilla y el coordinador se queda con la menor inercia, sin barrera. Con esta receta todas las
+   semillas convergen a la misma inercia
+   ({{< meta cifras.kmeans.semillas_cerca_del_minimo >}} de {{< meta cifras.kmeans.semillas >}}), así
+   que esa versión no mejora el modelo: sirve como línea base, y la diferencia de tiempo entre las dos
+   es justo el costo de coordinar.
+
+## Para el TB2: la anticipación y el diferencial
+
+1. **Medir la anticipación con un split temporal y sin fugas.** Estandarizar y entrenar solo con el
+   tramo de entrenamiento, asignar el de evaluación con esos valores y reportar, por nivel, la
+   proporción de veces en que el promedio de 24 horas siguiente superó el ECA, frente a las dos
+   referencias ingenuas de la @sec-eca-inca. Como el nivel alto recoge el
+   {{< meta cifras.calibracion.recall >}} de las horas sobre el ECA con una pureza de
+   {{< meta cifras.calibracion.pureza >}}, el resultado tiene que darse con su tasa de falsas alarmas,
+   no solo de aciertos.
+2. **Comparar solo en ventanas comunes.** El {{< meta cifras.alto.pct_lima >}} de las horas del
+   nivel alto es de unas semanas de diciembre de 2021 en Lima, y
+   {{< meta cifras.limpieza.n_estaciones_inicio_fin_2021 >}} estaciones arrancan en noviembre o
+   diciembre de ese año: la comparación entre estaciones, y cualquier mapa de «zonas de riesgo», tiene
+   que hacerse en esa ventana y decirlo.
+3. **Usar SENAMHI como contraste en Lima.** Las horas de Lima del nivel alto son de campañas de OEFA
+   junto a ladrilleras y a una refinería de zinc; la red de SENAMHI en Lima permitiría ver si esas
+   semanas fueron excepcionales o si es el aire de la ciudad (Q8, diferida al TB2).
+4. **Responder Q2 por estación, con la fracción fina y la meteorología.** La fracción fina baja del
+   nivel bajo al alto ({{< meta cifras.bajo.cociente >}} a {{< meta cifras.alto.cociente >}}), pero esa
+   es una media que mezcla lugares. El diferencial tiene que leerse por estación y junto a su actividad
+   (@tbl-estaciones-actividad): una ladrillera, un corredor vial y una mina no deberían tener la misma
+   firma (inferencia a probar). La meteorología solo existe en
+   {{< meta cifras.meteo.estaciones_con_meteo >}} de las {{< meta cifras.meteo.estaciones >}} estaciones
+   del gold: hay que decirlo junto a cada lectura.
+5. **Poner la advertencia de cobertura junto al mapa,** no en una nota al pie: el sistema ve
+   {{< meta cifras.limpieza.n_estaciones >}} puntos en {{< meta cifras.eda.regiones >}} de las
+   {{< meta cifras.eda.regiones_total >}} regiones.
+
+## Para OEFA y quienes usen este dato
+
+1. **Publicar la hora de cada lectura.** Hoy el {{< meta cifras.limpieza.pct_hora_inferida >}} de
+   las lecturas válidas no la trae y hay que reconstruirla por posición; solo una exportación la
+   conserva (@sec-csv).
+2. **Distinguir el 0 del «sin dato».** Hasta 2021 un equipo que no midió deja días enteros en 0
+   ({{< meta cifras.limpieza.bloque_en_cero >}} lecturas) y desde 2022 deja una fila vacía. Un solo
+   código explícito de faltante evitaría que alguien promedie ceros como si fueran aire limpio.
+3. **Documentar la regla de las 18 horas en el diccionario del dato.** El promedio de 24 horas que
+   publica OEFA vale 0 cuando el día tiene menos de {{< meta cifras.eda.regla_horas_validas >}} horas
+   válidas, y es la media de las horas no nulas en otro caso; el archivo no lo dice.
+4. **Una ubicación por estación.** {{< meta cifras.limpieza.n_ubicaciones_distintas >}} estaciones
+   aparecen con más de un juego de coordenadas ({{< meta cifras.limpieza.estaciones_ubicaciones_distintas >}})
+   y CA-HUAR-01 trae una zona UTM que la pondría en la Amazonía.
+5. **A quien use el dato:** tratar el 0 de los contaminantes como faltante, no comparar estaciones de
+   ventanas distintas como si fueran exposición anual, y no leer la ausencia de estación como aire
+   limpio.

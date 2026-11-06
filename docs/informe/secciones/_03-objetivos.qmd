@@ -1,0 +1,30 @@
+<!-- e) Objetivos. -->
+
+# Objetivos
+
+## Objetivo general
+
+Construir en Go, sin bibliotecas de terceros, la primera mitad de un sistema de alertas de calidad
+del aire: un cargador concurrente que limpie y estandarice más de un millón de lecturas de la red
+de OEFA, y un K-Means ejecutado en paralelo con goroutines que agrupe las horas-estación en
+regímenes de contaminación, con el diseño de su versión distribuida resuelto, para responder dónde,
+cuándo y de qué tipo son los episodios de PM2,5 y PM10 que superan el ECA de aire.
+
+## Objetivos específicos
+
+1. Cargar, pivotar, limpiar y estandarizar las filas largas del CSV de OEFA con un cargador
+   concurrente (goroutines y canales), contando lo que descarta cada regla y verificando que las
+   filas leídas sean las procesadas más las descartadas.
+2. Medir el speedup del cargador con 1, 2, 4, 8 y 12 workers sobre el archivo completo, con mediana de
+   varias repeticiones e intervalo de confianza.
+3. Portar del Trabajo Parcial el K-Means (Lloyd con inicialización k-means++) y ejecutarlo en
+   paralelo con un worker pool, con un resultado idéntico bit a bit para cualquier número de
+   workers, probado con `go test -race`.
+4. Calibrar las features y el número de clusters en un laboratorio aparte (Colab) y congelar la
+   receta en `configs/kmeans.json`, que Go lee sin decidir nada.
+5. Caracterizar cada régimen: su perfil en unidades originales, su etiqueta frente al ECA y su
+   distribución por estación y por hora del día.
+6. Diseñar el K-Means distribuido y el protocolo entre el coordinador y los nodos (sumas parciales,
+   barrera por iteración, timeout) que la PC4 implementa.
+7. Documentar la arquitectura de las cuatro partes del sistema y llevar el proyecto en GitHub con
+   Git Flow y un tablero Kanban.

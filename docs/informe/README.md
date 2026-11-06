@@ -1,0 +1,160 @@
+# Informe de la PC3 (Quarto → Word)
+
+Informe del Entregable 1 del Trabajo Final (PC3), en Quarto, renderizado a `.docx` como pide el
+enunciado: uno por integrante, con el nombre `1ACC0065_PC3_202610_Informe_<código>` (se respeta el
+`202610` del enunciado aunque el ciclo sea 2026-20) y su código en la carátula.
+
+```bash
+cp equipo.ejemplo.yml equipo.local.yml   # una vez: poner los códigos de alumno reales (no se versiona)
+bash render.sh                           # tablas + historial + los tres .docx + participación → salida/
+bash render.sh U000000002                # solo el de un código
+FETCH=1 bash render.sh                   # además hace git fetch antes del historial
+./empaquetar-pc3.sh                      # entrega en salida/entrega/ (se niega si queda algo pendiente)
+```
+
+Requisitos: Quarto ≥ 1.4 (probado con 1.10.19), Python 3 con pandas (o `uv`, que lo instala al
+vuelo: `uv run tablas.py`; `render.sh` lo usa solo si el `python3` del sistema no tiene pandas) y git. Para renderizar no hace falta Jupyter ni LaTeX; para **regenerar las figuras** en
+local sí: los notebooks se corren con `jupyter nbconvert` (ver `notebooks/README.md`). El índice es un
+campo de Word: `render.sh` marca el `.docx` para que Word pregunte al abrirlo si actualiza los
+campos; hay que aceptar (o clic derecho sobre el índice → Actualizar campo).
+
+Renderizar se hace con `render.sh`, no con `quarto render` a secas: el script arma antes
+`generado/local/` (no versionado), que el proyecto necesita.
+
+## Estructura
+
+| Archivo | Qué es |
+|---|---|
+| `_quarto.yml` | Proyecto: formato docx, plantilla, APA, numeración, filtro y metadatos |
+| `informe.qmd` | Esqueleto en el orden del enunciado, a) a j); incluye las secciones |
+| `secciones/_NN-*.qmd` | Una sección por archivo, para escribir en paralelo sin pisarse |
+| `equipo.ejemplo.yml` | Nombres y códigos **de ejemplo**; los reales van en `equipo.local.yml`, no versionado |
+| `_participacion.md` | Plantilla del Anexo D (participación dentro del informe), sin niveles; la llenada va en `participacion.local.md`, no versionado |
+| `llenar-participacion.py`, `participacion.ejemplo.yml` | El reporte de participación suelto se llena sobre la plantilla del docente (`recursos/plantilla-participacion.docx`, no versionada: se copia del Aula Virtual) con los datos de `participacion.local.yml`, no versionado |
+| `filtros/informe.lua` | Carátula por código, índice, figuras faltantes, avisos condicionales, tablas |
+| `tablas.py` | `generado/*.json` → `generado/tablas/*.md` y `generado/cifras.yml` |
+| `generado/` | JSON de Go, tablas y cifras derivadas, figuras, `historial.ejemplo.md` y `local/` (no versionado: equipo, participación e historial del momento) |
+| `generar-historial.sh` | `generado/local/historial.md`: commits por integrante, PR fusionadas, commits de la entrega |
+| `render.sh` | Todo lo anterior y los tres `.docx` |
+| `empaquetar-pc3.sh` | Los `.docx`, el zip del código por integrante, la participación, `SHA256SUMS` |
+| `referencias.bib`, `apa.csl` | Bibliografía (BibLaTeX) y estilo APA 7 oficial del repositorio de CSL |
+| `recursos/` | `plantilla.docx` (estilos de Word), marcador de figura, logo; `crear_recursos.py` los regenera |
+| `capturas/` | Capturas reales de la terminal (PNG) |
+
+## Reglas
+
+1. **Ninguna cifra a mano.** Las tablas se incluyen con
+   `{{< include generado/tablas/x.md >}}` y las cifras de la prosa con
+   `{{< meta cifras.grupo.clave >}}` (las claves están en `generado/cifras.yml`). Si hace falta
+   una cifra nueva, se agrega a `tablas.py`, no al texto.
+2. **Cada hueco es un aviso visible**: `::: {.callout-warning title="PENDIENTE"}` con qué va y de
+   qué archivo sale. Se borra cuando el hueco se llena. `empaquetar-pc3.sh` no arma la entrega
+   mientras quede uno, ni una cifra PLACEHOLDER, ni un dato o una figura sintéticos, ni una figura
+   faltante.
+3. **Figuras**: se referencian por su ruta final (`generado/figuras/x.png`, `capturas/x.png`,
+   `../diagramas/arquitectura.png`). Si el archivo no existe, el filtro pone
+   `recursos/figura-pendiente.png` y avisa por stderr; el render no falla. El aviso PENDIENTE de cada
+   figura va dentro de un div `:::: {si-falta="ruta"}`, que desaparece solo cuando llega el PNG.
+4. **Capturas**: de la terminal real, con el comando a la vista (regla del docente), en
+   `capturas/`: `cargar.png`, `go-test-race.png`, `ci.png`, `benchmark.png`, `entrenar.png`,
+   `docker.png`, `kanban.png`.
+5. **Citas**: `[@clave]`, con la clave en `referencias.bib`. Solo referencias verificadas (DOI o
+   documento oficial): el encabezado del `.bib` dice cómo se verificó cada una.
+6. **Datos personales**: el repositorio es público. Los códigos de alumno y la participación
+   llenada viven solo en `equipo.local.yml` y `participacion.local.md`; `render.sh` los copia a
+   `generado/local/`, también ignorado.
+
+## Figuras desde Colab
+
+El notebook 03 dibuja las figuras del informe. Si corre en Colab, las deja en Drive, en
+`MyDrive/aire-distribuido/reports/figuras/`, junto con `origen.json`, que dice de qué datos sale
+cada una y si es sintética. Se copian **todas, con `origen.json`**, a `generado/figuras/`:
+
+```bash
+rclone copy <remoto>:aire-distribuido/reports/figuras/ docs/informe/generado/figuras/
+# o descargarlas de Drive a mano y copiarlas a docs/informe/generado/figuras/
+```
+
+Los nombres son los que esperan las secciones (`completitud.png`, `distribuciones.png`, `codo.png`,
+`perfiles.png`, `regimen-hora.png`, `regimen-estacion.png`, `episodio.png`, `speedup.png`,
+`cobertura.png`). Una figura que `origen.json` marca con `"sintetico": true` lleva la marca de
+agua «DATOS SINTÉTICOS» y hace fallar `tablas.py --final`.
+
+## Decisiones
+
+- **Motor `markdown`, no Jupyter.** El `.qmd` no tiene celdas ejecutables: `tablas.py` corre antes
+  y el render solo incluye. Así renderizar no depende de un kernel, los tres renders son rápidos y
+  las cifras salen siempre de los JSON de Go.
+- **El parámetro `codigo` es metadato** (`-M codigo:U…`), porque el motor markdown no tiene
+  `params`. El filtro lo busca en `equipo` y detiene el render si no está: no sale una carátula
+  equivocada.
+- **El índice lo pone el filtro, no `toc: true`.** Pandoc pone su índice antes de todo el cuerpo,
+  es decir, antes de la carátula; el enunciado ordena carátula, resumen, índice. El filtro inserta
+  el mismo campo TOC de Word donde está `::: indice`, y `render.sh` agrega `w:updateFields` al
+  `settings.xml` del `.docx` para que Word lo llene al abrir.
+- **Tablas de Word**: Quarto dibuja figuras, tablas y avisos como tablas de Word; el filtro las
+  separa con un párrafo mínimo (si no, Word las funde) y alinea las tablas con id a la izquierda
+  (Quarto las centra, también el texto de las celdas).
+- **El speedup del resumen es el de un W fijo**, el máximo medido, con su IC: no el mejor de la
+  tabla, que sesgaría hacia arriba.
+- **Reporte de participación**: mismo contenido en el Anexo D y en un `.docx` suelto,
+  `1ACC0065-202620_Participación_PC3.docx` (nombre de la plantilla oficial del curso con `_PC3`).
+  La plantilla oficial es del docente y no se versiona.
+
+## JSON de `generado/`: los escribe Go
+
+Los esquemas son los de los comandos de Go, que son la fuente de verdad; `tablas.py` se adapta a
+ellos, nunca al revés. Se copian desde `reports/` (o `python3 tablas.py --entrada ../../reports`).
+
+| Archivo | Lo escribe | Esquema en | Qué toma el informe |
+|---|---|---|---|
+| `limpieza.json` | `cmd/cargar` | `datos/reporte.go`, reglas en `datos/doc.go` | `metadatos`, `sha256` del CSV y de las `configs`, `convencion_hora`; filas largas (leídas, procesadas, descartadas por regla en el orden de la cascada, marcadas: hora inferida, unidad convertida, ubicación corregida; hora explícita, inferida y por bloque físico; días en cero, horas en cero y fuera de rango por parámetro; conversiones por parámetro); filas anchas (total, completas del gold, PM2.5 > PM10, con hora inferida); por estación (leídas, procesadas, anchas, gold, desde, hasta, ubicación con lat/lon, ubicación original y ubicaciones distintas); parámetros, periodos y unidades vistos; avisos; workers, bloques, duración y `fases_s` (para Amdahl) |
+| `estandarizacion.json` | `cmd/cargar` | `datos/estandarizar.go` | `metadatos`, features, log1p, nivel, n, media, desv, ddof, chunk |
+| `benchmark_cargador.json` | `cmd/cargar -bench` | `datos/medicion.go` | `metadatos`, `protocolo` (con `nota_recorte` si las repeticiones no alcanzan para el recorte); por W: tiempos, mediana, media recortada, speedup con IC bootstrap (`speedup_ic`, cociente de medias recortadas) y cociente de medianas (`speedup`), sha256 del silver y del gold; `identicos` |
+| `benchmark_kmeans.json` | `cmd/benchmark` | `cmd/benchmark/main.go` | `resumen` por experimento (iteraciones fijas y hasta converger), modo, W y chunk: mediana, media recortada, ms por iteración, speedup con IC bootstrap, eficiencia; `determinismo` |
+| `kmeans.json` | `cmd/entrenar` | `cmd/entrenar/main.go`, `kmeans/semillas.go`, `kmeans/doc.go` | k, semilla elegida, `arranques` (una corrida por semilla), `arranque_elegido`, corridas a la vez, `centroides_iniciales` (archivo, origen, sha256) y `nota_tiempos_arranques`, iteraciones, paro, inercia, tamaños, centroides estandarizados |
+| `regimenes.json` | `cmd/entrenar` | `kmeans/regimenes.go` | por régimen: perfil (media aritmética de las lecturas), PM2.5 medio (derivado si no es feature), PM10 medio, etiqueta ECA, conteos por hora y por estación |
+| `codo.json` | `cmd/entrenar -codo` | `kmeans/codo.go` | inercia, semilla, iteraciones y paro por k; el k elegido es el de la receta |
+| `auditoria.json` | notebook 03 | — | los chequeos de Go contra pandas y scikit-learn; si la auditoría corrió con otra receta que `kmeans.json`, el informe lo dice y `--final` falla |
+| `../../reports/calibracion_resumen.csv`, `kmeans_propuesto.json` | notebook 02 | — | la tabla de la calibración: la receta final frente a su versión con log1p, la que prefería la regla automática y la provisional (se leen de `reports/`, no se copian: `*.csv` está ignorado en el repo) |
+| `../../reports/estaciones_ficha.csv` | notebook 04 | — | el tipo de serie de cada estación (años, meses, semanas, manual), para la tabla de tipología, y la actividad fiscalizada (todas, si hubo más de una evaluación) y el rubro de cada una, para la tabla de estaciones; las lecturas salen de `limpieza.json` y las horas del gold y del nivel alto, de `regimenes.json`, que tienen que dar las mismas horas del gold por estación. El texto importado se escapa (`escapar`): un nombre de OEFA no puede meter formato, enlaces ni HTML |
+| `../../reports/descriptores_regimen.csv` | §8 del notebook 02 | — | la fracción fina y la meteorología de cada nivel, con su anomalía dentro de la estación (no son features), y cuántas estaciones tienen cada variable (la prosa usa la menor); cada régimen tiene que tener el tamaño, las estaciones y los PM medios de `regimenes.json` (el del modelo de `kmeans.json`): si no, la tabla y `_estado.md` lo avisan y `--final` falla |
+| `../../configs/limpieza.json` | el equipo | `datos/config.go` | la tabla de umbrales (rangos, unidades, centinelas, ceros); si su sha256 no es el que registra `limpieza.json`, o `limpieza.json` no lo registra, la tabla no es (o no se sabe si es) la de la corrida: se avisa y `--final` falla |
+| `../../datos/`, `kmeans/`, `protocolo/` (código Go) | — | — | los fragmentos de código de la sección de evidencias (`generado/tablas/frag_*.md`): `tablas.py` los extrae por patrón con su archivo y sus líneas (`FRAGMENTOS`); si el patrón ya no aparece, el fragmento sale como PENDIENTE (no queda el viejo) y `--estricto` falla; si el archivo tiene cambios sin commitear, `--final` falla, porque el zip es el commit. `configs/` y el código se leen de la raíz del repo, sea cual sea `--reports` |
+| `eda.json` | transcrito de `reports/eda_criba.md` (notebook 01) y `docs/eda-procedencia.md` (notebook 04) | — | lo que solo miden los notebooks: el control de la hora por posición, los registros multilínea, los episodios de 24 h, y los datos de procedencia (evaluaciones, regiones, regla de las 18 horas, filas idénticas, filas vacías de 2022, % del gold de 2022). Se actualiza desde los `.md` si los notebooks vuelven a correr; la prosa respeta sus etiquetas [dato], [OEFA], [norma] e [inferencia] |
+
+Los siete de Go son copias de `reports/` de la **corrida sobre el CSV completo de OEFA** (01/11).
+Para actualizarlos, se vuelven a copiar desde `reports/` después de correr los comandos. Si alguna
+vez se prueba con la muestra sintética, se marca `"placeholder": true` y las guardas de `--final`
+la detectan igual.
+
+`tablas.py` comprueba los invariantes de Go (leídas = procesadas + descartadas = procesadas + Σ por
+regla; las sumas por estación, por cluster y por hora; los dos speedups del cargador; el arranque
+elegido es el de menor inercia; el determinismo de los dos benchmarks) y que las copias sean de la
+misma corrida (`kmeans.json` y `regimenes.json`, mismo gold y tamaños; `regimenes.json` y
+`limpieza.json`, mismas horas del gold por estación), y los avisa en el informe.
+Con `--estricto` falla si falta un JSON o un invariante no cuadra. Con `--final`, el que usa
+`empaquetar-pc3.sh`, además falla con cualquier señal de datos de prueba: un `placeholder`, una
+`entrada` bajo `data/sample/`, una estación `SINT-` o `SIN-`, un gold sintético o una figura
+sintética en `generado/figuras/origen.json`. Go no marca sus salidas como sintéticas: estas guardas
+son las que impiden entregar la muestra como si fueran los datos.
+
+Además, `--final` falla si una figura que sale del modelo (`origen.json` dice su fuente y fecha) es
+anterior a `kmeans.json`: mostraría otro modelo. Con k = 3, `tablas.py` nombra los regímenes por su
+PM10 medio (bajo, medio, alto) y escribe sus cifras como `cifras.bajo.*`, `cifras.medio.*` y
+`cifras.alto.*`, para que la prosa no dependa del número de régimen.
+
+**Lo que el informe querría y no sale de Go** (no se inventa): la banda INCA de cada régimen
+(`regimenes.json` trae el perfil de las features y la etiqueta ECA); la meteorología de cada régimen,
+que sale de los notebooks (`reports/descriptores_regimen.csv`); y lo que solo mide el EDA
+(`generado/eda.json`, transcrito).
+
+## Antes de entregar
+
+- `equipo.local.yml` con los códigos reales, `participacion.local.md` con los niveles marcados (Anexo D) y `participacion.local.yml` más `recursos/plantilla-participacion.docx` para el reporte suelto en el formato del curso.
+- `grep -rn 'title="PENDIENTE' secciones/` vacío, `python3 tablas.py --final` sin errores.
+- Push de todas las ramas y `FETCH=1 bash render.sh` con `main` ya en el tag `pc3`.
+- Tablero Kanban y video (si la PC3 lo lleva) publicados.
+- `./empaquetar-pc3.sh pc3`, con `pc3` en el checkout (el informe sale del árbol de trabajo y el zip, de
+  la ref: si HEAD no es la ref, se niega): cada integrante sube su `.docx` y su `.zip`; el coordinador,
+  además, la participación.

@@ -1,0 +1,14 @@
+# Equipo para la carátula y para los nombres de los .docx. Los códigos de alumno son datos personales
+# y el repositorio es público: este archivo trae códigos de ejemplo. Los reales van en
+# equipo.local.yml (mismo formato, no se versiona); render.sh usa ese si existe y este si no.
+#
+#   cp equipo.ejemplo.yml equipo.local.yml   # y poner los códigos reales
+codigo: U000000001          # el de la carátula por defecto (el del coordinador)
+equipo:
+  - nombre: Rody Sebastian Vilchez Marin
+    codigo: U000000001
+    rol: coordinador
+  - nombre: Dayana Kety Gómez Rodriguez
+    codigo: U000000002
+  - nombre: Julio Cesar Meza Alfaro
+    codigo: U000000003

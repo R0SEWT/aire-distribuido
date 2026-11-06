@@ -1,0 +1,79 @@
+---
+# Informe de la PC3. La estructura sigue el enunciado del Trabajo Final, a) a j):
+# carátula, resumen, índice, problema y motivación, objetivos, desarrollo, conclusiones,
+# recomendaciones, bibliografía (APA 7) y anexos. Cada sección vive en secciones/ para que los
+# tres puedan escribir a la vez sin pisarse.
+#
+# Reglas:
+#   - Ninguna cifra a mano: las tablas se incluyen desde generado/tablas/ (shortcode include) y
+#     las cifras de la prosa se leen de generado/cifras.yml (shortcode meta, cifras.grupo.clave).
+#     Las dos cosas las escribe tablas.py desde generado/*.json. Ver README.md.
+#   - Cada hueco es un ::: {.callout-warning title="PENDIENTE"} que dice qué va y de dónde sale.
+#     El informe se entrega sin ninguno: empaquetar-pc3.sh no arma la entrega mientras quede uno.
+lang: es
+---
+
+{{< include secciones/_00-caratula.qmd >}}
+
+{{< pagebreak >}}
+
+{{< include secciones/_01-resumen.qmd >}}
+
+{{< pagebreak >}}
+
+::: indice
+:::
+
+{{< pagebreak >}}
+
+{{< include generado/tablas/_estado.md >}}
+
+{{< include secciones/_02-problema.qmd >}}
+
+{{< include secciones/_03-objetivos.qmd >}}
+
+# Desarrollo
+
+Esta sección recorre los cinco puntos que el enunciado pide para el Entregable 1, en su orden:
+la presentación del caso, la limpieza y el análisis de los datos, el diseño del modelo de ML
+distribuido, la paralelización del cálculo en Go y las evidencias de la implementación. Los otros
+tres (los cambios en GitHub, el tablero Kanban y el reporte de participación) van en los anexos. La
+@tbl-mapa-enunciado dice dónde está cada uno.
+
+::: {#tbl-mapa-enunciado tbl-colwidths="[48,52]"}
+| Punto del Entregable 1 (enunciado) | Dónde está en este informe |
+|:---|:---|
+| Presentación del caso: problema, motivación y pregunta de impacto social | @sec-caso, con la pregunta en la @sec-pregunta y la cobertura en la @sec-cobertura |
+| Limpieza y análisis de datos: procedimiento y evidencias | @sec-limpieza (reglas, hora por posición, ceros, conteos, EDA, estandarización y auditoría) |
+| Diseño del modelo ML distribuido | @sec-modelo (K-Means, calibración, sumas parciales, protocolo y secuencia, ECA e INCA) |
+| Paralelización del cálculo: justificación, técnicas y patrones en Go | @sec-paralelizacion |
+| Evidencias de la implementación: código en Go y pruebas | @sec-evidencias (código, pruebas, rendimiento, resultados, Docker, gestión del proyecto) |
+| Cambios subidos a GitHub | Anexo A (repositorio, tag) y Anexo C (historial y PRs) |
+| Tablero Kanban actualizado | Anexo B |
+| Reporte de participación | Anexo D y el archivo aparte `1ACC0065-202620_Participación_PC3.docx` |
+
+Dónde está cada punto del enunciado
+:::
+
+{{< include secciones/_04-caso.qmd >}}
+
+{{< include secciones/_05-limpieza.qmd >}}
+
+{{< include secciones/_06-modelo.qmd >}}
+
+{{< include secciones/_07-paralelizacion.qmd >}}
+
+{{< include secciones/_08-evidencias.qmd >}}
+
+{{< include secciones/_09-conclusiones.qmd >}}
+
+{{< include secciones/_10-recomendaciones.qmd >}}
+
+# Bibliografía {.unnumbered}
+
+::: {#refs}
+:::
+
+{{< pagebreak >}}
+
+{{< include secciones/_11-anexos.qmd >}}

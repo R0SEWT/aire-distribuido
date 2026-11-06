@@ -1,0 +1,53 @@
+<!-- j) Anexos: repositorio y video, Kanban, historial de git, participación. -->
+
+# Anexos {.unnumbered}
+
+## Anexo A. Repositorio, video y datos {.unnumbered}
+
+- **Repositorio (público):** <https://github.com/R0SEWT/aire-distribuido>. La versión que se
+  entrega es la rama `main` en el tag `pc3`, a la que se llega por `release/pc3`.
+- **Video (complementario, no se evalúa en la PC3; el docente aclaró el 03/11 que el video es del
+  TB2):** <https://drive.google.com/open?id=1IpKF7mfue0Jxyfyar0dkHH2SfThXBw54>, 7 min 50 s. Guion,
+  grabaciones de terminal y montaje reproducible en `docs/video/` del repositorio.
+- **Datos:** no se versionan (1,3 GB). Ficha y descarga en la Plataforma Nacional de Datos Abiertos
+  [@oefa2026aire]; instrucciones en `data/README.md`.
+- **Archivo que produjo los resultados** (de `generado/limpieza.json`):
+  {{< meta cifras.limpieza.entrada >}}, {{< meta cifras.limpieza.bytes >}} bytes, sha256
+  {{< meta cifras.limpieza.sha256 >}}.
+- **Configuración usada:** `configs/limpieza.json`, sha256
+  {{< meta cifras.limpieza.sha256_config_limpieza >}}; `configs/kmeans.json`, sha256
+  {{< meta cifras.limpieza.sha256_config_kmeans >}}.
+
+
+## Anexo B. Tablero Kanban {.unnumbered}
+
+El seguimiento de las tareas de la PC3 se hizo en un tablero Kanban de GitHub Projects, público y
+enlazado al repositorio: <https://github.com/users/R0SEWT/projects/8>. Se creó el 02/11 con una
+tarjeta por tarea del plan y las solicitudes de cambio (PR) del repositorio. Las piezas que ya habían
+entrado con la PR #3 (01/11) se registraron ese día como hechas, con su PR enlazada; el 03/11 las
+tarjetas se convirtieron en issues del repositorio, para que cada PR cierre la suya, y desde entonces
+el tablero se mueve con el trabajo (la @fig-kanban es del 03/11; las tarjetas abiertas son las de la
+entrega misma).
+
+![Tablero Kanban del proyecto en GitHub Projects](capturas/kanban.png){#fig-kanban width=16cm}
+
+:::: {si-falta="capturas/kanban.png"}
+::: {.callout-warning title="PENDIENTE"}
+Captura del tablero el día de la entrega, con las tarjetas de la PC3 en «Hecho». Va en
+`docs/informe/capturas/kanban.png`.
+:::
+::::
+
+## Anexo C. Historial de versiones por integrante {.unnumbered}
+
+{{< include generado/local/historial.md >}}
+
+El historial sale de `git` tal cual (`generar-historial.sh`) y no se reescribe: por eso aparecen
+mensajes de herramientas (la inicialización del gestor de tareas, los cambios en las instrucciones
+del repositorio) y la rama del montaje del video, que el agente que lo produjo nombró con su prefijo
+en vez de `feature/`. Las PR se listan desde GitHub (`gh pr list`), porque varias se fusionaron sin
+commit de merge y no aparecen en `git log --merges`.
+
+## Anexo D. Reporte de participación {.unnumbered}
+
+{{< include generado/local/_participacion.md >}}

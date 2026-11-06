@@ -1,0 +1,20 @@
+# Datos del reporte de participación. Copiar a participacion.local.yml (no versionado) y llenar.
+# llenar-participacion.py los escribe sobre la plantilla del docente (recursos/plantilla-participacion.docx,
+# no versionada: es material del curso; se copia desde el Aula Virtual).
+entrega: PC3
+grupo: "Nombre del grupo"   # entre comillas si lleva dos puntos
+solucion: Nombre de la solución
+lider: Nombre completo del team leader
+comentario: Comentario del team leader.
+integrantes:
+  - nombre: Integrante 1
+    responsabilidades:      # hasta cuatro, una por fila de la plantilla
+      - Responsabilidad A
+      - Responsabilidad B
+    cumplimiento: cumplio   # cumplio | parcial | no_cumplio
+  - nombre: Integrante 2
+    responsabilidades: [Responsabilidad C]
+    cumplimiento: cumplio
+  - nombre: Integrante 3
+    responsabilidades: [Responsabilidad D]
+    cumplimiento: cumplio

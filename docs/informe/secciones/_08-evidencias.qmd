@@ -1,0 +1,389 @@
+<!-- f.5) Evidencias de la implementación: código en Go, pruebas, benchmarks y capturas reales. -->
+
+## Evidencias de la implementación {#sec-evidencias}
+
+Cada ejecución que cita esta sección tiene su captura real de la terminal, con el comando a la
+vista, en `docs/informe/capturas/`.
+
+### Código
+
+La @tbl-repo resume qué hay en cada carpeta del repositorio.
+
+::: {#tbl-repo tbl-colwidths="[28,72]"}
+| Ruta | Contenido |
+|:---|:---|
+| `cmd/cargar/` | Parte A: CSV de OEFA → tabla ancha (silver), gold estandarizado y `limpieza.json`; con `-bench`, el benchmark del cargador |
+| `cmd/entrenar/` | Parte B: K-Means con varias semillas, regímenes y codo |
+| `cmd/benchmark/` | Speedup del K-Means concurrente frente al secuencial |
+| `datos/` | Paquete del cargador: lector, workers, cosedora, recolector, horas, pivot, estandarización, reportes |
+| `kmeans/` | Portado del TP: secuencial, concurrente, sumas parciales, k-means++, semillas, regímenes, codo |
+| `protocolo/` | Mensajes, codificación y barrera del coordinador del K-Means distribuido |
+| `configs/limpieza.json`, `configs/kmeans.json` | Formato del CSV y umbrales de limpieza; receta del K-Means |
+| `reports/` | Salidas de las corridas sobre el CSV real (versionadas, pequeñas) y la criba del EDA |
+| `notebooks/` | EDA, calibración y auditoría (Colab): laboratorio, no sistema |
+| `data/sample/` | Muestra versionada del CSV para las pruebas y la integración continua |
+| `Dockerfile` | Imagen de `cargar`, `entrenar` y `benchmark` |
+| `docs/` | Specs, diseño, diagramas y este informe (Quarto → Word) |
+
+Estructura del repositorio
+:::
+
+Los fragmentos que siguen sostienen la @sec-paralelizacion. Se toman del código del repositorio en
+cada render, con su archivo y sus líneas, de modo que el informe muestra la versión entregada.
+
+**Cargador.** Cada worker del pool (@lst-cargador-pool) toma índices de bloque del canal `trabajos` y
+manda su parcial por `resultados`; el `select` con `fin` lo deja salir ante el primer error sin quedar
+bloqueado en un envío. El recolector (@lst-cargador-orden) recibe los parciales en el orden en que
+terminan, guarda los adelantados en `pendientes` y solo fusiona el que sigue en el orden del archivo;
+al fusionarlo libera un lugar del semáforo `enVuelo`, que es lo que acota la memoria.
+
+{{< include generado/tablas/frag_cargador_pool.md >}}
+
+{{< include generado/tablas/frag_cargador_orden.md >}}
+
+**K-Means.** Los workers se crean una vez (@lst-kmeans-pool) y cada uno escribe solo
+`parciales[t.chunk]`, la posición del chunk que le tocó: no comparten nada en escritura, y por eso no
+hay `Mutex`. Cada iteración (@lst-kmeans-iter) reparte los chunks, espera la barrera
+(`barrera.Wait()`) y recién entonces fusiona con `Fusionar` (@lst-fusionar), que suma en el orden del
+arreglo, es decir, de chunk.
+
+{{< include generado/tablas/frag_kmeans_pool.md >}}
+
+{{< include generado/tablas/frag_kmeans_iter.md >}}
+
+{{< include generado/tablas/frag_fusionar.md >}}
+
+**Protocolo.** El mensaje `PARCIAL` lleva lo mismo que un `Parcial` del K-Means (sumas, conteos e
+inercia) más el número de ronda, `Iter` (@lst-parcial). Con ese número el coordinador reconoce y
+descarta el parcial rezagado de una ronda que ya abortó, en vez de fusionarlo con la siguiente.
+
+{{< include generado/tablas/frag_parcial.md >}}
+
+### Pruebas
+
+::: {#tbl-pruebas tbl-colwidths="[45,42,13]"}
+| Prueba | Qué demuestra | Paquete |
+|:---|:---|:---|
+| `TestMismoResultadoConUnoYOchoWorkers` | Mismo `Dataset` con W = 1 y W = 8 (bit a bit) | `datos/` |
+| `TestMuestraSiembraCadaRegla` | Cada regla de limpieza tiene su caso en `data/sample/` | `datos/` |
+| `TestConservacionDeFilasLargas` | Leídas = procesadas + descartadas | `datos/` |
+| `TestConcurrenteDaElMismoResultadoParaCualquierP` (TP) | Mismos centroides para cualquier número de workers | `kmeans/` |
+| `TestConcurrenteEquivaleAlSecuencialConTolerancia` (TP) | El concurrente coincide con el secuencial con tolerancia | `kmeans/` |
+| `TestMejorDeSemillasEsElMismoParaCualquierWYCualquierParalelismo` | El arranque elegido no depende de W ni de cuántas semillas corren a la vez | `kmeans/` |
+| `TestRondaConDosNodosFusionaEnOrdenDeNodo` | Una ronda con dos nodos fusiona sus parciales en orden de nodo | `protocolo/` |
+
+Pruebas que sostienen la corrección de la concurrencia
+:::
+
+La @fig-captura-tests muestra la corrida de `go test -race ./...` sobre todo el módulo, y la
+@fig-captura-ci, los mismos checks corriendo en GitHub Actions en cada PR.
+
+![`go test -race ./...` sobre todo el módulo](capturas/go-test-race.png){#fig-captura-tests width=16cm}
+
+:::: {si-falta="capturas/go-test-race.png"}
+::: {.callout-warning title="PENDIENTE"}
+Captura real de `go test -race -v ./...` (o `-short` si el completo no cabe en una pantalla; en ese
+caso, dos capturas). Va en `docs/informe/capturas/go-test-race.png`.
+:::
+::::
+
+![Integración continua en GitHub Actions (`go test -race`, `go vet` y `gofmt`): corridas en verde por push y por PR, y las PRs fusionadas, vistas con `gh`](capturas/ci.png){#fig-captura-ci width=16cm}
+
+:::: {si-falta="capturas/ci.png"}
+::: {.callout-warning title="PENDIENTE"}
+Captura de las corridas de GitHub Actions en verde (`gh run list`) y de las PRs fusionadas. Va en
+`docs/informe/capturas/ci.png`.
+:::
+::::
+
+### Rendimiento
+
+El cargador se midió con el bloque fijo de {{< meta cifras.benchmark_cargador.bloque >}}, con
+{{< meta cifras.benchmark_cargador.workers >}} workers y
+{{< meta cifras.benchmark_cargador.repeticiones >}} repeticiones por configuración
+(@tbl-bench-cargador). El resumen se da para un W fijado de antemano, el máximo medido, y no para
+la mejor fila de la tabla: elegir el máximo entre configuraciones con ruido sesgaría el speedup hacia
+arriba. Con {{< meta cifras.benchmark_cargador.w >}} workers, el speedup (cociente de medias
+recortadas, como en el K-Means) fue {{< meta cifras.benchmark_cargador.speedup >}} (IC 95 %
+{{< meta cifras.benchmark_cargador.speedup_ic >}}), con una eficiencia de
+{{< meta cifras.benchmark_cargador.eficiencia >}}; el cociente de medianas fue
+{{< meta cifras.benchmark_cargador.speedup_medianas >}} (de
+{{< meta cifras.benchmark_cargador.mediana_base_s >}} s a
+{{< meta cifras.benchmark_cargador.mediana_w_s >}} s). El silver y el gold salieron idénticos
+(mismo sha256) para todo número de workers.
+
+{{< include generado/tablas/benchmark_cargador.md >}}
+
+El K-Means se midió con {{< meta cifras.benchmark_kmeans.workers >}} workers y chunks de
+{{< meta cifras.benchmark_kmeans.chunks >}} filas, contra la versión secuencial, en dos
+experimentos: un número fijo de iteraciones (el mismo trabajo) y hasta converger (el mismo
+resultado) (@tbl-bench-kmeans). Con el mismo criterio de un W fijo, hasta converger y con
+{{< meta cifras.benchmark_kmeans.w >}} workers y chunks de
+{{< meta cifras.benchmark_kmeans.chunk >}} filas, el speedup fue
+{{< meta cifras.benchmark_kmeans.speedup >}} (IC 95 %
+{{< meta cifras.benchmark_kmeans.speedup_ic >}}), con una eficiencia de
+{{< meta cifras.benchmark_kmeans.eficiencia >}}. El resultado fue idéntico bit a bit para todo
+número de workers.
+
+{{< include generado/tablas/benchmark_kmeans.md >}}
+
+Dos lecturas de la @tbl-bench-kmeans. Con W = 1 la versión concurrente iguala o supera a la secuencial
+(eficiencia de 102 % y 114 %): el bucle por chunks recorre los datos en bloques que caben en caché,
+mientras que el secuencial los recorre de corrido, y con una sola iteración de referencia el ruido
+del cronómetro pesa; no es paralelismo. Y las mediciones de rendimiento se hicieron con el
+toolchain `go1.27.3` (el que trae la laptop); el módulo exige Go 1.26 como mínimo (`go.mod`) y la
+imagen de Docker compila con `golang:1.26`. La @fig-speedup dibuja los dos speedups con su intervalo,
+y la @fig-captura-benchmark es la corrida reducida de `cmd/benchmark` en la terminal.
+
+![Speedup del cargador y del K-Means frente al número de workers, con el intervalo de confianza bootstrap al 95 % del cociente y la diagonal ideal. En el K-Means, el color distingue el experimento (trabajo fijo o hasta converger) y el trazo, el tamaño del chunk. Laptop de desarrollo, 14 CPU lógicas](generado/figuras/speedup.png){#fig-speedup width=15cm}
+
+:::: {si-falta="generado/figuras/speedup.png"}
+::: {.callout-warning title="PENDIENTE"}
+Speedup contra workers, con la diagonal ideal y las barras del IC, desde
+`generado/benchmark_*.json`. La dibuja el notebook 03 en `docs/informe/generado/figuras/speedup.png`.
+:::
+::::
+
+![Ejecución de `cmd/benchmark` en la laptop de desarrollo (14 CPU lógicas): corrida reducida de 3 repeticiones; las cifras del texto salen de la corrida completa de 10](capturas/benchmark.png){#fig-captura-benchmark width=16cm}
+
+:::: {si-falta="capturas/benchmark.png"}
+::: {.callout-warning title="PENDIENTE"}
+Captura real de `go run ./cmd/benchmark` (puede ser una corrida reducida si la completa no
+cabe), con el comando a la vista. Va en `docs/informe/capturas/benchmark.png`.
+:::
+::::
+
+**Por qué el speedup se aleja de la diagonal.** La métrica de Karp y Flatt [@karpflatt1990]
+convierte un speedup medido en una fracción serial experimental: con
+{{< meta cifras.benchmark_cargador.w >}} workers, la del cargador es
+{{< meta cifras.benchmark_cargador.karp_flatt >}}. Las fases explícitamente seriales (la hora por
+posición y el orden de la tabla) pesan solo {{< meta cifras.limpieza.fraccion_serial >}} del tiempo
+en la @tbl-limpieza-fases, así que el resto de la diferencia está en lo que no se ve como fase: la
+fusión de los parciales en orden de bloque, que es serial y tardó {{< meta cifras.limpieza.fusion_s >}} s
+aunque corra solapada con la lectura, y el ancho de banda de memoria que comparten los workers al
+parsear. Por Amdahl [@amdahl1967], la fusión es el techo: cuantos más workers leen, más se acerca el
+tiempo de lectura al de la fusión, que no se reparte.
+
+{{< include generado/tablas/limpieza_fases.md >}}
+
+En el K-Means pesan otras dos cosas. La primera, **lo poco que hay que calcular por iteración**: con
+la receta final, cada punto tiene $D$ = 2 dimensiones y hay $k$ = 3 centroides, así que la versión
+secuencial converge en {{< meta cifras.benchmark_kmeans.mediana_seq_ms >}} ms sobre
+{{< meta cifras.kmeans.n >}} filas. Con tan poco trabajo, la barrera y la reducción de cada
+iteración, que no se reparten, pesan mucho: con {{< meta cifras.benchmark_kmeans.w >}} workers el
+speedup es {{< meta cifras.benchmark_kmeans.speedup >}} y la fracción serial de Karp y Flatt,
+{{< meta cifras.benchmark_kmeans.karp_flatt >}}. La segunda, **el tamaño de chunk frente a n**: con
+chunks de {{< meta cifras.benchmark_kmeans.chunk >}} filas, el de la receta, hay
+{{< meta cifras.benchmark_kmeans.n_chunks >}} chunks por iteración, de sobra para los workers; con
+chunks de {{< meta cifras.benchmark_kmeans.otro_chunk >}} filas habría solo
+{{< meta cifras.benchmark_kmeans.n_chunks_otro >}}, y un worker sin chunk no hace nada: con los
+mismos workers, el speedup sería {{< meta cifras.benchmark_kmeans.speedup_otro_chunk >}} (IC 95 %
+{{< meta cifras.benchmark_kmeans.speedup_otro_chunk_ic >}}). Por eso la receta final usa chunks de
+{{< meta cifras.benchmark_kmeans.chunk >}}. Con un solo worker, la versión concurrente queda a la
+par de la secuencial (@tbl-bench-kmeans): paga la coordinación del pool sin repartir nada. El
+paralelismo de datos rinde más cuanto más trabajo hay por iteración, que es el argumento para el
+clúster de la PC4 cuando el gold crezca o $k$ y $D$ suban.
+
+### Resultados del K-Means {#sec-resultados-kmeans}
+
+**Semillas.** De las {{< meta cifras.kmeans.semillas >}} semillas, se quedó la
+{{< meta cifras.kmeans.semilla >}}, la de menor inercia (@tbl-semillas), y las
+{{< meta cifras.kmeans.semillas_cerca_del_minimo >}} llegaron a menos de 0,001 % de ese mínimo: con
+esta receta, Lloyd converge a la misma partición sin importar el arranque, que es lo que la
+calibración midió como estabilidad. Las corridas fueron simultáneas,
+{{< meta cifras.kmeans.corridas_a_la_vez >}} a la vez: los arranques tardaron
+{{< meta cifras.kmeans.ms_arranques_pared >}} ms de pared frente a
+{{< meta cifras.kmeans.ms_arranques_suma >}} ms que suman sus corridas, que es la evidencia del
+paralelismo por semillas.
+
+{{< include generado/tablas/kmeans_semillas.md >}}
+
+**El modelo elegido.** El K-Means {{< meta cifras.kmeans.paro >}} sobre
+{{< meta cifras.kmeans.n >}} horas-estación de {{< meta cifras.limpieza.n_estaciones_gold >}}
+estaciones, con inercia {{< meta cifras.kmeans.inercia >}}. Sus centroides, en el espacio
+estandarizado en que corre, están en la @tbl-centroides-z; el **perfil** de cada régimen, en µg/m³,
+en la @tbl-regimenes.
+
+{{< include generado/tablas/kmeans_centroides_z.md >}}
+
+{{< include generado/tablas/regimenes.md >}}
+
+**Tres niveles de aire.** Con solo PM2,5 y PM10 como features, el K-Means parte las horas por nivel
+de material particulado:
+
+- **Nivel bajo** (régimen {{< meta cifras.bajo.regimen >}}): el {{< meta cifras.bajo.pct >}} de las
+  horas, con PM2,5 medio de {{< meta cifras.bajo.pm2_5 >}} µg/m³ y PM10 de
+  {{< meta cifras.bajo.pm10 >}}. Aparece a toda hora, con algo más de peso en la
+  {{< meta cifras.bajo.franja >}}, y en {{< meta cifras.bajo.n_estaciones >}} de las
+  {{< meta cifras.limpieza.n_estaciones_gold >}} estaciones.
+- **Nivel medio** (régimen {{< meta cifras.medio.regimen >}}): el {{< meta cifras.medio.pct >}},
+  con PM2,5 de {{< meta cifras.medio.pm2_5 >}} y PM10 de {{< meta cifras.medio.pm10 >}} µg/m³; más
+  frecuente de {{< meta cifras.medio.franja >}} (pico a las {{< meta cifras.medio.hora_pico >}}).
+  Sus estaciones principales: {{< meta cifras.medio.principales >}}.
+- **Nivel alto** (régimen {{< meta cifras.alto.regimen >}}): solo el {{< meta cifras.alto.pct >}}
+  de las horas ({{< meta cifras.alto.filas >}}), con PM2,5 medio de {{< meta cifras.alto.pm2_5 >}}
+  µg/m³ y PM10 de {{< meta cifras.alto.pm10 >}}: **{{< meta cifras.alto.eca >}} el ECA por los dos
+  contaminantes en promedio**. El {{< meta cifras.alto.pct_franja >}} de sus horas son de
+  {{< meta cifras.alto.franja >}} (pico a las {{< meta cifras.alto.hora_pico >}}, en hora final), y
+  se concentra en pocas estaciones: {{< meta cifras.alto.principales >}}.
+
+El nivel alto es la respuesta de esta PC3 a la primera mitad de la pregunta: **dónde y cuándo** el
+aire entra en él. Que su media supere el ECA no significa que cada hora suya sea un incumplimiento
+(el ECA es un promedio de 24 horas), pero en la calibración este régimen recogió el
+{{< meta cifras.calibracion.recall >}} de las horas en que el promedio de 24 horas sí lo superó: es
+la señal de partida para medir, en el TB2, con cuánta anticipación avisa. Los episodios son raros, y
+eso se ve en su tamaño.
+
+**Combustión o polvo: el diferencial.** La fracción fina, como cociente PM2,5/PM10 de las medias, es
+de {{< meta cifras.alto.cociente >}} en el nivel alto, {{< meta cifras.medio.cociente >}} en el
+medio y {{< meta cifras.bajo.cociente >}} en el bajo. Si baja a medida que sube el nivel, los episodios
+traen más partícula gruesa que el aire de fondo, lo que apunta a polvo (suelo, minería, viento) antes
+que a combustión. Es la primera lectura de Q2, el diferencial de la pregunta; la respuesta por
+estación, y con la meteorología de cada régimen, queda para el TB2.
+
+**Advertencias de peso.** Estos niveles no describen el aire del Perú, y hay que leerlos con tres
+cuidados:
+
+- **Una estación pesa mucho.** {{< meta cifras.limpieza.estacion_gold_max >}}
+  ({{< meta cifras.limpieza.departamento_gold_max >}}) aporta el
+  {{< meta cifras.limpieza.pct_estacion_gold_max >}} de las horas completas del gold y es la estación
+  principal de los tres niveles: lo que el modelo dice del aire «en general» está cargado hacia ella.
+- **El nivel alto mezcla sitio y época.** El {{< meta cifras.alto.pct_lima >}} de sus horas sale de
+  estaciones de Lima ({{< meta cifras.alto.estaciones_lima >}} horas) cuyas horas con PM2,5 y PM10 son
+  de unas semanas de diciembre de 2021. Que una estación de Lima pase muchas de sus horas en el nivel
+  alto describe esas semanas, no la exposición de un año, y no se puede comparar con un año entero de
+  otra estación (inferencia nuestra).
+- **El gold es sobre todo reciente.** {{< meta cifras.limpieza.n_estaciones_inicio_fin_2021 >}}
+  estaciones arrancan en noviembre o diciembre de 2021, y el {{< meta cifras.eda.gold_2022_pct >}} %
+  del gold es de 2022 (notebook 04, sobre la corrida del 01/11). Las series largas con más horas no
+  entran al gold porque no miden PM2,5 (@tbl-tipologia).
+
+Y vale la advertencia de cobertura: el nivel de un lugar sin estación no se conoce (@sec-cobertura).
+
+**La meteorología de cada nivel.** El modelo no usa la meteorología; la @tbl-meteorologia la
+describe por nivel, junto con la fracción fina media por hora, cruzando las asignaciones de Go con el
+silver (notebook 02). Solo {{< meta cifras.meteo.estaciones_con_meteo >}} de las
+{{< meta cifras.meteo.estaciones >}} estaciones del gold miden viento, humedad y temperatura
+({{< meta cifras.meteo.alto_estaciones_con_meteo >}} de las {{< meta cifras.meteo.alto_estaciones >}}
+que tienen horas en el nivel alto), así que las medias mezclan lugares distintos; por eso la tabla da
+también la anomalía dentro de la estación, que compara cada hora con el promedio de su propia
+estación. Lo que se ve: los niveles medio y alto llegan con aire más seco que el habitual de su
+estación (humedad {{< meta cifras.meteo.medio_humedad_anomalia >}} y
+{{< meta cifras.meteo.alto_humedad_anomalia >}} puntos) y el bajo con aire algo más húmedo
+({{< meta cifras.meteo.bajo_humedad_anomalia >}}), mientras el viento casi no cambia
+({{< meta cifras.meteo.alto_viento_anomalia >}} m/s en el alto). La fracción fina media baja de
+{{< meta cifras.meteo.bajo_fraccion_fina >}} a {{< meta cifras.meteo.alto_fraccion_fina >}} del nivel
+bajo al alto, igual que el cociente de las medias. Aire más seco y más partícula gruesa en los
+episodios es compatible con polvo resuspendido (inferencia nuestra, que el TB2 tiene que probar por
+estación: con tan pocas estaciones con meteorología, una media de nivel no basta).
+
+{{< include generado/tablas/meteorologia.md >}}
+
+**Dónde y cuándo, en detalle.** La @tbl-regimenes-hora reparte cada nivel por franja horaria (en hora
+final) y la @tbl-regimenes-estacion dice en qué estaciones aparece más. Las figuras lo muestran: la
+@fig-niveles, las horas en el plano PM2,5–PM10 coloreadas por régimen; la @fig-perfiles, el perfil
+de cada régimen frente al ECA; la @fig-regimen-hora y la @fig-regimen-estacion, los repartos por
+hora y por estación; la @fig-episodio, una semana de CA-CP-01 con cada hora coloreada por su
+régimen; y la @fig-captura-entrenar, la corrida de `cmd/entrenar` que produjo estas salidas.
+
+{{< include generado/tablas/regimenes_hora.md >}}
+
+{{< include generado/tablas/regimenes_estacion.md >}}
+
+![Los tres niveles de aire: PM2,5 frente a PM10 de cada hora, coloreada por su régimen, con las líneas del ECA](generado/figuras/niveles.png){#fig-niveles width=15cm}
+
+:::: {si-falta="generado/figuras/niveles.png"}
+::: {.callout-warning title="PENDIENTE"}
+Dispersión PM2,5 frente a PM10 por régimen, con las líneas del ECA. La dibuja el notebook 03 en
+`docs/informe/generado/figuras/niveles.png` (llega en un commit de `feature/notebooks`).
+:::
+::::
+
+![Perfil de cada régimen: media de PM10 (barra llena) y de PM2,5 (barra clara) de sus horas, en unidades originales, frente al ECA de 24 horas. La media horaria de un régimen sobre la línea dice que el régimen es peligroso, no que haya un incumplimiento; los centroides estandarizados están en la @tbl-centroides-z](generado/figuras/perfiles.png){#fig-perfiles width=15cm}
+
+:::: {si-falta="generado/figuras/perfiles.png"}
+::: {.callout-warning title="PENDIENTE"}
+Perfiles de los regímenes desde `generado/kmeans.json`. Notebook 03, en
+`docs/informe/generado/figuras/perfiles.png`.
+:::
+::::
+
+![Régimen por hora del día (hora de fin del promedio horario, en Lima): porcentaje de las horas de cada régimen que cae en cada hora. Cada fila suma 100 %; una fila plana es un régimen sin hora preferida](generado/figuras/regimen-hora.png){#fig-regimen-hora width=15cm}
+
+:::: {si-falta="generado/figuras/regimen-hora.png"}
+::: {.callout-warning title="PENDIENTE"}
+Heatmap régimen × hora desde `generado/regimenes.json` (`por_hora`). Notebook 03, en
+`docs/informe/generado/figuras/regimen-hora.png`.
+:::
+::::
+
+![Régimen por estación: porcentaje de las horas de cada estación en cada régimen, con las estaciones agrupadas por departamento (CA-HUAR-01 viene sin departamento en el dato; está en Pasco). Cada fila suma 100 %](generado/figuras/regimen-estacion.png){#fig-regimen-estacion width=13cm}
+
+:::: {si-falta="generado/figuras/regimen-estacion.png"}
+::: {.callout-warning title="PENDIENTE"}
+Heatmap régimen × estación desde `generado/regimenes.json` (`por_estacion`). Notebook 03, en
+`docs/informe/generado/figuras/regimen-estacion.png`.
+:::
+::::
+
+![Un episodio en CA-CP-01 (Cusco), del 22 al 28 de setiembre de 2020: PM2,5 y PM10 horarios con el fondo y la franja «régimen» coloreados por régimen, las líneas del ECA de 24 h y la franja «24 h > ECA», que marca las horas cuyo promedio de las 24 h anteriores supera el ECA. Es la estación con más horas en el nivel alto y la ventana de siete días con más horas en ese nivel y sobre el ECA. Sin fondo: horas sin régimen](generado/figuras/episodio.png){#fig-episodio width=16cm}
+
+:::: {si-falta="generado/figuras/episodio.png"}
+::: {.callout-warning title="PENDIENTE"}
+La figura estrella: unos días de una estación con un episodio, cada hora coloreada por su régimen.
+Notebook 03, en `docs/informe/generado/figuras/episodio.png`. Elegir el episodio con el EDA y decir
+por qué ese.
+:::
+::::
+
+![Ejecución de `cmd/entrenar`: iteraciones, inercia y regímenes](capturas/entrenar.png){#fig-captura-entrenar width=16cm}
+
+:::: {si-falta="capturas/entrenar.png"}
+::: {.callout-warning title="PENDIENTE"}
+Captura real de `go run ./cmd/entrenar` con la receta de `configs/kmeans.json`. Va en
+`docs/informe/capturas/entrenar.png`.
+:::
+::::
+
+**La auditoría del modelo.** El notebook 03 corrió sobre estas mismas salidas (misma receta y mismo
+gold que este informe) y comparó el K-Means de Go con scikit-learn
+(@tbl-auditoria): las asignaciones, los tamaños, la inercia, los centroides (después de emparejar las
+etiquetas de los dos modelos) y el codo coinciden, y Lloyd desde los centroides iniciales de Go
+reproduce la inercia de cada semilla. Las diferencias son del orden del redondeo de la coma flotante,
+muy por debajo de la tolerancia, y ningún chequeo da diferencia
+({{< meta cifras.auditoria.diferencias >}} de {{< meta cifras.auditoria.chequeos >}}).
+
+### Despliegue con Docker
+
+![Construcción y ejecución de la imagen de `cmd/cargar` y `cmd/entrenar`](capturas/docker.png){#fig-captura-docker width=16cm}
+
+:::: {si-falta="capturas/docker.png"}
+::: {.callout-warning title="PENDIENTE"}
+Captura real de `docker build -t aire-distribuido .` y de un `docker run` con `data/` montado (Compose
+entero llega en la PC4). Va en
+`docs/informe/capturas/docker.png`.
+:::
+::::
+
+El `Dockerfile` compila en dos etapas (la @fig-captura-docker muestra la construcción de la imagen y
+una corrida del cargador dentro del contenedor). La primera, sobre `golang:1.26`, compila todo el módulo (si
+algo no compila, la imagen no se construye) y los comandos de `cmd/` como binarios estáticos
+(`CGO_ENABLED=0`, `-trimpath`). La segunda copia solo esos binarios y `configs/` a una imagen
+distroless sin shell, con la zona horaria de Lima y un usuario sin privilegios. Los datos no entran
+en la imagen: `data/` se monta en `/datos` y las salidas quedan en el disco del anfitrión; la receta
+y las reglas de limpieza sí van dentro, porque la imagen es el código más la receta congelada. No
+tiene `ENTRYPOINT`: se elige el comando (`cargar`, `entrenar` o `benchmark`) al correrla.
+
+### Gestión del proyecto
+
+`develop` es la rama por defecto del repositorio. En la PC3 cada pieza se trabajó en su rama:
+`feature/cargador`, `feature/kmeans`, `feature/diseno`, `feature/informe` y `feature/notebooks`.
+Como las piezas dependen unas de otras (el informe lee lo que escriben el cargador y el K-Means; los
+notebooks, lo que escribe Go), no se fusionaron una por una en `develop`: se fusionaron varias veces
+en una rama de integración, `feature/spec-pc3`, que es la que entra a `develop` con una sola PR
+(la [#3](https://github.com/R0SEWT/aire-distribuido/pull/3)); el cierre del informe, los
+descriptores por régimen, las capturas y el video entraron después en PRs más chicas (de la
+[#4](https://github.com/R0SEWT/aire-distribuido/pull/4) a la
+[#8](https://github.com/R0SEWT/aire-distribuido/pull/8)). La entrega sale de una rama
+`release/pc3` hacia `main` (la PR #32), con el tag `pc3`. Las tareas se siguen en un tablero Kanban de
+GitHub Projects (Anexo B), y el historial de commits por integrante y de PR está en el Anexo C.

@@ -1,0 +1,392 @@
+estacion,parametro,inicio,fin,dias,dias_del_parametro,al_inicio,al_final,tipo
+CA-03,h2s,2019-05-31,2019-06-20,21,252,False,False,tramo largo (> 7 días)
+CA-03,h2s,2019-07-26,2019-09-04,41,252,False,False,tramo largo (> 7 días)
+CA-03,humedad,2019-06-26,2019-06-30,5,252,False,False,tramo corto (2–7 días)
+CA-03,humedad,2019-07-19,2019-09-04,48,252,False,False,tramo largo (> 7 días)
+CA-03,pm10,2019-04-24,2019-12-31,252,252,True,True,nunca medido
+CA-03,pm2_5,2019-04-24,2019-12-31,252,252,True,True,nunca medido
+CA-03,presion,2019-06-26,2019-06-30,5,252,False,False,tramo corto (2–7 días)
+CA-03,presion,2019-07-19,2019-09-04,48,252,False,False,tramo largo (> 7 días)
+CA-03,so2,2019-05-31,2019-06-20,21,252,False,False,tramo largo (> 7 días)
+CA-03,so2,2019-07-26,2019-09-04,41,252,False,False,tramo largo (> 7 días)
+CA-03,so2,2019-09-19,2019-09-25,7,252,False,False,tramo corto (2–7 días)
+CA-03,so2,2019-10-01,2019-10-01,1,252,False,False,día suelto
+CA-03,temperatura,2019-06-26,2019-06-30,5,252,False,False,tramo corto (2–7 días)
+CA-03,temperatura,2019-07-19,2019-09-04,48,252,False,False,tramo largo (> 7 días)
+CA-03,viento_direccion,2019-06-26,2019-06-30,5,252,False,False,tramo corto (2–7 días)
+CA-03,viento_direccion,2019-07-19,2019-09-04,48,252,False,False,tramo largo (> 7 días)
+CA-03,viento_velocidad,2019-06-26,2019-06-30,5,252,False,False,tramo corto (2–7 días)
+CA-03,viento_velocidad,2019-07-19,2019-09-04,48,252,False,False,tramo largo (> 7 días)
+CA-AYAS-01,humedad,2021-12-09,2021-12-31,23,43,True,False,tramo largo (> 7 días)
+CA-AYAS-01,presion,2021-12-09,2021-12-31,23,43,True,False,tramo largo (> 7 días)
+CA-AYAS-01,temperatura,2021-12-09,2021-12-31,23,43,True,False,tramo largo (> 7 días)
+CA-AYAS-01,viento_direccion,2021-12-09,2021-12-31,23,43,True,False,tramo largo (> 7 días)
+CA-AYAS-01,viento_velocidad,2021-12-09,2021-12-31,23,43,True,False,tramo largo (> 7 días)
+CA-CC-01,humedad,2018-05-16,2018-05-25,10,1461,False,False,tramo largo (> 7 días)
+CA-CC-01,humedad,2018-11-06,2018-11-09,4,1461,False,False,tramo corto (2–7 días)
+CA-CC-01,humedad,2018-11-18,2018-11-18,1,1461,False,False,día suelto
+CA-CC-01,humedad,2019-01-11,2019-01-17,7,1461,False,False,tramo corto (2–7 días)
+CA-CC-01,humedad,2019-05-15,2019-05-17,3,1461,False,False,tramo corto (2–7 días)
+CA-CC-01,humedad,2019-09-25,2019-09-25,1,1461,False,False,día suelto
+CA-CC-01,humedad,2020-09-28,2020-10-01,4,1461,False,False,tramo corto (2–7 días)
+CA-CC-01,humedad,2020-10-06,2020-10-06,1,1461,False,False,día suelto
+CA-CC-01,presion,2018-05-16,2018-05-25,10,1461,False,False,tramo largo (> 7 días)
+CA-CC-01,presion,2018-11-06,2018-11-09,4,1461,False,False,tramo corto (2–7 días)
+CA-CC-01,presion,2018-11-18,2018-11-18,1,1461,False,False,día suelto
+CA-CC-01,presion,2019-01-11,2019-01-17,7,1461,False,False,tramo corto (2–7 días)
+CA-CC-01,presion,2019-05-15,2019-05-17,3,1461,False,False,tramo corto (2–7 días)
+CA-CC-01,presion,2019-09-25,2019-09-25,1,1461,False,False,día suelto
+CA-CC-01,presion,2020-09-28,2020-10-01,4,1461,False,False,tramo corto (2–7 días)
+CA-CC-01,presion,2020-10-06,2021-03-12,158,1461,False,False,tramo largo (> 7 días)
+CA-CC-01,so2,2018-05-16,2018-05-24,9,1461,False,False,tramo largo (> 7 días)
+CA-CC-01,so2,2018-11-06,2018-11-09,4,1461,False,False,tramo corto (2–7 días)
+CA-CC-01,so2,2018-11-18,2018-11-18,1,1461,False,False,día suelto
+CA-CC-01,so2,2019-01-11,2019-01-17,7,1461,False,False,tramo corto (2–7 días)
+CA-CC-01,so2,2019-05-15,2019-05-17,3,1461,False,False,tramo corto (2–7 días)
+CA-CC-01,so2,2019-09-25,2019-09-25,1,1461,False,False,día suelto
+CA-CC-01,so2,2020-09-28,2020-10-01,4,1461,False,False,tramo corto (2–7 días)
+CA-CC-01,so2,2020-11-12,2020-11-13,2,1461,False,False,tramo corto (2–7 días)
+CA-CC-01,so2,2020-11-23,2020-11-23,1,1461,False,False,día suelto
+CA-CC-01,so2,2020-11-28,2020-12-02,5,1461,False,False,tramo corto (2–7 días)
+CA-CC-01,so2,2021-02-23,2021-02-25,3,1461,False,False,tramo corto (2–7 días)
+CA-CC-01,temperatura,2018-05-16,2018-05-25,10,1461,False,False,tramo largo (> 7 días)
+CA-CC-01,temperatura,2018-11-06,2018-11-09,4,1461,False,False,tramo corto (2–7 días)
+CA-CC-01,temperatura,2018-11-18,2018-11-18,1,1461,False,False,día suelto
+CA-CC-01,temperatura,2019-01-11,2019-01-17,7,1461,False,False,tramo corto (2–7 días)
+CA-CC-01,temperatura,2019-05-15,2019-05-17,3,1461,False,False,tramo corto (2–7 días)
+CA-CC-01,temperatura,2019-09-25,2019-09-25,1,1461,False,False,día suelto
+CA-CC-01,temperatura,2020-09-28,2020-10-01,4,1461,False,False,tramo corto (2–7 días)
+CA-CC-01,temperatura,2020-10-06,2020-10-06,1,1461,False,False,día suelto
+CA-CC-01,viento_direccion,2018-05-16,2018-05-25,10,1461,False,False,tramo largo (> 7 días)
+CA-CC-01,viento_direccion,2018-11-06,2018-11-09,4,1461,False,False,tramo corto (2–7 días)
+CA-CC-01,viento_direccion,2018-11-18,2018-11-18,1,1461,False,False,día suelto
+CA-CC-01,viento_direccion,2019-01-11,2019-01-17,7,1461,False,False,tramo corto (2–7 días)
+CA-CC-01,viento_direccion,2019-05-15,2019-05-17,3,1461,False,False,tramo corto (2–7 días)
+CA-CC-01,viento_direccion,2019-09-25,2019-09-25,1,1461,False,False,día suelto
+CA-CC-01,viento_direccion,2020-09-28,2020-10-01,4,1461,False,False,tramo corto (2–7 días)
+CA-CC-01,viento_direccion,2020-10-06,2020-10-06,1,1461,False,False,día suelto
+CA-CC-01,viento_velocidad,2018-05-16,2018-05-25,10,1461,False,False,tramo largo (> 7 días)
+CA-CC-01,viento_velocidad,2018-11-06,2018-11-09,4,1461,False,False,tramo corto (2–7 días)
+CA-CC-01,viento_velocidad,2018-11-18,2018-11-18,1,1461,False,False,día suelto
+CA-CC-01,viento_velocidad,2019-01-11,2019-01-17,7,1461,False,False,tramo corto (2–7 días)
+CA-CC-01,viento_velocidad,2019-05-15,2019-05-17,3,1461,False,False,tramo corto (2–7 días)
+CA-CC-01,viento_velocidad,2019-09-25,2019-09-25,1,1461,False,False,día suelto
+CA-CC-01,viento_velocidad,2020-09-28,2020-10-01,4,1461,False,False,tramo corto (2–7 días)
+CA-CC-01,viento_velocidad,2020-10-06,2020-10-06,1,1461,False,False,día suelto
+CA-CG-01,humedad,2021-12-02,2021-12-31,30,74,True,False,tramo largo (> 7 días)
+CA-CG-01,presion,2021-12-02,2021-12-31,30,74,True,False,tramo largo (> 7 días)
+CA-CG-01,temperatura,2021-12-02,2021-12-31,30,74,True,False,tramo largo (> 7 días)
+CA-CG-01,viento_direccion,2021-12-02,2021-12-31,30,74,True,False,tramo largo (> 7 días)
+CA-CG-01,viento_velocidad,2021-12-02,2021-12-31,30,74,True,False,tramo largo (> 7 días)
+CA-CH-03,h2s,2020-01-16,2020-11-14,304,731,False,False,tramo largo (> 7 días)
+CA-CH-03,h2s,2021-03-03,2021-03-08,6,731,False,False,tramo corto (2–7 días)
+CA-CH-03,h2s,2021-09-01,2021-09-15,15,731,False,False,tramo largo (> 7 días)
+CA-CH-03,h2s,2021-11-08,2021-11-10,3,731,False,False,tramo corto (2–7 días)
+CA-CH-03,h2s,2021-11-16,2021-11-22,7,731,False,False,tramo corto (2–7 días)
+CA-CH-03,humedad,2020-01-16,2020-08-20,218,731,False,False,tramo largo (> 7 días)
+CA-CH-03,humedad,2021-09-01,2021-09-01,1,731,False,False,día suelto
+CA-CH-03,humedad,2021-11-08,2021-12-31,54,731,False,True,tramo largo (> 7 días)
+CA-CH-03,pm10,2020-01-01,2021-11-10,680,731,True,False,tramo largo (> 7 días)
+CA-CH-03,pm2_5,2020-01-01,2021-11-10,680,731,True,False,tramo largo (> 7 días)
+CA-CH-03,presion,2020-01-16,2020-08-20,218,731,False,False,tramo largo (> 7 días)
+CA-CH-03,presion,2021-09-01,2021-09-01,1,731,False,False,día suelto
+CA-CH-03,presion,2021-11-08,2021-12-31,54,731,False,True,tramo largo (> 7 días)
+CA-CH-03,so2,2020-01-16,2020-02-03,19,731,False,False,tramo largo (> 7 días)
+CA-CH-03,so2,2020-03-01,2020-08-20,173,731,False,False,tramo largo (> 7 días)
+CA-CH-03,so2,2020-09-02,2020-09-05,4,731,False,False,tramo corto (2–7 días)
+CA-CH-03,so2,2020-11-13,2021-12-31,414,731,False,True,tramo largo (> 7 días)
+CA-CH-03,temperatura,2020-01-16,2020-08-20,218,731,False,False,tramo largo (> 7 días)
+CA-CH-03,temperatura,2021-09-01,2021-09-01,1,731,False,False,día suelto
+CA-CH-03,temperatura,2021-11-08,2021-12-31,54,731,False,True,tramo largo (> 7 días)
+CA-CH-03,viento_direccion,2020-01-16,2020-08-20,218,731,False,False,tramo largo (> 7 días)
+CA-CH-03,viento_direccion,2021-09-01,2021-09-01,1,731,False,False,día suelto
+CA-CH-03,viento_direccion,2021-11-08,2021-12-31,54,731,False,True,tramo largo (> 7 días)
+CA-CH-03,viento_velocidad,2020-01-16,2020-08-20,218,731,False,False,tramo largo (> 7 días)
+CA-CH-03,viento_velocidad,2021-09-01,2021-09-01,1,731,False,False,día suelto
+CA-CH-03,viento_velocidad,2021-11-08,2021-12-31,54,731,False,True,tramo largo (> 7 días)
+CA-COLQ-01,humedad,2021-12-02,2021-12-31,30,30,True,True,nunca medido
+CA-COLQ-01,pm10,2021-12-04,2021-12-06,3,30,False,False,tramo corto (2–7 días)
+CA-COLQ-01,pm2_5,2021-12-04,2021-12-06,3,30,False,False,tramo corto (2–7 días)
+CA-COLQ-01,presion,2021-12-02,2021-12-31,30,30,True,True,nunca medido
+CA-COLQ-01,temperatura,2021-12-02,2021-12-31,30,30,True,True,nunca medido
+CA-COLQ-01,viento_direccion,2021-12-02,2021-12-31,30,30,True,True,nunca medido
+CA-COLQ-01,viento_velocidad,2021-12-02,2021-12-31,30,30,True,True,nunca medido
+CA-CP-01,humedad,2020-12-11,2021-01-06,27,709,False,False,tramo largo (> 7 días)
+CA-CP-01,humedad,2021-05-14,2021-05-21,8,709,False,False,tramo largo (> 7 días)
+CA-CP-01,pm10,2021-11-18,2021-11-22,5,709,False,False,tramo corto (2–7 días)
+CA-CP-01,pm2_5,2021-11-18,2021-11-22,5,709,False,False,tramo corto (2–7 días)
+CA-CP-01,presion,2020-12-11,2021-01-06,27,709,False,False,tramo largo (> 7 días)
+CA-CP-01,presion,2021-05-14,2021-05-21,8,709,False,False,tramo largo (> 7 días)
+CA-CP-01,temperatura,2020-12-11,2021-01-06,27,709,False,False,tramo largo (> 7 días)
+CA-CP-01,temperatura,2021-05-14,2021-05-21,8,709,False,False,tramo largo (> 7 días)
+CA-CP-01,viento_direccion,2020-12-11,2021-01-06,27,709,False,False,tramo largo (> 7 días)
+CA-CP-01,viento_direccion,2021-05-14,2021-05-21,8,709,False,False,tramo largo (> 7 días)
+CA-CP-01,viento_velocidad,2020-12-11,2021-01-06,27,709,False,False,tramo largo (> 7 días)
+CA-CP-01,viento_velocidad,2021-05-14,2021-05-21,8,709,False,False,tramo largo (> 7 días)
+CA-ESP-01,humedad,2021-11-15,2021-12-31,47,47,True,True,nunca medido
+CA-ESP-01,pm10,2021-12-31,2021-12-31,1,47,False,True,día suelto
+CA-ESP-01,pm2_5,2021-12-31,2021-12-31,1,47,False,True,día suelto
+CA-ESP-01,presion,2021-11-15,2021-12-31,47,47,True,True,nunca medido
+CA-ESP-01,temperatura,2021-11-15,2021-12-31,47,47,True,True,nunca medido
+CA-ESP-01,viento_direccion,2021-11-15,2021-12-31,47,47,True,True,nunca medido
+CA-ESP-01,viento_velocidad,2021-11-15,2021-12-31,47,47,True,True,nunca medido
+CA-HU-04,humedad,2021-12-09,2021-12-31,23,23,True,True,nunca medido
+CA-HU-04,pm10,2021-12-21,2021-12-31,11,23,False,True,tramo largo (> 7 días)
+CA-HU-04,pm2_5,2021-12-21,2021-12-31,11,23,False,True,tramo largo (> 7 días)
+CA-HU-04,presion,2021-12-09,2021-12-31,23,23,True,True,nunca medido
+CA-HU-04,temperatura,2021-12-09,2021-12-31,23,23,True,True,nunca medido
+CA-HU-04,viento_direccion,2021-12-09,2021-12-31,23,23,True,True,nunca medido
+CA-HU-04,viento_velocidad,2021-12-09,2021-12-31,23,23,True,True,nunca medido
+CA-HU-09,humedad,2021-12-13,2021-12-31,19,19,True,True,nunca medido
+CA-HU-09,presion,2021-12-13,2021-12-31,19,19,True,True,nunca medido
+CA-HU-09,temperatura,2021-12-13,2021-12-31,19,19,True,True,nunca medido
+CA-HU-09,viento_direccion,2021-12-13,2021-12-31,19,19,True,True,nunca medido
+CA-HU-09,viento_velocidad,2021-12-13,2021-12-31,19,19,True,True,nunca medido
+CA-HUA-01,humedad,2021-12-08,2021-12-31,24,287,True,False,tramo largo (> 7 días)
+CA-HUA-01,presion,2021-12-08,2021-12-31,24,287,True,False,tramo largo (> 7 días)
+CA-HUA-01,temperatura,2021-12-08,2021-12-31,24,287,True,False,tramo largo (> 7 días)
+CA-HUA-01,viento_direccion,2021-12-08,2021-12-31,24,287,True,False,tramo largo (> 7 días)
+CA-HUA-01,viento_velocidad,2021-12-08,2021-12-31,24,287,True,False,tramo largo (> 7 días)
+CA-HUAR-01,humedad,2021-12-04,2021-12-31,28,28,True,True,nunca medido
+CA-HUAR-01,pm10,2021-12-18,2021-12-31,14,28,False,True,tramo largo (> 7 días)
+CA-HUAR-01,pm2_5,2021-12-18,2021-12-31,14,28,False,True,tramo largo (> 7 días)
+CA-HUAR-01,presion,2021-12-04,2021-12-31,28,28,True,True,nunca medido
+CA-HUAR-01,temperatura,2021-12-04,2021-12-31,28,28,True,True,nunca medido
+CA-HUAR-01,viento_direccion,2021-12-04,2021-12-31,28,28,True,True,nunca medido
+CA-HUAR-01,viento_velocidad,2021-12-04,2021-12-31,28,28,True,True,nunca medido
+CA-MAC-01,humedad,2021-12-09,2021-12-31,23,242,True,False,tramo largo (> 7 días)
+CA-MAC-01,presion,2021-12-09,2021-12-31,23,242,True,False,tramo largo (> 7 días)
+CA-MAC-01,temperatura,2021-12-09,2021-12-31,23,242,True,False,tramo largo (> 7 días)
+CA-MAC-01,viento_direccion,2021-12-09,2021-12-31,23,242,True,False,tramo largo (> 7 días)
+CA-MAC-01,viento_velocidad,2021-12-09,2021-12-31,23,242,True,False,tramo largo (> 7 días)
+CA-ROM-01,humedad,2021-12-02,2021-12-31,30,229,True,False,tramo largo (> 7 días)
+CA-ROM-01,presion,2021-12-02,2021-12-31,30,309,True,False,tramo largo (> 7 días)
+CA-ROM-01,temperatura,2021-12-02,2021-12-31,30,229,True,False,tramo largo (> 7 días)
+CA-ROM-01,viento_direccion,2021-12-02,2021-12-31,30,302,True,False,tramo largo (> 7 días)
+CA-ROM-01,viento_velocidad,2021-12-02,2021-12-31,30,302,True,False,tramo largo (> 7 días)
+CA-RZC-01,pm10,2021-12-14,2021-12-31,18,18,True,True,nunca medido
+CA-RZC-01,pm2_5,2021-12-14,2021-12-31,18,18,True,True,nunca medido
+CA-RZC-02,humedad,2021-12-12,2021-12-12,1,156,True,False,día suelto
+CA-RZC-02,pm10,2021-12-12,2021-12-18,7,20,True,False,tramo corto (2–7 días)
+CA-RZC-02,pm10,2021-12-30,2021-12-31,2,20,False,True,tramo corto (2–7 días)
+CA-RZC-02,pm2_5,2021-12-12,2021-12-18,7,20,True,False,tramo corto (2–7 días)
+CA-RZC-02,pm2_5,2021-12-30,2021-12-31,2,20,False,True,tramo corto (2–7 días)
+CA-RZC-02,presion,2021-12-12,2021-12-12,1,156,True,False,día suelto
+CA-RZC-02,radiacion,2021-12-12,2021-12-31,20,156,True,False,tramo largo (> 7 días)
+CA-RZC-02,temperatura,2021-12-12,2021-12-12,1,156,True,False,día suelto
+CA-RZC-02,viento_direccion,2021-12-12,2021-12-12,1,156,True,False,día suelto
+CA-RZC-02,viento_velocidad,2021-12-12,2021-12-12,1,156,True,False,día suelto
+CA-SB-01,h2s,2018-01-01,2018-02-28,59,1461,True,False,tramo largo (> 7 días)
+CA-SB-01,h2s,2018-08-10,2018-09-05,27,1461,False,False,tramo largo (> 7 días)
+CA-SB-01,h2s,2018-11-01,2021-12-31,1157,1461,False,True,tramo largo (> 7 días)
+CA-SB-01,humedad,2018-04-01,2018-04-04,4,1461,False,False,tramo corto (2–7 días)
+CA-SB-01,humedad,2018-11-12,2018-12-05,24,1461,False,False,tramo largo (> 7 días)
+CA-SB-01,humedad,2019-03-29,2019-03-31,3,1461,False,False,tramo corto (2–7 días)
+CA-SB-01,humedad,2019-05-04,2019-05-05,2,1461,False,False,tramo corto (2–7 días)
+CA-SB-01,humedad,2019-07-03,2019-07-04,2,1461,False,False,tramo corto (2–7 días)
+CA-SB-01,humedad,2019-10-24,2019-10-31,8,1461,False,False,tramo largo (> 7 días)
+CA-SB-01,humedad,2019-11-24,2019-12-15,22,1461,False,False,tramo largo (> 7 días)
+CA-SB-01,humedad,2021-09-19,2021-09-19,1,1461,False,False,día suelto
+CA-SB-01,humedad,2021-12-10,2021-12-18,9,1461,False,False,tramo largo (> 7 días)
+CA-SB-01,pm10,2018-01-01,2018-04-04,94,1461,True,False,tramo largo (> 7 días)
+CA-SB-01,pm10,2018-05-29,2018-12-05,191,1461,False,False,tramo largo (> 7 días)
+CA-SB-01,pm10,2019-03-29,2019-03-31,3,1461,False,False,tramo corto (2–7 días)
+CA-SB-01,pm10,2019-05-04,2019-05-05,2,1461,False,False,tramo corto (2–7 días)
+CA-SB-01,pm10,2019-07-03,2019-07-04,2,1461,False,False,tramo corto (2–7 días)
+CA-SB-01,pm10,2019-12-10,2019-12-15,6,1461,False,False,tramo corto (2–7 días)
+CA-SB-01,pm10,2020-02-14,2020-03-02,18,1461,False,False,tramo largo (> 7 días)
+CA-SB-01,pm10,2021-02-07,2021-02-23,17,1461,False,False,tramo largo (> 7 días)
+CA-SB-01,pm10,2021-09-19,2021-09-19,1,1461,False,False,día suelto
+CA-SB-01,pm10,2021-12-10,2021-12-19,10,1461,False,False,tramo largo (> 7 días)
+CA-SB-01,presion,2018-04-01,2018-04-04,4,1461,False,False,tramo corto (2–7 días)
+CA-SB-01,presion,2018-11-12,2018-12-05,24,1461,False,False,tramo largo (> 7 días)
+CA-SB-01,presion,2019-03-29,2019-03-31,3,1461,False,False,tramo corto (2–7 días)
+CA-SB-01,presion,2019-05-04,2019-05-05,2,1461,False,False,tramo corto (2–7 días)
+CA-SB-01,presion,2019-07-03,2019-07-04,2,1461,False,False,tramo corto (2–7 días)
+CA-SB-01,presion,2019-10-24,2019-10-31,8,1461,False,False,tramo largo (> 7 días)
+CA-SB-01,presion,2019-11-24,2019-12-15,22,1461,False,False,tramo largo (> 7 días)
+CA-SB-01,presion,2020-10-01,2020-10-05,5,1461,False,False,tramo corto (2–7 días)
+CA-SB-01,presion,2021-09-19,2021-09-19,1,1461,False,False,día suelto
+CA-SB-01,presion,2021-12-10,2021-12-18,9,1461,False,False,tramo largo (> 7 días)
+CA-SB-01,so2,2018-08-10,2018-09-05,27,1461,False,False,tramo largo (> 7 días)
+CA-SB-01,so2,2018-11-12,2018-12-20,39,1461,False,False,tramo largo (> 7 días)
+CA-SB-01,so2,2019-01-01,2021-12-31,1096,1461,False,True,tramo largo (> 7 días)
+CA-SB-01,temperatura,2018-04-01,2018-04-04,4,1461,False,False,tramo corto (2–7 días)
+CA-SB-01,temperatura,2018-11-12,2018-12-05,24,1461,False,False,tramo largo (> 7 días)
+CA-SB-01,temperatura,2019-03-29,2019-03-31,3,1461,False,False,tramo corto (2–7 días)
+CA-SB-01,temperatura,2019-05-04,2019-05-05,2,1461,False,False,tramo corto (2–7 días)
+CA-SB-01,temperatura,2019-07-03,2019-07-04,2,1461,False,False,tramo corto (2–7 días)
+CA-SB-01,temperatura,2019-10-24,2019-10-31,8,1461,False,False,tramo largo (> 7 días)
+CA-SB-01,temperatura,2019-11-24,2019-12-15,22,1461,False,False,tramo largo (> 7 días)
+CA-SB-01,temperatura,2021-09-19,2021-09-19,1,1461,False,False,día suelto
+CA-SB-01,temperatura,2021-12-10,2021-12-18,9,1461,False,False,tramo largo (> 7 días)
+CA-SB-01,viento_direccion,2018-04-01,2018-04-04,4,1461,False,False,tramo corto (2–7 días)
+CA-SB-01,viento_direccion,2018-11-12,2018-12-20,39,1461,False,False,tramo largo (> 7 días)
+CA-SB-01,viento_direccion,2019-03-29,2019-03-31,3,1461,False,False,tramo corto (2–7 días)
+CA-SB-01,viento_direccion,2019-05-04,2019-05-05,2,1461,False,False,tramo corto (2–7 días)
+CA-SB-01,viento_direccion,2019-07-03,2019-07-04,2,1461,False,False,tramo corto (2–7 días)
+CA-SB-01,viento_direccion,2019-10-24,2019-10-31,8,1461,False,False,tramo largo (> 7 días)
+CA-SB-01,viento_direccion,2019-11-24,2019-12-15,22,1461,False,False,tramo largo (> 7 días)
+CA-SB-01,viento_direccion,2021-09-19,2021-09-19,1,1461,False,False,día suelto
+CA-SB-01,viento_direccion,2021-12-10,2021-12-18,9,1461,False,False,tramo largo (> 7 días)
+CA-SB-01,viento_velocidad,2018-04-01,2018-04-04,4,1461,False,False,tramo corto (2–7 días)
+CA-SB-01,viento_velocidad,2018-11-12,2018-12-20,39,1461,False,False,tramo largo (> 7 días)
+CA-SB-01,viento_velocidad,2019-03-29,2019-03-31,3,1461,False,False,tramo corto (2–7 días)
+CA-SB-01,viento_velocidad,2019-05-04,2019-05-05,2,1461,False,False,tramo corto (2–7 días)
+CA-SB-01,viento_velocidad,2019-07-03,2019-07-04,2,1461,False,False,tramo corto (2–7 días)
+CA-SB-01,viento_velocidad,2019-10-24,2019-10-31,8,1461,False,False,tramo largo (> 7 días)
+CA-SB-01,viento_velocidad,2019-11-24,2019-12-15,22,1461,False,False,tramo largo (> 7 días)
+CA-SB-01,viento_velocidad,2021-09-19,2021-09-19,1,1461,False,False,día suelto
+CA-SB-01,viento_velocidad,2021-12-10,2021-12-18,9,1461,False,False,tramo largo (> 7 días)
+CA-SOC-01,humedad,2021-12-02,2021-12-02,1,30,True,False,día suelto
+CA-SOC-01,presion,2021-12-02,2021-12-02,1,30,True,False,día suelto
+CA-SOC-01,temperatura,2021-12-02,2021-12-02,1,30,True,False,día suelto
+CA-SOC-01,viento_direccion,2021-12-02,2021-12-02,1,30,True,False,día suelto
+CA-SOC-01,viento_velocidad,2021-12-02,2021-12-02,1,30,True,False,día suelto
+CA-TA-01,co,2018-03-27,2019-05-31,431,1376,True,False,tramo largo (> 7 días)
+CA-TA-01,co,2019-07-11,2021-12-31,905,1376,False,True,tramo largo (> 7 días)
+CA-TA-01,h2s,2018-04-25,2018-05-24,30,1376,False,False,tramo largo (> 7 días)
+CA-TA-01,h2s,2018-05-31,2018-06-11,12,1376,False,False,tramo largo (> 7 días)
+CA-TA-01,h2s,2018-10-10,2018-10-11,2,1376,False,False,tramo corto (2–7 días)
+CA-TA-01,h2s,2018-10-26,2021-12-31,1163,1376,False,True,tramo largo (> 7 días)
+CA-TA-01,humedad,2018-03-27,2019-06-09,440,1376,True,False,tramo largo (> 7 días)
+CA-TA-01,humedad,2019-06-21,2019-06-23,3,1376,False,False,tramo corto (2–7 días)
+CA-TA-01,humedad,2019-07-11,2020-10-31,479,1376,False,False,tramo largo (> 7 días)
+CA-TA-01,o3,2018-04-25,2018-05-24,30,1376,False,False,tramo largo (> 7 días)
+CA-TA-01,o3,2018-05-31,2018-06-11,12,1376,False,False,tramo largo (> 7 días)
+CA-TA-01,o3,2018-09-27,2018-09-28,2,1376,False,False,tramo corto (2–7 días)
+CA-TA-01,o3,2018-10-01,2018-10-11,11,1376,False,False,tramo largo (> 7 días)
+CA-TA-01,o3,2018-10-26,2021-12-31,1163,1376,False,True,tramo largo (> 7 días)
+CA-TA-01,pm10,2018-03-27,2018-05-24,59,1376,True,False,tramo largo (> 7 días)
+CA-TA-01,pm10,2018-05-31,2018-06-11,12,1376,False,False,tramo largo (> 7 días)
+CA-TA-01,pm10,2018-09-11,2018-09-11,1,1376,False,False,día suelto
+CA-TA-01,pm10,2018-10-10,2018-10-11,2,1376,False,False,tramo corto (2–7 días)
+CA-TA-01,pm10,2018-10-26,2019-06-09,227,1376,False,False,tramo largo (> 7 días)
+CA-TA-01,pm10,2019-06-21,2019-06-23,3,1376,False,False,tramo corto (2–7 días)
+CA-TA-01,pm10,2019-07-01,2021-12-31,915,1376,False,True,tramo largo (> 7 días)
+CA-TA-01,presion,2018-03-27,2018-05-25,60,1376,True,False,tramo largo (> 7 días)
+CA-TA-01,presion,2018-05-30,2018-06-12,14,1376,False,False,tramo largo (> 7 días)
+CA-TA-01,presion,2018-08-13,2018-08-20,8,1376,False,False,tramo largo (> 7 días)
+CA-TA-01,presion,2018-10-10,2018-10-11,2,1376,False,False,tramo corto (2–7 días)
+CA-TA-01,presion,2018-10-26,2019-06-09,227,1376,False,False,tramo largo (> 7 días)
+CA-TA-01,presion,2019-06-21,2019-06-23,3,1376,False,False,tramo corto (2–7 días)
+CA-TA-01,presion,2019-07-11,2020-10-31,479,1376,False,False,tramo largo (> 7 días)
+CA-TA-01,presion,2020-11-19,2021-04-30,163,1376,False,False,tramo largo (> 7 días)
+CA-TA-01,so2,2018-04-25,2018-05-24,30,1376,False,False,tramo largo (> 7 días)
+CA-TA-01,so2,2018-05-31,2018-06-11,12,1376,False,False,tramo largo (> 7 días)
+CA-TA-01,so2,2018-10-10,2018-10-11,2,1376,False,False,tramo corto (2–7 días)
+CA-TA-01,so2,2018-10-26,2019-05-31,218,1376,False,False,tramo largo (> 7 días)
+CA-TA-01,so2,2019-07-11,2020-11-11,490,1376,False,False,tramo largo (> 7 días)
+CA-TA-01,so2,2020-12-10,2020-12-13,4,1376,False,False,tramo corto (2–7 días)
+CA-TA-01,temperatura,2018-03-27,2018-05-25,60,1376,True,False,tramo largo (> 7 días)
+CA-TA-01,temperatura,2018-05-30,2018-06-12,14,1376,False,False,tramo largo (> 7 días)
+CA-TA-01,temperatura,2018-08-13,2018-08-20,8,1376,False,False,tramo largo (> 7 días)
+CA-TA-01,temperatura,2018-10-10,2018-10-11,2,1376,False,False,tramo corto (2–7 días)
+CA-TA-01,temperatura,2018-10-26,2019-06-09,227,1376,False,False,tramo largo (> 7 días)
+CA-TA-01,temperatura,2019-06-21,2019-06-23,3,1376,False,False,tramo corto (2–7 días)
+CA-TA-01,temperatura,2019-07-11,2020-10-31,479,1376,False,False,tramo largo (> 7 días)
+CA-TA-01,viento_direccion,2018-03-27,2018-05-25,60,1376,True,False,tramo largo (> 7 días)
+CA-TA-01,viento_direccion,2018-05-30,2018-06-12,14,1376,False,False,tramo largo (> 7 días)
+CA-TA-01,viento_direccion,2018-08-13,2018-08-20,8,1376,False,False,tramo largo (> 7 días)
+CA-TA-01,viento_direccion,2018-10-10,2018-10-11,2,1376,False,False,tramo corto (2–7 días)
+CA-TA-01,viento_direccion,2018-10-26,2019-06-09,227,1376,False,False,tramo largo (> 7 días)
+CA-TA-01,viento_direccion,2019-06-21,2019-06-23,3,1376,False,False,tramo corto (2–7 días)
+CA-TA-01,viento_direccion,2019-07-11,2020-10-31,479,1376,False,False,tramo largo (> 7 días)
+CA-TA-01,viento_velocidad,2018-03-27,2018-05-25,60,1376,True,False,tramo largo (> 7 días)
+CA-TA-01,viento_velocidad,2018-05-30,2018-06-12,14,1376,False,False,tramo largo (> 7 días)
+CA-TA-01,viento_velocidad,2018-08-13,2018-08-20,8,1376,False,False,tramo largo (> 7 días)
+CA-TA-01,viento_velocidad,2018-10-10,2018-10-11,2,1376,False,False,tramo corto (2–7 días)
+CA-TA-01,viento_velocidad,2018-10-26,2019-06-09,227,1376,False,False,tramo largo (> 7 días)
+CA-TA-01,viento_velocidad,2019-06-21,2019-06-23,3,1376,False,False,tramo corto (2–7 días)
+CA-TA-01,viento_velocidad,2019-07-11,2020-10-31,479,1376,False,False,tramo largo (> 7 días)
+CA-TAL-01,humedad,2021-12-30,2021-12-30,1,26,False,False,día suelto
+CA-TAL-01,pm10,2021-12-06,2021-12-06,1,26,True,False,día suelto
+CA-TAL-01,pm10,2021-12-20,2021-12-30,11,26,False,False,tramo largo (> 7 días)
+CA-TAL-01,pm2_5,2021-12-06,2021-12-06,1,26,True,False,día suelto
+CA-TAL-01,pm2_5,2021-12-20,2021-12-30,11,26,False,False,tramo largo (> 7 días)
+CA-TAL-01,presion,2021-12-30,2021-12-30,1,26,False,False,día suelto
+CA-TAL-01,temperatura,2021-12-30,2021-12-30,1,26,False,False,día suelto
+CA-TAL-01,viento_direccion,2021-12-30,2021-12-30,1,26,False,False,día suelto
+CA-TAL-01,viento_velocidad,2021-12-30,2021-12-30,1,26,False,False,día suelto
+CA-TO-01,co,2018-08-12,2018-08-12,1,1064,False,False,día suelto
+CA-TO-01,co,2018-08-25,2018-08-31,7,1064,False,False,tramo corto (2–7 días)
+CA-TO-01,co,2018-09-22,2018-10-05,14,1064,False,False,tramo largo (> 7 días)
+CA-TO-01,co,2018-11-14,2018-12-13,30,1064,False,False,tramo largo (> 7 días)
+CA-TO-01,co,2018-12-22,2018-12-25,4,1064,False,False,tramo corto (2–7 días)
+CA-TO-01,co,2019-01-01,2021-01-30,761,1064,False,True,tramo largo (> 7 días)
+CA-TO-01,humedad,2018-07-01,2018-07-31,31,1064,False,False,tramo largo (> 7 días)
+CA-TO-01,humedad,2018-08-12,2018-08-12,1,1064,False,False,día suelto
+CA-TO-01,humedad,2018-09-01,2018-09-11,11,1064,False,False,tramo largo (> 7 días)
+CA-TO-01,humedad,2018-11-14,2018-12-12,29,1064,False,False,tramo largo (> 7 días)
+CA-TO-01,humedad,2018-12-22,2018-12-25,4,1064,False,False,tramo corto (2–7 días)
+CA-TO-01,humedad,2019-03-30,2019-04-01,3,1064,False,False,tramo corto (2–7 días)
+CA-TO-01,humedad,2019-08-14,2019-08-23,10,1064,False,False,tramo largo (> 7 días)
+CA-TO-01,humedad,2019-09-20,2019-09-23,4,1064,False,False,tramo corto (2–7 días)
+CA-TO-01,humedad,2020-01-27,2020-02-22,27,1064,False,False,tramo largo (> 7 días)
+CA-TO-01,o3,2018-08-12,2018-08-12,1,1064,False,False,día suelto
+CA-TO-01,o3,2018-11-14,2018-12-13,30,1064,False,False,tramo largo (> 7 días)
+CA-TO-01,o3,2018-12-22,2018-12-25,4,1064,False,False,tramo corto (2–7 días)
+CA-TO-01,o3,2019-01-01,2021-01-30,761,1064,False,True,tramo largo (> 7 días)
+CA-TO-01,pm10,2018-08-12,2018-08-14,3,1064,False,False,tramo corto (2–7 días)
+CA-TO-01,pm10,2018-11-14,2018-12-13,30,1064,False,False,tramo largo (> 7 días)
+CA-TO-01,pm10,2018-12-22,2018-12-25,4,1064,False,False,tramo corto (2–7 días)
+CA-TO-01,pm10,2019-02-08,2019-02-11,4,1064,False,False,tramo corto (2–7 días)
+CA-TO-01,pm10,2019-09-20,2019-09-23,4,1064,False,False,tramo corto (2–7 días)
+CA-TO-01,pm10,2020-01-27,2020-01-27,1,1064,False,False,día suelto
+CA-TO-01,pm10,2020-02-05,2020-02-24,20,1064,False,False,tramo largo (> 7 días)
+CA-TO-01,pm10,2020-06-23,2020-06-23,1,1064,False,False,día suelto
+CA-TO-01,presion,2018-07-01,2018-07-31,31,1064,False,False,tramo largo (> 7 días)
+CA-TO-01,presion,2018-08-12,2018-08-12,1,1064,False,False,día suelto
+CA-TO-01,presion,2018-09-01,2018-09-11,11,1064,False,False,tramo largo (> 7 días)
+CA-TO-01,presion,2018-11-14,2018-12-12,29,1064,False,False,tramo largo (> 7 días)
+CA-TO-01,presion,2018-12-22,2018-12-25,4,1064,False,False,tramo corto (2–7 días)
+CA-TO-01,presion,2019-03-30,2019-04-01,3,1064,False,False,tramo corto (2–7 días)
+CA-TO-01,presion,2019-08-14,2019-08-23,10,1064,False,False,tramo largo (> 7 días)
+CA-TO-01,presion,2019-09-20,2019-09-23,4,1064,False,False,tramo corto (2–7 días)
+CA-TO-01,presion,2020-01-27,2020-02-22,27,1064,False,False,tramo largo (> 7 días)
+CA-TO-01,presion,2020-10-31,2020-11-12,13,1064,False,False,tramo largo (> 7 días)
+CA-TO-01,so2,2018-08-12,2018-08-12,1,1064,False,False,día suelto
+CA-TO-01,so2,2018-11-14,2018-12-13,30,1064,False,False,tramo largo (> 7 días)
+CA-TO-01,so2,2018-12-22,2018-12-25,4,1064,False,False,tramo corto (2–7 días)
+CA-TO-01,so2,2019-01-01,2021-01-30,761,1064,False,True,tramo largo (> 7 días)
+CA-TO-01,temperatura,2018-07-01,2018-07-31,31,1064,False,False,tramo largo (> 7 días)
+CA-TO-01,temperatura,2018-08-12,2018-08-12,1,1064,False,False,día suelto
+CA-TO-01,temperatura,2018-09-01,2018-09-11,11,1064,False,False,tramo largo (> 7 días)
+CA-TO-01,temperatura,2018-11-14,2018-12-12,29,1064,False,False,tramo largo (> 7 días)
+CA-TO-01,temperatura,2018-12-22,2018-12-25,4,1064,False,False,tramo corto (2–7 días)
+CA-TO-01,temperatura,2019-03-30,2019-04-01,3,1064,False,False,tramo corto (2–7 días)
+CA-TO-01,temperatura,2019-08-14,2019-08-23,10,1064,False,False,tramo largo (> 7 días)
+CA-TO-01,temperatura,2019-09-20,2019-09-23,4,1064,False,False,tramo corto (2–7 días)
+CA-TO-01,temperatura,2020-01-27,2020-02-22,27,1064,False,False,tramo largo (> 7 días)
+CA-TO-01,viento_direccion,2018-07-01,2018-07-31,31,1064,False,False,tramo largo (> 7 días)
+CA-TO-01,viento_direccion,2018-08-12,2018-08-12,1,1064,False,False,día suelto
+CA-TO-01,viento_direccion,2018-09-01,2018-09-11,11,1064,False,False,tramo largo (> 7 días)
+CA-TO-01,viento_direccion,2018-11-14,2018-12-12,29,1064,False,False,tramo largo (> 7 días)
+CA-TO-01,viento_direccion,2018-12-22,2018-12-25,4,1064,False,False,tramo corto (2–7 días)
+CA-TO-01,viento_direccion,2019-03-30,2019-04-01,3,1064,False,False,tramo corto (2–7 días)
+CA-TO-01,viento_direccion,2019-08-14,2019-08-23,10,1064,False,False,tramo largo (> 7 días)
+CA-TO-01,viento_direccion,2019-09-20,2019-09-23,4,1064,False,False,tramo corto (2–7 días)
+CA-TO-01,viento_direccion,2020-01-27,2020-02-22,27,1064,False,False,tramo largo (> 7 días)
+CA-TO-01,viento_velocidad,2018-07-01,2018-07-31,31,1064,False,False,tramo largo (> 7 días)
+CA-TO-01,viento_velocidad,2018-08-12,2018-08-12,1,1064,False,False,día suelto
+CA-TO-01,viento_velocidad,2018-09-01,2018-09-11,11,1064,False,False,tramo largo (> 7 días)
+CA-TO-01,viento_velocidad,2018-11-14,2018-12-12,29,1064,False,False,tramo largo (> 7 días)
+CA-TO-01,viento_velocidad,2018-12-22,2018-12-25,4,1064,False,False,tramo corto (2–7 días)
+CA-TO-01,viento_velocidad,2019-03-30,2019-04-01,3,1064,False,False,tramo corto (2–7 días)
+CA-TO-01,viento_velocidad,2019-08-14,2019-08-23,10,1064,False,False,tramo largo (> 7 días)
+CA-TO-01,viento_velocidad,2019-09-20,2019-09-23,4,1064,False,False,tramo corto (2–7 días)
+CA-TO-01,viento_velocidad,2020-01-27,2020-02-22,27,1064,False,False,tramo largo (> 7 días)
+CA-VE-01,humedad,2019-12-21,2019-12-22,2,406,False,False,tramo corto (2–7 días)
+CA-VE-01,humedad,2020-01-15,2020-01-22,8,406,False,False,tramo largo (> 7 días)
+CA-VE-01,pm10,2019-11-08,2019-11-09,2,375,False,False,tramo corto (2–7 días)
+CA-VE-01,pm10,2019-12-01,2019-12-04,4,375,False,False,tramo corto (2–7 días)
+CA-VE-01,pm10,2020-02-28,2020-03-26,28,375,False,False,tramo largo (> 7 días)
+CA-VE-01,pm10,2020-09-27,2020-09-30,4,375,False,True,tramo corto (2–7 días)
+CA-VE-01,presion,2019-12-21,2019-12-22,2,406,False,False,tramo corto (2–7 días)
+CA-VE-01,presion,2020-01-15,2020-01-22,8,406,False,False,tramo largo (> 7 días)
+CA-VE-01,temperatura,2019-12-21,2019-12-22,2,406,False,False,tramo corto (2–7 días)
+CA-VE-01,temperatura,2020-01-15,2020-01-22,8,406,False,False,tramo largo (> 7 días)
+CA-VE-01,viento_direccion,2019-12-21,2019-12-22,2,406,False,False,tramo corto (2–7 días)
+CA-VE-01,viento_direccion,2020-01-15,2020-01-22,8,406,False,False,tramo largo (> 7 días)
+CA-VE-01,viento_velocidad,2019-12-21,2019-12-22,2,406,False,False,tramo corto (2–7 días)
+CA-VE-01,viento_velocidad,2020-01-15,2020-01-22,8,406,False,False,tramo largo (> 7 días)

@@ -1,0 +1,10 @@
+---
+# Reporte de participación suelto: el archivo que sube el coordinador junto con su informe.
+# El contenido es el mismo del Anexo D. _participacion.md es la plantilla versionada (sin niveles de
+# cumplimiento); la llenada va en participacion.local.md, que no se versiona. render.sh copia la que
+# corresponda a generado/local/_participacion.md.
+lang: es
+number-sections: false
+---
+
+{{< include generado/local/_participacion.md >}}

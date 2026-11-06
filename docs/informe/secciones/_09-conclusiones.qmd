@@ -1,0 +1,104 @@
+<!-- g) Conclusiones. -->
+
+# Conclusiones
+
+1. **La carga concurrente cumple el millón de registros y no pierde ni una fila sin contarla.** De
+   {{< meta cifras.limpieza.filas_largas_leidas >}} filas leídas,
+   {{< meta cifras.limpieza.filas_largas_procesadas >}} pasaron las reglas y
+   {{< meta cifras.limpieza.filas_largas_descartadas >}} ({{< meta cifras.limpieza.pct_descartadas >}})
+   se descartaron, cada una en la primera regla que falló (@tbl-limpieza-reglas). Ese descarte no es
+   ruido de medición sino forma del dato: días enteros en cero
+   ({{< meta cifras.limpieza.pct_bloque_en_cero >}}), filas vacías de 2022
+   ({{< meta cifras.limpieza.pct_sin_valor >}}) y promedios no horarios
+   ({{< meta cifras.limpieza.pct_descartadas_periodo >}}). Quedan
+   {{< meta cifras.limpieza.filas_anchas >}} horas-estación y
+   {{< meta cifras.limpieza.filas_completas >}} completas para el modelo. Una segunda implementación
+   en pandas, hecha desde el bronze, reproduce cada conteo y el silver byte a byte
+   ({{< meta cifras.auditoria.ok >}} de {{< meta cifras.auditoria.chequeos >}} chequeos iguales,
+   @tbl-auditoria).
+
+2. **El cargador escala, y su techo es lo que se hace en serie para que el resultado no dependa de
+   W.** Con {{< meta cifras.benchmark_cargador.w >}} workers el speedup es
+   {{< meta cifras.benchmark_cargador.speedup >}} (IC 95 %
+   {{< meta cifras.benchmark_cargador.speedup_ic >}}), con eficiencia de
+   {{< meta cifras.benchmark_cargador.eficiencia >}}, y el silver y el gold salen con el mismo sha256
+   para todo número de workers. La lectura de
+   Amdahl sale de las fases medidas (@tbl-limpieza-fases): la hora por posición y el orden de la tabla,
+   seriales, pesan el {{< meta cifras.limpieza.fraccion_serial >}} de la carga, y la fusión en orden de
+   bloque, serial aunque solapada con la lectura, otros {{< meta cifras.limpieza.fusion_s >}} s. La
+   fracción serial experimental de Karp y Flatt es {{< meta cifras.benchmark_cargador.karp_flatt >}}:
+   por Amdahl, el cargador no pasaría de unas {{< meta cifras.benchmark_cargador.techo_amdahl >}} veces
+   por más workers que se agreguen en esta máquina [@amdahl1967; @karpflatt1990]. El parseo escala;
+   lo que no escala es el orden, que es el precio del determinismo.
+
+3. **El K-Means del Trabajo Parcial se portó sin perder su contrato, y es reproducible bit a bit.**
+   Conserva el contrato numérico del TP y sus pruebas; con el chunk fijo, la reducción en orden de
+   chunk da los mismos centroides para cualquier número de workers (`go test -race` lo fija y el
+   benchmark lo confirma para todos los W medidos). Las
+   {{< meta cifras.kmeans.semillas_cerca_del_minimo >}} de {{< meta cifras.kmeans.semillas >}} semillas
+   llegan a menos de 0,001 % de la misma inercia, y scikit-learn reproduce asignaciones, inercia y
+   centroides (@tbl-auditoria). Su speedup, {{< meta cifras.benchmark_kmeans.speedup >}} con
+   {{< meta cifras.benchmark_kmeans.w >}} workers (IC 95 %
+   {{< meta cifras.benchmark_kmeans.speedup_ic >}}), es menor que el del cargador porque hay poco que
+   calcular: una iteración secuencial cuesta {{< meta cifras.benchmark_kmeans.ms_iter_seq >}} ms (dos
+   features, tres centroides), y la barrera y la reducción, que no se reparten, pesan. Karp y Flatt da
+   {{< meta cifras.benchmark_kmeans.karp_flatt >}} y un techo de unas
+   {{< meta cifras.benchmark_kmeans.techo_amdahl >}} veces.
+
+4. **El aire de las estaciones se agrupa en tres niveles, y el alto dice dónde y cuándo.** El nivel
+   bajo reúne el {{< meta cifras.bajo.pct >}} de las horas; el medio, el
+   {{< meta cifras.medio.pct >}}; el alto, el {{< meta cifras.alto.pct >}}, con medias de
+   {{< meta cifras.alto.pm2_5 >}} µg/m³ de PM2,5 y {{< meta cifras.alto.pm10 >}} de PM10, que
+   {{< meta cifras.alto.eca >}} el ECA. Ese nivel recoge el {{< meta cifras.calibracion.recall >}} de
+   las horas en que el promedio de 24 horas supera el ECA; el {{< meta cifras.alto.pct_franja >}} de
+   sus horas son de {{< meta cifras.alto.franja >}} (pico a las {{< meta cifras.alto.hora_pico >}}, en
+   hora final) y se concentra en {{< meta cifras.alto.principales >}}. Es la respuesta de esta PC3 a
+   la primera mitad de la pregunta. El diferencial tiene una primera lectura: la fracción fina baja de
+   {{< meta cifras.bajo.cociente >}} en el nivel bajo a {{< meta cifras.alto.cociente >}} en el alto,
+   así que los episodios traen más partícula gruesa, lo que apunta a polvo antes que a combustión.
+
+5. **Ningún K-Means separa los episodios, y el logaritmo los borra.** En las
+   {{< meta cifras.calibracion.n_corridas >}} corridas de la calibración
+   ({{< meta cifras.calibracion.n_variantes >}} variantes), ninguna cumplió el criterio de separar el
+   ECA. En la receta final, la pureza del nivel alto es {{< meta cifras.calibracion.pureza >}}: la
+   mayoría de sus horas no está dentro de un promedio de 24 horas sobre el ECA. Con log1p, la pureza
+   cae a {{< meta cifras.calibracion.log_pureza >}} y el recall a
+   {{< meta cifras.calibracion.log_recall >}}, porque el logaritmo comprime justo la cola donde viven
+   los episodios: un hallazgo que corrigió la especificación de diseño. La consecuencia es de diseño: el K-Means describe
+   niveles de aire, no detecta incumplimientos; la alerta necesita el nivel y el ECA juntos, y llamarla
+   «temprana» exige medir cuánto anticipa. La regla automática prefería
+   `{{< meta cifras.calibracion.auto_variante >}}` con $k$ = {{< meta cifras.calibracion.auto_k >}}
+   (recall {{< meta cifras.calibracion.auto_recall >}}); el equipo eligió la receta simple porque se
+   explica como un solo modelo.
+
+6. **Leer cómo se recolectó el dato cambió el cargador y la pregunta.** Para OEFA, un 0 es «sin dato»:
+   el promedio de 24 horas que publica vale 0 cuando el día tiene menos de
+   {{< meta cifras.eda.regla_horas_validas >}} horas no nulas
+   ({{< meta cifras.eda.pct_dias_24h_cero_bajo_18h >}} % de esos días), y por eso
+   {{< meta cifras.limpieza.bloque_en_cero >}} lecturas de días enteros en cero se tratan como
+   faltantes. Desde 2022 el hueco cambió de forma: el {{< meta cifras.eda.pct_vacias_2022 >}} % de las
+   filas vacías es de ese año. Y el dato no es una red sino
+   {{< meta cifras.eda.evaluaciones >}} evaluaciones de actividades fiscalizadas, con
+   {{< meta cifras.tipologia.semanas >}} campañas de semanas. De ahí salieron reglas del cargador que la
+   especificación de diseño no tenía (los días y las horas en cero como faltantes, las filas vacías de 2022 y la hora por
+   bloque físico), y el diferencial pasó de Q5 a Q2, porque
+   las estaciones vecinas del Callao no tienen horas simultáneas.
+
+7. **La cobertura es desigual, y eso es parte del resultado.** El archivo tiene
+   {{< meta cifras.limpieza.n_estaciones >}} estaciones en {{< meta cifras.eda.regiones >}} de las
+   {{< meta cifras.eda.regiones_total >}} regiones, ninguna en la Amazonía;
+   {{< meta cifras.limpieza.n_estaciones_sin_datos >}} no tienen ninguna lectura horaria válida y solo
+   {{< meta cifras.limpieza.n_estaciones_gold >}} llegan al modelo. Una sola,
+   {{< meta cifras.limpieza.estacion_gold_max >}}, aporta el
+   {{< meta cifras.limpieza.pct_estacion_gold_max >}} de las horas del gold. Lo que el modelo dice del
+   aire describe el entorno de unas pocas fuentes fiscalizadas, y una zona sin estación no es una zona
+   con aire limpio (@sec-cobertura).
+
+8. **Los límites de esta respuesta están medidos.** El {{< meta cifras.alto.pct_lima >}} de las horas
+   del nivel alto sale de tres estaciones de Lima cuyas horas en el gold son de unas semanas de
+   diciembre de 2021; el
+   {{< meta cifras.eda.gold_2022_pct >}} % del gold es de 2022; y el
+   {{< meta cifras.limpieza.pct_anchas_hora_inferida >}} de las filas anchas tiene la hora inferida por
+   posición, un supuesto fuerte aunque validado donde se puede, del que depende todo lo que se diga de
+   la hora del día. Lo que esta PC3 no responde todavía es la anticipación: con cuánta antelación y
+   con qué acierto avisa el nivel alto se mide en el TB2, con un split temporal.

@@ -1,0 +1,244 @@
+<!-- f.2) Limpieza y análisis de datos: procedimiento y evidencias. -->
+
+## Limpieza y análisis de datos {#sec-limpieza}
+
+### Procedimiento
+
+La limpieza la hace el cargador concurrente de Go (parte A, @sec-paralelizacion) en una sola
+pasada sobre el CSV: cada worker aplica las reglas 1 a 6 a las filas largas de su bloque, el
+recolector pivota a filas anchas (regla 7) y la completitud (regla 8) decide qué horas-estación
+entran al modelo. Cada regla cuenta lo que descarta o marca, y esos conteos son la evidencia de esta
+sección. La @tbl-reglas da el criterio de cada regla; los umbrales (unidades, centinelas y rangos
+físicos de las reglas 3, 4 y 6) no están en el código sino en `configs/limpieza.json`, para cerrarlos
+con el EDA sin tocar las pruebas.
+
+::: {#tbl-reglas tbl-colwidths="[6,60,34]"}
+| N.º | Regla | Motivo |
+|:---|:---|:---|
+| 1 | Solo filas con `Periodo` horario; los promedios diarios o mensuales se descartan | La unidad de análisis es la lectura horaria |
+| 2 | Fecha y hora parseables, en hora local de Lima (UTC−5); fuera del rango del dataset, se descarta | Evitar basura histórica |
+| 2′ | Hora: si falta, se reconstruye por posición en los días de 24 filas contiguas (hora final), o en el bloque físico si el día de 2022 tiene filas vacías, y se marca como inferida; si no, se descarta (@sec-hora) | El {{< meta cifras.limpieza.pct_hora_inferida >}} de las lecturas no trae hora |
+| 3′ | Un día entero de un parámetro en 0 exacto se descarta: el equipo no midió; en un día con datos, una hora en 0 exacto de un contaminante también | Para OEFA, un 0 es un faltante, no aire limpio |
+| 3 | Valor numérico; negativos (salvo temperatura) y centinelas del equipo se descartan | Lectura inválida del sensor |
+| 4 | Fuera del rango físico del parámetro, se descarta y se cuenta por parámetro | Rango del equipo |
+| 5 | Duplicados exactos (estación, parámetro, fecha-hora): se conserva el primero en orden de archivo; con valor distinto, se marcan | Reenvíos del sistema de captura |
+| 6 | Una sola unidad por parámetro; lo que venga en otra se convierte. Los gases que vienen en ppb y en µg/m³ conservan µg/m³ y el duplicado se cuenta | Comparabilidad entre estaciones |
+| 7 | Pivot: una fila ancha por (estación, fecha-hora); parámetro faltante, NaN | Es la unidad del modelo |
+| 8 | Completitud: una fila ancha entra al modelo solo si tiene todas las features de la receta | El K-Means no admite NaN |
+| 9 | Coordenadas UTM a latitud y longitud, una vez por estación; no son features | Va en el TB2, con el mapa |
+
+Reglas de limpieza y su motivo
+:::
+
+La @tbl-umbrales resume los umbrales de las reglas 3, 4 y 6, tomados de la misma configuración con
+la que corrió el cargador (`configs/limpieza.json`). Los rangos son físicos, no estadísticos: descartan
+lo que no puede ser una lectura (una humedad sobre 100 %, una presión bajo 400 hPa, que no se da a la
+altitud de ninguna estación), no lo que es raro, para no recortar los episodios que el modelo tiene
+que ver. Los centinelas ({{< meta cifras.umbrales.centinelas >}}) se comparan con el valor crudo,
+antes de convertir la unidad. La columna «Día en 0 = sin dato» aplica la regla 3′ a todos los
+parámetros menos la precipitación, porque un día seco tiene precipitación 0.
+
+{{< include generado/tablas/umbrales.md >}}
+
+### La hora, reconstruida por posición {#sec-hora}
+
+El {{< meta cifras.limpieza.pct_hora_inferida >}} de las lecturas que llegan al silver no trae hora
+(@sec-csv). Sin hora no hay lectura horaria, y sin lectura horaria no hay ni pivot ni régimen. La
+decisión del 01/11 fue reconstruirla por **posición**: dentro de cada día de una misma estación,
+parámetro, unidad y periodo, la fila *i* (contando desde cero) es la hora que empieza a las *i*:00 y
+se fecha al final de su hora, a las *i* + 1. Se aplica cuando el día tiene exactamente 24 filas
+contiguas en el archivo. En 2022 un hueco es una fila vacía que ocupa su hora: un día con 23 lecturas y
+una fila vacía sigue teniendo sus 24 filas físicas, y la posición se cuenta en ese **bloque físico**;
+así se recuperan {{< meta cifras.limpieza.hora_por_bloque_fisico >}} lecturas que antes se perdían. Si
+ni así el día está completo, la fila se descarta por la regla `hora`
+({{< meta cifras.limpieza.descartadas_hora >}} lecturas). Cada hora reconstruida se marca como
+inferida y se cuenta (@tbl-limpieza-hora).
+
+**La evidencia del control.** La regla se probó donde se puede comprobar. Donde el archivo trae la
+hora explícita, la hora de inicio coincide con la posición de la fila en su bloque físico en el
+{{< meta cifras.eda.control_fisico >}} de {{< meta cifras.eda.control_fisico_filas >}} filas, incluidas
+{{< meta cifras.eda.control_fisico_huecos >}} de días con huecos (notebook 04); en los
+{{< meta cifras.eda.control_dias >}} días completos con hora, en el {{< meta cifras.eda.control_hora >}}
+de {{< meta cifras.eda.control_filas >}} filas (notebook 01). Y hay un control externo: el reporte de
+OEFA de diciembre de 2021 en CA-AYAS-01 documenta el inicio del monitoreo el 9/12 a las 14:35 y un
+corte de luz del 10/12 a las 15:45 al 11/12 a las 15:05 [@oefa2021antamina]; en el CSV, sin hora, el
+9/12 tiene 10 filas y el corte aparece en las posiciones 16 del 10/12 a 15 del 11/12, al minuto de la
+hora (dato y OEFA).
+
+**Es un supuesto fuerte.** Que la hora sea la posición
+en los días que traen hora no prueba que lo sea en los que no la traen: si OEFA ordenara distinto
+esos días, o si faltara una lectura dentro de un bloque de 24, las horas se correrían sin que nada lo
+delate. Por eso se exige el día completo y se marca cada hora inferida: el
+{{< meta cifras.limpieza.pct_anchas_hora_inferida >}} de las filas anchas tiene alguna celda con hora
+inferida, y cualquier resultado que dependa de la hora del día (el ciclo diario de un régimen, su
+hora pico) hereda este supuesto.
+
+{{< include generado/tablas/limpieza_hora.md >}}
+
+### Ceros, gases gemelos y conversiones {#sec-ceros}
+
+**Días enteros en cero.** {{< meta cifras.limpieza.bloque_en_cero >}} lecturas
+({{< meta cifras.limpieza.pct_bloque_en_cero >}} del archivo, @tbl-limpieza-ceros) pertenecen a días
+en que un parámetro marcó 0 exacto las 24 horas. Ningún contaminante ni variable meteorológica vale
+exactamente cero un día entero: es un equipo que no midió y rellenó con ceros. Contarlos como
+medición haría pasar un equipo apagado por aire limpio, que es justo el error que la advertencia de
+cobertura quiere evitar; por eso se descartan enteros (regla `bloque_en_cero`). Solo en PM10 son
+{{< meta cifras.limpieza.bloque_en_cero_pm10 >}} lecturas.
+
+**Horas sueltas en cero.** Dentro de un día con datos, un 0 exacto de un contaminante también es un
+faltante: con un equipo automático siempre hay partículas en el aire, y cerca del límite de detección
+el equipo da valores pequeños, no un 0 exacto; y OEFA no cuenta las horas en 0 al promediar el día
+(@sec-procedencia). La regla `cero_como_faltante` descarta
+{{< meta cifras.limpieza.cero_como_faltante >}} de esas horas, {{< meta cifras.limpieza.cero_como_faltante_pm >}}
+de PM. La meteorología no entra en esta regla: un viento de 0 m/s es calma, y una hora seca tiene
+precipitación 0. En los gases, un 0 podría ser «bajo el límite de detección»: se trata como faltante,
+igual que OEFA, en vez de imputarlo.
+
+{{< include generado/tablas/limpieza_ceros.md >}}
+
+**Gases gemelos y conversiones.** SO2, CO, O3 y H2S llegan dos veces, en ppb y en µg/m³, para la
+misma estación y hora. Se conserva la lectura en µg/m³ y su gemela en ppb se descarta por la regla
+`duplicado_unidad` ({{< meta cifras.limpieza.duplicado_unidad >}} lecturas,
+{{< meta cifras.limpieza.pct_duplicado_unidad >}} del archivo); si un gas solo viene en ppb, se
+convierte con el factor a 25 °C y 1 atm. La presión llega en mmHg y en hPa y se lleva a hPa. En
+total, {{< meta cifras.limpieza.unidad_convertida >}} lecturas se convirtieron a la unidad canónica
+y quedan marcadas (@tbl-limpieza-marcas).
+
+{{< include generado/tablas/limpieza_marcas.md >}}
+
+### Evidencias de la limpieza
+
+La conservación se verifica en filas largas: de las {{< meta cifras.limpieza.filas_largas_leidas >}}
+filas leídas, {{< meta cifras.limpieza.filas_largas_procesadas >}} pasaron las reglas y
+{{< meta cifras.limpieza.filas_largas_descartadas >}} ({{< meta cifras.limpieza.pct_descartadas >}})
+se descartaron (@tbl-limpieza-resumen). El pivot dejó {{< meta cifras.limpieza.filas_anchas >}}
+filas anchas, de las cuales {{< meta cifras.limpieza.filas_completas >}}
+({{< meta cifras.limpieza.pct_completas >}}) tienen todas las features y entran al modelo. La
+@tbl-limpieza-reglas desglosa los descartes por regla, en cascada: cada fila descartada se cuenta en
+la primera regla que falla, así que no hay doble conteo. La @tbl-limpieza-estaciones lo desglosa por
+estación.
+
+{{< include generado/tablas/limpieza_resumen.md >}}
+
+{{< include generado/tablas/limpieza_reglas.md >}}
+
+{{< include generado/tablas/limpieza_estaciones.md >}}
+
+El cargador también registra lo que el archivo trae tal cual, sin interpretar: los nombres de
+parámetro con su frecuencia (@tbl-limpieza-parametros) y las unidades de cada parámetro
+(@tbl-limpieza-unidades). Con eso se cierran los mapeos de `configs/limpieza.json` contra el CSV
+real. Parámetros sin mapeo en esta corrida: {{< meta cifras.limpieza.no_mapeados >}}. La
+@fig-captura-cargar es la corrida de `cmd/cargar` sobre el CSV completo, con los conteos por regla a
+la vista.
+
+{{< include generado/tablas/limpieza_parametros.md >}}
+
+{{< include generado/tablas/limpieza_unidades.md >}}
+
+![Ejecución de `cmd/cargar` sobre el CSV completo: conteos por regla y conservación](capturas/cargar.png){#fig-captura-cargar width=16cm}
+
+:::: {si-falta="capturas/cargar.png"}
+::: {.callout-warning title="PENDIENTE"}
+Captura real de la terminal con `go run ./cmd/cargar -entrada data/bronze/<CSV>` sobre el CSV
+completo, con el comando a la vista y la salida de conteos. Va en `docs/informe/capturas/cargar.png`.
+:::
+::::
+
+![Por qué falta el dato: destino de cada fila larga del archivo, por estación, según la primera regla del cargador que la descarta (entre paréntesis, filas de la estación). «Día en cero» incluye la presión en 0, que la regla de rango atrapa antes; «hora en cero» es un 0 de un contaminante en un día con datos. Los colores son los del calendario de la @fig-calendario](generado/figuras/faltantes.png){#fig-faltantes width=16cm}
+
+:::: {si-falta="generado/figuras/faltantes.png"}
+::: {.callout-warning title="PENDIENTE"}
+Falta `generado/figuras/faltantes.png` (la dibuja el notebook 04).
+:::
+::::
+
+![La regla de las 18 horas de OEFA: días con 24 filas horarias y promedio de 24 horas publicado, según cuántas horas del día tienen valor distinto de 0 (encima de cada barra, los días comparados). Con menos de 18 horas no nulas, OEFA publica 0 (dato insuficiente); con 18 o más, la media de las horas no nulas. El 0 es «sin dato», también dentro de un día](generado/figuras/regla18.png){#fig-regla18 width=16cm}
+
+:::: {si-falta="generado/figuras/regla18.png"}
+::: {.callout-warning title="PENDIENTE"}
+Falta `generado/figuras/regla18.png` (la dibuja el notebook 04).
+:::
+::::
+
+**Qué dicen los conteos.** La @fig-faltantes muestra el destino de cada fila por estación y la
+@fig-regla18, la regla con que OEFA publica el promedio diario. Se descarta la mitad del archivo
+({{< meta cifras.limpieza.pct_descartadas >}}), y casi todo por tres razones que no son ruido de
+medición sino forma del dato: los días en cero ({{< meta cifras.limpieza.pct_bloque_en_cero >}} de
+las filas leídas), las filas vacías de la plantilla de 2022
+({{< meta cifras.limpieza.pct_sin_valor >}}) y los periodos que no son horarios
+({{< meta cifras.limpieza.pct_descartadas_periodo >}}: promedios de 24 horas y medias móviles que
+el archivo mezcla con las horarias). Las gemelas en otra unidad suman otro
+{{< meta cifras.limpieza.pct_duplicado_unidad >}}. De las {{< meta cifras.limpieza.fuera_de_rango >}}
+lecturas fuera de rango, {{< meta cifras.limpieza.fuera_de_rango_presion >}} son de presión, y el
+análisis de procedencia muestra que {{< meta cifras.eda.presion_cero_fuera_de_rango >}} de ellas son
+presión en 0 exacto (días en cero), que la regla del rango físico atrapa antes que `bloque_en_cero`
+porque 0 hPa está fuera de rango: no son lecturas malas ni un problema de unidad. Al final, de {{< meta cifras.limpieza.n_estaciones_con_datos >}}
+estaciones con datos, solo {{< meta cifras.limpieza.n_estaciones_gold >}} tienen horas completas en
+las dos features de la receta (@tbl-limpieza-estaciones): el modelo ve una parte chica de la red,
+y la advertencia de cobertura (@sec-cobertura) vale con más razón.
+
+### Análisis exploratorio
+
+El análisis exploratorio se hizo en el notebook 01 (Colab) sobre la capa silver. Su primer objetivo
+fue la criba de preguntas (@sec-pregunta); el segundo, decidir las features: se prefiere **menos
+features con más estaciones** a más features con pocas estaciones. La @fig-completitud muestra la
+completitud por estación y parámetro, y la @fig-distribuciones, la distribución de PM2,5, PM10 y la
+fracción fina por estación.
+
+![Completitud por estación y parámetro después de la limpieza: porcentaje de las horas del rango de cada estación con dato válido (las celdas en blanco son 0). A la derecha de la línea, las filas completas para cada conjunto de features de la calibración (F1/F2, M0–M2)](generado/figuras/completitud.png){#fig-completitud width=16cm}
+
+:::: {si-falta="generado/figuras/completitud.png"}
+::: {.callout-warning title="PENDIENTE"}
+Heatmap estación × parámetro de completitud. Lo dibuja el notebook 01 en
+`docs/informe/generado/figuras/completitud.png`.
+:::
+::::
+
+![Distribución de PM2,5 y PM10 por estación, en escala logarítmica, y de la fracción fina PM2,5/PM10, para las estaciones con material particulado. Cajas: cuartiles; bigotes: 1,5 veces el rango intercuartil; sin atípicos. El ECA es un promedio de 24 h: una lectura horaria sobre la línea no es por sí sola un incumplimiento](generado/figuras/distribuciones.png){#fig-distribuciones width=16cm}
+
+:::: {si-falta="generado/figuras/distribuciones.png"}
+::: {.callout-warning title="PENDIENTE"}
+Distribuciones de PM2,5 y PM10 (escala log, con las líneas del ECA). Las dibuja el notebook 01 en
+`docs/informe/generado/figuras/distribuciones.png`.
+:::
+::::
+
+**Lo que mostró el EDA** (notebook 01 sobre el bronze, `reports/eda_criba.md`). Los episodios
+sobre el ECA existen pero son raros: {{< meta cifras.eda.episodios_24h >}} episodios de 24 horas en
+{{< meta cifras.eda.estaciones_episodios >}} estaciones. PM2,5 y PM10 son coherentes entre sí: las
+filas anchas con PM2,5 > PM10 son {{< meta cifras.limpieza.violaciones_pm >}}. Algunas estaciones no
+sirven para todo: el complejo de La Oroya (CA-CC-01) no trae PM en el dataset, solo SO2 y
+meteorología, y en CA-03 y CA-TA-01 el ciclo diario de la temperatura no es creíble (máximo de la
+temperatura antes del mediodía o mínimo cerca de la medianoche), así que su meteorología no se usa como feature tal como viene. Además,
+{{< meta cifras.limpieza.n_ubicaciones_distintas >}} estaciones aparecen con más de una ubicación
+({{< meta cifras.limpieza.estaciones_ubicaciones_distintas >}}) y se cargan como una sola. La
+completitud decide las features: exigir viento y humedad junto con el PM dejaba pocas estaciones,
+y la receta final, solo con PM2,5 y PM10, deja {{< meta cifras.limpieza.n_estaciones_gold >}}
+estaciones con horas completas (@sec-modelo).
+
+### Estandarización
+
+Las features de la receta se estandarizan con z-score antes del K-Means, para que ninguna domine la
+distancia euclídea por su escala. El cargador admite log1p antes del z-score (la especificación de diseño lo proponía
+para las colas largas de PM2,5 y PM10), pero la receta final no lo usa: la calibración mostró que el
+logaritmo comprime justo la cola donde viven los episodios y borra su separación (@sec-modelo). La media y la desviación se calculan sobre la tabla ancha ya
+deduplicada y filtrada por completitud, para que sean las de la matriz que ve el modelo. No se usa
+la fórmula $\sum x^2 - (\sum x)^2/n$, que cancela cuando la media es grande frente a la desviación
+(la presión, unos 1000 hPa con pocos hPa de variación): se usa el algoritmo de Welford por chunk
+[@welford1962] y la fusión de Chan, Golub y LeVeque en orden de chunk [@chan1983], que es estable,
+concurrente y determinista. La @tbl-estandarizacion da los valores usados
+(nivel {{< meta cifras.estandarizacion.nivel >}}, n = {{< meta cifras.estandarizacion.n >}}).
+
+{{< include generado/tablas/estandarizacion.md >}}
+
+### Auditoría de la limpieza y del modelo
+
+El patrón es el del TP: dos implementaciones independientes, y si discrepan hay un bug. El notebook
+03 rehace en pandas la limpieza, el silver y el gold desde el bronze, y en scikit-learn el K-Means, y
+los compara con lo que escribió Go (@tbl-auditoria): {{< meta cifras.auditoria.ok >}} de
+{{< meta cifras.auditoria.chequeos >}} chequeos dan OK, {{< meta cifras.auditoria.diferencias >}}
+encuentran una diferencia; {{< meta cifras.auditoria.avisos >}} termina con un aviso (no es un error
+(el detalle está en la tabla). La auditoría corrió sobre la misma receta y el mismo gold que el
+modelo de este informe: {{< meta cifras.auditoria.misma_receta >}}.
+
+{{< include generado/tablas/auditoria.md >}}
