@@ -12,6 +12,20 @@ sección. La @tbl-reglas da el criterio de cada regla; los umbrales (unidades, c
 físicos de las reglas 3, 4 y 6) no están en el código sino en `configs/limpieza.json`, para cerrarlos
 con el EDA sin tocar las pruebas.
 
+El dato recorre las capas de la @tbl-capas en un solo sentido (@fig-pipeline-datos). `cmd/cargar`
+lee el bronze y escribe el silver, el gold y los conteos de cada regla; `cmd/entrenar` lee el gold
+con la receta que congeló la calibración. Los notebooks leen las capas, pero no las escriben:
+exploran, calibran, auditan y dibujan.
+
+![Pipeline de datos por capas: los dos comandos de Go escriben cada capa; los notebooks de Python solo las leen. La receta del K-Means (`configs/kmeans.json`) sale de la calibración del notebook 02](../diagramas/pipeline-datos.png){#fig-pipeline-datos width=16cm}
+
+:::: {si-falta="../diagramas/pipeline-datos.png"}
+::: {.callout-warning title="PENDIENTE"}
+Falta `docs/diagramas/pipeline-datos.png` (se exporta con draw.io desde `pipeline-datos.drawio`;
+ver `docs/diagramas/renderizar.sh`).
+:::
+::::
+
 ::: {#tbl-reglas tbl-colwidths="[6,60,34]"}
 | N.º | Regla | Motivo |
 |:---|:---|:---|

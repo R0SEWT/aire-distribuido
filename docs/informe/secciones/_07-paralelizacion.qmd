@@ -21,18 +21,17 @@ goroutine acumula en su propia memoria.
 
 ### Parte A: cargador concurrente
 
-```
-productor ─ índices de bloques (B bytes) ─▶ W workers: unir multilínea, parsear, reglas por fila
-   │  (semáforo: a lo sumo 2W bloques sin fusionar)        │ parciales (índice de bloque)
-   │                                                       ▼
-   │                         recolector: cose los bordes y fusiona en orden de bloque
-   │                                                       │
-   │                         horas: posición en el día, reglas por día (serial)
-   │                                                       │
-   │                         pivot por estación (paralelo: una tarea por estación)
-   │                                                       │
-   └──────────────▶ tabla ancha ordenada ─▶ gold: Welford por chunk, fusión de Chan ─▶ Dataset
-```
+La @fig-pipeline-cargador muestra las etapas del cargador, en qué orden corren y cuáles reparten su
+trabajo entre goroutines.
+
+![Pipeline concurrente del cargador: lectura y reglas por fila en W workers, fusión en orden de bloque, horas en serie, pivot por estación y z-score por chunk en paralelo (`datos/pipeline.go`, `datos/recolector.go` y `datos/estandarizar.go`)](../diagramas/pipeline-cargador.png){#fig-pipeline-cargador width=16cm}
+
+:::: {si-falta="../diagramas/pipeline-cargador.png"}
+::: {.callout-warning title="PENDIENTE"}
+Falta `docs/diagramas/pipeline-cargador.png` (se exporta con draw.io desde
+`pipeline-cargador.drawio`; ver `docs/diagramas/renderizar.sh`).
+:::
+::::
 
 - **Lector y productor.** La cabecera se lee una vez. El resto se parte en bloques de B bytes
   (64 MiB por defecto) alineados al siguiente salto de línea, y sus índices van por un canal. Un
@@ -63,10 +62,9 @@ En cada iteración, los centroides son de solo lectura y cada worker escribe sol
 $k \times D$, conteos $k$ e inercia) **del chunk que le tocó**; no hay `Mutex` en el bucle caliente.
 La única sincronización es la **barrera** al final de cada iteración (`sync.WaitGroup`). La
 reducción suma los parciales **en orden de chunk**, no de worker; por eso el resultado es idéntico
-bit a bit para cualquier número de workers con el chunk fijo. El pool, la iteración con su barrera y
-la reducción están, copiados del código, en el @lst-kmeans-pool, el @lst-kmeans-iter y el
-@lst-fusionar
-(@sec-evidencias).
+bit a bit para cualquier número de workers con el chunk fijo. El @alg-kmeans-paralelo lo resume en
+pseudocódigo (@sec-pseudocodigo); el pool, la iteración con su barrera y la reducción están, copiados
+del código, en el @lst-kmeans-pool, el @lst-kmeans-iter y el @lst-fusionar (@sec-evidencias).
 
 Por encima de ese pool corre un segundo nivel de paralelismo: las semillas. `cmd/entrenar` lanza
 varias corridas completas a la vez, cada una con su parte de los workers, y se queda con la de menor
