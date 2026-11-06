@@ -1,5 +1,5 @@
 --[[
-Filtro del informe (Quarto → docx). Hace seis cosas:
+Filtro del informe (Quarto → docx). Hace siete cosas:
 
 1. Carátula según el código de alumno. `codigo` es el parámetro del render
    (`quarto render informe.qmd -M codigo:<código>`); se busca en `equipo` (generado/local/equipo.yml) y:
@@ -21,13 +21,19 @@ Filtro del informe (Quarto → docx). Hace seis cosas:
      :::
      ::::
    (El atributo va en un div exterior: Quarto convierte los callouts antes de que corra este filtro.)
-5. Tablas con id alineadas a la izquierda. En docx, Quarto centra el contenido de un flotante de
-   tabla, y con él el texto de cada celda, pisando la alineación de las columnas. Con
-   `tbl-align="left"` se respeta la de cada columna. La opción global no se toma de los metadatos,
-   así que se pone tabla por tabla, salvo que la tabla ya traiga la suya.
+5. Tablas, listados y algoritmos con id alineados a la izquierda. En docx, Quarto centra el
+   contenido de un flotante, y con él el texto de cada celda de una tabla (pisando la alineación de
+   las columnas) y cada línea de un bloque de código (que pierde la sangría). Con
+   `tbl-align="left"`, `lst-align="left"` o `alg-align="left"` se respeta la del contenido. La
+   opción global no se toma de los metadatos, así que se pone flotante por flotante, salvo que ya
+   traiga la suya. Las figuras siguen centradas.
 6. Separadores entre tablas. En docx, Quarto dibuja figuras, tablas y avisos como tablas de Word, y
    dos tablas sin un párrafo entre ellas se funden en una sola (Word y LibreOffice las unen). Entre
    dos bloques así se inserta un párrafo vacío mínimo.
+7. Figuras dentro del ancho de la celda. En docx, Quarto pone cada figura en una tabla de una celda
+   con 0,19 cm de margen a cada lado (estilo «Table» de la plantilla), así que el ancho útil es
+   16 − 0,38 cm. Una imagen de 16 cm se sale y LibreOffice la recorta por la derecha. Todo ancho en
+   cm se limita a ANCHO_MAX_CM.
 ]]
 
 local base = nil
@@ -150,17 +156,28 @@ local function Div(el)
   end
 end
 
+-- Prefijos de los flotantes que van a la izquierda; Quarto lee «<prefijo>-align» del id.
+local A_LA_IZQUIERDA = { tbl = true, lst = true, alg = true }
+
 local function FloatRefTarget(f)
-  if f.type == "Table" and f.attributes["tbl-align"] == nil then
-    f.attributes["tbl-align"] = "left"
+  local prefijo = (f.identifier or ""):match("^(%a+)-")
+  if prefijo and A_LA_IZQUIERDA[prefijo] and f.attributes[prefijo .. "-align"] == nil then
+    f.attributes[prefijo .. "-align"] = "left"
     return f
   end
 end
+
+-- Ancho útil de la celda de un flotante: 16 cm de texto menos 2 × 0,19 cm de margen, con holgura.
+local ANCHO_MAX_CM = 15.5
 
 local function Image(img)
   if not existe(img.src) then
     io.stderr:write("aviso: falta la figura " .. img.src .. "; se usa recursos/figura-pendiente.png\n")
     img.src = "recursos/figura-pendiente.png"
+  end
+  local cm = tonumber((img.attributes.width or ""):match("^([%d.]+)cm$"))
+  if cm and cm > ANCHO_MAX_CM then
+    img.attributes.width = ANCHO_MAX_CM .. "cm"
   end
   return img
 end

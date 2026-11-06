@@ -32,7 +32,12 @@ from docx.shared import Cm, Pt, RGBColor
 
 AQUI = Path(__file__).resolve().parent
 FUENTE = "Arial"
-MONO = "Consolas"
+# Courier New y no Consolas: Consolas no viene con LibreOffice ni con Google Docs, que la reemplazan
+# por una fuente proporcional (los listados pierden la sangría). Courier New está en Word, en Google
+# Docs y, en Linux, LibreOffice la sustituye por Liberation Mono, que tiene sus mismas métricas.
+MONO = "Courier New"
+GRIS_CODIGO = "F6F8FA"  # fondo de los bloques de código (el de GitHub, coherente con highlight-style)
+BORDE_CODIGO = "D0D7DE"
 NEGRO = RGBColor(0, 0, 0)
 
 
@@ -143,6 +148,41 @@ def filetes_de_cabecera(doc):
     tabla.append(pr)
 
 
+def caja_de_codigo(estilo_codigo):
+    """Fondo gris claro y filete fino alrededor de cada bloque de código.
+
+    Pandoc escribe un bloque de código como un solo párrafo (las líneas van separadas por saltos de
+    línea), así que el borde y el sombreado del párrafo encierran el bloque entero. La sangría deja
+    la caja dentro del margen: el borde se dibuja a `space` puntos del texto, hacia afuera.
+    """
+    ppr = estilo_codigo.element.get_or_add_pPr()
+    for viejo in ppr.findall(qn("w:pBdr")) + ppr.findall(qn("w:shd")):
+        ppr.remove(viejo)
+    bordes = OxmlElement("w:pBdr")
+    for lado in ("top", "left", "bottom", "right"):
+        b = OxmlElement(f"w:{lado}")
+        b.set(qn("w:val"), "single")
+        b.set(qn("w:sz"), "4")
+        b.set(qn("w:space"), "4")
+        b.set(qn("w:color"), BORDE_CODIGO)
+        bordes.append(b)
+    sombra = OxmlElement("w:shd")
+    sombra.set(qn("w:val"), "clear")
+    sombra.set(qn("w:color"), "auto")
+    sombra.set(qn("w:fill"), GRIS_CODIGO)
+    # Orden del esquema (CT_PPrBase): pBdr y shd van antes de tabs, spacing, ind y jc.
+    sucesores = ("w:tabs", "w:suppressAutoHyphens", "w:kinsoku", "w:wordWrap", "w:overflowPunct",
+                 "w:topLinePunct", "w:autoSpaceDE", "w:autoSpaceDN", "w:bidi", "w:adjustRightInd",
+                 "w:snapToGrid", "w:spacing", "w:ind", "w:contextualSpacing", "w:mirrorIndents",
+                 "w:suppressOverlap", "w:jc", "w:textDirection", "w:textAlignment",
+                 "w:textboxTightWrap", "w:outlineLvl", "w:divId", "w:cnfStyle", "w:rPr",
+                 "w:sectPr", "w:pPrChange")
+    ppr.insert_element_before(bordes, *sucesores)
+    ppr.insert_element_before(sombra, *sucesores)
+    estilo_codigo.paragraph_format.left_indent = Cm(0.15)
+    estilo_codigo.paragraph_format.right_indent = Cm(0.15)
+
+
 def numero_de_pagina(parrafo_pie):
     parrafo_pie.alignment = WD_ALIGN_PARAGRAPH.CENTER
     run = parrafo_pie.add_run()
@@ -216,10 +256,19 @@ def plantilla(destino: Path) -> None:
     fuente(doc.styles["Footnote Text"], tam=9)
 
     codigo = estilo(doc, "Source Code")
-    fuente(codigo, nombre=MONO, tam=9)
-    parrafo(codigo, antes=0, despues=0, interlineado=1.0)
+    fuente(codigo, nombre=MONO, tam=8.5)
+    parrafo(codigo, antes=2, despues=6, interlineado=1.0, alineacion=WD_ALIGN_PARAGRAPH.LEFT)
+    caja_de_codigo(codigo)
     try:
-        fuente(doc.styles["Verbatim Char"], nombre=MONO, tam=9.5)
+        # Sin tamaño propio: lo toma del párrafo. Pandoc basa en Verbatim Char los estilos de cada
+        # token del resaltado (KeywordTok, CommentTok…), así que un tamaño aquí pisaría el 8,5 de
+        # Source Code en los bloques; sin él, el código en línea sigue al texto (11) y el de los
+        # bloques al bloque.
+        verbatim = doc.styles["Verbatim Char"]
+        fuente(verbatim, nombre=MONO)
+        rpr = verbatim.element.get_or_add_rPr()
+        for viejo in rpr.findall(qn("w:sz")) + rpr.findall(qn("w:szCs")):
+            rpr.remove(viejo)
     except KeyError:
         pass
 
