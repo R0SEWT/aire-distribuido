@@ -39,7 +39,11 @@ En el PDF los gráficos salen en su estado final.
 - **Los gráficos de D3** leen `datos.js`, que `datos.py` arma desde `reports/*.json` sin redondear
   nada. `datos.js` se versiona: el deck se renderiza sin correr Go.
 - **Las figuras y diagramas** son los del informe (`docs/diagramas/`,
-  `docs/informe/generado/figuras/`, `docs/informe/capturas/`), referenciados, no copiados.
+  `docs/informe/generado/figuras/`), referenciados, no copiados.
+- **Las capturas de terminal** son la pantalla entera y en una lámina no se leen: `recortes.py`
+  recorta de las del informe (`docs/informe/capturas/`) solo lo que importa, sin reescalar, y lo
+  deja en `img/captura-*.png`. En la lámina de evidencias se muestran grandes, una por clic.
+  `render.sh` los rehace si hay `uv`.
 
 Si cambian los reports, se corre `tablas.py` del informe (para `cifras.yml`) y después
 `render.sh`; el deck no puede contradecir al informe.
@@ -48,7 +52,7 @@ Si cambian los reports, se corre `tablas.py` del informe (para `cifras.yml`) y d
 
 - `custom.scss`: los tokens (`$tinta`, `$bajo`, `$medio`, `$alto`, `$critico`, …), las fuentes
   (Inter, Inter Tight, IBM Plex Mono) y todas las piezas: `.cifra`, `.pregunta`, `.tres`, `.aviso`,
-  `.chips`, `.evidencias` y las clases de los SVG. Los colores de los tres niveles son los de las
+  `.chips`, `.evid-fila`, `.evid-stack` y las clases de los SVG. Los colores de los tres niveles son los de las
   figuras del informe.
 - `js/graficos.js`: los gráficos de D3 (embudo de la limpieza, speedup con su intervalo, el worker
   pool animado, los tres niveles frente al ECA, el nivel alto por hora y por estación). Cada uno es

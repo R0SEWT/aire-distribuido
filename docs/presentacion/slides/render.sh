@@ -10,6 +10,8 @@ cd "$(dirname "$0")"
 command -v quarto >/dev/null 2>&1 || { echo "error: falta quarto (https://quarto.org)" >&2; exit 1; }
 
 python3 datos.py
+# Los recortes de las capturas (img/captura-*.png) se versionan; si hay uv, se rehacen por si cambiaron
+if command -v uv >/dev/null 2>&1; then uv run --quiet --with pillow python recortes.py; fi
 quarto render index.qmd
 
 if [ "${1:-}" = "--pdf" ]; then

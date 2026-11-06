@@ -478,39 +478,56 @@ gold está cargado hacia 2022.
 
 [Julio]{.quien}
 
-::: {.evidencias}
+::: {.evid-fila}
 ::: {}
 [{{< meta deck.pruebas >}}]{.cifra}
-funciones de prueba, todas con `go test -race`
-
-![](../../informe/capturas/go-test-race.png){.captura}
+funciones de prueba, todas con `-race`
 :::
 
 ::: {}
 [CI]{.cifra}
 en cada push y PR: `-race`, `go vet` y `gofmt`
-
-![](../../informe/capturas/ci.png){.captura}
 :::
 
 ::: {}
 [Docker]{.cifra}
 imagen distroless con `cargar` y `entrenar`
-
-![](../../informe/capturas/docker.png){.captura}
 :::
 :::
 
-::: {.sub}
+::: {.r-stack .evid-stack}
+::: {.fragment .fade-out fragment-index="1"}
+![](img/captura-test.png){.terminal width="88%"}
+
+[`go test -race ./...`: todos los paquetes con pruebas, en `ok`]{.evid-pie}
+:::
+
+::: {.fragment .fade-in-then-out fragment-index="1"}
+![](img/captura-ci.png){.terminal width="100%"}
+
+[`gh run list`: las corridas del CI, todas en verde]{.evid-pie}
+:::
+
+::: {.fragment .fade-in fragment-index="2"}
+![](img/captura-docker.png){.terminal width="90%"}
+
+[`docker build` y `docker run`: el cargador corre dentro del contenedor]{.evid-pie}
+:::
+:::
+
+::: {.sub style="font-size: 0.68em; margin-top: 0.4em;"}
 Auditoría independiente: un notebook rehace la limpieza y el K-Means en pandas y scikit-learn.
 **{{< meta cifras.auditoria.ok >}} de {{< meta cifras.auditoria.chequeos >}} chequeos** sin
 diferencias.
 :::
 
 ::: notes
-[0:25 · Julio] ¿Cómo sabemos que está bien? Todas las pruebas corren con el detector de carreras,
-go test -race, y la integración continua las corre en cada push. El sistema se construye en una
-imagen de Docker.
+[0:30 · Julio] ¿Cómo sabemos que está bien? Todas las pruebas corren con el detector de carreras:
+aquí, go test -race sobre todo el módulo, con cada paquete en ok.
+[clic] La integración continua las corre en cada push y en cada PR, y todas las corridas están en
+verde.
+[clic] Y el sistema se construye en una imagen de Docker: aquí el cargador corre dentro del
+contenedor.
 Y una auditoría independiente: un notebook rehace la limpieza y el K-Means desde cero en pandas y
 scikit-learn, y de 40 chequeos, los 40 coinciden.
 :::

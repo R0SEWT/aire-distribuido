@@ -97,11 +97,22 @@ $presentation-h2-font-size: 1.4em;
 .tres p .cifra { display: block; font-size: 2.9em; color: $alto; }
 .tres p .t { display: block; font-family: $presentation-heading-font; font-weight: 700; font-size: 1.2em;
   line-height: 1.2; }
-// Evidencias: una cifra o palabra grande, su explicación y la captura de apoyo
-.evidencias { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1em; margin-top: 0.4em; }
-.evidencias p { font-size: 0.6em; line-height: 1.35; margin: 0; }
-.evidencias p .cifra { display: block; font-size: 2.6em; color: $azul-oscuro; }
-.evidencias img { width: 100%; height: 5.2em; object-fit: cover; object-position: top left; margin-top: 0.5em; }
+// Evidencias: tres cifras arriba y, debajo, una captura legible por clic (recortes.py)
+.evid-fila { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1em; margin-top: 0.2em; }
+.evid-fila p { font-size: 0.56em; line-height: 1.3; margin: 0; }
+.evid-fila p .cifra { display: block; font-size: 2.3em; color: $azul-oscuro; }
+.reveal .evid-stack { margin-top: 0.5em; width: 100%; }
+// Cada capa ocupa todo el ancho: si no, el % de ancho de la imagen se mide contra la imagen misma
+.reveal .evid-stack > * { width: 100%; }
+.reveal .evid-stack img.terminal { display: block; margin: 0 auto; max-width: 100%; max-height: 10em;
+  border-radius: 10px; box-shadow: 0 6px 24px rgba($tinta, 0.18); }
+.reveal .evid-stack p { margin: 0; text-align: center; }
+.evid-pie { display: block; font-size: 0.5em; color: $suave; margin-top: 0.35em; }
+// En el PDF no hay clics: las tres capturas, una debajo de otra y más chicas
+html.print-pdf .reveal .evid-stack { display: flex; flex-direction: column; gap: 0.15em; }
+html.print-pdf .reveal .evid-stack > .fragment { opacity: 1 !important; visibility: visible !important; }
+html.print-pdf .reveal .evid-stack img.terminal { width: auto !important; max-height: 3em; }
+html.print-pdf .evid-pie { display: none; }
 
 // Aviso
 .aviso {
