@@ -204,6 +204,82 @@ Falta `docs/diagramas/secuencia-iteracion.png` (se exporta con draw.io desde
 :::
 ::::
 
+### Pseudocódigo {#sec-pseudocodigo}
+
+El @alg-kmeans-paralelo resume el K-Means de la PC3: Lloyd sobre el worker pool persistente de la
+@sec-paralelizacion. Las líneas 1 a 5 son `Parciales`, la función que llama un worker sobre su
+chunk y, en la PC4, un nodo sobre su partición. La barrera de las líneas 12 y 13 es la única
+sincronización de cada iteración, y la fusión de la línea 14 suma en orden de chunk: por eso el
+resultado es idéntico bit a bit para cualquier número de workers. El código de esas líneas está en
+el @lst-kmeans-pool, el @lst-kmeans-iter y el @lst-fusionar (@sec-evidencias).
+
+::: {#alg-kmeans-paralelo}
+```pseudo
+Entrada: X, n filas de D features; c, k centroides iniciales (k-means++);
+         W workers; chunks de B filas; tolerancia tol; máximo de T iteraciones
+Salida:  centroides c, asignaciones a e inercia J
+
+    función Parciales(X, c, desde, hasta)   // un worker; en la PC4, un nodo
+ 1      S ← ceros(k × D); N ← ceros(k); J ← 0
+ 2      para i = desde, ..., hasta - 1 hacer
+ 3          j ← argmin_j |X[i] - c[j]|²     // empate: gana el índice menor
+ 4          S[j] ← S[j] + X[i]; N[j] ← N[j] + 1; J ← J + |X[i] - c[j]|²
+ 5      devolver (S, N, J)
+
+ 6  C ← cantidad de chunks de B filas; P ← C parciales vacíos
+ 7  lanzar W goroutines una sola vez; cada una, hasta que se cierre trabajos:
+ 8      recibir un chunk b por el canal trabajos
+ 9      P[b] ← Parciales(X, c, filas de b)  // c: solo lectura; P[b]: solo suyo
+10      barrera.Done()
+11  para t = 1, ..., T hacer
+12      barrera.Add(C); enviar b = 0, ..., C - 1 por trabajos
+13      barrera.Wait()                      // los C parciales están listos
+14      F ← Fusionar(P[0], ..., P[C - 1])   // en orden de chunk, no de llegada
+15      mov ← Actualizar(c, F)              // c[j] ← S[j] / N[j] si N[j] > 0
+16      si mov ≤ tol entonces salir
+17  repetir 12 a 14 con Asignar, que además escribe a[i]
+18  cerrar trabajos; esperar a que terminen las W goroutines
+19  devolver c, a y J ← F.inercia
+```
+
+K-Means de Lloyd en paralelo en una máquina (PC3): worker pool persistente, una barrera por iteración y fusión en orden de chunk (`kmeans/concurrente.go` y `kmeans/parciales.go`)
+:::
+
+El @alg-kmeans-distribuido es una corrida del K-Means distribuido vista desde el coordinador, con
+los mensajes de la @tbl-protocolo. Las líneas 4 a 10 son `Ronda` (`protocolo/coordinador.go`), ya
+escrita y probada en esta PC3. El reparto de los rangos (líneas 1 y 2) y el bucle completo sobre TCP
+son la PC4. Cada nodo responde con el mismo cálculo del @alg-kmeans-paralelo, restringido a su
+rango.
+
+::: {#alg-kmeans-distribuido}
+```pseudo
+Entrada: K nodos conectados (todos abrieron su sesión con HOLA); gold de n
+         filas y su huella; c, k centroides iniciales; plazo por ronda; tol; T
+Salida:  centroides c, o un error que nombra al nodo que falló
+
+ 1  R[1..K] ← las n filas en K rangos contiguos, en orden de filas
+ 2  para cada nodo q: enviar CARGAR(R[q], huella); esperar LISTO
+ 3  para t = 1, ..., T hacer
+ 4      límite ← ahora + plazo                // el mismo para todos los nodos
+ 5      en paralelo, para cada nodo q:        // fan-out: una goroutine por nodo
+ 6          enviar ITERAR(t, c)
+ 7          P[q] ← esperar PARCIAL(t)         // descarta los de otra ronda
+ 8      esperar a los K, como mucho hasta límite   // barrera (fan-in)
+ 9      si un nodo falló, rompió el protocolo o venció el límite entonces
+10          abortar la ronda t con un error que nombra al nodo  // se relanza
+11      F ← Fusionar(P[1], ..., P[K])         // en orden de nodo, no de llegada
+12      mov ← Actualizar(c, F)
+13      si mov ≤ tol entonces salir
+14  enviar FIN a cada nodo; devolver c
+
+    en el nodo q, al recibir ITERAR(t, c):
+15      P ← Parciales de R[q] por chunks, con su pool (Algoritmo 1, 12-14)
+16      responder PARCIAL(t, P)               // sumas k × D, conteos k, inercia
+```
+
+Una corrida del K-Means distribuido desde el coordinador (diseño de la PC4). Las líneas 4 a 10 son `Ronda`, ya implementada y probada en `protocolo/coordinador.go`
+:::
+
 ### Regímenes frente al ECA y al INCA {#sec-eca-inca}
 
 Cada cluster es un **régimen**: un nivel típico de PM2,5 y PM10. Su
