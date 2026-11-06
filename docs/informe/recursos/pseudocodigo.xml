@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE language>
+<!--
+  Resaltado del pseudocódigo del informe (bloques ```pseudo). Lo carga _quarto.yml con
+  syntax-definitions. Con highlight-style: github, las palabras clave salen en el rojo de las de Go,
+  las funciones del código en morado y los comentarios y los números de línea en gris, como en los
+  listados.
+-->
+<language name="Pseudo" section="Other" version="1" kateversion="5.0" extensions="*.pseudo"
+          casesensitive="1" author="aire-distribuido" license="MIT">
+  <highlighting>
+    <list name="palabras">
+      <item>función</item>
+      <item>para</item>
+      <item>cada</item>
+      <item>hacer</item>
+      <item>si</item>
+      <item>entonces</item>
+      <item>salir</item>
+      <item>devolver</item>
+      <item>repetir</item>
+      <item>enviar</item>
+      <item>recibir</item>
+      <item>esperar</item>
+      <item>lanzar</item>
+      <item>abortar</item>
+      <item>responder</item>
+      <item>paralelo</item>
+    </list>
+    <list name="funciones">
+      <item>Parciales</item>
+      <item>Asignar</item>
+      <item>Fusionar</item>
+      <item>Actualizar</item>
+      <item>Ronda</item>
+      <item>argmin</item>
+    </list>
+    <list name="mensajes">
+      <item>HOLA</item>
+      <item>CARGAR</item>
+      <item>LISTO</item>
+      <item>ITERAR</item>
+      <item>PARCIAL</item>
+      <item>FIN</item>
+    </list>
+    <contexts>
+      <context name="Inicio" attribute="Normal" lineEndContext="#stay">
+        <RegExpr attribute="Linea" context="#stay" String="^\s*[0-9]+(?=\s)" column="0"/>
+        <RegExpr attribute="Rotulo" context="#stay" String="^(Entrada|Salida):" column="0"/>
+        <Detect2Chars attribute="Comentario" context="Comentario" char="/" char1="/"/>
+        <keyword attribute="Palabra" context="#stay" String="palabras"/>
+        <keyword attribute="Funcion" context="#stay" String="funciones"/>
+        <keyword attribute="Mensaje" context="#stay" String="mensajes"/>
+      </context>
+      <context name="Comentario" attribute="Comentario" lineEndContext="#pop"/>
+    </contexts>
+    <itemDatas>
+      <itemData name="Normal" defStyleNum="dsNormal"/>
+      <itemData name="Linea" defStyleNum="dsComment"/>
+      <itemData name="Rotulo" defStyleNum="dsKeyword"/>
+      <itemData name="Comentario" defStyleNum="dsComment"/>
+      <itemData name="Palabra" defStyleNum="dsControlFlow"/>
+      <itemData name="Funcion" defStyleNum="dsFunction"/>
+      <itemData name="Mensaje" defStyleNum="dsConstant"/>
+    </itemDatas>
+  </highlighting>
+  <general>
+    <keywords casesensitive="1"/>
+  </general>
+</language>

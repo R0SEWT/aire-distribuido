@@ -5,7 +5,8 @@
 ## Anexo A. Repositorio, video y datos {.unnumbered}
 
 - **Repositorio (público):** <https://github.com/R0SEWT/aire-distribuido>. La versión que se
-  entrega es la rama `main` en el tag `pc3`, a la que se llega por `release/pc3`.
+  entrega es la rama `main` en el tag `pc3.1`, a la que se llega por `release/pc3.1`; el tag `pc3`
+  es el primer release, antes de corregir el formato del informe.
 - **Video (complementario, no se evalúa en la PC3; el docente aclaró el 03/11 que el video es del
   TB2):** <https://drive.google.com/open?id=1IpKF7mfue0Jxyfyar0dkHH2SfThXBw54>, 7 min 50 s. Guion,
   grabaciones de terminal y montaje reproducible en `docs/video/` del repositorio.

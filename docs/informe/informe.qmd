@@ -45,7 +45,7 @@ tres (los cambios en GitHub, el tablero Kanban y el reporte de participación) v
 |:---|:---|
 | Presentación del caso: problema, motivación y pregunta de impacto social | @sec-caso, con la pregunta en la @sec-pregunta y la cobertura en la @sec-cobertura |
 | Limpieza y análisis de datos: procedimiento y evidencias | @sec-limpieza (reglas, hora por posición, ceros, conteos, EDA, estandarización y auditoría) |
-| Diseño del modelo ML distribuido | @sec-modelo (K-Means, calibración, sumas parciales, protocolo y secuencia, ECA e INCA) |
+| Diseño del modelo ML distribuido | @sec-modelo (K-Means, calibración, sumas parciales, protocolo y secuencia, pseudocódigo en la @sec-pseudocodigo, ECA e INCA) |
 | Paralelización del cálculo: justificación, técnicas y patrones en Go | @sec-paralelizacion |
 | Evidencias de la implementación: código en Go y pruebas | @sec-evidencias (código, pruebas, rendimiento, resultados, Docker, gestión del proyecto) |
 | Cambios subidos a GitHub | Anexo A (repositorio, tag) y Anexo C (historial y PRs) |

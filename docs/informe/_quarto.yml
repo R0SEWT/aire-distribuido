@@ -23,6 +23,13 @@ crossref:
   fig-title: Figura
   tbl-title: Tabla
   title-delim: "."
+  # Pseudocódigo numerado aparte de los listados de Go: ::: {#alg-...} con un bloque ```pseudo.
+  custom:
+    - kind: float
+      key: alg
+      reference-prefix: Algoritmo
+      caption-location: top
+      latex-env: algoritmo
 # generado/local/ no se versiona: lo arma render.sh. equipo.yml sale de equipo.local.yml (con los
 # códigos de alumno reales, tampoco versionado) o, si no existe, de equipo.ejemplo.yml.
 metadata-files:
@@ -45,3 +52,6 @@ format:
     toc: false
     number-sections: true
     highlight-style: github
+    # Resaltado de los bloques ```pseudo (palabras clave, funciones del código y comentarios).
+    syntax-definitions:
+      - recursos/pseudocodigo.xml

@@ -1,0 +1,100 @@
+<mxGraphModel adaptiveColors="auto" grid="0" page="0">
+  <root>
+    <mxCell id="0"/>
+    <mxCell id="1" parent="0"/>
+    <!-- Carriles: Go escribe las capas; Python solo las lee. -->
+    <mxCell id="carril_go" value="Go · el sistema: cada capa la escribe un comando" style="swimlane;html=1;startSize=28;fontStyle=1;fontSize=13;fillColor=#fafafa;strokeColor=#9a9a9a;swimlaneFillColor=#fafafa;" vertex="1" parent="1">
+      <mxGeometry x="0" y="0" width="1210" height="385" as="geometry"/>
+    </mxCell>
+    <mxCell id="carril_py" value="" style="rounded=0;whiteSpace=wrap;html=1;dashed=1;dashPattern=4 3;fillColor=#ffffff;strokeColor=#9a9a9a;" vertex="1" parent="1">
+      <mxGeometry x="0" y="405" width="1210" height="150" as="geometry"/>
+    </mxCell>
+    <mxCell id="carril_py_t" value="&lt;b&gt;Python en Colab&lt;/b&gt;&lt;br&gt;el laboratorio: explora, calibra, audita y dibuja; no escribe las capas" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=12;fontColor=#333333;" vertex="1" parent="1">
+      <mxGeometry x="12" y="425" width="140" height="110" as="geometry"/>
+    </mxCell>
+    <!-- Fila de Go -->
+    <mxCell id="oefa" value="&lt;b&gt;OEFA&lt;/b&gt;&lt;br&gt;datos abiertos" style="rounded=0;whiteSpace=wrap;html=1;dashed=1;dashPattern=4 3;fillColor=#ffffff;strokeColor=#888888;fontColor=#333333;fontSize=13;" vertex="1" parent="1">
+      <mxGeometry x="12" y="185" width="110" height="70" as="geometry"/>
+    </mxCell>
+    <mxCell id="bronze" value="&lt;b&gt;bronze&lt;/b&gt;&lt;br&gt;CSV largo,&lt;br&gt;tal cual · sha256" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=12;fillColor=#f1f1f1;strokeColor=#666666;fontColor=#222222;fontSize=13;" vertex="1" parent="1">
+      <mxGeometry x="162" y="165" width="150" height="110" as="geometry"/>
+    </mxCell>
+    <mxCell id="cargar" value="&lt;b&gt;cmd/cargar&lt;/b&gt;&lt;br&gt;cargador concurrente:&lt;br&gt;reglas 1–8, pivot, z-score" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#e3f1e5;strokeColor=#2e7d32;fontColor=#1b3d1f;fontSize=13;" vertex="1" parent="1">
+      <mxGeometry x="360" y="175" width="180" height="90" as="geometry"/>
+    </mxCell>
+    <mxCell id="silver" value="&lt;b&gt;silver&lt;/b&gt;&lt;br&gt;tabla ancha limpia:&lt;br&gt;estación × fecha-hora" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=12;fillColor=#f1f1f1;strokeColor=#666666;fontColor=#222222;fontSize=13;" vertex="1" parent="1">
+      <mxGeometry x="590" y="80" width="165" height="105" as="geometry"/>
+    </mxCell>
+    <mxCell id="gold" value="&lt;b&gt;gold&lt;/b&gt;&lt;br&gt;features de la receta,&lt;br&gt;estandarizadas" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=12;fillColor=#f1f1f1;strokeColor=#666666;fontColor=#222222;fontSize=13;" vertex="1" parent="1">
+      <mxGeometry x="590" y="255" width="165" height="105" as="geometry"/>
+    </mxCell>
+    <mxCell id="entrenar" value="&lt;b&gt;cmd/entrenar&lt;/b&gt;&lt;br&gt;K-Means paralelo,&lt;br&gt;varias semillas" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#e6eef9;strokeColor=#1f5fa8;fontColor=#13355e;fontSize=13;" vertex="1" parent="1">
+      <mxGeometry x="805" y="262" width="170" height="90" as="geometry"/>
+    </mxCell>
+    <mxCell id="reports" value="&lt;b&gt;reports&lt;/b&gt;&lt;br&gt;conteos por regla,&lt;br&gt;medias, modelo,&lt;br&gt;regímenes" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=12;fillColor=#f1f1f1;strokeColor=#666666;fontColor=#222222;fontSize=13;" vertex="1" parent="1">
+      <mxGeometry x="1025" y="160" width="170" height="120" as="geometry"/>
+    </mxCell>
+    <!-- Flujo de Go -->
+    <mxCell id="e_oefa" value="" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;endFill=1;strokeColor=#333333;fontSize=11;fontColor=#444444;verticalAlign=bottom;" edge="1" parent="1" source="oefa" target="bronze">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+    <mxCell id="e_bronze" value="" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;endFill=1;strokeColor=#333333;" edge="1" parent="1" source="bronze" target="cargar">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+    <mxCell id="e_silver" value="" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;endFill=1;strokeColor=#333333;exitX=1;exitY=0.25;entryX=0;entryY=0.5;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="cargar" target="silver">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+    <mxCell id="e_gold" value="" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;endFill=1;strokeColor=#333333;exitX=1;exitY=0.75;entryX=0;entryY=0.5;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="cargar" target="gold">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+    <mxCell id="e_entrenar" value="" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;endFill=1;strokeColor=#333333;exitX=1;exitY=0.5;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0;entryY=0.5;" edge="1" parent="1" source="gold" target="entrenar">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+    <mxCell id="e_modelo" value="modelo y regímenes" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;endFill=1;strokeColor=#333333;fontSize=11;fontColor=#444444;exitX=1;exitY=0.5;entryX=0.5;entryY=1;entryDx=0;entryDy=0;entryPerimeter=0;labelBackgroundColor=#fafafa;" edge="1" parent="1" source="entrenar" target="reports">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+    <mxCell id="e_conteos" value="conteos por regla, medias y desviaciones" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;endFill=1;strokeColor=#333333;fontSize=11;fontColor=#444444;exitX=0.5;exitY=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;entryPerimeter=0;labelBackgroundColor=#fafafa;" edge="1" parent="1" source="cargar" target="reports">
+      <mxGeometry relative="1" as="geometry">
+        <Array as="points">
+          <mxPoint x="450" y="52"/>
+          <mxPoint x="1110" y="52"/>
+        </Array>
+      </mxGeometry>
+    </mxCell>
+    <!-- Fila de Python -->
+    <mxCell id="nb01" value="&lt;b&gt;01 · EDA&lt;/b&gt;&lt;br&gt;criba de estaciones&lt;br&gt;y parámetros" style="rounded=0;whiteSpace=wrap;html=1;dashed=1;dashPattern=4 3;fillColor=#ffffff;strokeColor=#888888;fontColor=#333333;fontSize=12;" vertex="1" parent="1">
+      <mxGeometry x="162" y="435" width="150" height="90" as="geometry"/>
+    </mxCell>
+    <mxCell id="nb03" value="&lt;b&gt;03 · auditoría&lt;/b&gt;&lt;br&gt;rehace la limpieza y el K-Means en pandas y scikit-learn" style="rounded=0;whiteSpace=wrap;html=1;dashed=1;dashPattern=4 3;fillColor=#ffffff;strokeColor=#888888;fontColor=#333333;fontSize=12;" vertex="1" parent="1">
+      <mxGeometry x="360" y="435" width="180" height="90" as="geometry"/>
+    </mxCell>
+    <mxCell id="nb02" value="&lt;b&gt;02 · calibración&lt;/b&gt;&lt;br&gt;grilla de recetas:&lt;br&gt;features, log, k" style="rounded=0;whiteSpace=wrap;html=1;dashed=1;dashPattern=4 3;fillColor=#ffffff;strokeColor=#888888;fontColor=#333333;fontSize=12;" vertex="1" parent="1">
+      <mxGeometry x="590" y="435" width="165" height="90" as="geometry"/>
+    </mxCell>
+    <mxCell id="receta" value="&lt;b&gt;configs/kmeans.json&lt;/b&gt;&lt;br&gt;la receta congelada" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#fff8e1;strokeColor=#c9a227;fontColor=#333333;fontSize=12;" vertex="1" parent="1">
+      <mxGeometry x="805" y="450" width="170" height="60" as="geometry"/>
+    </mxCell>
+    <mxCell id="nb04" value="&lt;b&gt;04 · procedencia&lt;/b&gt;&lt;br&gt;fichas de estación,&lt;br&gt;mapa y figuras" style="rounded=0;whiteSpace=wrap;html=1;dashed=1;dashPattern=4 3;fillColor=#ffffff;strokeColor=#888888;fontColor=#333333;fontSize=12;" vertex="1" parent="1">
+      <mxGeometry x="1025" y="435" width="170" height="90" as="geometry"/>
+    </mxCell>
+    <!-- Lecturas de los notebooks y la receta -->
+    <mxCell id="e_nb01" value="lee" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=open;endFill=0;dashed=1;dashPattern=4 3;strokeColor=#777777;fontSize=11;fontColor=#555555;labelBackgroundColor=#ffffff;entryX=0.5;entryY=1;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="nb01" target="bronze">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+    <mxCell id="e_nb03" value="contrasta" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=open;endFill=0;dashed=1;dashPattern=4 3;strokeColor=#777777;fontSize=11;fontColor=#555555;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="nb03" target="cargar">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+    <mxCell id="e_nb02" value="lee" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=open;endFill=0;dashed=1;dashPattern=4 3;strokeColor=#777777;fontSize=11;fontColor=#555555;labelBackgroundColor=#ffffff;entryX=0.5;entryY=1;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="nb02" target="gold">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+    <mxCell id="e_receta" value="" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;endFill=1;strokeColor=#333333;" edge="1" parent="1" source="nb02" target="receta">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+    <mxCell id="e_receta_go" value="" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;endFill=1;strokeColor=#333333;" edge="1" parent="1" source="receta" target="entrenar">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+    <mxCell id="e_nb04" value="lee" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=open;endFill=0;dashed=1;dashPattern=4 3;strokeColor=#777777;fontSize=11;fontColor=#555555;labelBackgroundColor=#ffffff;entryX=0.5;entryY=1;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="nb04" target="reports">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+  </root>
+</mxGraphModel>

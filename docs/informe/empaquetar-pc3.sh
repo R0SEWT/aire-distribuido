@@ -8,10 +8,10 @@
 #
 #   ./empaquetar-pc3.sh                         # desde HEAD, en salida/entrega/
 #   ./empaquetar-pc3.sh --preliminar            # igual, aunque queden PENDIENTE o PLACEHOLDER
-#   ./empaquetar-pc3.sh pc3 ~/Descargas/PC3     # desde el tag pc3, en otra carpeta
+#   ./empaquetar-pc3.sh pc3.1 ~/Descargas/PC3   # desde un tag de la PC3, en otra carpeta
 #
-# La versión final sale del tag pc3, después del release a main por release/pc3 (nunca con develop
-# como rama de origen). El zip lleva solo lo versionado: el CSV de OEFA (1,3 GB) nunca lo está, y
+# La versión final sale de un tag de la PC3 (pc3 o pc3.N), después del release a main por
+# release/pc3 o release/pc3.N (nunca con develop como rama de origen). El zip lleva solo lo versionado: el CSV de OEFA (1,3 GB) nunca lo está, y
 # de data/ entran el README y la muestra de las pruebas. No entran la base de tareas ni la
 # configuración de los agentes (.beads/, .claude/, .codex/, .agents/, CLAUDE.md, AGENTS.md) ni el
 # montaje del video (docs/video/, que es del TB2): no son la solución.
@@ -47,8 +47,24 @@ if python3 -c 'import pandas' 2>/dev/null; then tablas=(python3 tablas.py --fina
 # 1b. El informe (tablas, cifras y fragmentos de código) sale del árbol de trabajo y el zip, de la ref: tienen
 #     que ser el mismo commit, o el informe mostraría código que no está en el zip.
 [ "$(git rev-parse HEAD)" = "$commit" ] || problemas+=("HEAD no es $ref: el informe saldría del árbol de trabajo y el zip de $ref (git checkout $ref)")
-# 2. Ningún aviso PENDIENTE en las fuentes.
-n="$(cat informe.qmd secciones/*.qmd _participacion.md | grep -c 'title="PENDIENTE' || true)"
+# 2. Ningún aviso PENDIENTE en las fuentes, sin contar los condicionales «si-falta» cuyo archivo existe
+#    (no se renderizan) ni la plantilla de la participación cuando hay una versión local llenada.
+n="$(python3 - <<'PY'
+import glob, os, re
+archivos = ["informe.qmd"] + sorted(glob.glob("secciones/*.qmd"))
+if not os.path.exists("participacion.local.md"):
+    archivos.append("_participacion.md")
+n = 0
+for f in archivos:
+    s = open(f, encoding="utf-8").read()
+    s = "\n".join(l for l in s.split("\n") if not l.startswith("#"))  # la cabecera comentada de informe.qmd nombra el aviso
+    for m in re.finditer(r':::: \{si-falta="([^"]+)"\}.*?\n::::', s, re.S):
+        if os.path.exists(m.group(1)):
+            s = s.replace(m.group(0), "")
+    n += s.count('title="PENDIENTE')
+print(n)
+PY
+)"
 [ "$n" -eq 0 ] || problemas+=("quedan $n avisos PENDIENTE en las fuentes (grep -n 'title=\"PENDIENTE' secciones/*.qmd)")
 # 2b. Ningún borrador de IA sin revisar: el aviso se borra cuando Rody aprueba la sección.
 n="$(cat informe.qmd secciones/*.qmd | grep -c 'title="Borrador generado con IA' || true)"
@@ -100,7 +116,7 @@ PY
 
 estado="final"
 [ "${#problemas[@]}" -eq 0 ] || estado="PRELIMINAR (${#problemas[@]} problemas: ver la salida del script)"
-[ "$tag" = "pc3" ] || estado="$estado; la ref no es el tag pc3"
+[[ "$tag" =~ ^pc3(\.[0-9]+)?$ ]] || estado="$estado; la ref no es un tag de la PC3 (pc3, pc3.1…)"
 [ -z "$(git status --porcelain -- .)" ] || estado="$estado; hay cambios sin commitear en docs/informe"
 
 {
@@ -118,7 +134,7 @@ estado="final"
   echo "| \`1ACC0065-202620_Participación_PC3.docx\` | el coordinador, junto con su informe |"
   echo
   echo "Cada integrante sube sus archivos al Aula Virtual antes del sáb 07/11 23:30: el enunciado no"
-  echo "admite otro medio. El tag \`pc3\` tiene que estar en \`main\` antes de esa hora. Los sha256 están"
+  echo "admite otro medio. El tag \`${tag:-pc3}\` tiene que estar en \`main\` antes de esa hora. Los sha256 están"
   echo "en \`SHA256SUMS\`."
 } > "$destino/ENTREGA.md"
 
