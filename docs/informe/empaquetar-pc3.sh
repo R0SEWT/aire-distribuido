@@ -77,12 +77,14 @@ done < <(grep -ho 'si-falta="[^"]*"' secciones/*.qmd | sed 's/si-falta="\(.*\)"/
 echo "→ render"
 bash render.sh >/dev/null
 
-# 4. El .docx final no puede decir PENDIENTE ni PLACEHOLDER en ninguna parte.
+# 4. El .docx final no puede tener un aviso PENDIENTE (el título del aviso es un run que dice solo
+#    «PENDIENTE») ni un PLACEHOLDER en ninguna parte. La palabra suelta sí puede aparecer: el
+#    historial del Anexo C copia mensajes de commit, y uno habla de los avisos PENDIENTE.
 for c in "${codigos[@]}"; do
   f="salida/1ACC0065_PC3_202610_Informe_${c}.docx"
   [ -f "$f" ] || { echo "error: falta $f" >&2; exit 1; }
-  if python3 -c 'import sys, zipfile; x = zipfile.ZipFile(sys.argv[1]).read("word/document.xml").decode(); sys.exit(0 if ("PENDIENTE" in x or "PLACEHOLDER" in x) else 1)' "$f"; then
-    problemas+=("$f todavía contiene PENDIENTE o PLACEHOLDER")
+  if python3 -c 'import re, sys, zipfile; x = zipfile.ZipFile(sys.argv[1]).read("word/document.xml").decode(); sys.exit(0 if (re.search(r"<w:t[^>]*>\s*PENDIENTE\s*</w:t>", x) or "PLACEHOLDER" in x) else 1)' "$f"; then
+    problemas+=("$f todavía tiene un aviso PENDIENTE o un PLACEHOLDER")
   fi
 done
 
