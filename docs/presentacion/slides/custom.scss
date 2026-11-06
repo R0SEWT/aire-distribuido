@@ -1,0 +1,232 @@
+/*-- scss:defaults --*/
+@import url('https://fonts.googleapis.com/css2?family=Inter+Tight:wght@500..800&family=Inter:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Mono:wght@400;600&display=swap');
+
+// Tokens. Los tres niveles de aire usan los colores de las figuras del informe (aire_lab.PALETA):
+// azul = bajo, verde = medio, naranja = alto. Rojo = el ECA. Azul oscuro = lo concurrente ya fusionado.
+$tinta: #10233B;
+$texto: #1A1D21;
+$papel: #FFFFFF;
+$superficie: #FCFCFB;
+$niebla: #F1F2F0;
+$borde: #D8D7D2;
+$suave: #52514E;
+$nota: #6F6E69;
+$gris: #8C8B86;
+$azul: #2A78D6;
+$azul-claro: #CDE2FB;
+$azul-medio: #86B6EF;
+$azul-oscuro: #104281;
+$bajo: #2A78D6;
+$medio: #1BAF7A;
+$alto: #EB6834;
+$critico: #D03B3B;
+$celeste: #86B6EF;
+
+$body-bg: $papel;
+$body-color: $texto;
+$link-color: $azul;
+$font-family-sans-serif: "Inter", Arial, sans-serif;
+$font-family-monospace: "IBM Plex Mono", "Courier New", monospace;
+$presentation-font-size-root: 32px;
+$presentation-heading-font: "Inter Tight", Arial, sans-serif;
+$presentation-heading-color: $texto;
+$presentation-heading-font-weight: 700;
+$presentation-heading-letter-spacing: -0.02em;
+$presentation-h2-font-size: 1.4em;
+
+/*-- scss:rules --*/
+.reveal .slides section { text-align: left; }
+.reveal h1, .reveal h2 { line-height: 1.1; }
+.reveal .centro { text-align: center; }
+
+// Fondo oscuro: reveal marca la lámina con .has-dark-background
+.reveal .has-dark-background,
+.reveal .has-dark-background h1,
+.reveal .has-dark-background h2 { color: #EEF1F5; }
+.reveal .has-dark-background .eyebrow { color: $celeste; }
+.reveal .has-dark-background .suave { color: #B7C0CA; }
+.reveal .has-dark-background .sub { color: #C9D1DA; }
+.reveal .has-dark-background .nota { color: #93A0AE; }
+
+.eyebrow {
+  font-family: $font-family-monospace;
+  font-size: 0.48em;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: $azul;
+  margin-bottom: 0.3em !important;
+}
+.suave { color: $suave; }
+.nota { color: $nota; font-size: 0.5em; line-height: 1.35; }
+.alto { color: $alto; }
+.medio { color: $medio; }
+.bajo { color: $bajo; }
+.critico { color: $critico; }
+
+// Una sola idea grande por lámina
+.pregunta {
+  font-family: $presentation-heading-font;
+  font-weight: 700;
+  font-size: 1.65em;
+  line-height: 1.14;
+  letter-spacing: -0.02em;
+}
+.cifra {
+  font-family: $presentation-heading-font;
+  font-weight: 800;
+  font-size: 3.4em;
+  line-height: 1;
+  letter-spacing: -0.03em;
+}
+.cifra.media { font-size: 2.2em; }
+.cifra.chica { font-size: 1.4em; }
+.sub { font-size: 0.95em; line-height: 1.3; color: $suave; margin-top: 0.3em; }
+
+// Quién habla: chip arriba a la derecha de cada lámina
+.quien {
+  position: absolute; top: -0.2em; right: 0;
+  font-family: $font-family-monospace; font-size: 0.42em; letter-spacing: 0.08em;
+  text-transform: uppercase; color: $gris;
+}
+.has-dark-background .quien { color: #93A0AE; }
+
+// Tres sorpresas del CSV, en columnas
+.tres { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.1em; margin-top: 0.9em; }
+.tres > div { background: $niebla; border-radius: 14px; padding: 0.7em 0.8em; }
+.tres p { font-size: 0.66em; line-height: 1.38; margin: 0.35em 0 0; }
+.tres p .cifra { display: block; font-size: 2.9em; color: $alto; }
+.tres p .t { display: block; font-family: $presentation-heading-font; font-weight: 700; font-size: 1.2em;
+  line-height: 1.2; }
+// Evidencias: una cifra o palabra grande, su explicación y la captura de apoyo
+.evidencias { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1em; margin-top: 0.4em; }
+.evidencias p { font-size: 0.6em; line-height: 1.35; margin: 0; }
+.evidencias p .cifra { display: block; font-size: 2.6em; color: $azul-oscuro; }
+.evidencias img { width: 100%; height: 5.2em; object-fit: cover; object-position: top left; margin-top: 0.5em; }
+
+// Aviso
+.aviso {
+  border-left: 6px solid $alto; background: rgba($alto, 0.08);
+  padding: 0.5em 0.8em; border-radius: 0 10px 10px 0; font-size: 0.7em; line-height: 1.35;
+}
+.aviso b { font-family: $presentation-heading-font; }
+
+// Fichas
+.chips { display: flex; flex-wrap: wrap; gap: 0.4em; margin-top: 0.8em; }
+.chip { background: $niebla; border-radius: 999px; padding: 0.25em 0.9em; font-size: 0.6em; }
+.chip.on { background: $tinta; color: #FFFFFF; }
+
+// Lista con aire
+.lista { font-size: 0.78em; line-height: 1.38; }
+.lista li { margin-bottom: 0.35em; }
+.cierre { font-family: $presentation-heading-font; font-weight: 700; font-size: 1.05em; margin-top: 0.7em; }
+
+// Imágenes: diagramas, mapas y capturas
+.figura { display: block; margin: 0.2em auto 0; max-width: 100%; }
+.captura { border: 1px solid $borde; border-radius: 8px; box-shadow: 0 6px 24px rgba($tinta, 0.12); }
+.capturas { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.6em; margin-top: 0.5em; }
+.capturas figure { margin: 0; }
+.capturas img { width: 100%; height: 6.6em; object-fit: cover; object-position: top left; }
+.capturas figcaption { font-size: 0.45em; color: $suave; margin-top: 0.3em; }
+.qr { width: 5.2em; background: #FFFFFF; padding: 0.25em; border-radius: 10px; }
+
+// Respaldo
+.reveal table { font-size: 0.56em; }
+.respaldo table { font-size: 0.58em; }
+.reveal table th code { color: #FFFFFF; background: transparent; }
+// Marcas de paso para los gráficos: fragmentos invisibles que no ocupan lugar
+.reveal .slides section .paso { position: absolute; width: 0; height: 0; overflow: hidden; margin: 0; }
+.reveal table th { background: $tinta; color: #FFFFFF; }
+.reveal table td, .reveal table th { padding: 0.22em 0.5em; vertical-align: top; line-height: 1.3; }
+.respaldo .eyebrow { color: $gris; }
+.reveal pre { font-size: 0.5em; width: 100%; box-shadow: none; }
+.reveal pre code { max-height: none; line-height: 1.4; background: $niebla; border-radius: 10px; padding: 0.8em 1em; }
+
+// Portada: a la izquierda, sin pisar las estaciones de la derecha
+.reveal .slides section.quarto-title-block,
+.reveal .slides section.quarto-title-block * { text-align: left; }
+.reveal .slides section.quarto-title-block .title,
+.reveal .slides section.quarto-title-block .subtitle,
+.reveal .slides section.quarto-title-block .quarto-title-authors { max-width: 62%; }
+.reveal .quarto-title-block .title { font-size: 2.2em; }
+.reveal .quarto-title-block .subtitle { color: $celeste; font-size: 0.9em; }
+.reveal .quarto-title-block .quarto-title-authors { display: block; margin-top: 1.3em; }
+.reveal .quarto-title-block .quarto-title-author { padding: 0; }
+.reveal .quarto-title-block .quarto-title-author-name { font-weight: 600; font-size: 0.72em; }
+.reveal .quarto-title-block .quarto-title-affiliation { font-size: 0.56em; color: #B7C0CA; }
+
+// ------------------------------------------------------------------ gráficos de D3 (js/graficos.js)
+.d3 svg { display: block; width: 100%; height: auto; overflow: visible; }
+.d3 { margin-top: 0.3em; }
+svg.g text { font-family: $font-family-sans-serif; font-size: 21px; fill: $texto; }
+svg.g .g-titulo { font-family: $presentation-heading-font; font-weight: 700; font-size: 23px; }
+svg.g .g-et { font-size: 19px; fill: $suave; }
+svg.g .g-suave { fill: $nota; }
+svg.g .g-valor { font-family: $presentation-heading-font; font-weight: 800; font-size: 26px; }
+svg.g .g-num { font-family: $font-family-monospace; font-size: 18px; fill: $suave; }
+svg.g .g-eje text { font-size: 17px; fill: $suave; }
+svg.g .g-eje path, svg.g .g-eje line { stroke: $borde; }
+svg.g .g-dentro { font-family: $presentation-heading-font; font-weight: 700; font-size: 21px; fill: #FFFFFF; }
+svg.g .g-dentro-osc { fill: $texto; }
+
+// Embudo
+svg.g .s-valida { fill: $azul; }
+svg.g .s-desc { fill: #C9C8C2; }
+svg.g .s-desc-0 { fill: $alto; }
+svg.g .s-desc-1 { fill: #A3A29C; }
+svg.g .s-desc-2 { fill: #B8B7B1; }
+svg.g .s-desc-3 { fill: #CDCCC6; }
+svg.g .s-desc-4 { fill: #DEDDD8; }
+svg.g .s-desc-5 { fill: #ECEBE7; }
+svg.g .s-anchas { fill: $azul-claro; }
+svg.g .s-gold { fill: $azul; }
+svg.g .g-ley text { font-size: 19px; }
+
+// Speedup
+svg.g .g-ideal { stroke: $gris; stroke-width: 2; stroke-dasharray: 7 7; }
+svg.g .g-ideal-t { fill: $gris; }
+svg.g .g-linea { fill: none; stroke-width: 4; }
+svg.g .g-ic { opacity: 0.18; }
+svg.g .g-ley-t { font-family: $presentation-heading-font; font-weight: 600; font-size: 20px; }
+@mixin serie($c) {
+  .g-linea { stroke: $c; } .g-ic { fill: $c; } circle { fill: $c; } .g-valor, .g-ley-t { fill: $c; }
+}
+svg.g .g-serie-cargador { @include serie($azul); }
+svg.g .g-serie-kmeans_1000 { @include serie($azul-oscuro); }
+svg.g .g-serie-kmeans_10000 { @include serie(#5C8FD0); .g-linea { stroke-dasharray: 10 7; } }
+
+// Niveles, horas y estaciones
+svg.g .n-bajo { fill: $bajo; }
+svg.g .n-medio { fill: $medio; }
+svg.g .n-alto { fill: $alto; }
+svg.g .n-alto-suave { fill: rgba($alto, 0.38); }
+svg.g .g-eca { stroke: $critico; stroke-width: 2.5; stroke-dasharray: 9 6; }
+svg.g .g-eca-t { fill: $critico; font-weight: 600; font-size: 19px; }
+
+// Worker pool
+svg.g .p-ranura { fill: $niebla; stroke: $borde; stroke-width: 1.5; stroke-dasharray: 5 4; }
+svg.g .p-slot { fill: $papel; stroke: $borde; stroke-width: 2; }
+svg.g .p-slot-listo { stroke: $azul; stroke-width: 2.5; }
+svg.g .p-slot-t { font-family: $font-family-monospace; font-size: 16px; fill: $suave; }
+svg.g .p-tile rect { fill: $azul-claro; stroke: $azul-medio; stroke-width: 2; }
+svg.g .p-tile text { font-family: $presentation-heading-font; font-weight: 800; font-size: 24px; fill: $tinta; }
+svg.g .p-tile-calcula rect { fill: $azul; stroke: $azul; }
+svg.g .p-tile-calcula text { fill: #FFFFFF; }
+svg.g .p-tile-listo rect { fill: $azul-medio; stroke: $azul; }
+svg.g .p-tile-fusionado rect { fill: $azul-oscuro; stroke: $azul-oscuro; }
+svg.g .p-tile-fusionado text { fill: #FFFFFF; }
+svg.g .p-worker { fill: $niebla; stroke: $borde; stroke-width: 2; }
+svg.g .p-worker-t { font-family: $presentation-heading-font; font-weight: 700; font-size: 19px; fill: $suave; }
+svg.g .p-prog-fondo { fill: $borde; }
+svg.g .p-prog { fill: $azul; }
+svg.g .p-barrera-fondo { fill: $niebla; }
+svg.g .p-barrera { fill: $gris; }
+svg.g .p-barrera-ok { fill: $medio; }
+svg.g .p-cursor { fill: none; stroke: $alto; stroke-width: 4; }
+svg.g .p-orden { font-family: $font-family-monospace; font-size: 17px; }
+.p-botones { display: flex; gap: 0.4em; align-items: center; justify-content: flex-end; margin-top: 0.2em; }
+.p-botones-t { font-family: $font-family-monospace; font-size: 0.42em; color: $suave; margin-right: 0.3em; }
+.p-botones button {
+  font: 600 0.45em $font-family-sans-serif; color: $tinta; background: $niebla; border: 1px solid $borde;
+  border-radius: 999px; padding: 0.3em 0.9em; cursor: pointer;
+}
+.p-botones button.activo { background: $tinta; color: #FFFFFF; border-color: $tinta; }

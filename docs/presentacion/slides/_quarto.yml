@@ -1,0 +1,15 @@
+# Deck de la exposición (Quarto + reveal.js). Cómo se renderiza y se presenta: README.md.
+project:
+  type: default
+  output-dir: _site
+  render:
+    - index.qmd
+
+# Sin kernel: las cifras del texto se leen de los mismos YAML que el informe (shortcode meta) y
+# los gráficos de D3, de datos.js. Renderizar no depende de Python ni de Jupyter.
+engine: markdown
+lang: es
+
+metadata-files:
+  - ../../informe/generado/cifras.yml   # las cifras del informe (tablas.py)
+  - _deck.yml                           # lo que solo cita el deck (datos.py)
