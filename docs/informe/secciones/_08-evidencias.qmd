@@ -385,5 +385,5 @@ en una rama de integración, `feature/spec-pc3`, que es la que entra a `develop`
 descriptores por régimen, las capturas y el video entraron después en PRs más chicas (de la
 [#4](https://github.com/R0SEWT/aire-distribuido/pull/4) a la
 [#8](https://github.com/R0SEWT/aire-distribuido/pull/8)). La entrega sale de una rama
-`release/pc3` hacia `main`, con el tag `pc3`. Las tareas se siguen en un tablero Kanban de
+`release/pc3` hacia `main` (la PR #32), con el tag `pc3`. Las tareas se siguen en un tablero Kanban de
 GitHub Projects (Anexo B), y el historial de commits por integrante y de PR está en el Anexo C.

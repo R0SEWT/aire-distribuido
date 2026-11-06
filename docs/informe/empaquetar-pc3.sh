@@ -47,8 +47,24 @@ if python3 -c 'import pandas' 2>/dev/null; then tablas=(python3 tablas.py --fina
 # 1b. El informe (tablas, cifras y fragmentos de código) sale del árbol de trabajo y el zip, de la ref: tienen
 #     que ser el mismo commit, o el informe mostraría código que no está en el zip.
 [ "$(git rev-parse HEAD)" = "$commit" ] || problemas+=("HEAD no es $ref: el informe saldría del árbol de trabajo y el zip de $ref (git checkout $ref)")
-# 2. Ningún aviso PENDIENTE en las fuentes.
-n="$(cat informe.qmd secciones/*.qmd _participacion.md | grep -c 'title="PENDIENTE' || true)"
+# 2. Ningún aviso PENDIENTE en las fuentes, sin contar los condicionales «si-falta» cuyo archivo existe
+#    (no se renderizan) ni la plantilla de la participación cuando hay una versión local llenada.
+n="$(python3 - <<'PY'
+import glob, os, re
+archivos = ["informe.qmd"] + sorted(glob.glob("secciones/*.qmd"))
+if not os.path.exists("participacion.local.md"):
+    archivos.append("_participacion.md")
+n = 0
+for f in archivos:
+    s = open(f, encoding="utf-8").read()
+    s = "\n".join(l for l in s.split("\n") if not l.startswith("#"))  # la cabecera comentada de informe.qmd nombra el aviso
+    for m in re.finditer(r':::: \{si-falta="([^"]+)"\}.*?\n::::', s, re.S):
+        if os.path.exists(m.group(1)):
+            s = s.replace(m.group(0), "")
+    n += s.count('title="PENDIENTE')
+print(n)
+PY
+)"
 [ "$n" -eq 0 ] || problemas+=("quedan $n avisos PENDIENTE en las fuentes (grep -n 'title=\"PENDIENTE' secciones/*.qmd)")
 # 2b. Ningún borrador de IA sin revisar: el aviso se borra cuando Rody aprueba la sección.
 n="$(cat informe.qmd secciones/*.qmd | grep -c 'title="Borrador generado con IA' || true)"
