@@ -18,9 +18,6 @@
   {{< meta cifras.limpieza.sha256_config_limpieza >}}; `configs/kmeans.json`, sha256
   {{< meta cifras.limpieza.sha256_config_kmeans >}}.
 
-::: {.callout-warning title="PENDIENTE"}
-Crear el tag `pc3` en `main` después del release.
-:::
 
 ## Anexo B. Tablero Kanban {.unnumbered}
 
