@@ -2,12 +2,6 @@
 
 # Recomendaciones
 
-::: {.callout-note title="Borrador generado con IA, para revisión de Rody"}
-Redactadas por un agente de Claude Code (Claude Opus 5.5) el 02/11; cada una dice qué hallazgo la
-motiva. Lo marcado como inferencia es lectura del agente, a validar. Revisar y borrar este aviso al
-aprobarlas.
-:::
-
 ## Para la PC4: el clúster
 
 1. **Montar el clúster sobre lo que ya está probado.** La barrera de una ronda a través de la red
