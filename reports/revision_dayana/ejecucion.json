@@ -1,0 +1,26 @@
+{
+  "fecha_auditoria": "2026-11-07 10:30",
+  "rama": "feature/eda-limpieza",
+  "commit_base": "8ef264fa3ed0b7e2bb56af6fa44aef75bfd14c30",
+  "arbol_con_cambios": true,
+  "entorno_python": "Colab: no · Python 3.12.11 · pandas 3.1.1 · numpy 2.5.4 · scikit-learn 1.9.1 · matplotlib 3.11.2 · scipy 1.18.1 · joblib 1.6.0",
+  "go": "go version go1.27.1 darwin/arm64",
+  "bronze_sha256": "1f09a8064ee0aed0b3a9a0a90b96f63ce226b45a969dace49f73e45134f26d92",
+  "bronze_bytes": 1317949839,
+  "silver_sha256": "63b707f469a63baa8d38121b0e4b7724796d53f3aa66b306b1ed44c179cf506e",
+  "gold_sha256": "2fdace5ad8599149c9ed2b177151881025d895a50738519d9358d537236f87f7",
+  "auditoria": {
+    "OK": 40
+  },
+  "conteos_y_estaciones_identicos_a_referencia": true,
+  "benchmarks": "Referencias históricas copiadas del repositorio; no se volvieron a medir.",
+  "inicios": "Centroides iniciales publicados, reutilizados para comparar los mismos arranques.",
+  "fuentes_sha256": {
+    "configs/limpieza.json": "bf27c7144a64a8c696b66e4c4ac032d2dcfddfd6bcd7c8ffb1496fcd18fafda6",
+    "configs/kmeans.json": "a9e48be6dd31906f53a29209a1a5dc7364b4b2110c3f24c9c025e42a3afa9234",
+    "notebooks/aire_lab.py": "2d060a7ab1a03373773e5713a68b72e8fd0d5bda412e78b108a8ef45af7a81b4",
+    "notebooks/01_eda_criba.ipynb": "83f17786522d4b2bccdc0e554c65065c4ede51d7fa88e09d4a5f2dc5e49bae66",
+    "notebooks/03_auditoria_figuras.ipynb": "119907e2bce6fd340bde42ba683fda26b1868434b0bcb22e6a2673cdd7d251d8",
+    "docs/ejecutar-revision.py": "c9a33b06570877239fa46d6cd9b90c4331e5374e0c463f7eda3ee8db597c409b"
+  }
+}

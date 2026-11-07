@@ -138,6 +138,15 @@ estación.
 
 {{< include generado/tablas/limpieza_estaciones.md >}}
 
+**Cómo leer la completitud.** El «% gold» de la tabla divide las filas completas entre las
+filas anchas existentes de cada estación. La figura de completitud del EDA usa otro
+denominador: todas las horas entre la primera y la última fila de la estación, incluidos
+ambos extremos. Una hora sin fila silver no entra en el primer denominador, pero sí en el
+segundo. Los huecos entre campañas también están dentro de ese rango: ninguno de los dos
+porcentajes demuestra por sí solo una cobertura anual ni el tiempo efectivo de operación
+del equipo. La revisión reproducible de los conteos y ambos denominadores se documenta en
+`docs/limpieza.md`, con su tabla generada en `reports/revision_limpieza.md`.
+
 El cargador también registra lo que el archivo trae tal cual, sin interpretar: los nombres de
 parámetro con su frecuencia (@tbl-limpieza-parametros) y las unidades de cada parámetro
 (@tbl-limpieza-unidades). Con eso se cierran los mapeos de `configs/limpieza.json` contra el CSV
@@ -256,3 +265,12 @@ encuentran una diferencia; {{< meta cifras.auditoria.avisos >}} termina con un a
 modelo de este informe: {{< meta cifras.auditoria.misma_receta >}}.
 
 {{< include generado/tablas/auditoria.md >}}
+
+La reproducción de Dayana volvió a ejecutar el cargador y el entrenamiento de Go, y los
+notebooks de EDA y auditoría, sobre el CSV completo con el mismo SHA-256. Los conteos de
+limpieza, las estaciones y los hashes del silver y del gold coinciden con la referencia;
+la auditoría completó {{< meta cifras.auditoria.chequeos >}} comprobaciones, todas correctas,
+sin diferencias, avisos ni omisiones. Se conservaron los centroides iniciales publicados
+para comparar los mismos arranques. Los benchmarks se usaron como referencia histórica,
+sin volver a medirlos. El entorno, los hashes y las salidas de esta revisión están en
+`reports/revision_dayana/`; el procedimiento para repetirla está en `docs/limpieza.md`.

@@ -30,7 +30,7 @@ la tabla dice quién hizo qué. También falta el nombre del grupo.
 | Nro | Estudiante | Responsabilidades | Cumplió | Cumplimiento parcial | No cumplió |
 |:---|:-----------|:---------------------|:----:|:-----:|:----:|
 | 1 | Rody Sebastian Vilchez Marin | Coordinación; specs, cargador, K-Means, protocolo, diseño, notebooks e informe | | | |
-| 2 | Dayana Kety Gómez Rodriguez | Ofrecida: EDA y evidencias de limpieza (`docs/limpieza.md`, completitud por estación). PENDIENTE: confirmar | | | |
+| 2 | Dayana Kety Gómez Rodriguez | Reproducción del EDA y auditoría de limpieza sobre el CSV completo; contraste de conteos Go/Python y completitud por estación; ejecutor y verificador reproducibles; documentación (`docs/limpieza.md`), corrección de la medición de memoria en macOS y aclaración de denominadores en el informe | | | |
 | 3 | Julio Cesar Meza Alfaro | Ofrecida: benchmark del cargador en gorgo y capturas de las ejecuciones. PENDIENTE: confirmar | | | |
 
 **Criterios de descuento por participación individual**
