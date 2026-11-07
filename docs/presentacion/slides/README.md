@@ -31,7 +31,7 @@ cantidad de workers y la animación vuelve a empezar. Se detiene sola al salir d
 Respaldo en PDF: `bash render.sh --pdf`, o abrir `_site/index.html?print-pdf` en Chrome e imprimir.
 En el PDF los gráficos salen en su estado final.
 
-En línea: <https://concurrente.rosewt.dev/pc3/>. Se republica con `bash ../publicar.sh`.
+En línea: <https://uni.rosewt.dev/concurrente/pc3/>. Se republica con `bash ../publicar.sh`.
 
 ## De dónde salen los números
 
