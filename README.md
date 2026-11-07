@@ -190,7 +190,7 @@ capa.
 
 | Entregable | Qué lleva | Semana | Estado |
 |---|---|---:|---|
-| PC3 · Entregable 1 | Cargador concurrente, K-Means paralelo, diseño distribuido e informe | 11 | Entregada: tag [`pc3.1`](https://github.com/R0SEWT/aire-distribuido/tree/pc3.1) |
+| PC3 · Entregable 1 | Cargador concurrente, K-Means paralelo, diseño distribuido e informe | 11 | Entregada: tag [`pc3.1`](https://github.com/R0SEWT/aire-distribuido/tree/pc3.1) · [diapositivas](https://concurrente.rosewt.dev/pc3/) |
 | PC4 · Entregable 2 | Clúster de nodos por TCP, API coordinadora, Docker Compose y el protocolo verificado con Spin | 13 | Pendiente |
 | TB2 · Entregable final | Frontend con el mapa y las alertas, anticipación de los episodios, video | 15 | Pendiente |
 
@@ -274,6 +274,7 @@ bash docs/informe/render.sh
 | `notebooks/` | El laboratorio en Colab: EDA, calibración, auditoría y figuras, procedencia y mapa. |
 | `docs/informe/` | El informe en Quarto, con su plantilla de Word, el filtro y el empaquetado de la entrega. |
 | `docs/diagramas/` | Los diagramas en draw.io y sus PNG. |
+| `docs/presentacion/` | La exposición: la historia en sencillo, el deck en Quarto, reveal.js y D3, y cómo se publica en concurrente.rosewt.dev. |
 | `docs/diseno.md`, `docs/specs/` | El diseño del sistema y las specs de cada parte. |
 | `data/` | Solo el README y la muestra; el resto no se versiona. |
 
