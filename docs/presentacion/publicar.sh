@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
-# Publica las presentaciones en https://concurrente.rosewt.dev (sitio de Netlify «concurrente-rosewt»,
-# cuenta r0sewt; el dominio está en el DNS de Netlify, así que el registro y el certificado son
-# automáticos).
+# Publica las presentaciones en https://uni.rosewt.dev/concurrente/ (sitio de Netlify
+# «concurrente-rosewt», cuenta r0sewt). Este sitio es el origen: no tiene dominio propio y el catálogo
+# uni.rosewt.dev (repo R0SEWT/uni) lo monta en /concurrente/ con un proxy. La dirección vieja,
+# concurrente.rosewt.dev, redirige ahí.
 #
 #   bash publicar.sh          # renderiza el deck y lo publica como /pc3/
 #   bash publicar.sh pc4      # lo mismo, como /pc4/
@@ -32,4 +33,4 @@ sitio_id="b375213d-41e4-493d-ad99-04da09b1236f"   # concurrente-rosewt
 "${netlify[@]}" deploy --prod --no-build --dir sitio --site "$sitio_id" \
   --message "$entrega desde $commit ($(git rev-parse --abbrev-ref HEAD))"
 
-echo "publicado: https://concurrente.rosewt.dev/$entrega/"
+echo "publicado: https://uni.rosewt.dev/concurrente/$entrega/"
