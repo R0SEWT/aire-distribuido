@@ -1,0 +1,40 @@
+{
+  "features": [
+    "pm2_5",
+    "pm10"
+  ],
+  "log1p": [],
+  "nivel": "absoluto",
+  "n": 65873,
+  "media": [
+    14.113365111654247,
+    31.547649264493792
+  ],
+  "desv": [
+    13.321236195790332,
+    37.240576817625694
+  ],
+  "ddof": 0,
+  "chunk": 1000,
+  "metadatos": {
+    "momento": "2026-11-07T10:26:28.490849-05:00",
+    "maquina": "Dayanas-MacBook.local",
+    "version_go": "go1.27.1",
+    "gomaxprocs": 12,
+    "cpus_logicas": 12,
+    "commit": "8ef264fa3ed0b7e2bb56af6fa44aef75bfd14c30",
+    "arbol_sucio": true
+  },
+  "configs": {
+    "kmeans": {
+      "ruta": "configs/kmeans.json",
+      "sha256": "a9e48be6dd31906f53a29209a1a5dc7364b4b2110c3f24c9c025e42a3afa9234",
+      "existe": true
+    },
+    "limpieza": {
+      "ruta": "configs/limpieza.json",
+      "sha256": "bf27c7144a64a8c696b66e4c4ac032d2dcfddfd6bcd7c8ffb1496fcd18fafda6",
+      "existe": true
+    }
+  }
+}
