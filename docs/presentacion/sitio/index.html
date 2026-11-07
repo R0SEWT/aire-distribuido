@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Programación Concurrente y Distribuida · Equipo 4</title>
+<meta name="description" content="Presentaciones del Equipo 4 (aire-distribuido) en Programación Concurrente y Distribuida, UPC 2026-20.">
+<style>
+  :root {
+    --tinta: #10233B; --papel: #FFFFFF; --texto: #1A1D21; --suave: #52514E; --borde: #D8D7D2;
+    --niebla: #F1F2F0; --azul: #2A78D6; --celeste: #86B6EF; --alto: #EB6834;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--papel); color: var(--texto);
+    font: 17px/1.5 Inter, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  }
+  header { background: var(--tinta); color: #EEF1F5; padding: 56px 16px 48px; }
+  main, .ancho { max-width: 860px; margin: 0 auto; }
+  main { padding: 32px 16px 56px; }
+  .eyebrow {
+    font: 600 13px/1.4 "IBM Plex Mono", ui-monospace, "Courier New", monospace;
+    letter-spacing: 0.12em; text-transform: uppercase; color: var(--celeste); margin: 0 0 10px;
+  }
+  h1 { font-size: clamp(30px, 6vw, 46px); line-height: 1.08; letter-spacing: -0.02em; margin: 0 0 12px; }
+  header p { margin: 0; color: #C9D1DA; max-width: 640px; }
+  h2 { font-size: 15px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--suave); margin: 0 0 14px; }
+  .tarjeta {
+    display: block; border: 1px solid var(--borde); border-radius: 14px; padding: 20px 22px;
+    text-decoration: none; color: inherit; background: var(--papel);
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+  .tarjeta:hover, .tarjeta:focus-visible { border-color: var(--azul); box-shadow: 0 6px 24px rgba(16, 35, 59, 0.12); outline: none; }
+  .tarjeta .tag { font: 600 12px/1 "IBM Plex Mono", ui-monospace, monospace; color: var(--alto); letter-spacing: 0.1em; }
+  .tarjeta h3 { font-size: 22px; line-height: 1.2; margin: 8px 0 6px; letter-spacing: -0.01em; }
+  .tarjeta p { margin: 0; color: var(--suave); }
+  .enlaces { display: flex; flex-wrap: wrap; gap: 8px 18px; margin-top: 12px; font-size: 15px; }
+  .enlaces a { color: var(--azul); }
+  .pie { color: var(--suave); font-size: 14px; margin-top: 40px; border-top: 1px solid var(--borde); padding-top: 16px; }
+  .pie a { color: var(--azul); }
+</style>
+</head>
+<body>
+<header>
+  <div class="ancho">
+    <p class="eyebrow">Programación Concurrente y Distribuida · UPC · 2026-20</p>
+    <h1>Equipo 4: Aire Distribuido</h1>
+    <p>Niveles de calidad del aire con K-Means paralelo en Go, sobre las lecturas horarias de OEFA.
+      Rody Vilchez, Dayana Gómez y Julio Meza.</p>
+  </div>
+</header>
+<main>
+  <h2>Presentaciones</h2>
+  <a class="tarjeta" href="pc3/">
+    <span class="tag">PC3 · ENTREGABLE 1</span>
+    <h3>El cargador concurrente y el K-Means paralelo</h3>
+    <p>Del CSV de 1,3 GB a tres niveles de aire: la limpieza, el worker pool con su barrera, el
+      speedup medido y lo que encontramos. Las notas del orador se abren con la tecla S.</p>
+  </a>
+  <div class="enlaces">
+    <a href="pc3/aire-distribuido-pc3.pdf">PDF de la PC3</a>
+    <a href="https://github.com/R0SEWT/aire-distribuido">Repositorio</a>
+    <a href="https://github.com/R0SEWT/aire-distribuido/tree/pc3.1">Versión entregada (tag pc3.1)</a>
+  </div>
+  <p class="pie">Datos: OEFA, <em>Vigilancia y seguimiento ambiental en la calidad del aire</em>,
+    Plataforma Nacional de Datos Abiertos (licencia ODC-By).
+    Fuente de este sitio: <a href="https://github.com/R0SEWT/aire-distribuido/tree/develop/docs/presentacion">docs/presentacion</a>.</p>
+</main>
+</body>
+</html>

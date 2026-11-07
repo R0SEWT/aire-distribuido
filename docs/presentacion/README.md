@@ -8,6 +8,11 @@ video del TB2, que el enunciado pide de 6 minutos como máximo y con la particip
   antes que las láminas.
 - [`slides/`](slides/README.md): el deck en Quarto, reveal.js y D3. `bash slides/render.sh` deja un
   HTML que funciona sin red.
+- **Publicado en <https://concurrente.rosewt.dev/pc3/>**, con su PDF y una portada en
+  <https://concurrente.rosewt.dev>. `bash publicar.sh` renderiza el deck y lo vuelve a publicar
+  (sitio de Netlify `concurrente-rosewt`); `sitio/index.html` es la portada. Al publicar la PC4 o el
+  TB2, `bash publicar.sh pc4` lo deja en `/pc4/` sin tocar `/pc3/`, siempre que `sitio/pc3/` siga
+  en la carpeta: Netlify publica `sitio/` entero.
 
 Mismo método que la charla de SIMBig 2026: primero la historia, después el deck, y ninguna cifra
 escrita a mano (salen de `reports/` y de las cifras del informe).
