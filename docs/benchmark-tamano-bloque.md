@@ -31,7 +31,7 @@ Se midió el 6 de noviembre de 2026 con los 2 883 877 registros del informe (1 3
 | 64 MiB | 20 | 4,294 s | 1,167 s | 3,68× |
 | 128 MiB | 10 | 4,392 s | 1,332 s | 3,30× |
 
-Con cuatro workers, 16 MiB redujo la mediana un **6,8 %** respecto de 64 MiB. Los tiempos observados con cuatro workers fueron 1,059–1,127 s para 16 MiB, 1,146–1,190 s para 64 MiB y 1,279–1,514 s para 128 MiB. **16 MiB fue el tamaño más rápido en este equipo y en esta serie.** Para recomendarlo como valor general, falta replicar la comparación en otro equipo e invertir el orden de los tamaños para controlar efectos de caché o temperatura.
+Con cuatro workers, 16 MiB redujo la mediana un **6,8 %** respecto de 64 MiB. Los tiempos observados con cuatro workers fueron 1,059–1,127 s para 16 MiB, 1,146–1,190 s para 64 MiB y 1,279–1,514 s para 128 MiB. **16 MiB fue el tamaño más rápido en este equipo y en esta serie.** Se mantienen 64 MiB como valor por defecto. Antes de adoptar 16 MiB, falta comparar ambos tamaños con ocho y doce workers y en Linux, variando el orden de las pruebas.
 
 Las 60 mediciones conservaron `silver` y `gold` byte a byte. Ambas huellas también coinciden con las del benchmark publicado:
 
@@ -57,6 +57,8 @@ En el equipo Windows, ocho workers dieron la menor mediana. Con doce, la diferen
 Las 50 mediciones conservaron las mismas huellas de `silver` y `gold` que la prueba de tamaños y la referencia publicada.
 
 ![Salida de consola registrada para uno, dos, cuatro, ocho y doce workers](benchmark-evidencias/consola-cantidad-workers.png)
+
+Los cuatro registros completos de estas pruebas están agrupados en [`benchmark_cargador_windows.json`](informe/generado/benchmark_cargador_windows.json). Se normalizó la ruta del CSV y se omitió el nombre del equipo. El informe genera sus tablas desde esos registros con `tablas.py`.
 
 ## Cómo reproducir la corrida completa
 

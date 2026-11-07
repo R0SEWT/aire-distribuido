@@ -1,0 +1,486 @@
+{
+  "tamanos": [
+    {
+      "entrada": "data/bronze/oefa.csv",
+      "bytes": 1317949839,
+      "filas_largas": 2883877,
+      "filas_anchas": 236001,
+      "bloque_bytes": 16777216,
+      "bloques": 79,
+      "chunk": 1000,
+      "repeticiones": 10,
+      "orden": "intercalado: en cada repetición se corre cada W una vez, en el orden de la lista",
+      "cpus": 32,
+      "gomaxprocs": 32,
+      "go": "go1.26.8",
+      "plataforma": "windows/amd64",
+      "fecha": "2026-11-06T20:59:20-05:00",
+      "base_workers": 1,
+      "mediciones": [
+        {
+          "workers": 1,
+          "tiempos_s": [
+            2.2009089,
+            3.9503468,
+            3.9677708000000003,
+            3.9856439999999997,
+            3.9602803,
+            3.9048034,
+            3.9663557000000003,
+            4.0765722,
+            3.9700148,
+            4.3050839
+          ],
+          "mediana_s": 3.9670632500000003,
+          "speedup": 1,
+          "sha256_silver": "63b707f469a63baa8d38121b0e4b7724796d53f3aa66b306b1ed44c179cf506e",
+          "sha256_gold": "2fdace5ad8599149c9ed2b177151881025d895a50738519d9358d537236f87f7",
+          "media_recortada_s": 3.9727235000000007,
+          "speedup_ic": {
+            "punto": 1,
+            "inferior": 0.8844379474132209,
+            "superior": 1.136001744170243,
+            "nivel": 0.95
+          }
+        },
+        {
+          "workers": 4,
+          "tiempos_s": [
+            1.1266533,
+            1.0860304,
+            1.0946967,
+            1.0901995,
+            1.0822236,
+            1.0586521,
+            1.0891378,
+            1.0851016,
+            1.0951743,
+            1.0839058
+          ],
+          "mediana_s": 1.0875841,
+          "speedup": 3.6475921724122307,
+          "sha256_silver": "63b707f469a63baa8d38121b0e4b7724796d53f3aa66b306b1ed44c179cf506e",
+          "sha256_gold": "2fdace5ad8599149c9ed2b177151881025d895a50738519d9358d537236f87f7",
+          "media_recortada_s": 1.0883087125,
+          "speedup_ic": {
+            "punto": 3.6503645099689495,
+            "inferior": 3.2301394718313903,
+            "superior": 3.73683763243767,
+            "nivel": 0.95
+          }
+        }
+      ],
+      "identicos": true,
+      "sha256": "1f09a8064ee0aed0b3a9a0a90b96f63ce226b45a969dace49f73e45134f26d92",
+      "protocolo": {
+        "calentamiento": 1,
+        "speedup": "mediana con la base / mediana con W (cociente de medianas)",
+        "speedup_ic": "media recortada con la base / media recortada con W, IC bootstrap 95 % (kmeans.ICBootstrapCociente)",
+        "recorte_por_extremo": 0.1,
+        "replicas_bootstrap": 2000,
+        "semilla_bootstrap": 7
+      },
+      "metadatos": {
+        "momento": "2026-11-06T20:59:20.5653575-05:00",
+        "version_go": "go1.26.8",
+        "gomaxprocs": 32,
+        "cpus_logicas": 32,
+        "commit": "8ef264fa3ed0b7e2bb56af6fa44aef75bfd14c30",
+        "arbol_sucio": true
+      },
+      "configs": {
+        "kmeans": {
+          "ruta": "configs/kmeans.json",
+          "sha256": "27e13e3d83c73e1bf3b148a64c46a566cc916372510a2b8e5f6d3e722659b5ab",
+          "existe": true
+        },
+        "limpieza": {
+          "ruta": "configs/limpieza.json",
+          "sha256": "bc7f82037e61d2bb64a3392164fc4f482236567d17d5b971f3ff895263b7d951",
+          "existe": true
+        }
+      }
+    },
+    {
+      "entrada": "data/bronze/oefa.csv",
+      "bytes": 1317949839,
+      "filas_largas": 2883877,
+      "filas_anchas": 236001,
+      "bloque_bytes": 67108864,
+      "bloques": 20,
+      "chunk": 1000,
+      "repeticiones": 10,
+      "orden": "intercalado: en cada repetición se corre cada W una vez, en el orden de la lista",
+      "cpus": 32,
+      "gomaxprocs": 32,
+      "go": "go1.26.8",
+      "plataforma": "windows/amd64",
+      "fecha": "2026-11-06T21:00:14-05:00",
+      "base_workers": 1,
+      "mediciones": [
+        {
+          "workers": 1,
+          "tiempos_s": [
+            2.2392755,
+            4.2139912,
+            4.2965059,
+            4.6422125,
+            4.1855299,
+            4.4153526,
+            4.5298814,
+            4.2923729,
+            4.3690689,
+            4.2146455
+          ],
+          "mediana_s": 4.2944394,
+          "speedup": 1,
+          "sha256_silver": "63b707f469a63baa8d38121b0e4b7724796d53f3aa66b306b1ed44c179cf506e",
+          "sha256_gold": "2fdace5ad8599149c9ed2b177151881025d895a50738519d9358d537236f87f7",
+          "media_recortada_s": 4.3146685375,
+          "speedup_ic": {
+            "punto": 1,
+            "inferior": 0.870395740387644,
+            "superior": 1.1558523971835097,
+            "nivel": 0.95
+          }
+        },
+        {
+          "workers": 4,
+          "tiempos_s": [
+            1.1717005,
+            1.1673781,
+            1.1819884,
+            1.1899693,
+            1.1662485,
+            1.1462191,
+            1.1629067,
+            1.1795441,
+            1.1668848,
+            1.1522295
+          ],
+          "mediana_s": 1.16713145,
+          "speedup": 3.679482203996816,
+          "sha256_silver": "63b707f469a63baa8d38121b0e4b7724796d53f3aa66b306b1ed44c179cf506e",
+          "sha256_gold": "2fdace5ad8599149c9ed2b177151881025d895a50738519d9358d537236f87f7",
+          "media_recortada_s": 1.168610075,
+          "speedup_ic": {
+            "punto": 3.6921370351012937,
+            "inferior": 3.2135922934988077,
+            "superior": 3.7943368344055743,
+            "nivel": 0.95
+          }
+        }
+      ],
+      "identicos": true,
+      "sha256": "1f09a8064ee0aed0b3a9a0a90b96f63ce226b45a969dace49f73e45134f26d92",
+      "protocolo": {
+        "calentamiento": 1,
+        "speedup": "mediana con la base / mediana con W (cociente de medianas)",
+        "speedup_ic": "media recortada con la base / media recortada con W, IC bootstrap 95 % (kmeans.ICBootstrapCociente)",
+        "recorte_por_extremo": 0.1,
+        "replicas_bootstrap": 2000,
+        "semilla_bootstrap": 7
+      },
+      "metadatos": {
+        "momento": "2026-11-06T21:00:13.9883109-05:00",
+        "version_go": "go1.26.8",
+        "gomaxprocs": 32,
+        "cpus_logicas": 32,
+        "commit": "8ef264fa3ed0b7e2bb56af6fa44aef75bfd14c30",
+        "arbol_sucio": true
+      },
+      "configs": {
+        "kmeans": {
+          "ruta": "configs/kmeans.json",
+          "sha256": "27e13e3d83c73e1bf3b148a64c46a566cc916372510a2b8e5f6d3e722659b5ab",
+          "existe": true
+        },
+        "limpieza": {
+          "ruta": "configs/limpieza.json",
+          "sha256": "bc7f82037e61d2bb64a3392164fc4f482236567d17d5b971f3ff895263b7d951",
+          "existe": true
+        }
+      }
+    },
+    {
+      "entrada": "data/bronze/oefa.csv",
+      "bytes": 1317949839,
+      "filas_largas": 2883877,
+      "filas_anchas": 236001,
+      "bloque_bytes": 134217728,
+      "bloques": 10,
+      "chunk": 1000,
+      "repeticiones": 10,
+      "orden": "intercalado: en cada repetición se corre cada W una vez, en el orden de la lista",
+      "cpus": 32,
+      "gomaxprocs": 32,
+      "go": "go1.26.8",
+      "plataforma": "windows/amd64",
+      "fecha": "2026-11-06T21:01:11-05:00",
+      "base_workers": 1,
+      "mediciones": [
+        {
+          "workers": 1,
+          "tiempos_s": [
+            2.3028641,
+            4.3665106,
+            4.2360252,
+            4.4169644,
+            4.2597646000000005,
+            4.0608193,
+            4.5438191,
+            5.3280829,
+            5.2368456,
+            5.3006323
+          ],
+          "mediana_s": 4.3917375,
+          "speedup": 1,
+          "sha256_silver": "63b707f469a63baa8d38121b0e4b7724796d53f3aa66b306b1ed44c179cf506e",
+          "sha256_gold": "2fdace5ad8599149c9ed2b177151881025d895a50738519d9358d537236f87f7",
+          "media_recortada_s": 4.552672637500001,
+          "speedup_ic": {
+            "punto": 1,
+            "inferior": 0.8425845640576256,
+            "superior": 1.1927623571521941,
+            "nivel": 0.95
+          }
+        },
+        {
+          "workers": 4,
+          "tiempos_s": [
+            1.2788496999999999,
+            1.3218193,
+            1.3005895,
+            1.3386655,
+            1.3136326999999999,
+            1.3248678,
+            1.5141179,
+            1.3744312,
+            1.4179389,
+            1.4069319
+          ],
+          "mediana_s": 1.33176665,
+          "speedup": 3.297677937797886,
+          "sha256_silver": "63b707f469a63baa8d38121b0e4b7724796d53f3aa66b306b1ed44c179cf506e",
+          "sha256_gold": "2fdace5ad8599149c9ed2b177151881025d895a50738519d9358d537236f87f7",
+          "media_recortada_s": 1.3498595999999998,
+          "speedup_ic": {
+            "punto": 3.3727008627415778,
+            "inferior": 2.8625763586683046,
+            "superior": 3.6584882022629017,
+            "nivel": 0.95
+          }
+        }
+      ],
+      "identicos": true,
+      "sha256": "1f09a8064ee0aed0b3a9a0a90b96f63ce226b45a969dace49f73e45134f26d92",
+      "protocolo": {
+        "calentamiento": 1,
+        "speedup": "mediana con la base / mediana con W (cociente de medianas)",
+        "speedup_ic": "media recortada con la base / media recortada con W, IC bootstrap 95 % (kmeans.ICBootstrapCociente)",
+        "recorte_por_extremo": 0.1,
+        "replicas_bootstrap": 2000,
+        "semilla_bootstrap": 7
+      },
+      "metadatos": {
+        "momento": "2026-11-06T21:01:11.5201304-05:00",
+        "version_go": "go1.26.8",
+        "gomaxprocs": 32,
+        "cpus_logicas": 32,
+        "commit": "8ef264fa3ed0b7e2bb56af6fa44aef75bfd14c30",
+        "arbol_sucio": true
+      },
+      "configs": {
+        "kmeans": {
+          "ruta": "configs/kmeans.json",
+          "sha256": "27e13e3d83c73e1bf3b148a64c46a566cc916372510a2b8e5f6d3e722659b5ab",
+          "existe": true
+        },
+        "limpieza": {
+          "ruta": "configs/limpieza.json",
+          "sha256": "bc7f82037e61d2bb64a3392164fc4f482236567d17d5b971f3ff895263b7d951",
+          "existe": true
+        }
+      }
+    }
+  ],
+  "workers": {
+    "entrada": "data/bronze/oefa.csv",
+    "bytes": 1317949839,
+    "filas_largas": 2883877,
+    "filas_anchas": 236001,
+    "bloque_bytes": 67108864,
+    "bloques": 20,
+    "chunk": 1000,
+    "repeticiones": 10,
+    "orden": "intercalado: en cada repetición se corre cada W una vez, en el orden de la lista",
+    "cpus": 32,
+    "gomaxprocs": 32,
+    "go": "go1.26.8",
+    "plataforma": "windows/amd64",
+    "fecha": "2026-11-06T21:58:37-05:00",
+    "base_workers": 1,
+    "mediciones": [
+      {
+        "workers": 1,
+        "tiempos_s": [
+          2.4575563000000002,
+          3.8911967,
+          3.8889739,
+          3.8903054,
+          3.8458598,
+          4.5100197,
+          4.3635359000000005,
+          4.2986352,
+          4.3060685,
+          4.4858629
+        ],
+        "mediana_s": 4.09491595,
+        "speedup": 1,
+        "sha256_silver": "63b707f469a63baa8d38121b0e4b7724796d53f3aa66b306b1ed44c179cf506e",
+        "sha256_gold": "2fdace5ad8599149c9ed2b177151881025d895a50738519d9358d537236f87f7",
+        "media_recortada_s": 4.121304787500001,
+        "speedup_ic": {
+          "punto": 1,
+          "inferior": 0.8737617669305654,
+          "superior": 1.1473473661586457,
+          "nivel": 0.95
+        }
+      },
+      {
+        "workers": 2,
+        "tiempos_s": [
+          2.0656562,
+          2.0858548,
+          2.0248605,
+          2.0137237,
+          2.0690435,
+          2.047547,
+          2.0866493,
+          2.0780427,
+          2.1051194,
+          2.0281867
+        ],
+        "mediana_s": 2.06734985,
+        "speedup": 1.9807561598729893,
+        "sha256_silver": "63b707f469a63baa8d38121b0e4b7724796d53f3aa66b306b1ed44c179cf506e",
+        "sha256_gold": "2fdace5ad8599149c9ed2b177151881025d895a50738519d9358d537236f87f7",
+        "media_recortada_s": 2.0607300875,
+        "speedup_ic": {
+          "punto": 1.9999245958988312,
+          "inferior": 1.7583618734461355,
+          "superior": 2.099299324677254,
+          "nivel": 0.95
+        }
+      },
+      {
+        "workers": 4,
+        "tiempos_s": [
+          1.1824943,
+          1.1748043,
+          1.1610717,
+          1.1584753,
+          1.1739557,
+          1.1961482,
+          1.1811396,
+          1.1631393,
+          1.1878913,
+          1.1591825
+        ],
+        "mediana_s": 1.17438,
+        "speedup": 3.486874733902144,
+        "sha256_silver": "63b707f469a63baa8d38121b0e4b7724796d53f3aa66b306b1ed44c179cf506e",
+        "sha256_gold": "2fdace5ad8599149c9ed2b177151881025d895a50738519d9358d537236f87f7",
+        "media_recortada_s": 1.1729598375,
+        "speedup_ic": {
+          "punto": 3.513594119542904,
+          "inferior": 3.0908884280155555,
+          "superior": 3.6835511997813417,
+          "nivel": 0.95
+        }
+      },
+      {
+        "workers": 8,
+        "tiempos_s": [
+          0.8115705,
+          0.8155892,
+          0.8067028,
+          0.8147522,
+          0.7919677,
+          0.7932697,
+          0.7883057,
+          0.8535721,
+          0.8207138,
+          0.8094244
+        ],
+        "mediana_s": 0.81049745,
+        "speedup": 5.052348961739485,
+        "sha256_silver": "63b707f469a63baa8d38121b0e4b7724796d53f3aa66b306b1ed44c179cf506e",
+        "sha256_gold": "2fdace5ad8599149c9ed2b177151881025d895a50738519d9358d537236f87f7",
+        "media_recortada_s": 0.8079987875,
+        "speedup_ic": {
+          "punto": 5.10063239110987,
+          "inferior": 4.475353537912128,
+          "superior": 5.354453500072934,
+          "nivel": 0.95
+        }
+      },
+      {
+        "workers": 12,
+        "tiempos_s": [
+          0.8544709,
+          0.8264317,
+          0.8242381,
+          0.8393127,
+          0.7987229,
+          0.8074866,
+          0.8074154,
+          0.8171857,
+          0.8170606,
+          0.7911275
+        ],
+        "mediana_s": 0.81712315,
+        "speedup": 5.011381638128842,
+        "sha256_silver": "63b707f469a63baa8d38121b0e4b7724796d53f3aa66b306b1ed44c179cf506e",
+        "sha256_gold": "2fdace5ad8599149c9ed2b177151881025d895a50738519d9358d537236f87f7",
+        "media_recortada_s": 0.8172317124999999,
+        "speedup_ic": {
+          "punto": 5.043006438030268,
+          "inferior": 4.43518726757117,
+          "superior": 5.2991451971784,
+          "nivel": 0.95
+        }
+      }
+    ],
+    "identicos": true,
+    "sha256": "1f09a8064ee0aed0b3a9a0a90b96f63ce226b45a969dace49f73e45134f26d92",
+    "protocolo": {
+      "calentamiento": 1,
+      "speedup": "mediana con la base / mediana con W (cociente de medianas)",
+      "speedup_ic": "media recortada con la base / media recortada con W, IC bootstrap 95 % (kmeans.ICBootstrapCociente)",
+      "recorte_por_extremo": 0.1,
+      "replicas_bootstrap": 2000,
+      "semilla_bootstrap": 7
+    },
+    "metadatos": {
+      "momento": "2026-11-06T21:58:37.0245319-05:00",
+      "version_go": "go1.26.8",
+      "gomaxprocs": 32,
+      "cpus_logicas": 32,
+      "commit": "8ef264fa3ed0b7e2bb56af6fa44aef75bfd14c30",
+      "arbol_sucio": true
+    },
+    "configs": {
+      "kmeans": {
+        "ruta": "configs/kmeans.json",
+        "sha256": "27e13e3d83c73e1bf3b148a64c46a566cc916372510a2b8e5f6d3e722659b5ab",
+        "existe": true
+      },
+      "limpieza": {
+        "ruta": "configs/limpieza.json",
+        "sha256": "bc7f82037e61d2bb64a3392164fc4f482236567d17d5b971f3ff895263b7d951",
+        "existe": true
+      }
+    }
+  }
+}
