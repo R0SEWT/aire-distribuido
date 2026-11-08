@@ -121,7 +121,7 @@ Go {{< meta cifras.benchmark_cargador_windows.go >}} en Windows amd64 y
 {{< meta cifras.benchmark_cargador_windows.repeticiones >}} repeticiones por configuración. El tiempo incluye lectura, limpieza, pivot y
 estandarización, y excluye la escritura de los CSV de salida.
 
-Se usó el commit `8ef264f`, con un chunk de estandarización de 1 000 filas y un overlay
+Las mediciones se repitieron el 7 de noviembre de 2026 con el commit `8ef264f`, un chunk de estandarización de 1 000 filas y un overlay
 temporal que omite la llamada Linux a `Getrusage`, que el cargador no utiliza.
 Los tamaños se probaron en orden ascendente, intercalando uno y cuatro workers en cada
 repetición. La segunda prueba intercaló las cinco cantidades de workers. La nota
@@ -134,7 +134,7 @@ equipo y en el orden de ejecución probado (@tbl-bench-win-bloques, @fig-bench-w
 
 {{< include generado/tablas/benchmark_cargador_windows_bloques.md >}}
 
-![Benchmark del cargador en Windows por tamaño de bloque. Reconstrucción a partir del registro de consola.](../benchmark-evidencias/consola-tamano-bloque.png){#fig-bench-win-bloques width=15.5cm}
+![Benchmark del cargador en Windows por tamaño de bloque. Captura real de la terminal con el resumen del JSON generado en la ejecución.](../benchmark-evidencias/consola-tamano-bloque.png){#fig-bench-win-bloques width=15.5cm}
 
 Luego se fijó el tamaño de bloque en 64 MiB y se usaron 1, 2, 4, 8 y 12 workers.
 Se reportan los mismos indicadores que en el benchmark de Linux. El speedup principal es el
@@ -156,7 +156,7 @@ workers hubo {{< meta cifras.benchmark_cargador_windows.diferencia_ms >}} ms de 
 
 {{< include generado/tablas/benchmark_cargador_windows_workers.md >}}
 
-![Benchmark del cargador en Windows por número de workers. Reconstrucción a partir del registro de consola.](../benchmark-evidencias/consola-cantidad-workers.png){#fig-bench-win-workers width=15.5cm}
+![Benchmark del cargador en Windows por número de workers. Captura real de la terminal con el resumen del JSON generado en la ejecución.](../benchmark-evidencias/consola-cantidad-workers.png){#fig-bench-win-workers width=15.5cm}
 
 En ambas pruebas, las huellas SHA-256 de silver y gold coincidieron entre configuraciones
 y con la referencia de Linux. Las mediciones describen los equipos probados, que también

@@ -3,6 +3,7 @@
 import argparse
 import hashlib
 import json
+import math
 import subprocess
 from pathlib import Path
 
@@ -22,7 +23,11 @@ def main():
     parser.add_argument("entrada", type=Path, help="CSV de entrada")
     parser.add_argument("salida", type=Path, help="Directorio nuevo para la evidencia")
     parser.add_argument("--piloto", action="store_true", help="Usa KiB para una muestra")
+    parser.add_argument("--timeout", type=float, default=600,
+                        help="Tiempo máximo por tamaño, en segundos (por defecto: 600)")
     args = parser.parse_args()
+    if not math.isfinite(args.timeout) or args.timeout <= 0:
+        parser.error("--timeout tiene que ser un número positivo y finito")
 
     huella_entrada = sha256(args.entrada)
     if not args.piloto and huella_entrada != SHA256_OEFA:
@@ -51,7 +56,14 @@ def main():
         with registro.open("w", encoding="utf-8") as log:
             log.write(f"Argumentos: {json.dumps(comando, ensure_ascii=False)}\n\n")
             log.flush()
-            resultado = subprocess.run(comando, stdout=log, stderr=subprocess.STDOUT)
+            try:
+                # Los argumentos se pasan separados y el binario se ejecuta sin shell.
+                resultado = subprocess.run(comando, stdout=log, stderr=subprocess.STDOUT,
+                                           shell=False, timeout=args.timeout)
+            except subprocess.TimeoutExpired:
+                raise SystemExit(
+                    f"La corrida de {tamano} {unidad} superó {args.timeout:g} s. Revisa {registro}"
+                ) from None
         if resultado.returncode:
             raise SystemExit(f"Falló la corrida de {tamano} {unidad}. Revisa {registro}")
 

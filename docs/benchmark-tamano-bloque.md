@@ -23,40 +23,40 @@ Con cuatro workers, 64 KiB obtuvo la menor mediana en esta primera serie. Al rep
 
 ## Resultados con el CSV completo
 
-Se midió el 6 de noviembre de 2026 con los 2 883 877 registros del informe (1 317 949 839 bytes), el commit `8ef264f` y el mismo binario de Go 1.26.8 para Windows amd64 del piloto, con 32 CPU lógicas y un chunk de 1 000 filas. El binario usó el overlay temporal descrito arriba. Se hicieron diez repeticiones por combinación, intercalando uno y cuatro workers dentro de cada tamaño. Los tamaños se probaron en orden ascendente.
+Las mediciones se repitieron el 7 de noviembre de 2026 con los 2 883 877 registros del informe (1 317 949 839 bytes), el commit `f49e4ca` y el mismo binario de Go 1.26.8 para Windows amd64 del piloto, con 32 CPU lógicas y un chunk de 1 000 filas. El binario usó el overlay temporal descrito arriba. Se hicieron diez repeticiones por combinación, intercalando uno y cuatro workers dentro de cada tamaño. Los tamaños se probaron en orden ascendente.
 
 | Tamaño | Bloques | Mediana con 1 worker | Mediana con 4 workers | Mejora al pasar a 4 workers |
 |---|---:|---:|---:|---:|
-| 16 MiB | 79 | 3,967 s | 1,088 s | 3,65× |
-| 64 MiB | 20 | 4,294 s | 1,167 s | 3,68× |
-| 128 MiB | 10 | 4,392 s | 1,332 s | 3,30× |
+| 16 MiB | 79 | 4,087 s | 1,095 s | 3,73× |
+| 64 MiB | 20 | 4,263 s | 1,197 s | 3,56× |
+| 128 MiB | 10 | 4,147 s | 1,319 s | 3,14× |
 
-Con cuatro workers, 16 MiB redujo la mediana un **6,8 %** respecto de 64 MiB. Los tiempos observados con cuatro workers fueron 1,059–1,127 s para 16 MiB, 1,146–1,190 s para 64 MiB y 1,279–1,514 s para 128 MiB. **16 MiB fue el tamaño más rápido en este equipo y en esta serie.** Se mantienen 64 MiB como valor por defecto. Antes de adoptar 16 MiB, falta comparar ambos tamaños con ocho y doce workers y en Linux, variando el orden de las pruebas.
+Con cuatro workers, 16 MiB redujo la mediana un **8,5 %** respecto de 64 MiB. Los tiempos observados con cuatro workers fueron 0,678–1,121 s para 16 MiB, 1,153–1,218 s para 64 MiB y 1,233–1,345 s para 128 MiB. **16 MiB fue el tamaño más rápido en este equipo y en esta serie.** Se mantienen 64 MiB como valor por defecto. Antes de adoptar 16 MiB, falta comparar ambos tamaños con ocho y doce workers y en Linux, variando el orden de las pruebas.
 
 Las 60 mediciones conservaron `silver` y `gold` byte a byte. Ambas huellas también coinciden con las del benchmark publicado:
 
 - Silver: `63b707f469a63baa8d38121b0e4b7724796d53f3aa66b306b1ed44c179cf506e`
 - Gold: `2fdace5ad8599149c9ed2b177151881025d895a50738519d9358d537236f87f7`
 
-![Salida de consola registrada para los tres tamaños de bloque](benchmark-evidencias/consola-tamano-bloque.png)
+![Captura real de la terminal con el resumen de la prueba de tamaños](benchmark-evidencias/consola-tamano-bloque.png)
 
 ## Escalabilidad con bloques de 64 MiB
 
-La segunda prueba mantuvo 64 MiB por bloque y varió el número de workers. Se usaron el mismo CSV, equipo Windows y binario que en la prueba de tamaños, con diez repeticiones intercaladas por configuración. La comparación usa la mediana de cada serie y la aceleración respecto de un worker en el mismo equipo. La referencia de Linux proviene del [benchmark publicado](../reports/benchmark_cargador.json).
+La segunda prueba mantuvo 64 MiB por bloque y varió el número de workers. Se repitió el 7 de noviembre de 2026 con el mismo CSV, equipo Windows y binario que en la prueba de tamaños, con diez repeticiones intercaladas por configuración. La comparación usa la mediana de cada serie y la aceleración respecto de un worker en el mismo equipo. La referencia de Linux proviene del [benchmark publicado](../reports/benchmark_cargador.json).
 
 | Workers | Mediana en Windows | Aceleración en Windows | Mediana en Linux | Aceleración en Linux |
 |---:|---:|---:|---:|---:|
-| 1 | 4,095 s | 1,00× | 6,683 s | 1,00× |
-| 2 | 2,067 s | 1,98× | 3,678 s | 1,82× |
-| 4 | 1,174 s | 3,49× | 2,355 s | 2,84× |
-| 8 | 0,810 s | 5,05× | 1,585 s | 4,22× |
-| 12 | 0,817 s | 5,01× | 1,349 s | 4,95× |
+| 1 | 4,259 s | 1,00× | 6,683 s | 1,00× |
+| 2 | 2,065 s | 2,06× | 3,678 s | 1,82× |
+| 4 | 1,159 s | 3,67× | 2,355 s | 2,84× |
+| 8 | 0,795 s | 5,36× | 1,585 s | 4,22× |
+| 12 | 0,794 s | 5,36× | 1,349 s | 4,95× |
 
-En el equipo Windows, ocho workers dieron la menor mediana. Con doce, la diferencia fue de solo 7 ms y los tiempos observados se solapan, así que esta serie muestra una meseta entre ocho y doce. La comparación describe dos equipos con hardware y versiones de Go distintos, además del sistema operativo.
+En el equipo Windows, 12 workers dieron la menor mediana. Entre ocho y doce, la diferencia fue de 0,677 ms y los tiempos observados se solapan, así que esta serie muestra una meseta entre ocho y doce. La comparación describe dos equipos con hardware y versiones de Go distintos, además del sistema operativo.
 
 Las 50 mediciones conservaron las mismas huellas de `silver` y `gold` que la prueba de tamaños y la referencia publicada.
 
-![Salida de consola registrada para uno, dos, cuatro, ocho y doce workers](benchmark-evidencias/consola-cantidad-workers.png)
+![Captura real de la terminal con el resumen de la prueba de workers](benchmark-evidencias/consola-cantidad-workers.png)
 
 Los cuatro registros completos de estas pruebas están agrupados en [`benchmark_cargador_windows.json`](informe/generado/benchmark_cargador_windows.json). Se normalizó la ruta del CSV y se omitió el nombre del equipo. El informe genera sus tablas desde esos registros con `tablas.py`.
 
@@ -69,6 +69,8 @@ binarios=$(mktemp -d)
 go build -o "$binarios/cargar" ./cmd/cargar
 python3 scripts/benchmark-bloques.py "$binarios/cargar" data/bronze/oefa.csv "$binarios/resultados"
 ```
+
+Cada tamaño tiene un límite de 600 segundos, configurable con `--timeout`. Si se supera, el script detiene el cargador e indica la ruta de `terminal.txt`.
 
 El script genera `resumen.md` dentro del directorio de salida que se indica como tercer argumento. En el ejemplo, ese directorio es `$binarios/resultados`. Para replicar el piloto, pasa `data/sample/oefa_real_muestra.csv`, elige otro directorio de salida y añade `--piloto`. Si la corrida completa muestra diferencias pequeñas, repite la serie cambiando el orden de los tamaños antes de recomendar una configuración.
 

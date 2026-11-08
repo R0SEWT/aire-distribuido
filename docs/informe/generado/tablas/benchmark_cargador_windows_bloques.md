@@ -3,9 +3,9 @@
 ::: {#tbl-bench-win-bloques tbl-colwidths="[16,12,26,26,20]"}
 | Bloque (MiB) | Bloques | Mediana con 1 worker (s) | Mediana con 4 workers (s) | Speedup (medianas) |
 |---:|---:|---:|---:|---:|
-| 16 | 79 | 3,967 | 1,088 | 3,65 |
-| 64 | 20 | 4,294 | 1,167 | 3,68 |
-| 128 | 10 | 4,392 | 1,332 | 3,30 |
+| 16 | 79 | 4,087 | 1,095 | 3,73 |
+| 64 | 20 | 4,263 | 1,197 | 3,56 |
+| 128 | 10 | 4,147 | 1,319 | 3,14 |
 
 Tiempo del cargador en Windows por tamaño de bloque
 :::
