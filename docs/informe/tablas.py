@@ -18,6 +18,7 @@ generado/cifras.yml). Los esquemas son los de Go, que son la fuente de verdad:
     limpieza.json            cmd/cargar             datos/reporte.go       (ReporteLimpieza)
     estandarizacion.json     cmd/cargar             datos/estandarizar.go  (Estandarizacion)
     benchmark_cargador.json  cmd/cargar -bench      datos/medicion.go      (Benchmark)
+    benchmark_cargador_windows.json  agrupación de cuatro Benchmark de Windows, con rutas normalizadas
     kmeans.json              cmd/entrenar           cmd/entrenar/main.go
     regimenes.json           cmd/entrenar           kmeans/regimenes.go    (Regimen)
     codo.json                cmd/entrenar -codo     kmeans/codo.go
@@ -54,6 +55,7 @@ MARCA = "[PLACEHOLDER]"
 COMANDOS = {
     "limpieza.json": "cmd/cargar",
     "estandarizacion.json": "cmd/cargar",
+    "benchmark_cargador_windows.json": "cmd/cargar -bench",
     "benchmark_cargador.json": "cmd/cargar -bench",
     "kmeans.json": "cmd/entrenar",
     "regimenes.json": "cmd/entrenar",
@@ -753,6 +755,119 @@ class Informe:
             "identicos": "sí" if d.get("identicos") else "no",
             "maquina": str((d.get("metadatos") or {}).get("maquina") or d.get("host", "")),
         })
+
+
+    def benchmark_cargador_windows(self) -> None:
+        o = "benchmark_cargador_windows.json"
+        d = self.leer(o)
+        tablas = (
+            ("benchmark_cargador_windows_bloques.md", "tbl-bench-win-bloques",
+             "Tiempo del cargador en Windows por tamaño de bloque"),
+            ("benchmark_cargador_windows_workers.md", "tbl-bench-win-workers",
+             "Tiempo y speedup del cargador en Windows con bloques de 64 MiB"),
+        )
+        if d is None:
+            for archivo, ident, titulo in tablas:
+                self.tabla(archivo, o, None, ident, titulo)
+            return
+
+        def por_workers(corrida: dict, requeridos: set[int], contexto: str) -> dict:
+            mediciones = {m["workers"]: m for m in corrida["mediciones"]}
+            if len(mediciones) != len(corrida["mediciones"]):
+                raise ValueError(f"{o}: workers duplicados en {contexto}")
+            faltan = requeridos - mediciones.keys()
+            if faltan:
+                raise ValueError(f"{o}: faltan workers {sorted(faltan)} en {contexto}")
+            return mediciones
+
+        tamanos = {r["bloque_bytes"]: r for r in d["tamanos"]}
+        if len(tamanos) != len(d["tamanos"]):
+            raise ValueError(f"{o}: tamaños de bloque duplicados")
+        faltan = {16 * 2**20, 64 * 2**20, 128 * 2**20} - tamanos.keys()
+        if faltan:
+            raise ValueError(f"{o}: faltan bloques de {[b // 2**20 for b in sorted(faltan)]} MiB")
+        if d["workers"]["bloque_bytes"] != 64 * 2**20:
+            raise ValueError(f"{o}: la prueba de workers requiere bloques de 64 MiB")
+        por_tamano = {
+            b: por_workers(r, {1, 4}, f"bloques de {b // 2**20} MiB")
+            for b, r in tamanos.items()
+        }
+        mediciones_workers = por_workers(d["workers"], {1, 2, 4, 8, 12}, "la prueba de workers")
+        referencia = self.datos.get("benchmark_cargador.json")
+        for corrida in [*tamanos.values(), d["workers"]]:
+            self.comprobar(o, bool(corrida["identicos"]), "las salidas difieren entre workers")
+            if referencia is not None:
+                self.comprobar(o, corrida["sha256"] == referencia["sha256"],
+                               "el CSV de Windows difiere del benchmark de referencia")
+            base = next(m for m in corrida["mediciones"] if m["workers"] == 1)
+            for m in corrida["mediciones"]:
+                self.comprobar(o, len(m["tiempos_s"]) == corrida["repeticiones"],
+                               "el número de tiempos difiere de las repeticiones declaradas")
+                self.comprobar(o, abs(pd.Series(m["tiempos_s"]).median() - m["mediana_s"]) < 1e-9,
+                               "la mediana difiere de los tiempos registrados")
+                self.comprobar(o, abs(m["speedup"] - base["mediana_s"] / m["mediana_s"]) < 1e-9,
+                               "el speedup difiere del cociente de medianas")
+                self.comprobar(o, abs(m["speedup_ic"]["punto"] -
+                                       base["media_recortada_s"] / m["media_recortada_s"]) < 1e-9,
+                               "el speedup principal difiere del cociente de medias recortadas")
+                if referencia is not None:
+                    self.comprobar(o, all(m[k] == referencia["mediciones"][0][k]
+                                          for k in ("sha256_silver", "sha256_gold")),
+                                   "las salidas difieren de la referencia de Linux")
+
+        bloques = pd.DataFrame([(
+            entero(r["bloque_bytes"] // 2**20),
+            entero(r["bloques"]),
+            decimal(por_tamano[b][1]["mediana_s"], 3),
+            decimal(por_tamano[b][4]["mediana_s"], 3),
+            decimal(por_tamano[b][4]["speedup"], 2),
+        ) for b, r in sorted(tamanos.items())], columns=[
+            "Bloque (MiB)", "Bloques", "Mediana con 1 worker (s)",
+            "Mediana con 4 workers (s)", "Speedup (medianas)",
+        ])
+        workers = pd.DataFrame([(
+            entero(m["workers"]),
+            decimal(m["mediana_s"], 3),
+            decimal(m["media_recortada_s"], 3),
+            decimal(m["speedup"], 2),
+            decimal(m["speedup_ic"]["punto"], 2),
+            f"[{decimal(m['speedup_ic']['inferior'], 2)}; {decimal(m['speedup_ic']['superior'], 2)}]",
+            pct(m["speedup_ic"]["punto"] / m["workers"], 0),
+            f"`{m['sha256_gold'][:12]}`",
+        ) for _, m in sorted(mediciones_workers.items())], columns=[
+            "Workers", "Mediana (s)", "Media recortada (s)", "Speedup (medianas)",
+            "Speedup", "IC 95 %", "Eficiencia", "sha256 del gold",
+        ])
+        fijo = max(d["workers"]["mediciones"], key=lambda m: m["workers"])
+        protocolo = d["workers"]["protocolo"]
+        bloque_16 = por_tamano[16 * 2**20][4]
+        bloque_64 = por_tamano[64 * 2**20][4]
+        un_worker = mediciones_workers[1]
+        ocho = mediciones_workers[8]
+        doce = mediciones_workers[12]
+        self.guardar_cifras("benchmark_cargador_windows", d, {
+            "filas": entero(d["workers"]["filas_largas"]),
+            "cpus": entero(d["workers"]["cpus"]),
+            "repeticiones": entero(d["workers"]["repeticiones"]),
+            "go": d["workers"]["go"].removeprefix("go"),
+            "reduccion_bloque": pct(
+                1 - bloque_16["mediana_s"] / bloque_64["mediana_s"], 1
+            ),
+            "mediana_un_worker": decimal(un_worker["mediana_s"], 3),
+            "mediana_ocho": decimal(ocho["mediana_s"], 3),
+            "diferencia_ms": entero(round(1000 * abs(doce["mediana_s"] - ocho["mediana_s"]))),
+            "w_resumen": entero(fijo["workers"]),
+            "speedup": decimal(fijo["speedup_ic"]["punto"], 2),
+            "speedup_ic": f"[{decimal(fijo['speedup_ic']['inferior'], 2)}; {decimal(fijo['speedup_ic']['superior'], 2)}]",
+            "eficiencia": pct(fijo["speedup_ic"]["punto"] / fijo["workers"], 0),
+            "recorte": pct(protocolo["recorte_por_extremo"], 0),
+            "replicas_bootstrap": entero(protocolo["replicas_bootstrap"]),
+        })
+        fuente = f"Fuente: `generado/{o}`, registros de `cmd/cargar -bench` en Windows."
+        self.tabla(tablas[0][0], o, d, tablas[0][1], tablas[0][2], markdown(bloques, "rrrrr"),
+                   anchos=[16, 12, 26, 26, 20], fuente=fuente)
+        self.tabla(tablas[1][0], o, d, tablas[1][1], tablas[1][2], markdown(workers, "rrrrrrrl"),
+                   anchos=[9, 11, 12, 11, 9, 15, 11, 22], fuente=fuente)
 
     def benchmark_kmeans(self) -> None:
         o = "benchmark_kmeans.json"
@@ -1746,6 +1861,7 @@ def main() -> int:
     inf.limpieza()          # primero: estandarizacion lo usa para cruzar n
     inf.estandarizacion()
     inf.benchmark_cargador()
+    inf.benchmark_cargador_windows()
     inf.benchmark_kmeans()
     inf.kmeans()
     inf.regimenes()
