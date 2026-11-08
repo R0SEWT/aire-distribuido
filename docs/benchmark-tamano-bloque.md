@@ -70,6 +70,8 @@ go build -o "$binarios/cargar" ./cmd/cargar
 python3 scripts/benchmark-bloques.py "$binarios/cargar" data/bronze/oefa.csv "$binarios/resultados"
 ```
 
+El primer argumento debe ser el binario de `cmd/cargar` compilado localmente. El script comprueba que exista y rechaza archivos `.bat` y `.cmd`; en Windows exige `.exe`.
+
 Cada tamaño tiene un límite de 600 segundos, configurable con `--timeout`. Si se supera, el script detiene el cargador e indica la ruta de `terminal.txt`.
 
 El script genera `resumen.md` dentro del directorio de salida que se indica como tercer argumento. En el ejemplo, ese directorio es `$binarios/resultados`. Para replicar el piloto, pasa `data/sample/oefa_real_muestra.csv`, elige otro directorio de salida y añade `--piloto`. Si la corrida completa muestra diferencias pequeñas, repite la serie cambiando el orden de los tamaños antes de recomendar una configuración.

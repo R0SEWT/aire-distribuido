@@ -4,6 +4,7 @@ import argparse
 import hashlib
 import json
 import math
+import os
 import subprocess
 from pathlib import Path
 
@@ -17,9 +18,21 @@ def sha256(ruta):
         return hashlib.file_digest(archivo, "sha256").hexdigest()
 
 
+def binario_local(valor):
+    ruta = Path(valor).resolve()
+    if not ruta.is_file():
+        raise argparse.ArgumentTypeError("el cargador debe ser un archivo existente")
+    if ruta.suffix.lower() in {".bat", ".cmd"}:
+        raise argparse.ArgumentTypeError("usa el binario de cmd/cargar, no un script de shell")
+    if os.name == "nt" and ruta.suffix.lower() != ".exe":
+        raise argparse.ArgumentTypeError("el cargador en Windows debe ser un binario .exe")
+    return ruta
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("cargador", type=Path, help="Binario de cmd/cargar")
+    parser.add_argument("cargador", type=binario_local,
+                        help="Binario de cmd/cargar compilado localmente")
     parser.add_argument("entrada", type=Path, help="CSV de entrada")
     parser.add_argument("salida", type=Path, help="Directorio nuevo para la evidencia")
     parser.add_argument("--piloto", action="store_true", help="Usa KiB para una muestra")
@@ -46,7 +59,7 @@ def main():
         silver = corrida / "silver.csv"
         gold = corrida / "gold.csv"
         comando = [
-            str(args.cargador.resolve()), "-entrada", str(args.entrada),
+            str(args.cargador), "-entrada", str(args.entrada),
             "-bloque", f"{tamano}{sufijo}", "-workers", "1,4",
             "-bench", str(REPETICIONES), "-silver", str(silver),
             "-gold", str(gold), "-reports", str(corrida),
@@ -57,7 +70,9 @@ def main():
             log.write(f"Argumentos: {json.dumps(comando, ensure_ascii=False)}\n\n")
             log.flush()
             try:
-                # Los argumentos se pasan separados y el binario se ejecuta sin shell.
+                # Auditoría de inyección: binario local de confianza, argv separado y sin shell.
+                # Los valores del CSV y las rutas no se interpretan como comandos.
+                # nosemgrep: python.lang.security.audit.dangerous-subprocess-use-audit, python.lang.security.audit.dangerous-subprocess-use-tainted-env-args
                 resultado = subprocess.run(comando, stdout=log, stderr=subprocess.STDOUT,
                                            shell=False, timeout=args.timeout)
             except subprocess.TimeoutExpired:
