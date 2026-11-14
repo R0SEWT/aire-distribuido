@@ -67,83 +67,6 @@ func escuchar(t *testing.T) net.Listener {
 	return ln
 }
 
-func nombres(ms []*miembro) string {
-	var s []string
-	for _, m := range ms {
-		s = append(s, m.enlace.Nodo)
-	}
-	return strings.Join(s, ",")
-}
-
-func TestEsperarNodosJuntaLosNNodosOrdenadosPorNombre(t *testing.T) {
-	ln := escuchar(t)
-	for _, n := range []string{"pc-03", "pc-01", "pc-02"} {
-		nodoFalso(t, ln.Addr().String(), n, protocolo.Version, false)
-	}
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-
-	ms := esperarNodos(ctx, ln, 3, time.Second, silencio)
-	if got := nombres(ms); got != "pc-01,pc-02,pc-03" {
-		t.Fatalf("nodos = %s", got)
-	}
-	if ms[0].enlace.Workers != 4 || ms[0].direccion == "" {
-		t.Fatalf("faltan datos del HOLA: %+v", ms[0])
-	}
-	cerrar(ms, time.Second)
-}
-
-func TestEsperarNodosVenceElPlazoConLosQueLlegaron(t *testing.T) {
-	ln := escuchar(t)
-	nodoFalso(t, ln.Addr().String(), "pc-01", protocolo.Version, false)
-	nodoFalso(t, ln.Addr().String(), "pc-02", protocolo.Version, false)
-	ctx, cancel := context.WithTimeout(context.Background(), 300*time.Millisecond)
-	defer cancel()
-
-	ms := esperarNodos(ctx, ln, 3, time.Second, silencio)
-	if len(ms) != 2 {
-		t.Fatalf("se esperaban los 2 que llegaron, hay %d (%s)", len(ms), nombres(ms))
-	}
-	cerrar(ms, time.Second)
-}
-
-func TestEsperarNodosRechazaOtraVersionYLeAvisa(t *testing.T) {
-	ln := escuchar(t)
-	viejo := nodoFalso(t, ln.Addr().String(), "pc-viejo", protocolo.Version+1, false)
-	nodoFalso(t, ln.Addr().String(), "pc-01", protocolo.Version, false)
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-
-	ms := esperarNodos(ctx, ln, 1, time.Second, silencio)
-	if got := nombres(ms); got != "pc-01" {
-		t.Fatalf("nodos = %s", got)
-	}
-	if err := <-viejo; err == nil || !strings.Contains(err.Error(), "versión") {
-		t.Fatalf("el nodo con otra versión tenía que recibir un ERROR que la nombre; recibió %v", err)
-	}
-	cerrar(ms, time.Second)
-}
-
-func TestEsperarNodosUnaReconexionReemplazaALaConexionVieja(t *testing.T) {
-	ln := escuchar(t)
-	primera := nodoFalso(t, ln.Addr().String(), "pc-01", protocolo.Version, false)
-	segunda := nodoFalso(t, ln.Addr().String(), "pc-01", protocolo.Version, false)
-	nodoFalso(t, ln.Addr().String(), "pc-02", protocolo.Version, false)
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-
-	ms := esperarNodos(ctx, ln, 2, time.Second, silencio)
-	if got := nombres(ms); got != "pc-01,pc-02" {
-		t.Fatalf("nodos = %s", got)
-	}
-	cerrar(ms, time.Second)
-	// Una de las dos conexiones de pc-01 se cerró sin FIN; la otra recibió el FIN.
-	a, b := <-primera, <-segunda
-	if (a == nil) == (b == nil) {
-		t.Fatalf("se esperaba un FIN y un cierre; llegaron %v y %v", a, b)
-	}
-}
-
 func TestMedirJuntaLatidosYSacaAlNodoQueNoResponde(t *testing.T) {
 	ln := escuchar(t)
 	nodoFalso(t, ln.Addr().String(), "pc-01", protocolo.Version, false)
@@ -177,21 +100,6 @@ func TestCerrarMandaFinALosSanos(t *testing.T) {
 	cerrar(ms, time.Second)
 	if err := <-fin; err != nil {
 		t.Fatalf("el nodo tenía que recibir FIN; recibió %v", err)
-	}
-}
-
-func TestPercentilPorRangoMasCercano(t *testing.T) {
-	xs := []time.Duration{5, 1, 4, 2, 3, 10, 9, 8, 7, 6}
-	for _, c := range []struct {
-		p    float64
-		want time.Duration
-	}{{50, 5}, {95, 10}, {100, 10}, {10, 1}, {0, 1}} {
-		if got := percentil(xs, c.p); got != c.want {
-			t.Errorf("percentil(%v) = %v, se esperaba %v", c.p, got, c.want)
-		}
-	}
-	if got := percentil(nil, 50); got != 0 {
-		t.Errorf("percentil de nada = %v", got)
 	}
 }
 

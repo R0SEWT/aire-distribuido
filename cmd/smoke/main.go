@@ -28,6 +28,8 @@ import (
 	"os/signal"
 	"text/tabwriter"
 	"time"
+
+	"github.com/R0SEWT/aire-distribuido/cluster"
 )
 
 func main() {
@@ -51,7 +53,7 @@ func main() {
 		lg.Fatalf("no puedo escuchar en %s: %v", *escuchar, err)
 	}
 	lg.Printf("escuchando en %s; los nodos pueden llamar a:", ln.Addr())
-	for _, d := range direccionesLocales(ln.Addr()) {
+	for _, d := range cluster.DireccionesLocales(ln.Addr()) {
 		lg.Printf("    %s", d)
 	}
 	lg.Printf("espero %d nodos durante %v (Ctrl+C empieza con los que hayan llegado)", *nodos, *plazo)
@@ -127,10 +129,10 @@ func armarReporte(miembros []*miembro, barreras []time.Duration, esperados, rond
 	}
 	for _, m := range miembros {
 		n := reporteNodo{
-			Nodo:      m.enlace.Nodo,
-			Direccion: m.direccion,
-			Workers:   m.enlace.Workers,
-			LlegadaS:  m.llegada.Seconds(),
+			Nodo:      m.Enlace.Nodo,
+			Direccion: m.Direccion,
+			Workers:   m.Enlace.Workers,
+			LlegadaS:  m.Llegada.Seconds(),
 			Latido:    estadisticaDe(m.latidos),
 			Muestras:  make([]float64, len(m.latidos)),
 		}
@@ -147,7 +149,7 @@ func armarReporte(miembros []*miembro, barreras []time.Duration, esperados, rond
 }
 
 func estadisticaDe(xs []time.Duration) estadistica {
-	return estadistica{N: len(xs), P50: ms(percentil(xs, 50)), P95: ms(percentil(xs, 95)), Max: ms(percentil(xs, 100))}
+	return estadistica{N: len(xs), P50: ms(cluster.Percentil(xs, 50)), P95: ms(cluster.Percentil(xs, 95)), Max: ms(cluster.Percentil(xs, 100))}
 }
 
 func ms(d time.Duration) float64 { return float64(d.Microseconds()) / 1000 }
@@ -180,28 +182,4 @@ func escribirJSON(ruta string, r reporte) error {
 		return err
 	}
 	return os.WriteFile(ruta, append(b, '\n'), 0o644)
-}
-
-// direccionesLocales dice a qué IP:puerto pueden llamar los nodos, para el
-// coordinador.txt del USB: la de -escuchar si es una IP concreta y, si escucha
-// en todas, cada IPv4 no loopback de esta máquina.
-func direccionesLocales(addr net.Addr) []string {
-	host, puerto, err := net.SplitHostPort(addr.String())
-	if err != nil {
-		return nil
-	}
-	if ip := net.ParseIP(host); ip != nil && !ip.IsUnspecified() {
-		return []string{addr.String()}
-	}
-	ifaces, err := net.InterfaceAddrs()
-	if err != nil {
-		return nil
-	}
-	var out []string
-	for _, a := range ifaces {
-		if ip, ok := a.(*net.IPNet); ok && ip.IP.To4() != nil && !ip.IP.IsLoopback() {
-			out = append(out, net.JoinHostPort(ip.IP.String(), puerto))
-		}
-	}
-	return out
 }
