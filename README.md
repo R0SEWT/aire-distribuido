@@ -269,7 +269,7 @@ bash docs/informe/render.sh
 | `datos/`, `cmd/cargar/` | Parte A: el cargador concurrente. Bloques por bytes, workers, recolector en orden, pivot por estación y z-score por chunk. |
 | `kmeans/`, `cmd/entrenar/`, `cmd/benchmark/` | Parte B: el K-Means secuencial y el paralelo, las semillas, los regímenes frente al ECA, el codo y el benchmark. |
 | `protocolo/` | Los mensajes entre el coordinador y los nodos, su codificación y la barrera de una ronda, con pruebas. |
-| `cmd/nodo/`, `cmd/smoke/`, `lab/` | Smoke test del clúster (PC4): el nodo que llama al coordinador, el coordinador que mide los latidos y el paquete para los Windows del laboratorio. |
+| `cluster/`, `cmd/nodo/`, `cmd/distribuido/`, `cmd/smoke/`, `lab/` | El clúster de la PC4: el nodo que llama al coordinador y calcula su rango, el K-Means distribuido (rangos contiguos, una barrera de red por iteración, fusión en orden de nodo, `reports/kmeans_distribuido.json`), el smoke test de latidos y el paquete para los Windows del laboratorio. |
 | `configs/` | `limpieza.json` (columnas, unidades, centinelas y rangos) y `kmeans.json` (la receta congelada). |
 | `reports/` | Lo que escriben los comandos: conteos, estandarización, modelo, regímenes, benchmarks y auditoría. |
 | `notebooks/` | El laboratorio en Colab: EDA, calibración, auditoría y figuras, procedencia y mapa. |
