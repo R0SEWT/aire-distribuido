@@ -1,0 +1,9 @@
+{
+ "lote": 4,
+ "tasa": 0.001,
+ "decaimiento": 0.0001,
+ "semilla": 0,
+ "ancho": 32,
+ "muestras_val": 32,
+ "amp": true
+}

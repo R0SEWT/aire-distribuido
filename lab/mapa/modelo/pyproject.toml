@@ -1,0 +1,34 @@
+[project]
+name = "mapa-modelo"
+version = "0.1.0"
+description = "Mapa nacional de PM2.5 y PM10: modelos M0, M1 y M2, nodo del protocolo v2, inferencia y agregación por distrito"
+requires-python = "==3.12.*"
+dependencies = [
+    "numpy>=2.1",
+    "torch==2.14.1",
+    "xgboost>=3.0",
+    "pandas>=2.2",
+    "shapely>=2.0",
+]
+
+[project.optional-dependencies]
+# Solo para leer el GeoTIFF de WorldPop en agregar.py.
+geo = ["rasterio>=1.4"]
+
+[dependency-groups]
+dev = ["pytest>=8"]
+
+[tool.uv]
+package = false
+
+[tool.uv.sources]
+torch = [{ index = "pytorch-cpu" }]
+
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
+
+[tool.pytest.ini_options]
+testpaths = ["pruebas"]
+pythonpath = ["."]
