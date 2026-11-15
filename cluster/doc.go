@@ -26,4 +26,21 @@
 //
 // cmd/nodo y cmd/distribuido son los comandos; cmd/smoke usa la misma espera
 // de nodos. La API de la parte C puede usar este paquete tal cual.
+//
+// # Local SGD del mapa nacional (protocolo v2)
+//
+// El coordinador del entrenamiento del mapa
+// (docs/specs/2026-11-14-mapa-nacional-design.md, §5; cmd/mapa-coord) usa las
+// mismas piezas con la versión 2 del protocolo. EsperarNodosVersion junta los
+// nodos que se presentan con un HOLA v2. LeerManifiesto lee manifiesto.json
+// (por HTTP o de una ruta) para sacar los días (los dias/AAAA-MM-DD.npy que
+// lista con su sha256) y su huella. RepartirDias agrupa los días en bloques de 7, los baraja con la
+// semilla y los reparte en ronda, y CargarTarea le manda a cada nodo su TAREA
+// a la vez. SGDLocal corre las rondas: cada una es una RondaLocal (fan-out del
+// PESOS, fan-in de los LOCAL con un plazo común) y Promediar, el promedio de
+// los pesos ponderado por las muestras de cada nodo, acumulado en float64 en
+// orden de nodo y bajado a float32: determinista, como la fusión del K-Means.
+// Los pesos son un vector opaco: el coordinador no sabe de capas. Si un nodo
+// cae, no responde a tiempo o devuelve pesos no finitos, la ronda se aborta
+// con un error que lo nombra; el punto de control es la última ronda completa.
 package cluster
