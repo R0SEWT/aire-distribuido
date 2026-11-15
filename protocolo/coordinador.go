@@ -40,15 +40,22 @@ type Enlace struct {
 	Dec  *Decodificador
 	conn net.Conn
 
-	Nodo    string // del HOLA
-	Workers int    // del HOLA: núcleos que el nodo dice usar
-	Rango   Rango  // del CARGAR que el nodo confirmó con LISTO
+	Nodo    string  // del HOLA
+	Workers int     // del HOLA: núcleos que el nodo dice usar
+	GPU     string  // del HOLA v2: la GPU del nodo ("" si entrena en CPU)
+	VramGB  float64 // del HOLA v2: su memoria en GB
+	Rango   Rango   // del CARGAR que el nodo confirmó con LISTO (v1)
 
-	// Rezagados cuenta los PARCIAL de rondas anteriores que llegaron tarde y se
-	// descartaron. Es una métrica del panel de administración.
+	// Tarea y Muestras son de la TAREA que el nodo confirmó con LISTO (v2): el
+	// id y las horas con etiqueta que tiene en sus días.
+	Tarea    string
+	Muestras int
+
+	// Rezagados cuenta los PARCIAL o LOCAL de rondas anteriores que llegaron
+	// tarde y se descartaron. Es una métrica del panel de administración.
 	Rezagados int
 
-	ultimaIter int // última ronda enviada por esta conexión
+	ultimaIter int // última ronda enviada por esta conexión (ITERAR o PESOS)
 }
 
 // NuevoEnlace envuelve la conexión con un nodo y se hace dueño de ella: la
@@ -85,21 +92,34 @@ func (e *Enlace) fallo(formato string, args ...any) error {
 	return &ErrorNodo{Nodo: e.nombre(), Err: fmt.Errorf(formato, args...)}
 }
 
-// RecibirHola espera el HOLA con el que el nodo abre la sesión y comprueba la
-// versión. Si no coincide, le avisa con un ERROR antes de devolver el error.
+// RecibirHola espera el HOLA con el que el nodo abre la sesión y comprueba que
+// sea de la versión 1, la del K-Means. Si no coincide, le avisa con un ERROR
+// antes de devolver el error.
 func RecibirHola(e *Enlace, limite time.Time) error {
+	return RecibirHolaVersion(e, Version, limite)
+}
+
+// RecibirHolaVersion es RecibirHola para un coordinador que habla la versión
+// version: el del mapa nacional pide Version2. Un coordinador habla una sola
+// versión, porque los nodos de una y otra no entienden los mismos mensajes.
+func RecibirHolaVersion(e *Enlace, version int, limite time.Time) error {
 	m, err := e.esperar(Hola, 0, limite)
 	if err != nil {
 		return e.fallo("esperando HOLA: %w", err)
 	}
-	if m.Version != Version {
-		texto := fmt.Sprintf("versión de protocolo %d, el coordinador habla la %d: actualiza el nodo", m.Version, Version)
+	if m.Version != version {
+		texto := fmt.Sprintf("versión de protocolo %d, el coordinador habla la %d: actualiza el nodo o llama al coordinador de la versión %d",
+			m.Version, version, m.Version)
 		_ = e.enviar(Mensaje{Tipo: Error, Mensaje: texto}, limite)
 		return &ErrorNodo{Nodo: m.Nodo, Err: fmt.Errorf("%w: %s", ErrProtocolo, texto)}
 	}
-	e.Nodo, e.Workers = m.Nodo, m.Workers
+	e.Nodo, e.Workers, e.GPU, e.VramGB = m.Nodo, m.Workers, m.GPU, m.VramGB
 	return nil
 }
+
+// UltimaRonda es el número de la última ronda enviada por esta conexión (un
+// ITERAR o un PESOS). La siguiente tiene que ser mayor.
+func (e *Enlace) UltimaRonda() int { return e.ultimaIter }
 
 // AsignarRango le manda CARGAR con las filas r del gold identificado por
 // huella y espera su LISTO. Comprueba que el nodo cargó exactamente esas filas del mismo
@@ -247,30 +267,43 @@ func Latido(e *Enlace, limite time.Time) (time.Duration, error) {
 	return time.Since(inicio), nil
 }
 
-// esperar lee hasta un mensaje del tipo pedido (si es PARCIAL, de la ronda
-// iter). En el camino descarta los PONG sueltos y los PARCIAL rezagados; un
-// ERROR del nodo o cualquier otra cosa termina la espera con error.
+// esperar lee hasta un mensaje del tipo pedido (si es PARCIAL o LOCAL, de la
+// ronda iter). En el camino descarta los PONG sueltos y los PARCIAL o LOCAL
+// rezagados; un ERROR del nodo o cualquier otra cosa termina la espera con
+// error.
 func (e *Enlace) esperar(tipo Tipo, iter int, limite time.Time) (Mensaje, error) {
 	for {
 		m, err := e.Dec.LeerAntesDe(limite)
 		if err != nil {
 			return Mensaje{}, err
 		}
+		ronda, deRonda := rondaDe(m)
 		switch {
-		case m.Tipo == tipo && (tipo != Parcial || m.Iter == iter):
+		case m.Tipo == tipo && (!deRonda || ronda == iter):
 			return m, nil
 		case m.Tipo == Pong:
 			continue
-		case m.Tipo == Parcial && m.Iter <= e.ultimaIter:
+		case deRonda && ronda <= e.ultimaIter:
 			e.Rezagados++
 			continue
-		case m.Tipo == Parcial:
-			return Mensaje{}, fmt.Errorf("%w: PARCIAL de la ronda %d, que no se envió (la última es la %d)",
-				ErrProtocolo, m.Iter, e.ultimaIter)
+		case deRonda:
+			return Mensaje{}, fmt.Errorf("%w: %s de la ronda %d, que no se envió (la última es la %d)",
+				ErrProtocolo, m.Tipo, ronda, e.ultimaIter)
 		case m.Tipo == Error:
 			return Mensaje{}, fmt.Errorf("%w: %s", ErrInformado, m.Mensaje)
 		default:
 			return Mensaje{}, fmt.Errorf("%w: se esperaba %s y llegó %s", ErrProtocolo, tipo, m.Tipo)
 		}
 	}
+}
+
+// rondaDe dice de qué ronda es una respuesta de ronda (PARCIAL o LOCAL).
+func rondaDe(m Mensaje) (int, bool) {
+	switch m.Tipo {
+	case Parcial:
+		return m.Iter, true
+	case Local:
+		return m.Ronda, true
+	}
+	return 0, false
 }
