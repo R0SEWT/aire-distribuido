@@ -12,10 +12,17 @@ import (
 	"time"
 )
 
-// MaxLinea es el tamaño máximo de un mensaje en bytes. Un PARCIAL con k = 50 y
-// D = 10 ocupa unos 15 KB; un megabyte deja margen de sobra y evita que un par
-// roto o malicioso haga crecer el búfer sin límite.
+// MaxLinea es el tamaño máximo de la línea JSON de un mensaje en bytes. Un
+// PARCIAL con k = 50 y D = 10 ocupa unos 15 KB; un megabyte deja margen de
+// sobra y evita que un par roto o malicioso haga crecer el búfer sin límite.
+// La carga binaria de la v2 no cuenta: tiene su propio tope, MaxCarga.
 const MaxLinea = 1 << 20
+
+// MaxCarga es el tamaño máximo de la carga binaria de un mensaje de la v2. Los
+// pesos de la red del mapa (~8 M de parámetros en float32) ocupan unos 32 MB;
+// 256 MB deja margen para un modelo ocho veces más grande y acota lo que un par
+// roto puede hacer reservar con un solo "bytes".
+const MaxCarga = 256 << 20
 
 var (
 	// ErrPlazoVencido indica que no llegó (o no salió) un mensaje antes del
@@ -44,8 +51,9 @@ func NuevoCodificador(w io.Writer) *Codificador {
 	return c
 }
 
-// Escribir valida m, lo escribe en una línea y vacía el búfer: un mensaje del
-// protocolo tiene que salir ya, porque del otro lado hay una barrera esperándolo.
+// Escribir valida m, lo escribe en una línea (y detrás su carga binaria, si
+// tiene) y vacía el búfer: un mensaje del protocolo tiene que salir ya, porque
+// del otro lado hay una barrera esperándolo.
 func (c *Codificador) Escribir(m Mensaje) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
@@ -103,6 +111,10 @@ func (c *Codificador) escribir(m Mensaje) error {
 		c.err = traducir("escribir "+string(m.Tipo), err)
 		return c.err
 	}
+	if _, err := c.w.Write(m.Carga); err != nil {
+		c.err = traducir("escribir la carga de "+string(m.Tipo), err)
+		return c.err
+	}
 	if err := c.w.Flush(); err != nil {
 		c.err = traducir("escribir "+string(m.Tipo), err)
 		return c.err
@@ -110,20 +122,23 @@ func (c *Codificador) escribir(m Mensaje) error {
 	return nil
 }
 
-// Decodificador lee mensajes, uno por línea. No es seguro para uso concurrente:
-// cada conexión tiene una sola goroutine lectora.
+// Decodificador lee mensajes, uno por línea, cada uno con su carga binaria si
+// la línea trae "bytes". No es seguro para uso concurrente: cada conexión tiene
+// una sola goroutine lectora.
 //
-// Si vence un plazo de LECTURA a mitad de una línea, lo ya leído se guarda y la
-// siguiente lectura continúa desde ahí: un plazo de lectura vencido no
-// desincroniza el flujo, y por eso el coordinador puede seguir leyendo de la
-// conexión de un nodo lento y descartar después su PARCIAL rezagado. Con la
-// escritura no es así: un plazo de escritura que vence a mitad de una línea
-// deja el Codificador roto, y el Enlace cierra la conexión.
+// Si vence un plazo de LECTURA a mitad de una línea o de una carga, lo ya leído
+// se guarda y la siguiente lectura continúa desde ahí: un plazo de lectura
+// vencido no desincroniza el flujo, y por eso el coordinador puede seguir
+// leyendo de la conexión de un nodo lento y descartar después su PARCIAL o su
+// LOCAL rezagado. Con la escritura no es así: un plazo de escritura que vence a
+// mitad de un mensaje deja el Codificador roto, y el Enlace cierra la conexión.
 type Decodificador struct {
 	r         *bufio.Reader
 	plazo     interface{ SetReadDeadline(time.Time) error }
-	pendiente []byte // línea a medio leer cuando venció un plazo
-	err       error  // pegajoso: línea demasiado larga, flujo truncado
+	pendiente []byte   // línea a medio leer cuando venció un plazo
+	cabecera  *Mensaje // mensaje cuya carga se está leyendo
+	leidos    int      // bytes de la carga de cabecera ya leídos
+	err       error    // pegajoso: línea o carga demasiado larga, flujo truncado
 }
 
 // NuevoDecodificador lee de r. Si r tiene SetReadDeadline (un net.Conn),
@@ -165,37 +180,99 @@ func (d *Decodificador) leer() (Mensaje, error) {
 	if d.err != nil {
 		return Mensaje{}, d.err
 	}
+	if d.cabecera == nil {
+		linea, err := d.leerLinea()
+		if err != nil {
+			return Mensaje{}, err
+		}
+		m, err := decodificar(linea)
+		if err != nil {
+			var conCarga struct{ Bytes int }
+			if json.Unmarshal(linea, &conCarga) == nil && conCarga.Bytes > 0 {
+				// La carga de una línea que no se entiende no se sabe saltar con
+				// confianza: el flujo se pierde.
+				d.err = fmt.Errorf("%w (y su carga de %d bytes deja el flujo desincronizado)", err, conCarga.Bytes)
+				return Mensaje{}, d.err
+			}
+			return Mensaje{}, err
+		}
+		if m.Bytes > MaxCarga {
+			// No se puede saltar una carga que no se va a leer: el flujo se pierde.
+			d.err = fmt.Errorf("%w: %s anuncia %d bytes de carga, más que MaxCarga (%d)", ErrMensajeInvalido, m.Tipo, m.Bytes, MaxCarga)
+			return Mensaje{}, d.err
+		}
+		if m.Bytes <= 0 {
+			if err := m.Validar(); err != nil {
+				return Mensaje{}, err
+			}
+			return m, nil
+		}
+		m.Carga = make([]byte, m.Bytes)
+		d.cabecera, d.leidos = &m, 0
+	}
+	return d.leerCarga()
+}
+
+// leerCarga completa la carga de d.cabecera. Si vence un plazo, lo leído queda
+// en d.leidos y la próxima lectura sigue desde ahí.
+func (d *Decodificador) leerCarga() (Mensaje, error) {
+	m := d.cabecera
+	for d.leidos < len(m.Carga) {
+		n, err := d.r.Read(m.Carga[d.leidos:])
+		d.leidos += n
+		switch {
+		case err == nil:
+		case errors.Is(err, io.EOF):
+			d.err = fmt.Errorf("leer %s: el otro extremo cerró a mitad de la carga binaria (llegaron %d de %d bytes): %w",
+				m.Tipo, d.leidos, len(m.Carga), io.ErrUnexpectedEOF)
+			d.cabecera = nil
+			return Mensaje{}, d.err
+		default:
+			return Mensaje{}, traducir("leer la carga de "+string(m.Tipo), err)
+		}
+	}
+	d.cabecera = nil
+	if err := m.Validar(); err != nil {
+		return Mensaje{}, err // la carga se consumió: el flujo sigue sano
+	}
+	return *m, nil
+}
+
+// leerLinea devuelve la línea siguiente, con su '\n'.
+func (d *Decodificador) leerLinea() ([]byte, error) {
 	for {
 		trozo, err := d.r.ReadSlice('\n')
 		d.pendiente = append(d.pendiente, trozo...)
 		if len(d.pendiente) > MaxLinea {
 			d.err = fmt.Errorf("%w: línea de más de %d bytes", ErrMensajeInvalido, MaxLinea)
-			return Mensaje{}, d.err
+			return nil, d.err
 		}
 		switch {
 		case err == nil:
 			linea := d.pendiente
 			d.pendiente = d.pendiente[:0]
-			return decodificar(linea)
+			return linea, nil
 		case errors.Is(err, bufio.ErrBufferFull):
 			continue // la línea es más larga que el búfer de bufio: seguir juntando
 		case errors.Is(err, io.EOF):
 			if len(d.pendiente) > 0 {
 				d.err = fmt.Errorf("leer: el otro extremo cerró a mitad de un mensaje (%d bytes): %w",
 					len(d.pendiente), io.ErrUnexpectedEOF)
-				return Mensaje{}, d.err
+				return nil, d.err
 			}
-			return Mensaje{}, io.EOF
+			return nil, io.EOF
 		default:
 			// Plazo vencido o error de red: lo leído queda en d.pendiente.
-			return Mensaje{}, traducir("leer", err)
+			return nil, traducir("leer", err)
 		}
 	}
 }
 
-// decodificar convierte una línea en un Mensaje. Rechaza campos desconocidos:
-// los dos extremos se compilan del mismo repo, y un campo que el otro no
-// entiende es un desajuste de versiones que conviene ver, no ignorar.
+// decodificar convierte una línea en un Mensaje, todavía sin validar: si trae
+// carga, primero hay que leerla para no desincronizar el flujo. Rechaza campos
+// desconocidos: los dos extremos se escriben contra el mismo protocolo, y un
+// campo que el otro no entiende es un desajuste de versiones que conviene ver,
+// no ignorar.
 func decodificar(linea []byte) (Mensaje, error) {
 	var m Mensaje
 	dec := json.NewDecoder(bytes.NewReader(linea))
@@ -205,9 +282,6 @@ func decodificar(linea []byte) (Mensaje, error) {
 	}
 	if dec.More() {
 		return Mensaje{}, fmt.Errorf("%w: más de un objeto JSON en la línea (%.80q)", ErrMensajeInvalido, linea)
-	}
-	if err := m.Validar(); err != nil {
-		return Mensaje{}, err
 	}
 	return m, nil
 }

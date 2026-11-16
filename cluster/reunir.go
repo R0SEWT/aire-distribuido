@@ -32,14 +32,22 @@ func Enlaces(ms []*Miembro) []*protocolo.Enlace {
 }
 
 // EsperarNodos acepta conexiones en ln hasta juntar n nodos que se presentaron
-// con un HOLA válido, o hasta que se cancela ctx (plazo vencido o Ctrl+C). Cada
-// conexión tiene plazoHola para presentarse. Si un nodo con el mismo nombre
-// vuelve a llamar, la conexión nueva reemplaza a la vieja.
+// con un HOLA válido de la versión 1 (la del K-Means), o hasta que se cancela
+// ctx (plazo vencido o Ctrl+C). Cada conexión tiene plazoHola para
+// presentarse. Si un nodo con el mismo nombre vuelve a llamar, la conexión
+// nueva reemplaza a la vieja.
 //
 // No cierra ln, pero deja de aceptar al volver: después, quien llama lo cierra.
 // Devuelve los nodos ordenados por nombre: es el orden de los rangos y el de la
 // fusión.
 func EsperarNodos(ctx context.Context, ln net.Listener, n int, plazoHola time.Duration, lg *log.Logger) []*Miembro {
+	return EsperarNodosVersion(ctx, ln, n, protocolo.Version, plazoHola, lg)
+}
+
+// EsperarNodosVersion es EsperarNodos para un coordinador que habla la versión
+// version del protocolo (cmd/mapa-coord pide protocolo.Version2): un nodo que
+// se presenta con otra recibe un ERROR que lo dice y no entra.
+func EsperarNodosVersion(ctx context.Context, ln net.Listener, n, version int, plazoHola time.Duration, lg *log.Logger) []*Miembro {
 	inicio := time.Now()
 	// hecho avisa a las goroutines de saludo que ya nadie recibe: la que termina
 	// después cierra su conexión en vez de quedarse bloqueada en llegan.
@@ -61,7 +69,7 @@ func EsperarNodos(ctx context.Context, ln net.Listener, n int, plazoHola time.Du
 			}
 			go func() {
 				e := protocolo.NuevoEnlace(conn)
-				if err := protocolo.RecibirHola(e, time.Now().Add(plazoHola)); err != nil {
+				if err := protocolo.RecibirHolaVersion(e, version, time.Now().Add(plazoHola)); err != nil {
 					lg.Printf("rechazado %s: %v", conn.RemoteAddr(), err)
 					e.Cerrar()
 					return
@@ -85,7 +93,11 @@ func EsperarNodos(ctx context.Context, ln net.Listener, n int, plazoHola time.Du
 				viejo.Enlace.Cerrar()
 			}
 			porNombre[m.Enlace.Nodo] = m
-			lg.Printf("[%d/%d] %s desde %s (%d workers)", len(porNombre), n, m.Enlace.Nodo, m.Direccion, m.Enlace.Workers)
+			gpu := ""
+			if m.Enlace.GPU != "" {
+				gpu = fmt.Sprintf(", GPU %s de %.0f GB", m.Enlace.GPU, m.Enlace.VramGB)
+			}
+			lg.Printf("[%d/%d] %s desde %s (%d workers%s)", len(porNombre), n, m.Enlace.Nodo, m.Direccion, m.Enlace.Workers, gpu)
 		case <-ctx.Done():
 			lg.Printf("dejo de esperar con %d de %d nodos: %v", len(porNombre), n, context.Cause(ctx))
 			n = len(porNombre)
