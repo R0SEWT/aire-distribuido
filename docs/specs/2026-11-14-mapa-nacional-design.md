@@ -14,7 +14,7 @@ estaciones como verdad. Cruzado con la población, responde la pregunta de impac
 
 > **¿Cuántas personas respiraron aire sobre el ECA, cuántos días al año y dónde, incluso donde no hay estación?**
 
-Es también la carga que justifica el clúster: unos 32 GB de entrada, una red convolucional de ~8 M de parámetros
+Es también la carga que justifica el clúster: unos 32 GB de entrada, una red convolucional de 2 a 8 M de parámetros (según su ancho, §4)
 y el entrenamiento repartido en las GPUs del laboratorio (T1000 u RTX A1000, 8 GB).
 
 **Lugar en el proyecto.** El sistema del curso sigue en Go. El entrenamiento y la inferencia en GPU son PyTorch
@@ -105,7 +105,7 @@ contaminante; las celdas sin verdad no aportan.
 |---|---|---|
 | M0 CAMS crudo | PM2.5 y PM10 de CAMS interpolados a la celda | La línea base: ¿cuánto se equivoca el modelo físico en el Perú? |
 | M1 Tabular | XGBoost (GPU) por celda-hora con los mismos canales en t, medias de 6 y 24 h y los estáticos | El método habitual en la literatura de *downscaling* de PM; si la red no le gana, se dice |
-| M2 Red espacial | U-Net 2D de 3 niveles (32-64-128-256 canales), GroupNorm (no BatchNorm: el promedio entre nodos no tiene estadísticas que sincronizar), ~8 M de parámetros | Usa el contexto espacial y temporal; es la carga del clúster |
+| M2 Red espacial | U-Net 2D de 3 niveles con ancho configurable (`ancho` en `hiper.json`): 32-64-128-256 canales son **2.0 M de parámetros** (8.2 MB); 64-128-256-512 son **8.0 M** (31.9 MB), la que se corrió en el laboratorio. GroupNorm (no BatchNorm: el promedio entre nodos no tiene estadísticas que sincronizar) | Usa el contexto espacial y temporal; es la carga del clúster |
 
 **Validación**: **5 particiones agrupadas por estación** (ninguna estación aparece en entrenamiento y validación a
 la vez), las mismas para los tres modelos. Métricas en µg/m³ y en `log1p`: RMSE, sesgo, R², y la detección de
@@ -119,9 +119,9 @@ con 22 estaciones, el promedio esconde mucho.
 Medido el 14/11 (`mlpbench`, PR futura): sincronizar el gradiente en cada lote por 1 GbE cuesta ~0.25 s por paso
 con 20 nodos y un modelo de 34 mil parámetros en JSON, y un PC entrena solo más rápido. Con ~8 M de parámetros es
 peor. Entonces **cada nodo entrena H pasos con su parte de los datos y el coordinador promedia los pesos**
-(local SGD / FedAvg). Con 8 M de parámetros en `float32` son 32 MB por nodo; 20 nodos suben y bajan ~1.3 GB por
-sincronización, ~12 s por el cable de la laptop **[estimación]**; con una sincronización cada ~5 min de cómputo,
-~4 % de sobrecosto. Se mide con H = 50, 200 y 1 000.
+(local SGD / FedAvg). Con 8 M de parámetros en `float32` son 32 MB por nodo; 20 nodos suben y bajan 1.28 GB por
+sincronización por el cable del coordinador, de 6 a 10 s **[medido]**. Con H = 2 000 pasos (~3 min de cómputo) el
+sobrecosto queda en 3.4 % (§5.6).
 
 ### 5.2 Reparto de los datos
 
@@ -171,6 +171,31 @@ pesos de la última ronda completa quedan escritos (punto de control).
 Las 5 particiones de validación, las semillas y los hiperparámetros son trabajos independientes: con 20 GPUs, 5
 trabajos de 4 nodos a la vez. **[abierta]** En esta versión, un coordinador por trabajo en puertos distintos; el
 reparto de nodos entre trabajos desde un solo coordinador queda para después.
+
+### 5.6 Medido en el laboratorio D56 (14/11)
+
+Datos sintéticos de tamaño nacional (192 × 136 celdas, 13 canales, 322 canales de entrada), lote 4, fp16 automático,
+NVIDIA RTX A1000 de 8 GB en cada PC, 1 GbE, coordinador en la laptop. Cifras por ronda: medianas sin la primera
+ronda cuando hay más de una. La referencia de una GPU es 1 / 21.6 ms = 46 muestras/s.
+
+| Nodos | Red | H | ms por muestra | Red por ronda | Muestras/s del clúster | Frente a una GPU | Fuente |
+|---|---|---|---|---|---|---|---|
+| 2 | 2.0 M | 100 | 11.8 | 0.26 s (5 %) | 159 | — | consola de la sesión **[sin archivo: el JSON se perdió]** |
+| 2 | 8.0 M | 100 | 21.7 | 1.0 s (10 %) | 82 | 1.8× | ídem |
+| 20 | 8.0 M | 200 | 21.6 | 10.4 s (37 %) | 572 | 12.4× | `reports/mapa/lab_d56_20gpus_h200_a64_sintetico.json` |
+| 20 | 8.0 M | 2 000 | 21.3 | 6.2 s (3.4 %) | 872 | **18.8×** | `reports/mapa/lab_d56_20gpus_h2000_a64_sintetico.json` |
+
+- **Las 20 GPUs rinden igual**: con H = 200, el cómputo por ronda va de 17.17 s (D56-10) a 17.42 s (D56-11), 1.4 % de
+  diferencia. Con rangos iguales nadie frena la ronda.
+- **El cuello de botella es el cable del coordinador**: 20 copias de 32 MB de subida y de bajada por un solo enlace de
+  1 GbE (~122 MB/s). Se baja subiendo H con el número de nodos; los pesos en `float16` lo partirían a la mitad.
+- **Proyección para los datos reales** (~41 mil horas con etiqueta, 100 épocas) **[estimación]**: ~25 h en una GPU,
+  ~1.5 h en 20 con H = 2 000.
+- **Sin la laptop**: el 14/11 a las 20:26 la D56-14 quedó como coordinador (`coord-mapa.bat`: `mapa-coord.exe` y un
+  servidor HTTP con los datos en ese PC), que sí acepta conexiones entrantes. Corrió 200 rondas de H = 2 000 con los 20
+  nodos desde los pesos de la ronda 4 de la corrida anterior; la ronda 1 tardó 178.3 s. Su resultado queda en esa PC
+  (`%LOCALAPPDATA%\aire-gpu\coord\`) **[pendiente de recoger]**.
+- Logs del coordinador, del servidor HTTP y fotos: `docs/informe/capturas/mapa/`.
 
 ## 6. Inferencia nacional
 
