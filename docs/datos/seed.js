@@ -7,7 +7,15 @@ const fs = require("fs");
 
 const databaseName = process.env.MONGO_INITDB_DATABASE || "aire_distribuido";
 const estacionesPath = process.env.ESTACIONES_CSV || "/seed/estaciones_ficha.csv";
+const initializationMarker =
+  process.env.INITIALIZATION_MARKER || "/data/db/.pc4-seed-completo";
 const database = db.getSiblingDB(databaseName);
+
+// El healthcheck no debe anunciar readiness mientras corre el seed. D2 asume
+// ejecución controlada en desarrollo local: no se lanzan dos seeds a la vez.
+if (fs.existsSync(initializationMarker)) {
+  fs.unlinkSync(initializationMarker);
+}
 
 const colecciones = [
   "modelos",
@@ -164,9 +172,24 @@ if (operaciones.length === 0) {
 
 database.estaciones.bulkWrite(operaciones, { ordered: true });
 
+const idsFuente = [...ids];
+const estacionesDeLaFuente = database.estaciones.countDocuments({
+  _id: { $in: idsFuente },
+});
+if (estacionesDeLaFuente !== idsFuente.length) {
+  throw new Error(
+    `se cargaron ${estacionesDeLaFuente} de ${idsFuente.length} estaciones de la ficha`,
+  );
+}
+
+// Señal local del volumen, escrita únicamente después de crear índices y
+// comprobar toda la carga. No agrega una sexta colección ni cambia el contrato.
+fs.writeFileSync(initializationMarker, "ok\n", { encoding: "utf8" });
+
 printjson({
   database: databaseName,
   estaciones_en_fuente: operaciones.length,
+  estaciones_de_la_fuente_en_mongo: estacionesDeLaFuente,
   estaciones_en_mongo: database.estaciones.countDocuments({}),
   colecciones: database.getCollectionNames().sort(),
 });
