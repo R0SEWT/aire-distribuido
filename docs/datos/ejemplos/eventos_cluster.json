@@ -1,0 +1,7 @@
+{
+  "_id": "sintetico-evento-alta-nodo-01",
+  "ts": "2026-11-16T21:59:30-05:00",
+  "tipo": "alta",
+  "nodo": "nodo-sintetico-01",
+  "detalle": "Nodo de ejemplo disponible para un entrenamiento sintético; no corresponde a una ejecución observada."
+}
