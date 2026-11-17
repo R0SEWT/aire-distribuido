@@ -2,6 +2,15 @@
 
 # Recomendaciones
 
+## Para el cargador: validar el tamaño de bloque
+
+Antes de adoptar {{< meta cifras.benchmark_cargador_windows.bloque_comparado >}} como valor por
+defecto, compararlo con {{< meta cifras.benchmark_cargador_windows.bloque_referencia >}} usando
+{{< meta cifras.benchmark_cargador_windows.w_ocho >}} y
+{{< meta cifras.benchmark_cargador_windows.w_doce >}} workers y en Linux. Variar el orden de los
+tamaños con `scripts/benchmark-bloques.py --tamanos`, registrar las condiciones de energía y hacer
+una corrida de calentamiento fuera de la serie medida. Conservar todas las repeticiones medidas.
+
 ## Para la PC4: el clúster
 
 1. **Montar el clúster sobre lo que ya está probado.** La barrera de una ronda a través de la red

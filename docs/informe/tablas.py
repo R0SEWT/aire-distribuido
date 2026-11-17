@@ -18,7 +18,7 @@ generado/cifras.yml). Los esquemas son los de Go, que son la fuente de verdad:
     limpieza.json            cmd/cargar             datos/reporte.go       (ReporteLimpieza)
     estandarizacion.json     cmd/cargar             datos/estandarizar.go  (Estandarizacion)
     benchmark_cargador.json  cmd/cargar -bench      datos/medicion.go      (Benchmark)
-    benchmark_cargador_windows.json  agrupación de cuatro Benchmark de Windows, con rutas normalizadas
+    benchmark_cargador_windows.json  scripts/benchmark-bloques.py --agrupar, cuatro Benchmark de Windows
     kmeans.json              cmd/entrenar           cmd/entrenar/main.go
     regimenes.json           cmd/entrenar           kmeans/regimenes.go    (Regimen)
     codo.json                cmd/entrenar -codo     kmeans/codo.go
@@ -740,6 +740,7 @@ class Informe:
         # el máximo entre configuraciones ruidosas sesga el speedup hacia arriba.
         fijo = max(med, key=lambda m: m["workers"])
         self.guardar_cifras("benchmark_cargador", d, {
+            "dispersion_max": decimal(max(max(m["tiempos_s"]) / min(m["tiempos_s"]) for m in med), 1),
             "w": entero(fijo["workers"]),
             "speedup": decimal(punto(fijo), 2),
             "speedup_ic": ic(fijo),
@@ -794,7 +795,16 @@ class Informe:
         }
         mediciones_workers = por_workers(d["workers"], {1, 2, 4, 8, 12}, "la prueba de workers")
         referencia = self.datos.get("benchmark_cargador.json")
+        contexto = d["workers"]
         for corrida in [*tamanos.values(), d["workers"]]:
+            self.revisar_entrada(o, corrida.get("entrada"))
+            for campo in ("go", "cpus", "chunk", "plataforma"):
+                self.comprobar(o, corrida.get(campo) is not None and corrida[campo] == contexto.get(campo),
+                               f"{campo} no coincide entre las corridas de Windows")
+            for campo in ("commit", "arbol_sucio"):
+                valor = corrida.get("metadatos", {}).get(campo)
+                self.comprobar(o, valor is not None and valor == contexto.get("metadatos", {}).get(campo),
+                               f"metadatos.{campo} no coincide entre las corridas de Windows")
             self.comprobar(o, bool(corrida["identicos"]), "las salidas difieren entre workers")
             if referencia is not None:
                 self.comprobar(o, corrida["sha256"] == referencia["sha256"],
@@ -845,7 +855,28 @@ class Informe:
         un_worker = mediciones_workers[1]
         ocho = mediciones_workers[8]
         doce = mediciones_workers[12]
+        meta = contexto["metadatos"]
         self.guardar_cifras("benchmark_cargador_windows", d, {
+            "fecha": lista([fecha(r["metadatos"]["momento"]) for r in [*tamanos.values(), contexto]], str),
+            "commit": meta["commit"][:7],
+            "arbol_sucio": "sí" if meta["arbol_sucio"] else "no",
+            "estado_arbol": "con el árbol modificado por el overlay" if meta["arbol_sucio"] else "con el árbol limpio",
+            "chunk": entero(contexto["chunk"]),
+            "plataforma": contexto["plataforma"],
+            "tamanos": lista([b // 2**20 for b in tamanos]) + " MiB",
+            "workers_bloques": lista([w for mediciones in por_tamano.values() for w in mediciones]),
+            "workers": lista(mediciones_workers),
+            "bloque_workers": entero(contexto["bloque_bytes"] // 2**20) + " MiB",
+            "bloque_comparado": entero(tamanos[16 * 2**20]["bloque_bytes"] // 2**20) + " MiB",
+            "bloque_referencia": entero(tamanos[64 * 2**20]["bloque_bytes"] // 2**20) + " MiB",
+            "w_bloques": entero(bloque_16["workers"]),
+            "w_base": entero(un_worker["workers"]),
+            "w_ocho": entero(ocho["workers"]),
+            "w_doce": entero(doce["workers"]),
+            "series_por_tamano": entero(len(d["tamanos"]) / len(tamanos)),
+            "orden_tamanos": ", ".join(str(r["bloque_bytes"] // 2**20) for r in d["tamanos"]) + " MiB",
+            "dispersion_max": decimal(max(max(m["tiempos_s"]) / min(m["tiempos_s"])
+                                          for m in contexto["mediciones"]), 1),
             "filas": entero(d["workers"]["filas_largas"]),
             "cpus": entero(d["workers"]["cpus"]),
             "repeticiones": entero(d["workers"]["repeticiones"]),
@@ -855,8 +886,9 @@ class Informe:
             ),
             "mediana_un_worker": decimal(un_worker["mediana_s"], 3),
             "mediana_ocho": decimal(ocho["mediana_s"], 3),
-            "diferencia_ms": entero(round(1000 * abs(doce["mediana_s"] - ocho["mediana_s"]))),
+            "diferencia_ms": decimal(1000 * abs(doce["mediana_s"] - ocho["mediana_s"]), 1),
             "w_resumen": entero(fijo["workers"]),
+            "speedup_medianas": decimal(fijo["speedup"], 2),
             "speedup": decimal(fijo["speedup_ic"]["punto"], 2),
             "speedup_ic": f"[{decimal(fijo['speedup_ic']['inferior'], 2)}; {decimal(fijo['speedup_ic']['superior'], 2)}]",
             "eficiencia": pct(fijo["speedup_ic"]["punto"] / fijo["workers"], 0),

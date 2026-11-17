@@ -1,2 +1,6 @@
 # Beads exports its issue log here; union-merge so parallel branches don't conflict.
 .beads/issues.jsonl merge=union
+
+# Las huellas de configuración se registran byte a byte en los reportes de Go.
+# Conservar LF evita que un checkout de Windows cambie esas huellas.
+configs/*.json text eol=lf

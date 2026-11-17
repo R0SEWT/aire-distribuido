@@ -31,10 +31,12 @@
    por más workers que se agreguen en esta máquina [@amdahl1967; @karpflatt1990]. El parseo escala;
    lo que no escala es el orden, que es el precio del determinismo.
 
-   En Windows, 16 MiB redujo la mediana un
-   {{< meta cifras.benchmark_cargador_windows.reduccion_bloque >}} frente a 64 MiB con cuatro
-   workers y salidas idénticas (@tbl-bench-win-bloques). Adoptarlo como valor por defecto
-   requiere validar la mejora con ocho y doce workers y en Linux.
+   En una serie por tamaño en un equipo Windows, con los tamaños en orden ascendente,
+   {{< meta cifras.benchmark_cargador_windows.bloque_comparado >}} redujo la mediana un
+   {{< meta cifras.benchmark_cargador_windows.reduccion_bloque >}} frente a
+   {{< meta cifras.benchmark_cargador_windows.bloque_referencia >}} con
+   {{< meta cifras.benchmark_cargador_windows.w_bloques >}} workers y salidas idénticas
+   (@tbl-bench-win-bloques). Es un indicio limitado a esa serie y ese equipo.
 
 3. **El K-Means del Trabajo Parcial se portó sin perder su contrato, y es reproducible bit a bit.**
    Conserva el contrato numérico del TP y sus pruebas; con el chunk fijo, la reducción en orden de
