@@ -8,7 +8,7 @@ RAIZ = Path(__file__).resolve().parents[1]
 
 
 def leer(ruta):
-    return json.loads((RAIZ / ruta).read_text())
+    return json.loads((RAIZ / ruta).read_text(encoding="utf-8"))
 
 
 def main():
@@ -45,7 +45,7 @@ def main():
               go["features"] == estandar["features"] == receta["features"])
 
     # El EDA publica los conteos sin redondear de F1-M0: contraste por clave, no por posición.
-    texto = (RAIZ / "reports/eda_criba.md").read_text()
+    texto = (RAIZ / "reports/eda_criba.md").read_text(encoding="utf-8")
     bloque = texto.split("### Filas completas por estación (regla 8)", 1)[1].split("### Huecos", 1)[0]
     eda = {}
     for linea in bloque.splitlines():
@@ -65,7 +65,7 @@ def main():
             comprobar(f"{nombre}: F1-M0 del EDA = gold", eda.get(nombre) == e["completas_gold"])
 
     salida = ["# Revisión de limpieza y completitud", "",
-              "Generado con `python3 docs/verificar-limpieza.py`. Compara salidas guardadas; no vuelve a ejecutar el bronze.", "",
+              "Generado con `python3 scripts/verificar_limpieza.py`. Compara salidas guardadas; no vuelve a ejecutar el bronze.", "",
               "Fuentes: `reports/limpieza.json`, `reports/eda_limpieza_prototipo.json`, `reports/eda_criba.md`,",
               "`reports/estandarizacion.json`, `configs/kmeans.json` y la copia de limpieza del informe.", "",
               f"SHA-256 del bronze declarado por Go: `{go['sha256']}`. No se recalculó sobre el CSV.", "",
@@ -84,7 +84,7 @@ def main():
         salida.append(f"| {nombre} | {silver} | {gold} | {horas} | {100*gold/silver:.1f} | {100*gold/horas:.1f} |")
     salida += ["", "Las estaciones sin silver no tienen denominador temporal calculable en este reporte.",
                "Una coincidencia entre reportes guardados demuestra consistencia, no una nueva auditoría independiente del CSV.", ""]
-    (RAIZ / "reports/revision_limpieza.md").write_text("\n".join(salida))
+    (RAIZ / "reports/revision_limpieza.md").write_text("\n".join(salida), encoding="utf-8")
     errores = sum(not ok for _, ok in controles)
     print(f"{len(controles)} controles; {errores} diferencias. reports/revision_limpieza.md")
     return bool(errores)

@@ -4,14 +4,13 @@ Evidencias de la ejecución de los notebooks 01 y 03 en el Mac de Dayana sobre e
 de OEFA. Los resultados originales del equipo siguen en el directorio padre.
 
 - `ejecucion.json`: entorno, rama, commit base, hashes de entradas y fuentes, y resultado de la comparación.
-- `limpieza.json` y `estandarizacion.json`: nueva corrida del cargador Go.
-- `eda_criba.md`: nueva ejecución del notebook 01, con matriz de completitud por estación y parámetro.
-- `auditoria.md` y `auditoria.json`: nueva ejecución del notebook 03 sobre las salidas de revisión.
+- `auditoria.json`: nueva ejecución del notebook 03 sobre las salidas de revisión.
 
-El estado del árbol tenía cambios de documentación y del notebook 01; los hashes de las
-fuentes registran exactamente qué se ejecutó. Los centroides iniciales son los publicados
-en el proyecto. Los benchmarks son referencias históricas: no se midieron nuevamente.
+Los hashes de las fuentes corresponden a los archivos de esta PR. Los centroides iniciales
+son los publicados en el proyecto. Los benchmarks son referencias históricas: no se midieron
+nuevamente. El notebook 03 no cotejó el SHA del silver con el benchmark porque la ruta de entrada
+era distinta; la comparación directa de los SHA de silver y gold está en `ejecucion.json`.
 
 Para repetir la ejecución, ver [`docs/limpieza.md`](../../docs/limpieza.md).
 Las copias ejecutadas de los notebooks, con figuras y logs, están localmente en
-`data/bronze/revision-dayana/ejecutados/`; los CSV e intermedios no se versionan.
+`data/revision/ejecutados/`; los CSV e intermedios no se versionan.

@@ -266,11 +266,12 @@ modelo de este informe: {{< meta cifras.auditoria.misma_receta >}}.
 
 {{< include generado/tablas/auditoria.md >}}
 
-La reproducción de Dayana volvió a ejecutar el cargador y el entrenamiento de Go, y los
-notebooks de EDA y auditoría, sobre el CSV completo con el mismo SHA-256. Los conteos de
-limpieza, las estaciones y los hashes del silver y del gold coinciden con la referencia;
-la auditoría completó {{< meta cifras.auditoria.chequeos >}} comprobaciones, todas correctas,
-sin diferencias, avisos ni omisiones. Se conservaron los centroides iniciales publicados
-para comparar los mismos arranques. Los benchmarks se usaron como referencia histórica,
-sin volver a medirlos. El entorno, los hashes y las salidas de esta revisión están en
-`reports/revision_dayana/`; el procedimiento para repetirla está en `docs/limpieza.md`.
+La reproducción en {{< meta cifras.revision.plataforma >}} con Go
+{{< meta cifras.revision.go >}} volvió a ejecutar el cargador, el entrenamiento y los notebooks
+de EDA y auditoría sobre el CSV completo. Obtuvo los mismos SHA-256 de silver y gold que la
+referencia: {{< meta cifras.revision.mismos_hashes >}}. La auditoría completó
+{{< meta cifras.revision.ok >}} de {{< meta cifras.revision.chequeos >}} comprobaciones con estado
+OK. Se conservaron los centroides iniciales publicados para comparar los mismos arranques y los
+benchmarks se usaron como referencia histórica, sin volver a medirlos. El entorno, los hashes y
+las salidas de esta revisión están en `reports/revision_dayana/`; el procedimiento para repetirla
+está en `docs/limpieza.md`.

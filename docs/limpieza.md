@@ -11,7 +11,7 @@ Los resultados originales se conservan; la ejecución nueva usa una raíz de dat
 Desde la raíz del repositorio, con Python 3 y sin paquetes adicionales:
 
 ```bash
-python3 docs/verificar-limpieza.py
+python3 scripts/verificar_limpieza.py
 ```
 
 El comando genera [los controles y la tabla por estación](../reports/revision_limpieza.md)
@@ -26,8 +26,10 @@ Se necesita Go, `uv` y el CSV original. Desde la raíz del repositorio, ajustar 
 descarga local. Estas salidas no se versionan y no pisan las capas ni los reportes originales:
 
 ```bash
+(
+set -euo pipefail
 CSV="/ruta/al/1a_Vigilancia y Seguimiento ambiental en la calidad del aire.csv"
-R="$PWD/data/bronze/revision-dayana"
+R="$PWD/data/revision"
 mkdir -p "$R/data/silver" "$R/data/gold" "$R/reports"
 cp -f reports/centroides_iniciales.json reports/benchmark_cargador.json reports/benchmark_kmeans.json "$R/reports/"
 go run ./cmd/cargar -entrada "$CSV" \
@@ -36,7 +38,8 @@ go run ./cmd/entrenar -gold "$R/data/gold/oefa_features.csv" \
   -estandarizacion "$R/reports/estandarizacion.json" -salida "$R/reports/kmeans.json" \
   -asignaciones "$R/data/gold/asignaciones.csv" -regimenes "$R/reports/regimenes.json" \
   -centroides "$R/reports/centroides_iniciales.json" -codo 2:10 -codo-salida "$R/reports/codo.json"
-uv run docs/ejecutar-revision.py --bronze "$CSV" --raiz "$R"
+uv run scripts/ejecutar_revision.py --bronze "$CSV" --raiz "$R"
+)
 ```
 
 El ejecutor usa los notebooks 01 y 03 del checkout actual. Guarda copias ejecutadas con
@@ -72,10 +75,8 @@ cobertura de un año completo ni la exposición anual de la población.
 
 ## Estaciones fuera del modelo
 
-Las estaciones sin filas silver quedan fuera antes de seleccionar features. Los reportes
-del EDA describen periodos no horarios o bloques en cero; el JSON agregado no permite
-atribuir una regla de descarte particular a cada estación. Para confirmarla se necesitaría
-reprocesar el bronze con un desglose de reglas por estación.
+Las ocho estaciones sin filas silver son puntos de muestreo manual con promedios de 24 horas,
+como documenta [la procedencia del EDA, §3.6](eda-procedencia.md#36-tipología-observada-en-el-csv).
 
 Entre las estaciones con silver y sin gold, la matriz de completitud del EDA distingue:
 

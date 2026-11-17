@@ -36,7 +36,10 @@ if [ ! -f "$equipo" ]; then
   problemas+=("no hay equipo.local.yml con los códigos reales (ver equipo.ejemplo.yml)")
   equipo=equipo.ejemplo.yml
 fi
-mapfile -t codigos < <(sed -n 's/^[[:space:]]\{1,\}codigo:[[:space:]]*\(U[0-9]\{9\}\)[[:space:]]*\(#.*\)\{0,1\}$/\1/p' "$equipo")
+codigos=()
+while IFS= read -r codigo || [ -n "$codigo" ]; do
+  codigos+=("$codigo")
+done < <(sed -n 's/^[[:space:]]\{1,\}codigo:[[:space:]]*\(U[0-9]\{9\}\)[[:space:]]*\(#.*\)\{0,1\}$/\1/p' "$equipo")
 [ "${#codigos[@]}" -eq 3 ] || echo "aviso: $equipo tiene ${#codigos[@]} códigos" >&2
 
 # 1. Ninguna cifra de prueba: tablas.py --final falla si queda un PLACEHOLDER, una entrada de

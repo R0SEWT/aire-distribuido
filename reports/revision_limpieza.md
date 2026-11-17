@@ -1,6 +1,6 @@
 # Revisión de limpieza y completitud
 
-Generado con `python3 docs/verificar-limpieza.py`. Compara salidas guardadas; no vuelve a ejecutar el bronze.
+Generado con `python3 scripts/verificar_limpieza.py`. Compara salidas guardadas; no vuelve a ejecutar el bronze.
 
 Fuentes: `reports/limpieza.json`, `reports/eda_limpieza_prototipo.json`, `reports/eda_criba.md`,
 `reports/estandarizacion.json`, `configs/kmeans.json` y la copia de limpieza del informe.

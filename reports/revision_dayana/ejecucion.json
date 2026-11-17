@@ -21,6 +21,6 @@
     "notebooks/aire_lab.py": "2d060a7ab1a03373773e5713a68b72e8fd0d5bda412e78b108a8ef45af7a81b4",
     "notebooks/01_eda_criba.ipynb": "83f17786522d4b2bccdc0e554c65065c4ede51d7fa88e09d4a5f2dc5e49bae66",
     "notebooks/03_auditoria_figuras.ipynb": "119907e2bce6fd340bde42ba683fda26b1868434b0bcb22e6a2673cdd7d251d8",
-    "docs/ejecutar-revision.py": "c9a33b06570877239fa46d6cd9b90c4331e5374e0c463f7eda3ee8db597c409b"
+    "scripts/ejecutar_revision.py": "3ef4e1b9e1ea27ae6ca37801a576d0ffbf00b935e28740a480229766c7cbe4e3"
   }
 }

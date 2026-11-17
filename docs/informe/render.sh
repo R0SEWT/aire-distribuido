@@ -8,12 +8,13 @@
 #
 # Pasos:
 #   1. tablas.py: generado/*.json → generado/tablas/*.md y generado/cifras.yml
-#   2. generado/local/ (no versionado): equipo.yml (de equipo.local.yml o, si no existe, de
+#   2. verificar_limpieza.py: valida y regenera reports/revision_limpieza.md
+#   3. generado/local/ (no versionado): equipo.yml (de equipo.local.yml o, si no existe, de
 #      equipo.ejemplo.yml), _participacion.md (de participacion.local.md o de la plantilla
 #      _participacion.md) e historial.md (generar-historial.sh o, si falla, el de ejemplo)
-#   3. quarto render informe.qmd -M codigo:<código> por cada integrante de `equipo`
-#   4. quarto render participacion.qmd
-#   5. w:updateFields en cada .docx: Word pregunta al abrir si actualiza los campos (el índice)
+#   4. quarto render informe.qmd -M codigo:<código> por cada integrante de `equipo`
+#   5. quarto render participacion.qmd
+#   6. w:updateFields en cada .docx: Word pregunta al abrir si actualiza los campos (el índice)
 set -euo pipefail
 cd "$(dirname "$0")"
 
@@ -28,6 +29,9 @@ else
   echo "error: tablas.py necesita pandas (pip install pandas, o instalar uv)" >&2
   exit 1
 fi
+
+echo "→ verificación de limpieza"
+python3 ../../scripts/verificar_limpieza.py
 
 echo "→ generado/local/"
 mkdir -p generado/local
@@ -50,7 +54,7 @@ fi
 # Los códigos salen de `equipo` (líneas indentadas), la misma fuente de la carátula.
 # Bash 3.2 (macOS) no incluye mapfile.
 equipo=()
-while IFS= read -r codigo; do
+while IFS= read -r codigo || [ -n "$codigo" ]; do
   equipo+=("$codigo")
 done < <(sed -n 's/^[[:space:]]\{1,\}codigo:[[:space:]]*\(U[0-9]\{9\}\)[[:space:]]*\(#.*\)\{0,1\}$/\1/p' generado/local/equipo.yml)
 [ "${#equipo[@]}" -gt 0 ] || { echo "error: no hay códigos en generado/local/equipo.yml" >&2; exit 1; }
