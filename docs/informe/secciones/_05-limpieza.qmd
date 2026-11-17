@@ -139,7 +139,7 @@ estación.
 {{< include generado/tablas/limpieza_estaciones.md >}}
 
 **Cómo leer la completitud.** El «% gold» de la tabla divide las filas completas entre las
-filas anchas existentes de cada estación. La figura de completitud del EDA usa otro
+filas anchas existentes de cada estación. La @fig-completitud usa otro
 denominador: todas las horas entre la primera y la última fila de la estación, incluidos
 ambos extremos. Una hora sin fila silver no entra en el primer denominador, pero sí en el
 segundo. Los huecos entre campañas también están dentro de ese rango: ninguno de los dos
