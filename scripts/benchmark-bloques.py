@@ -5,12 +5,10 @@
 
 import argparse
 import hashlib
-import html
 import json
 import math
 import os
 import subprocess
-import sys
 from pathlib import Path
 
 
@@ -107,18 +105,14 @@ def resumir(ruta, seccion):
     return "\n".join(lineas)
 
 
-def guardar_html(ruta, comando, resumen):
-    ruta.parent.mkdir(parents=True, exist_ok=True)
-    ruta.write_text(
-        '<!doctype html><html lang="es"><meta charset="utf-8"><title>Resumen del benchmark de Windows</title>'
-        '<style>body{margin:32px;font:16px system-ui;color:#17232f;background:#fff}'
-        'h1{font-size:24px}pre{font:15px/1.65 Consolas,monospace;white-space:pre-wrap}'
-        'code{font:14px/1.6 Consolas,monospace;overflow-wrap:anywhere}'
-        'section{padding:18px;background:#eef3f7;border-left:4px solid #397ca5}</style>'
-        '<h1>Resumen reproducible · benchmark de Windows</h1>'
-        '<p>Vista HTML generada desde los JSON originales. No representa la terminal de la corrida.</p>'
-        '<section><b>Comando de generación</b><br><code>' + html.escape(comando) + '</code></section>'
-        '<pre>' + html.escape(resumen) + '</pre></html>', encoding="utf-8")
+def ejecutar_cargador(cargador, argumentos, registro, timeout):
+    """Separa el ejecutable local validado de sus argumentos, sin usar un shell."""
+    # executable fija el archivo que se ejecuta; «cargar» es solo la etiqueta argv[0].
+    # Los espacios, comillas y metacaracteres de las rutas siguen siendo datos.
+    return subprocess.run(
+        ["cargar", *argumentos], executable=str(cargador),
+        stdout=registro, stderr=subprocess.STDOUT, shell=False, timeout=timeout,
+    )
 
 
 def main():
@@ -132,7 +126,6 @@ def main():
     modo.add_argument("--agrupar", type=Path, nargs=4, metavar="JSON", help="Agrupa tres pruebas de bloques y una de workers")
     parser.add_argument("--destino", type=Path, help="JSON de salida para --agrupar")
     parser.add_argument("--seccion", choices=("bloques", "workers", "todo"), default="todo")
-    parser.add_argument("--html", type=Path, help="Guarda también la vista HTML de --resumir")
     parser.add_argument("--tamanos", type=tamanos_en_orden, default=[16, 64, 128],
                         help="Tamaños en orden de ejecución, separados por comas (16,64,128)")
     parser.add_argument("--piloto", action="store_true", help="Usa KiB para una muestra")
@@ -146,8 +139,6 @@ def main():
             if args.resumir:
                 resumen = resumir(args.resumir, args.seccion)
                 print(resumen)
-                if args.html:
-                    guardar_html(args.html, subprocess.list2cmdline(["python", *sys.argv]), resumen)
             else:
                 if not args.destino:
                     parser.error("--agrupar necesita --destino")
@@ -160,8 +151,8 @@ def main():
         return
     if any(v is None for v in (args.cargador, args.entrada, args.salida)):
         parser.error("una nueva medición necesita cargador, entrada y salida")
-    if args.html or args.destino:
-        parser.error("--html requiere --resumir; --destino requiere --agrupar")
+    if args.destino:
+        parser.error("--destino requiere --agrupar")
     if not math.isfinite(args.timeout) or args.timeout <= 0:
         parser.error("--timeout tiene que ser un número positivo y finito")
 
@@ -181,8 +172,8 @@ def main():
         corrida.mkdir()
         silver = corrida / "silver.csv"
         gold = corrida / "gold.csv"
-        comando = [
-            str(args.cargador), "-entrada", str(args.entrada),
+        argumentos = [
+            "-entrada", str(args.entrada),
             "-bloque", f"{tamano}{sufijo}", "-workers", "1,4",
             "-bench", str(REPETICIONES), "-silver", str(silver),
             "-gold", str(gold), "-reports", str(corrida),
@@ -190,12 +181,10 @@ def main():
         registro = corrida / "terminal.txt"
         print(f"Ejecutando {tamano} {unidad} con 1 y 4 workers", flush=True)
         with registro.open("w", encoding="utf-8") as log:
-            log.write(f"Argumentos: {json.dumps(comando, ensure_ascii=False)}\n\n")
+            log.write(f"Argumentos: {json.dumps([str(args.cargador), *argumentos], ensure_ascii=False)}\n\n")
             log.flush()
             try:
-                # argv separado, sin shell.
-                resultado = subprocess.run(comando, stdout=log, stderr=subprocess.STDOUT,
-                                           shell=False, timeout=args.timeout)
+                resultado = ejecutar_cargador(args.cargador, argumentos, log, args.timeout)
             except subprocess.TimeoutExpired:
                 raise SystemExit(
                     f"La corrida de {tamano} {unidad} superó {args.timeout:g} s. Revisa {registro}"

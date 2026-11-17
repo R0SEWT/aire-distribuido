@@ -8,6 +8,7 @@ from contextlib import redirect_stdout
 import importlib.util
 import io
 import json
+import sys
 import tempfile
 import unittest
 from unittest.mock import patch
@@ -125,6 +126,8 @@ class BenchmarkWindows(unittest.TestCase):
         bloques = []
 
         def cargador_simulado(comando, **opciones):
+            self.assertEqual(comando[0], "cargar")
+            self.assertEqual(opciones["executable"], argv[1])
             bloques.append(comando[comando.index("-bloque") + 1])
             self.assertIs(opciones["shell"], False)
             self.assertEqual(opciones["timeout"], 600)
@@ -137,7 +140,7 @@ class BenchmarkWindows(unittest.TestCase):
             (corrida / "benchmark_cargador.json").write_text(json.dumps(informe), encoding="utf-8")
             return benchmark.subprocess.CompletedProcess(comando, 0)
 
-        with patch.object(benchmark.sys, "argv", argv), \
+        with patch.object(sys, "argv", argv), \
                 patch.object(benchmark.subprocess, "run", side_effect=cargador_simulado), \
                 redirect_stdout(io.StringIO()):
             benchmark.main()
@@ -148,13 +151,41 @@ class BenchmarkWindows(unittest.TestCase):
 
     def test_cli_timeout_no_publica_resumen_incompleto(self):
         _, salida, argv = self.preparar_cli()
-        with patch.object(benchmark.sys, "argv", argv), \
+        with patch.object(sys, "argv", argv), \
                 patch.object(benchmark.subprocess, "run", side_effect=benchmark.subprocess.TimeoutExpired("cargar", 600)), \
                 redirect_stdout(io.StringIO()):
             with self.assertRaisesRegex(SystemExit, "superó 600 s.*terminal.txt"):
                 benchmark.main()
         self.assertFalse((salida / "resumen.md").exists())
         self.assertTrue((salida / "128KiB/terminal.txt").exists())
+
+    def test_ejecucion_real_con_espacios_comillas_y_metacaracteres(self):
+        programa = self.ruta / "mostrar argumentos.py"
+        programa.write_text("import json, sys\nprint(json.dumps(sys.argv[1:]))\n", encoding="utf-8")
+        marcador = self.ruta / "no-debe-crearse.txt"
+        argumentos = [
+            "ruta con espacios.csv",
+            'comillas "dobles" y simples: \'',
+            f'& echo NO_DEBE_EJECUTARSE > "{marcador}"',
+            "punto;y-coma | tubería $(texto) %VARIABLE%",
+        ]
+        registro = self.ruta / "argumentos.txt"
+        with registro.open("w", encoding="utf-8") as log:
+            resultado = benchmark.ejecutar_cargador(
+                Path(sys.executable), [str(programa), *argumentos], log, 10,
+            )
+        salida = registro.read_text(encoding="utf-8")
+        self.assertEqual(resultado.returncode, 0, salida)
+        self.assertEqual(json.loads(salida), argumentos)
+        self.assertFalse(marcador.exists())
+
+    def test_rechaza_scripts_bat_y_cmd_como_ejecutable(self):
+        for extension in (".bat", ".cmd"):
+            with self.subTest(extension=extension):
+                archivo = self.ruta / f"cargador{extension}"
+                archivo.write_text("echo prueba", encoding="utf-8")
+                with self.assertRaises(benchmark.argparse.ArgumentTypeError):
+                    benchmark.binario_local(str(archivo))
 
 
 if __name__ == "__main__":
