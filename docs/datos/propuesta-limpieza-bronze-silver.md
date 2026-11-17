@@ -2,7 +2,7 @@
 
 ## Contexto y objetivo
 
-La PC3 transforma el CSV largo de vigilancia de calidad del aire de OEFA en
+La PC3 transforma el CSV largo de vigilancia de calidad del aire de OEFA en el artefacto local
 `data/silver/oefa_ancho.csv`: una tabla horaria ancha con una fila por estación y
 `fecha_hora`, una columna por parámetro y la marca `hora_inferida`. Para la PC4 también se necesita un
 catálogo de estaciones confiable, porque MongoDB expondrá la estación y su ubicación aunque una estación
@@ -16,11 +16,27 @@ faltantes de estación y ubicación. No cambia el pipeline de PC3 ni redefine Si
 - **Silver → Gold** selecciona las filas completas para las features de la receta y las estandariza. Que
   una observación no llegue a Gold no implica borrar su estación ni sus otras mediciones de Silver.
 
-La revisión se basa en `datos/`, `cmd/cargar`, `configs/limpieza.json`, los notebooks de PC3,
-`reports/limpieza.json`, `reports/estaciones_ficha.csv`, el Silver conservado bajo
-`data/bronze/revision-dayana/data/silver/` y las muestras de Bronze en `data/sample/`. El CSV Bronze
-completo de 1,3 GB no está en el árbol de trabajo; los conteos globales citados son los que dejó su corrida
-auditada en `reports/limpieza.json`, no una nueva ejecución realizada para esta propuesta.
+La revisión se basa en artefactos versionados: `datos/`, `cmd/cargar`, `configs/limpieza.json`, los
+notebooks de PC3, `reports/limpieza.json`, `reports/estaciones_ficha.csv` y las muestras pequeñas de
+Bronze en `data/sample/`. Para comprobar ejemplos fila a fila también se consultaron copias **locales no
+versionadas** de Silver y Gold bajo `data/bronze/revision-dayana/data/`; esa ruta no existe necesariamente
+en otro clon. El CSV Bronze completo de 1,3 GB tampoco está versionado. Los conteos globales citados son
+los que dejó su corrida auditada en `reports/limpieza.json`, no una nueva ejecución realizada para esta
+propuesta.
+
+El procedimiento reproducible es descargar el CSV de OEFA enlazado en `data/README.md`, guardarlo como
+`data/bronze/oefa.csv` y ejecutar:
+
+```bash
+go run ./cmd/cargar -entrada data/bronze/oefa.csv
+go run ./cmd/entrenar
+```
+
+`cmd/cargar` genera `data/silver/oefa_ancho.csv`, `data/gold/oefa_features.csv` y los reportes de limpieza
+y estandarización; `cmd/entrenar` genera `data/gold/asignaciones.csv` y los reportes del modelo. Todos los
+CSV bajo `data/`, salvo las muestras, están ignorados por Git y no deben añadirse al PR. La propuesta es
+complementaria al [diseño vigente de PC4 del PR #51](https://github.com/R0SEWT/aire-distribuido/blob/feature/spec-pc4/docs/specs/2026-11-14-pc4-design.md),
+sin modificarlo desde esta rama.
 
 ## Diagnóstico del tratamiento actual
 

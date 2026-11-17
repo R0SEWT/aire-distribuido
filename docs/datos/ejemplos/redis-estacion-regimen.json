@@ -2,5 +2,6 @@
   "regimen": 0,
   "excede_eca": false,
   "alerta": false,
+  "fecha_hora": "2021-12-10T01:00:00-05:00",
   "ts": "2026-11-16T22:05:00-05:00"
 }
