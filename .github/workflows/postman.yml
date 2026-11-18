@@ -1,0 +1,37 @@
+name: Postman
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  simulado:
+    name: simulado
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '26'
+          package-manager-cache: false
+
+      - name: Instalar Newman
+        run: npm install --global --ignore-scripts --no-audit --no-fund newman@6.2.3
+
+      - name: Comprobar sintaxis
+        run: |
+          node --check scripts/api-simulada-j2.cjs
+          node --check scripts/probar-postman-simulado.cjs
+
+      - name: Validar coleccion y controles con API simulada
+        run: |
+          NODE_PATH="$(npm root -g)" node scripts/probar-postman-simulado.cjs \
+            --informe "$RUNNER_TEMP/j2-simulado.json"

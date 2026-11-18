@@ -1,0 +1,113 @@
+{
+  "salud": {
+    "api": "ok",
+    "mongo": "ok",
+    "redis": "ok",
+    "nodos_en_pool": 4,
+    "modelo_activo": "sembrado-kmeans-json"
+  },
+  "prediccion": {
+    "estacion": "CA-AYAS-01",
+    "regimen": 1,
+    "excede_eca": true,
+    "alerta": true,
+    "pm2_5_medio_regimen": 65.1,
+    "pm10_medio_regimen": 186.7,
+    "modelo_id": "sembrado-kmeans-json",
+    "ms": 0.04
+  },
+  "regimen": {
+    "regimen": 1,
+    "excede_eca": true,
+    "alerta": true,
+    "ts": "2026-11-14T15:00:00-05:00"
+  },
+  "modelo": {
+    "id": "sembrado-kmeans-json",
+    "k": 3,
+    "features": [
+      "pm2_5",
+      "pm10"
+    ],
+    "iteraciones": 44,
+    "inercia": 50950.37,
+    "regimenes": [
+      {
+        "regimen": 0,
+        "pm2_5_medio": 9.0,
+        "pm10_medio": 17.6,
+        "excede_eca": false,
+        "tamano": 48161
+      },
+      {
+        "regimen": 1,
+        "pm2_5_medio": 65.1,
+        "pm10_medio": 186.7,
+        "excede_eca": true,
+        "tamano": 1536
+      },
+      {
+        "regimen": 2,
+        "pm2_5_medio": 24.4,
+        "pm10_medio": 58.2,
+        "excede_eca": false,
+        "tamano": 16176
+      }
+    ]
+  },
+  "nodos": [
+    {
+      "nombre": "H45-022",
+      "direccion": "10.11.38.69:56455",
+      "workers": 24,
+      "latencia_ms": 0.49,
+      "libre": true
+    }
+  ],
+  "metricas": {
+    "endpoints": {
+      "POST /api/predicciones": {
+        "pedidos": 12000,
+        "p50_ms": 0.3,
+        "p95_ms": 0.9,
+        "p99_ms": 2.1
+      }
+    },
+    "nodos_en_pool": 4,
+    "ultimo_entrenamiento": "e-20261119-1530"
+  },
+  "entrenamiento": {
+    "id": "e-20261119-1530",
+    "estado": "terminado",
+    "nodos": [
+      "H45-022",
+      "H45-023",
+      "H45-024",
+      "H45-032"
+    ],
+    "replicas": 1,
+    "iteraciones": 44,
+    "paro": "tolerancia",
+    "dif_secuencial": 8.9e-16,
+    "ms_total": 31.2,
+    "rondas": [
+      {
+        "iter": 1,
+        "inercia": 73075.5,
+        "ms_ronda": 0.61,
+        "ms_fusion": 0.003,
+        "ms_por_nodo": {
+          "H45-022": 0.11,
+          "H45-023": 0.12,
+          "H45-024": 0.11,
+          "H45-032": 0.13
+        }
+      }
+    ]
+  },
+  "_procedencia": {
+    "contrato": "PR #55, 96afa6f",
+    "sha256": "8ca7fc5598a36a1f714df5c8d1175e2e5e0632b07536ac450b4cb4eb9e4258b3",
+    "uso": "Ejemplos SIMULADOS, no mediciones ni implementación de K-Means."
+  }
+}

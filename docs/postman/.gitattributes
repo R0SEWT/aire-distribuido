@@ -1,0 +1,4 @@
+# Los resumenes guardan el SHA-256 de la coleccion: conservar LF en Windows.
+*.json text eol=lf
+# Evidencia original aportada por Julio: conservar sus bytes y finales de linea.
+evidencias/newman-simulado-terminal.txt -text

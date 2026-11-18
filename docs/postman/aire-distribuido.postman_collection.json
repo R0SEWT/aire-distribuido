@@ -1,0 +1,2568 @@
+{
+  "info": {
+    "name": "aire-distribuido - J2 HTTP",
+    "description": "Contrato J1 (PR #55, 96afa6f). SIMULADO no acredita API real ni latencia. Ver README y precondiciones de cada carpeta.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Base HTTP",
+      "item": [
+        {
+          "name": "Salud publica",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/api/salud",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const modo = pm.variables.get('modo');",
+                  "const simulado = pm.response.headers.get('X-Aire-Simulado') === 'true';",
+                  "const etiqueta = simulado ? '[SIMULADO] ' : '[REAL] ';",
+                  "pm.test(etiqueta + 'origen del entorno', () => {",
+                  "  pm.expect(['simulado', 'real']).to.include(modo);",
+                  "  pm.expect(simulado).to.eql(modo === 'simulado');",
+                  "});",
+                  "pm.test(etiqueta + 'codigo HTTP 200', () => pm.response.to.have.status(200));",
+                  "let datos;",
+                  "pm.test(etiqueta + 'contenido JSON', () => {",
+                  "  pm.expect(pm.response.headers.get('Content-Type')).to.match(/^application\\/json\\b/i);",
+                  "  datos = pm.response.json();",
+                  "});",
+                  "if (datos !== undefined) {",
+                  "  const esquema = {\"type\":\"object\",\"required\":[\"api\",\"mongo\",\"redis\",\"nodos_en_pool\",\"modelo_activo\"],\"properties\":{\"api\":{\"type\":\"string\"},\"mongo\":{\"type\":\"string\"},\"redis\":{\"type\":\"string\"},\"nodos_en_pool\":{\"type\":\"integer\",\"minimum\":0},\"modelo_activo\":{\"type\":[\"string\",\"null\"]}}};",
+                  "  pm.test(etiqueta + 'esquema de respuesta', () => pm.expect(datos).to.have.jsonSchema(esquema));",
+                  "}",
+                  "const ambito = pm.variables.get('latencia_ambito');",
+                  "const limite = Number(pm.variables.get('limite_ms'));",
+                  "pm.test(etiqueta + 'configuracion de latencia', () => {",
+                  "  pm.expect(['todos', 'prediccion']).to.include(ambito);",
+                  "  pm.expect(Number.isFinite(limite) && limite > 0).to.eql(true);",
+                  "});",
+                  "if (simulado) {",
+                  "  pm.test.skip('[SIMULADO] objetivo de latencia pendiente de API real', () => {});",
+                  "} else if (ambito === 'todos' || pm.request.url.getPath() === '/api/predicciones') {",
+                  "  pm.test('[REAL] respuesta HTTP menor que ' + limite + ' ms', () => pm.expect(pm.response.responseTime).to.be.below(limite));",
+                  "} else {",
+                  "  pm.test.skip('[REAL] endpoint fuera del alcance de latencia configurado', () => {});",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Credenciales incorrectas",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/api/auth/token",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"usuario\": \"no-existe\", \"clave\": \"incorrecta\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const modo = pm.variables.get('modo');",
+                  "const simulado = pm.response.headers.get('X-Aire-Simulado') === 'true';",
+                  "const etiqueta = simulado ? '[SIMULADO] ' : '[REAL] ';",
+                  "pm.test(etiqueta + 'origen del entorno', () => {",
+                  "  pm.expect(['simulado', 'real']).to.include(modo);",
+                  "  pm.expect(simulado).to.eql(modo === 'simulado');",
+                  "});",
+                  "pm.test(etiqueta + 'codigo HTTP 401', () => pm.response.to.have.status(401));",
+                  "let datos;",
+                  "pm.test(etiqueta + 'contenido JSON', () => {",
+                  "  pm.expect(pm.response.headers.get('Content-Type')).to.match(/^application\\/json\\b/i);",
+                  "  datos = pm.response.json();",
+                  "});",
+                  "if (datos !== undefined) {",
+                  "  const esquema = {\"type\":\"object\",\"required\":[\"error\"],\"properties\":{\"error\":{\"type\":\"string\",\"minLength\":1}}};",
+                  "  pm.test(etiqueta + 'esquema de respuesta', () => pm.expect(datos).to.have.jsonSchema(esquema));",
+                  "}",
+                  "const ambito = pm.variables.get('latencia_ambito');",
+                  "const limite = Number(pm.variables.get('limite_ms'));",
+                  "pm.test(etiqueta + 'configuracion de latencia', () => {",
+                  "  pm.expect(['todos', 'prediccion']).to.include(ambito);",
+                  "  pm.expect(Number.isFinite(limite) && limite > 0).to.eql(true);",
+                  "});",
+                  "if (simulado) {",
+                  "  pm.test.skip('[SIMULADO] objetivo de latencia pendiente de API real', () => {});",
+                  "} else if (ambito === 'todos' || pm.request.url.getPath() === '/api/predicciones') {",
+                  "  pm.test('[REAL] respuesta HTTP menor que ' + limite + ' ms', () => pm.expect(pm.response.responseTime).to.be.below(limite));",
+                  "} else {",
+                  "  pm.test.skip('[REAL] endpoint fuera del alcance de latencia configurado', () => {});",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Base - Token usuario",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/api/auth/token",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const usuario = pm.variables.get('usuario_usuario');",
+                  "const clave = pm.variables.get('usuario_clave');",
+                  "if (typeof usuario !== 'string' || !usuario || typeof clave !== 'string' || !clave) {",
+                  "  throw new Error('Configurar usuario y clave como texto en el entorno local');",
+                  "}",
+                  "pm.request.body.update(JSON.stringify({ usuario, clave }));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const modo = pm.variables.get('modo');",
+                  "const simulado = pm.response.headers.get('X-Aire-Simulado') === 'true';",
+                  "const etiqueta = simulado ? '[SIMULADO] ' : '[REAL] ';",
+                  "pm.test(etiqueta + 'origen del entorno', () => {",
+                  "  pm.expect(['simulado', 'real']).to.include(modo);",
+                  "  pm.expect(simulado).to.eql(modo === 'simulado');",
+                  "});",
+                  "pm.test(etiqueta + 'codigo HTTP 200', () => pm.response.to.have.status(200));",
+                  "let datos;",
+                  "pm.test(etiqueta + 'contenido JSON', () => {",
+                  "  pm.expect(pm.response.headers.get('Content-Type')).to.match(/^application\\/json\\b/i);",
+                  "  datos = pm.response.json();",
+                  "});",
+                  "if (datos !== undefined) {",
+                  "  const esquema = {\"type\":\"object\",\"required\":[\"token\",\"rol\",\"expira\"],\"properties\":{\"token\":{\"type\":\"string\",\"minLength\":1},\"rol\":{\"type\":\"string\",\"enum\":[\"usuario\",\"admin\"]},\"expira\":{\"type\":\"string\",\"format\":\"date-time\"}}};",
+                  "  pm.test(etiqueta + 'esquema de respuesta', () => pm.expect(datos).to.have.jsonSchema(esquema));",
+                  "  pm.test(etiqueta + 'rol usuario', () => pm.expect(datos.rol).to.eql('usuario'));",
+                  "  if (pm.response.code === 200 && typeof datos.token === 'string') pm.variables.set('token_usuario', datos.token);",
+                  "}",
+                  "const ambito = pm.variables.get('latencia_ambito');",
+                  "const limite = Number(pm.variables.get('limite_ms'));",
+                  "pm.test(etiqueta + 'configuracion de latencia', () => {",
+                  "  pm.expect(['todos', 'prediccion']).to.include(ambito);",
+                  "  pm.expect(Number.isFinite(limite) && limite > 0).to.eql(true);",
+                  "});",
+                  "if (simulado) {",
+                  "  pm.test.skip('[SIMULADO] objetivo de latencia pendiente de API real', () => {});",
+                  "} else if (ambito === 'todos' || pm.request.url.getPath() === '/api/predicciones') {",
+                  "  pm.test('[REAL] respuesta HTTP menor que ' + limite + ' ms', () => pm.expect(pm.response.responseTime).to.be.below(limite));",
+                  "} else {",
+                  "  pm.test.skip('[REAL] endpoint fuera del alcance de latencia configurado', () => {});",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Base - Token admin",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/api/auth/token",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const usuario = pm.variables.get('admin_usuario');",
+                  "const clave = pm.variables.get('admin_clave');",
+                  "if (typeof usuario !== 'string' || !usuario || typeof clave !== 'string' || !clave) {",
+                  "  throw new Error('Configurar usuario y clave como texto en el entorno local');",
+                  "}",
+                  "pm.request.body.update(JSON.stringify({ usuario, clave }));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const modo = pm.variables.get('modo');",
+                  "const simulado = pm.response.headers.get('X-Aire-Simulado') === 'true';",
+                  "const etiqueta = simulado ? '[SIMULADO] ' : '[REAL] ';",
+                  "pm.test(etiqueta + 'origen del entorno', () => {",
+                  "  pm.expect(['simulado', 'real']).to.include(modo);",
+                  "  pm.expect(simulado).to.eql(modo === 'simulado');",
+                  "});",
+                  "pm.test(etiqueta + 'codigo HTTP 200', () => pm.response.to.have.status(200));",
+                  "let datos;",
+                  "pm.test(etiqueta + 'contenido JSON', () => {",
+                  "  pm.expect(pm.response.headers.get('Content-Type')).to.match(/^application\\/json\\b/i);",
+                  "  datos = pm.response.json();",
+                  "});",
+                  "if (datos !== undefined) {",
+                  "  const esquema = {\"type\":\"object\",\"required\":[\"token\",\"rol\",\"expira\"],\"properties\":{\"token\":{\"type\":\"string\",\"minLength\":1},\"rol\":{\"type\":\"string\",\"enum\":[\"usuario\",\"admin\"]},\"expira\":{\"type\":\"string\",\"format\":\"date-time\"}}};",
+                  "  pm.test(etiqueta + 'esquema de respuesta', () => pm.expect(datos).to.have.jsonSchema(esquema));",
+                  "  pm.test(etiqueta + 'rol admin', () => pm.expect(datos.rol).to.eql('admin'));",
+                  "  if (pm.response.code === 200 && typeof datos.token === 'string') pm.variables.set('token_admin', datos.token);",
+                  "}",
+                  "const ambito = pm.variables.get('latencia_ambito');",
+                  "const limite = Number(pm.variables.get('limite_ms'));",
+                  "pm.test(etiqueta + 'configuracion de latencia', () => {",
+                  "  pm.expect(['todos', 'prediccion']).to.include(ambito);",
+                  "  pm.expect(Number.isFinite(limite) && limite > 0).to.eql(true);",
+                  "});",
+                  "if (simulado) {",
+                  "  pm.test.skip('[SIMULADO] objetivo de latencia pendiente de API real', () => {});",
+                  "} else if (ambito === 'todos' || pm.request.url.getPath() === '/api/predicciones') {",
+                  "  pm.test('[REAL] respuesta HTTP menor que ' + limite + ' ms', () => pm.expect(pm.response.responseTime).to.be.below(limite));",
+                  "} else {",
+                  "  pm.test.skip('[REAL] endpoint fuera del alcance de latencia configurado', () => {});",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Prediccion sin token",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/api/predicciones",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"estacion\": \"{{estacion}}\", \"fecha_hora\": \"2026-11-14T15:00:00-05:00\", \"pm2_5\": 70.2, \"pm10\": 190.5}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const modo = pm.variables.get('modo');",
+                  "const simulado = pm.response.headers.get('X-Aire-Simulado') === 'true';",
+                  "const etiqueta = simulado ? '[SIMULADO] ' : '[REAL] ';",
+                  "pm.test(etiqueta + 'origen del entorno', () => {",
+                  "  pm.expect(['simulado', 'real']).to.include(modo);",
+                  "  pm.expect(simulado).to.eql(modo === 'simulado');",
+                  "});",
+                  "pm.test(etiqueta + 'codigo HTTP 401', () => pm.response.to.have.status(401));",
+                  "let datos;",
+                  "pm.test(etiqueta + 'contenido JSON', () => {",
+                  "  pm.expect(pm.response.headers.get('Content-Type')).to.match(/^application\\/json\\b/i);",
+                  "  datos = pm.response.json();",
+                  "});",
+                  "if (datos !== undefined) {",
+                  "  const esquema = {\"type\":\"object\",\"required\":[\"error\"],\"properties\":{\"error\":{\"type\":\"string\",\"minLength\":1}}};",
+                  "  pm.test(etiqueta + 'esquema de respuesta', () => pm.expect(datos).to.have.jsonSchema(esquema));",
+                  "}",
+                  "const ambito = pm.variables.get('latencia_ambito');",
+                  "const limite = Number(pm.variables.get('limite_ms'));",
+                  "pm.test(etiqueta + 'configuracion de latencia', () => {",
+                  "  pm.expect(['todos', 'prediccion']).to.include(ambito);",
+                  "  pm.expect(Number.isFinite(limite) && limite > 0).to.eql(true);",
+                  "});",
+                  "if (simulado) {",
+                  "  pm.test.skip('[SIMULADO] objetivo de latencia pendiente de API real', () => {});",
+                  "} else if (ambito === 'todos' || pm.request.url.getPath() === '/api/predicciones') {",
+                  "  pm.test('[REAL] respuesta HTTP menor que ' + limite + ' ms', () => pm.expect(pm.response.responseTime).to.be.below(limite));",
+                  "} else {",
+                  "  pm.test.skip('[REAL] endpoint fuera del alcance de latencia configurado', () => {});",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Prediccion con token invalido",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/api/predicciones",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "simulado-invalido",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"estacion\": \"{{estacion}}\", \"fecha_hora\": \"2026-11-14T15:00:00-05:00\", \"pm2_5\": 70.2, \"pm10\": 190.5}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const modo = pm.variables.get('modo');",
+                  "const simulado = pm.response.headers.get('X-Aire-Simulado') === 'true';",
+                  "const etiqueta = simulado ? '[SIMULADO] ' : '[REAL] ';",
+                  "pm.test(etiqueta + 'origen del entorno', () => {",
+                  "  pm.expect(['simulado', 'real']).to.include(modo);",
+                  "  pm.expect(simulado).to.eql(modo === 'simulado');",
+                  "});",
+                  "pm.test(etiqueta + 'codigo HTTP 401', () => pm.response.to.have.status(401));",
+                  "let datos;",
+                  "pm.test(etiqueta + 'contenido JSON', () => {",
+                  "  pm.expect(pm.response.headers.get('Content-Type')).to.match(/^application\\/json\\b/i);",
+                  "  datos = pm.response.json();",
+                  "});",
+                  "if (datos !== undefined) {",
+                  "  const esquema = {\"type\":\"object\",\"required\":[\"error\"],\"properties\":{\"error\":{\"type\":\"string\",\"minLength\":1}}};",
+                  "  pm.test(etiqueta + 'esquema de respuesta', () => pm.expect(datos).to.have.jsonSchema(esquema));",
+                  "}",
+                  "const ambito = pm.variables.get('latencia_ambito');",
+                  "const limite = Number(pm.variables.get('limite_ms'));",
+                  "pm.test(etiqueta + 'configuracion de latencia', () => {",
+                  "  pm.expect(['todos', 'prediccion']).to.include(ambito);",
+                  "  pm.expect(Number.isFinite(limite) && limite > 0).to.eql(true);",
+                  "});",
+                  "if (simulado) {",
+                  "  pm.test.skip('[SIMULADO] objetivo de latencia pendiente de API real', () => {});",
+                  "} else if (ambito === 'todos' || pm.request.url.getPath() === '/api/predicciones') {",
+                  "  pm.test('[REAL] respuesta HTTP menor que ' + limite + ' ms', () => pm.expect(pm.response.responseTime).to.be.below(limite));",
+                  "} else {",
+                  "  pm.test.skip('[REAL] endpoint fuera del alcance de latencia configurado', () => {});",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Prediccion valida",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/api/predicciones",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_usuario}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"estacion\": \"{{estacion}}\", \"fecha_hora\": \"2026-11-14T15:00:00-05:00\", \"pm2_5\": 70.2, \"pm10\": 190.5}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const modo = pm.variables.get('modo');",
+                  "const simulado = pm.response.headers.get('X-Aire-Simulado') === 'true';",
+                  "const etiqueta = simulado ? '[SIMULADO] ' : '[REAL] ';",
+                  "pm.test(etiqueta + 'origen del entorno', () => {",
+                  "  pm.expect(['simulado', 'real']).to.include(modo);",
+                  "  pm.expect(simulado).to.eql(modo === 'simulado');",
+                  "});",
+                  "pm.test(etiqueta + 'codigo HTTP 200', () => pm.response.to.have.status(200));",
+                  "let datos;",
+                  "pm.test(etiqueta + 'contenido JSON', () => {",
+                  "  pm.expect(pm.response.headers.get('Content-Type')).to.match(/^application\\/json\\b/i);",
+                  "  datos = pm.response.json();",
+                  "});",
+                  "if (datos !== undefined) {",
+                  "  const esquema = {\"type\":\"object\",\"required\":[\"estacion\",\"regimen\",\"excede_eca\",\"alerta\",\"pm2_5_medio_regimen\",\"pm10_medio_regimen\",\"modelo_id\",\"ms\"],\"properties\":{\"estacion\":{\"type\":\"string\",\"minLength\":1},\"regimen\":{\"type\":\"integer\",\"minimum\":0},\"excede_eca\":{\"type\":\"boolean\"},\"alerta\":{\"type\":\"boolean\"},\"pm2_5_medio_regimen\":{\"type\":\"number\",\"minimum\":0,\"description\":\"Media horaria del régimen en µg/m³\"},\"pm10_medio_regimen\":{\"type\":\"number\",\"minimum\":0,\"description\":\"Media horaria del régimen en µg/m³\"},\"modelo_id\":{\"type\":\"string\",\"minLength\":1},\"ms\":{\"type\":\"number\",\"minimum\":0,\"description\":\"Tiempo interno de predicción en milisegundos\"}}};",
+                  "  pm.test(etiqueta + 'esquema de respuesta', () => pm.expect(datos).to.have.jsonSchema(esquema));",
+                  "  pm.test(etiqueta + 'estacion de la lectura', () => pm.expect(datos.estacion).to.eql(pm.variables.get('estacion')));",
+                  "}",
+                  "const ambito = pm.variables.get('latencia_ambito');",
+                  "const limite = Number(pm.variables.get('limite_ms'));",
+                  "pm.test(etiqueta + 'configuracion de latencia', () => {",
+                  "  pm.expect(['todos', 'prediccion']).to.include(ambito);",
+                  "  pm.expect(Number.isFinite(limite) && limite > 0).to.eql(true);",
+                  "});",
+                  "if (simulado) {",
+                  "  pm.test.skip('[SIMULADO] objetivo de latencia pendiente de API real', () => {});",
+                  "} else if (ambito === 'todos' || pm.request.url.getPath() === '/api/predicciones') {",
+                  "  pm.test('[REAL] respuesta HTTP menor que ' + limite + ' ms', () => pm.expect(pm.response.responseTime).to.be.below(limite));",
+                  "} else {",
+                  "  pm.test.skip('[REAL] endpoint fuera del alcance de latencia configurado', () => {});",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "PM2.5 negativa",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/api/predicciones",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_usuario}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"estacion\": \"{{estacion}}\", \"fecha_hora\": \"2026-11-14T15:00:00-05:00\", \"pm2_5\": -1, \"pm10\": 190.5}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const modo = pm.variables.get('modo');",
+                  "const simulado = pm.response.headers.get('X-Aire-Simulado') === 'true';",
+                  "const etiqueta = simulado ? '[SIMULADO] ' : '[REAL] ';",
+                  "pm.test(etiqueta + 'origen del entorno', () => {",
+                  "  pm.expect(['simulado', 'real']).to.include(modo);",
+                  "  pm.expect(simulado).to.eql(modo === 'simulado');",
+                  "});",
+                  "pm.test(etiqueta + 'codigo HTTP 400', () => pm.response.to.have.status(400));",
+                  "let datos;",
+                  "pm.test(etiqueta + 'contenido JSON', () => {",
+                  "  pm.expect(pm.response.headers.get('Content-Type')).to.match(/^application\\/json\\b/i);",
+                  "  datos = pm.response.json();",
+                  "});",
+                  "if (datos !== undefined) {",
+                  "  const esquema = {\"type\":\"object\",\"required\":[\"error\"],\"properties\":{\"error\":{\"type\":\"string\",\"minLength\":1}}};",
+                  "  pm.test(etiqueta + 'esquema de respuesta', () => pm.expect(datos).to.have.jsonSchema(esquema));",
+                  "}",
+                  "const ambito = pm.variables.get('latencia_ambito');",
+                  "const limite = Number(pm.variables.get('limite_ms'));",
+                  "pm.test(etiqueta + 'configuracion de latencia', () => {",
+                  "  pm.expect(['todos', 'prediccion']).to.include(ambito);",
+                  "  pm.expect(Number.isFinite(limite) && limite > 0).to.eql(true);",
+                  "});",
+                  "if (simulado) {",
+                  "  pm.test.skip('[SIMULADO] objetivo de latencia pendiente de API real', () => {});",
+                  "} else if (ambito === 'todos' || pm.request.url.getPath() === '/api/predicciones') {",
+                  "  pm.test('[REAL] respuesta HTTP menor que ' + limite + ' ms', () => pm.expect(pm.response.responseTime).to.be.below(limite));",
+                  "} else {",
+                  "  pm.test.skip('[REAL] endpoint fuera del alcance de latencia configurado', () => {});",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "PM10 negativa",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/api/predicciones",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_usuario}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"estacion\": \"{{estacion}}\", \"fecha_hora\": \"2026-11-14T15:00:00-05:00\", \"pm2_5\": 70.2, \"pm10\": -1}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const modo = pm.variables.get('modo');",
+                  "const simulado = pm.response.headers.get('X-Aire-Simulado') === 'true';",
+                  "const etiqueta = simulado ? '[SIMULADO] ' : '[REAL] ';",
+                  "pm.test(etiqueta + 'origen del entorno', () => {",
+                  "  pm.expect(['simulado', 'real']).to.include(modo);",
+                  "  pm.expect(simulado).to.eql(modo === 'simulado');",
+                  "});",
+                  "pm.test(etiqueta + 'codigo HTTP 400', () => pm.response.to.have.status(400));",
+                  "let datos;",
+                  "pm.test(etiqueta + 'contenido JSON', () => {",
+                  "  pm.expect(pm.response.headers.get('Content-Type')).to.match(/^application\\/json\\b/i);",
+                  "  datos = pm.response.json();",
+                  "});",
+                  "if (datos !== undefined) {",
+                  "  const esquema = {\"type\":\"object\",\"required\":[\"error\"],\"properties\":{\"error\":{\"type\":\"string\",\"minLength\":1}}};",
+                  "  pm.test(etiqueta + 'esquema de respuesta', () => pm.expect(datos).to.have.jsonSchema(esquema));",
+                  "}",
+                  "const ambito = pm.variables.get('latencia_ambito');",
+                  "const limite = Number(pm.variables.get('limite_ms'));",
+                  "pm.test(etiqueta + 'configuracion de latencia', () => {",
+                  "  pm.expect(['todos', 'prediccion']).to.include(ambito);",
+                  "  pm.expect(Number.isFinite(limite) && limite > 0).to.eql(true);",
+                  "});",
+                  "if (simulado) {",
+                  "  pm.test.skip('[SIMULADO] objetivo de latencia pendiente de API real', () => {});",
+                  "} else if (ambito === 'todos' || pm.request.url.getPath() === '/api/predicciones') {",
+                  "  pm.test('[REAL] respuesta HTTP menor que ' + limite + ' ms', () => pm.expect(pm.response.responseTime).to.be.below(limite));",
+                  "} else {",
+                  "  pm.test.skip('[REAL] endpoint fuera del alcance de latencia configurado', () => {});",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Estacion vacia",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/api/predicciones",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_usuario}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"estacion\": \"\", \"fecha_hora\": \"2026-11-14T15:00:00-05:00\", \"pm2_5\": 70.2, \"pm10\": 190.5}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const modo = pm.variables.get('modo');",
+                  "const simulado = pm.response.headers.get('X-Aire-Simulado') === 'true';",
+                  "const etiqueta = simulado ? '[SIMULADO] ' : '[REAL] ';",
+                  "pm.test(etiqueta + 'origen del entorno', () => {",
+                  "  pm.expect(['simulado', 'real']).to.include(modo);",
+                  "  pm.expect(simulado).to.eql(modo === 'simulado');",
+                  "});",
+                  "pm.test(etiqueta + 'codigo HTTP 400', () => pm.response.to.have.status(400));",
+                  "let datos;",
+                  "pm.test(etiqueta + 'contenido JSON', () => {",
+                  "  pm.expect(pm.response.headers.get('Content-Type')).to.match(/^application\\/json\\b/i);",
+                  "  datos = pm.response.json();",
+                  "});",
+                  "if (datos !== undefined) {",
+                  "  const esquema = {\"type\":\"object\",\"required\":[\"error\"],\"properties\":{\"error\":{\"type\":\"string\",\"minLength\":1}}};",
+                  "  pm.test(etiqueta + 'esquema de respuesta', () => pm.expect(datos).to.have.jsonSchema(esquema));",
+                  "}",
+                  "const ambito = pm.variables.get('latencia_ambito');",
+                  "const limite = Number(pm.variables.get('limite_ms'));",
+                  "pm.test(etiqueta + 'configuracion de latencia', () => {",
+                  "  pm.expect(['todos', 'prediccion']).to.include(ambito);",
+                  "  pm.expect(Number.isFinite(limite) && limite > 0).to.eql(true);",
+                  "});",
+                  "if (simulado) {",
+                  "  pm.test.skip('[SIMULADO] objetivo de latencia pendiente de API real', () => {});",
+                  "} else if (ambito === 'todos' || pm.request.url.getPath() === '/api/predicciones') {",
+                  "  pm.test('[REAL] respuesta HTTP menor que ' + limite + ' ms', () => pm.expect(pm.response.responseTime).to.be.below(limite));",
+                  "} else {",
+                  "  pm.test.skip('[REAL] endpoint fuera del alcance de latencia configurado', () => {});",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Fecha invalida",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/api/predicciones",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_usuario}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"estacion\": \"{{estacion}}\", \"fecha_hora\": \"ayer\", \"pm2_5\": 70.2, \"pm10\": 190.5}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const modo = pm.variables.get('modo');",
+                  "const simulado = pm.response.headers.get('X-Aire-Simulado') === 'true';",
+                  "const etiqueta = simulado ? '[SIMULADO] ' : '[REAL] ';",
+                  "pm.test(etiqueta + 'origen del entorno', () => {",
+                  "  pm.expect(['simulado', 'real']).to.include(modo);",
+                  "  pm.expect(simulado).to.eql(modo === 'simulado');",
+                  "});",
+                  "pm.test(etiqueta + 'codigo HTTP 400', () => pm.response.to.have.status(400));",
+                  "let datos;",
+                  "pm.test(etiqueta + 'contenido JSON', () => {",
+                  "  pm.expect(pm.response.headers.get('Content-Type')).to.match(/^application\\/json\\b/i);",
+                  "  datos = pm.response.json();",
+                  "});",
+                  "if (datos !== undefined) {",
+                  "  const esquema = {\"type\":\"object\",\"required\":[\"error\"],\"properties\":{\"error\":{\"type\":\"string\",\"minLength\":1}}};",
+                  "  pm.test(etiqueta + 'esquema de respuesta', () => pm.expect(datos).to.have.jsonSchema(esquema));",
+                  "}",
+                  "const ambito = pm.variables.get('latencia_ambito');",
+                  "const limite = Number(pm.variables.get('limite_ms'));",
+                  "pm.test(etiqueta + 'configuracion de latencia', () => {",
+                  "  pm.expect(['todos', 'prediccion']).to.include(ambito);",
+                  "  pm.expect(Number.isFinite(limite) && limite > 0).to.eql(true);",
+                  "});",
+                  "if (simulado) {",
+                  "  pm.test.skip('[SIMULADO] objetivo de latencia pendiente de API real', () => {});",
+                  "} else if (ambito === 'todos' || pm.request.url.getPath() === '/api/predicciones') {",
+                  "  pm.test('[REAL] respuesta HTTP menor que ' + limite + ' ms', () => pm.expect(pm.response.responseTime).to.be.below(limite));",
+                  "} else {",
+                  "  pm.test.skip('[REAL] endpoint fuera del alcance de latencia configurado', () => {});",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Listar estaciones",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/api/estaciones",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_usuario}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const modo = pm.variables.get('modo');",
+                  "const simulado = pm.response.headers.get('X-Aire-Simulado') === 'true';",
+                  "const etiqueta = simulado ? '[SIMULADO] ' : '[REAL] ';",
+                  "pm.test(etiqueta + 'origen del entorno', () => {",
+                  "  pm.expect(['simulado', 'real']).to.include(modo);",
+                  "  pm.expect(simulado).to.eql(modo === 'simulado');",
+                  "});",
+                  "pm.test(etiqueta + 'codigo HTTP 200', () => pm.response.to.have.status(200));",
+                  "let datos;",
+                  "pm.test(etiqueta + 'contenido JSON', () => {",
+                  "  pm.expect(pm.response.headers.get('Content-Type')).to.match(/^application\\/json\\b/i);",
+                  "  datos = pm.response.json();",
+                  "});",
+                  "if (datos !== undefined) {",
+                  "  const esquema = {\"type\":\"array\",\"items\":{\"type\":\"object\",\"required\":[\"id\"],\"description\":\"Ficha pública. La API expone _id de MongoDB como id; la metadata solo se incluye cuando existe en la fuente.\",\"properties\":{\"id\":{\"type\":\"string\",\"minLength\":1},\"objeto_fiscalizado\":{\"type\":[\"string\",\"null\"]},\"tipo_actividad\":{\"type\":[\"string\",\"null\"]},\"departamento\":{\"type\":[\"string\",\"null\"]},\"provincia\":{\"type\":[\"string\",\"null\"]},\"distrito\":{\"type\":[\"string\",\"null\"]},\"lat\":{\"type\":[\"number\",\"null\"],\"minimum\":-90,\"maximum\":90},\"lon\":{\"type\":[\"number\",\"null\"],\"minimum\":-180,\"maximum\":180}}}};",
+                  "  pm.test(etiqueta + 'esquema de respuesta', () => pm.expect(datos).to.have.jsonSchema(esquema));",
+                  "}",
+                  "const ambito = pm.variables.get('latencia_ambito');",
+                  "const limite = Number(pm.variables.get('limite_ms'));",
+                  "pm.test(etiqueta + 'configuracion de latencia', () => {",
+                  "  pm.expect(['todos', 'prediccion']).to.include(ambito);",
+                  "  pm.expect(Number.isFinite(limite) && limite > 0).to.eql(true);",
+                  "});",
+                  "if (simulado) {",
+                  "  pm.test.skip('[SIMULADO] objetivo de latencia pendiente de API real', () => {});",
+                  "} else if (ambito === 'todos' || pm.request.url.getPath() === '/api/predicciones') {",
+                  "  pm.test('[REAL] respuesta HTTP menor que ' + limite + ' ms', () => pm.expect(pm.response.responseTime).to.be.below(limite));",
+                  "} else {",
+                  "  pm.test.skip('[REAL] endpoint fuera del alcance de latencia configurado', () => {});",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Regimen de estacion",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/api/estaciones/{{estacion}}/regimen",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_usuario}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const modo = pm.variables.get('modo');",
+                  "const simulado = pm.response.headers.get('X-Aire-Simulado') === 'true';",
+                  "const etiqueta = simulado ? '[SIMULADO] ' : '[REAL] ';",
+                  "pm.test(etiqueta + 'origen del entorno', () => {",
+                  "  pm.expect(['simulado', 'real']).to.include(modo);",
+                  "  pm.expect(simulado).to.eql(modo === 'simulado');",
+                  "});",
+                  "pm.test(etiqueta + 'codigo HTTP 200', () => pm.response.to.have.status(200));",
+                  "let datos;",
+                  "pm.test(etiqueta + 'contenido JSON', () => {",
+                  "  pm.expect(pm.response.headers.get('Content-Type')).to.match(/^application\\/json\\b/i);",
+                  "  datos = pm.response.json();",
+                  "});",
+                  "if (datos !== undefined) {",
+                  "  const esquema = {\"type\":\"object\",\"required\":[\"regimen\",\"excede_eca\",\"alerta\",\"ts\"],\"properties\":{\"regimen\":{\"type\":\"integer\",\"minimum\":0},\"excede_eca\":{\"type\":\"boolean\"},\"alerta\":{\"type\":\"boolean\"},\"ts\":{\"type\":\"string\",\"format\":\"date-time\"}}};",
+                  "  pm.test(etiqueta + 'esquema de respuesta', () => pm.expect(datos).to.have.jsonSchema(esquema));",
+                  "}",
+                  "const ambito = pm.variables.get('latencia_ambito');",
+                  "const limite = Number(pm.variables.get('limite_ms'));",
+                  "pm.test(etiqueta + 'configuracion de latencia', () => {",
+                  "  pm.expect(['todos', 'prediccion']).to.include(ambito);",
+                  "  pm.expect(Number.isFinite(limite) && limite > 0).to.eql(true);",
+                  "});",
+                  "if (simulado) {",
+                  "  pm.test.skip('[SIMULADO] objetivo de latencia pendiente de API real', () => {});",
+                  "} else if (ambito === 'todos' || pm.request.url.getPath() === '/api/predicciones') {",
+                  "  pm.test('[REAL] respuesta HTTP menor que ' + limite + ' ms', () => pm.expect(pm.response.responseTime).to.be.below(limite));",
+                  "} else {",
+                  "  pm.test.skip('[REAL] endpoint fuera del alcance de latencia configurado', () => {});",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Regimen inexistente",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/api/estaciones/estacion-inexistente-j2/regimen",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_usuario}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const modo = pm.variables.get('modo');",
+                  "const simulado = pm.response.headers.get('X-Aire-Simulado') === 'true';",
+                  "const etiqueta = simulado ? '[SIMULADO] ' : '[REAL] ';",
+                  "pm.test(etiqueta + 'origen del entorno', () => {",
+                  "  pm.expect(['simulado', 'real']).to.include(modo);",
+                  "  pm.expect(simulado).to.eql(modo === 'simulado');",
+                  "});",
+                  "pm.test(etiqueta + 'codigo HTTP 404', () => pm.response.to.have.status(404));",
+                  "let datos;",
+                  "pm.test(etiqueta + 'contenido JSON', () => {",
+                  "  pm.expect(pm.response.headers.get('Content-Type')).to.match(/^application\\/json\\b/i);",
+                  "  datos = pm.response.json();",
+                  "});",
+                  "if (datos !== undefined) {",
+                  "  const esquema = {\"type\":\"object\",\"required\":[\"error\"],\"properties\":{\"error\":{\"type\":\"string\",\"minLength\":1}}};",
+                  "  pm.test(etiqueta + 'esquema de respuesta', () => pm.expect(datos).to.have.jsonSchema(esquema));",
+                  "}",
+                  "const ambito = pm.variables.get('latencia_ambito');",
+                  "const limite = Number(pm.variables.get('limite_ms'));",
+                  "pm.test(etiqueta + 'configuracion de latencia', () => {",
+                  "  pm.expect(['todos', 'prediccion']).to.include(ambito);",
+                  "  pm.expect(Number.isFinite(limite) && limite > 0).to.eql(true);",
+                  "});",
+                  "if (simulado) {",
+                  "  pm.test.skip('[SIMULADO] objetivo de latencia pendiente de API real', () => {});",
+                  "} else if (ambito === 'todos' || pm.request.url.getPath() === '/api/predicciones') {",
+                  "  pm.test('[REAL] respuesta HTTP menor que ' + limite + ' ms', () => pm.expect(pm.response.responseTime).to.be.below(limite));",
+                  "} else {",
+                  "  pm.test.skip('[REAL] endpoint fuera del alcance de latencia configurado', () => {});",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Modelo activo",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/api/modelos/activo",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_usuario}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const modo = pm.variables.get('modo');",
+                  "const simulado = pm.response.headers.get('X-Aire-Simulado') === 'true';",
+                  "const etiqueta = simulado ? '[SIMULADO] ' : '[REAL] ';",
+                  "pm.test(etiqueta + 'origen del entorno', () => {",
+                  "  pm.expect(['simulado', 'real']).to.include(modo);",
+                  "  pm.expect(simulado).to.eql(modo === 'simulado');",
+                  "});",
+                  "pm.test(etiqueta + 'codigo HTTP 200', () => pm.response.to.have.status(200));",
+                  "let datos;",
+                  "pm.test(etiqueta + 'contenido JSON', () => {",
+                  "  pm.expect(pm.response.headers.get('Content-Type')).to.match(/^application\\/json\\b/i);",
+                  "  datos = pm.response.json();",
+                  "});",
+                  "if (datos !== undefined) {",
+                  "  const esquema = {\"type\":\"object\",\"required\":[\"id\",\"k\",\"features\",\"iteraciones\",\"inercia\",\"regimenes\"],\"properties\":{\"id\":{\"type\":\"string\",\"minLength\":1},\"k\":{\"type\":\"integer\",\"minimum\":1},\"features\":{\"type\":\"array\",\"minItems\":1,\"uniqueItems\":true,\"items\":{\"type\":\"string\"}},\"iteraciones\":{\"type\":\"integer\",\"minimum\":0},\"inercia\":{\"type\":\"number\",\"minimum\":0},\"centroides\":{\"type\":\"array\",\"description\":\"Centroides en unidades originales y en el orden de features, si el servidor los incluye.\",\"items\":{\"type\":\"array\",\"items\":{\"type\":\"number\"}}},\"regimenes\":{\"type\":\"array\",\"items\":{\"type\":\"object\",\"required\":[\"regimen\",\"pm2_5_medio\",\"pm10_medio\",\"excede_eca\",\"tamano\"],\"properties\":{\"regimen\":{\"type\":\"integer\",\"minimum\":0},\"pm2_5_medio\":{\"type\":\"number\",\"minimum\":0},\"pm10_medio\":{\"type\":\"number\",\"minimum\":0},\"excede_eca\":{\"type\":\"boolean\"},\"tamano\":{\"type\":\"integer\",\"minimum\":0}}}}}};",
+                  "  pm.test(etiqueta + 'esquema de respuesta', () => pm.expect(datos).to.have.jsonSchema(esquema));",
+                  "  pm.test(etiqueta + 'regimenes del modelo', () => pm.expect(datos.regimenes.length).to.eql(datos.k));",
+                  "}",
+                  "const ambito = pm.variables.get('latencia_ambito');",
+                  "const limite = Number(pm.variables.get('limite_ms'));",
+                  "pm.test(etiqueta + 'configuracion de latencia', () => {",
+                  "  pm.expect(['todos', 'prediccion']).to.include(ambito);",
+                  "  pm.expect(Number.isFinite(limite) && limite > 0).to.eql(true);",
+                  "});",
+                  "if (simulado) {",
+                  "  pm.test.skip('[SIMULADO] objetivo de latencia pendiente de API real', () => {});",
+                  "} else if (ambito === 'todos' || pm.request.url.getPath() === '/api/predicciones') {",
+                  "  pm.test('[REAL] respuesta HTTP menor que ' + limite + ' ms', () => pm.expect(pm.response.responseTime).to.be.below(limite));",
+                  "} else {",
+                  "  pm.test.skip('[REAL] endpoint fuera del alcance de latencia configurado', () => {});",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Documento OpenAPI",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/openapi.yaml",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const modo = pm.variables.get('modo');",
+                  "const simulado = pm.response.headers.get('X-Aire-Simulado') === 'true';",
+                  "const etiqueta = simulado ? '[SIMULADO] ' : '[REAL] ';",
+                  "pm.test(etiqueta + 'origen del entorno', () => {",
+                  "  pm.expect(['simulado', 'real']).to.include(modo);",
+                  "  pm.expect(simulado).to.eql(modo === 'simulado');",
+                  "});",
+                  "pm.test(etiqueta + 'codigo HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test(etiqueta + 'contenido yaml', () => {",
+                  "  pm.expect((pm.response.headers.get('Content-Type') || '').toLowerCase()).to.include('application/yaml');",
+                  "  pm.expect(pm.response.text()).not.to.be.empty;",
+                  "  pm.expect(pm.response.text()).to.match(/^openapi:\\s*3\\.0\\.3/m);",
+                  "});",
+                  "const ambito = pm.variables.get('latencia_ambito');",
+                  "const limite = Number(pm.variables.get('limite_ms'));",
+                  "pm.test(etiqueta + 'configuracion de latencia', () => {",
+                  "  pm.expect(['todos', 'prediccion']).to.include(ambito);",
+                  "  pm.expect(Number.isFinite(limite) && limite > 0).to.eql(true);",
+                  "});",
+                  "if (simulado) {",
+                  "  pm.test.skip('[SIMULADO] objetivo de latencia pendiente de API real', () => {});",
+                  "} else if (ambito === 'todos' || pm.request.url.getPath() === '/api/predicciones') {",
+                  "  pm.test('[REAL] respuesta HTTP menor que ' + limite + ' ms', () => pm.expect(pm.response.responseTime).to.be.below(limite));",
+                  "} else {",
+                  "  pm.test.skip('[REAL] endpoint fuera del alcance de latencia configurado', () => {});",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Documentacion HTML",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/docs",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const modo = pm.variables.get('modo');",
+                  "const simulado = pm.response.headers.get('X-Aire-Simulado') === 'true';",
+                  "const etiqueta = simulado ? '[SIMULADO] ' : '[REAL] ';",
+                  "pm.test(etiqueta + 'origen del entorno', () => {",
+                  "  pm.expect(['simulado', 'real']).to.include(modo);",
+                  "  pm.expect(simulado).to.eql(modo === 'simulado');",
+                  "});",
+                  "pm.test(etiqueta + 'codigo HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test(etiqueta + 'contenido html', () => {",
+                  "  pm.expect((pm.response.headers.get('Content-Type') || '').toLowerCase()).to.include('text/html');",
+                  "  pm.expect(pm.response.text()).not.to.be.empty;",
+                  "});",
+                  "const ambito = pm.variables.get('latencia_ambito');",
+                  "const limite = Number(pm.variables.get('limite_ms'));",
+                  "pm.test(etiqueta + 'configuracion de latencia', () => {",
+                  "  pm.expect(['todos', 'prediccion']).to.include(ambito);",
+                  "  pm.expect(Number.isFinite(limite) && limite > 0).to.eql(true);",
+                  "});",
+                  "if (simulado) {",
+                  "  pm.test.skip('[SIMULADO] objetivo de latencia pendiente de API real', () => {});",
+                  "} else if (ambito === 'todos' || pm.request.url.getPath() === '/api/predicciones') {",
+                  "  pm.test('[REAL] respuesta HTTP menor que ' + limite + ' ms', () => pm.expect(pm.response.responseTime).to.be.below(limite));",
+                  "} else {",
+                  "  pm.test.skip('[REAL] endpoint fuera del alcance de latencia configurado', () => {});",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Nodos denegado a usuario",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/api/cluster/nodos",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_usuario}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const modo = pm.variables.get('modo');",
+                  "const simulado = pm.response.headers.get('X-Aire-Simulado') === 'true';",
+                  "const etiqueta = simulado ? '[SIMULADO] ' : '[REAL] ';",
+                  "pm.test(etiqueta + 'origen del entorno', () => {",
+                  "  pm.expect(['simulado', 'real']).to.include(modo);",
+                  "  pm.expect(simulado).to.eql(modo === 'simulado');",
+                  "});",
+                  "pm.test(etiqueta + 'codigo HTTP 403', () => pm.response.to.have.status(403));",
+                  "let datos;",
+                  "pm.test(etiqueta + 'contenido JSON', () => {",
+                  "  pm.expect(pm.response.headers.get('Content-Type')).to.match(/^application\\/json\\b/i);",
+                  "  datos = pm.response.json();",
+                  "});",
+                  "if (datos !== undefined) {",
+                  "  const esquema = {\"type\":\"object\",\"required\":[\"error\"],\"properties\":{\"error\":{\"type\":\"string\",\"minLength\":1}}};",
+                  "  pm.test(etiqueta + 'esquema de respuesta', () => pm.expect(datos).to.have.jsonSchema(esquema));",
+                  "}",
+                  "const ambito = pm.variables.get('latencia_ambito');",
+                  "const limite = Number(pm.variables.get('limite_ms'));",
+                  "pm.test(etiqueta + 'configuracion de latencia', () => {",
+                  "  pm.expect(['todos', 'prediccion']).to.include(ambito);",
+                  "  pm.expect(Number.isFinite(limite) && limite > 0).to.eql(true);",
+                  "});",
+                  "if (simulado) {",
+                  "  pm.test.skip('[SIMULADO] objetivo de latencia pendiente de API real', () => {});",
+                  "} else if (ambito === 'todos' || pm.request.url.getPath() === '/api/predicciones') {",
+                  "  pm.test('[REAL] respuesta HTTP menor que ' + limite + ' ms', () => pm.expect(pm.response.responseTime).to.be.below(limite));",
+                  "} else {",
+                  "  pm.test.skip('[REAL] endpoint fuera del alcance de latencia configurado', () => {});",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Metricas denegado a usuario",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/api/metricas",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_usuario}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const modo = pm.variables.get('modo');",
+                  "const simulado = pm.response.headers.get('X-Aire-Simulado') === 'true';",
+                  "const etiqueta = simulado ? '[SIMULADO] ' : '[REAL] ';",
+                  "pm.test(etiqueta + 'origen del entorno', () => {",
+                  "  pm.expect(['simulado', 'real']).to.include(modo);",
+                  "  pm.expect(simulado).to.eql(modo === 'simulado');",
+                  "});",
+                  "pm.test(etiqueta + 'codigo HTTP 403', () => pm.response.to.have.status(403));",
+                  "let datos;",
+                  "pm.test(etiqueta + 'contenido JSON', () => {",
+                  "  pm.expect(pm.response.headers.get('Content-Type')).to.match(/^application\\/json\\b/i);",
+                  "  datos = pm.response.json();",
+                  "});",
+                  "if (datos !== undefined) {",
+                  "  const esquema = {\"type\":\"object\",\"required\":[\"error\"],\"properties\":{\"error\":{\"type\":\"string\",\"minLength\":1}}};",
+                  "  pm.test(etiqueta + 'esquema de respuesta', () => pm.expect(datos).to.have.jsonSchema(esquema));",
+                  "}",
+                  "const ambito = pm.variables.get('latencia_ambito');",
+                  "const limite = Number(pm.variables.get('limite_ms'));",
+                  "pm.test(etiqueta + 'configuracion de latencia', () => {",
+                  "  pm.expect(['todos', 'prediccion']).to.include(ambito);",
+                  "  pm.expect(Number.isFinite(limite) && limite > 0).to.eql(true);",
+                  "});",
+                  "if (simulado) {",
+                  "  pm.test.skip('[SIMULADO] objetivo de latencia pendiente de API real', () => {});",
+                  "} else if (ambito === 'todos' || pm.request.url.getPath() === '/api/predicciones') {",
+                  "  pm.test('[REAL] respuesta HTTP menor que ' + limite + ' ms', () => pm.expect(pm.response.responseTime).to.be.below(limite));",
+                  "} else {",
+                  "  pm.test.skip('[REAL] endpoint fuera del alcance de latencia configurado', () => {});",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Historial denegado a usuario",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/api/entrenamientos",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_usuario}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const modo = pm.variables.get('modo');",
+                  "const simulado = pm.response.headers.get('X-Aire-Simulado') === 'true';",
+                  "const etiqueta = simulado ? '[SIMULADO] ' : '[REAL] ';",
+                  "pm.test(etiqueta + 'origen del entorno', () => {",
+                  "  pm.expect(['simulado', 'real']).to.include(modo);",
+                  "  pm.expect(simulado).to.eql(modo === 'simulado');",
+                  "});",
+                  "pm.test(etiqueta + 'codigo HTTP 403', () => pm.response.to.have.status(403));",
+                  "let datos;",
+                  "pm.test(etiqueta + 'contenido JSON', () => {",
+                  "  pm.expect(pm.response.headers.get('Content-Type')).to.match(/^application\\/json\\b/i);",
+                  "  datos = pm.response.json();",
+                  "});",
+                  "if (datos !== undefined) {",
+                  "  const esquema = {\"type\":\"object\",\"required\":[\"error\"],\"properties\":{\"error\":{\"type\":\"string\",\"minLength\":1}}};",
+                  "  pm.test(etiqueta + 'esquema de respuesta', () => pm.expect(datos).to.have.jsonSchema(esquema));",
+                  "}",
+                  "const ambito = pm.variables.get('latencia_ambito');",
+                  "const limite = Number(pm.variables.get('limite_ms'));",
+                  "pm.test(etiqueta + 'configuracion de latencia', () => {",
+                  "  pm.expect(['todos', 'prediccion']).to.include(ambito);",
+                  "  pm.expect(Number.isFinite(limite) && limite > 0).to.eql(true);",
+                  "});",
+                  "if (simulado) {",
+                  "  pm.test.skip('[SIMULADO] objetivo de latencia pendiente de API real', () => {});",
+                  "} else if (ambito === 'todos' || pm.request.url.getPath() === '/api/predicciones') {",
+                  "  pm.test('[REAL] respuesta HTTP menor que ' + limite + ' ms', () => pm.expect(pm.response.responseTime).to.be.below(limite));",
+                  "} else {",
+                  "  pm.test.skip('[REAL] endpoint fuera del alcance de latencia configurado', () => {});",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Detalle denegado a usuario",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/api/entrenamientos/no-existe",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_usuario}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const modo = pm.variables.get('modo');",
+                  "const simulado = pm.response.headers.get('X-Aire-Simulado') === 'true';",
+                  "const etiqueta = simulado ? '[SIMULADO] ' : '[REAL] ';",
+                  "pm.test(etiqueta + 'origen del entorno', () => {",
+                  "  pm.expect(['simulado', 'real']).to.include(modo);",
+                  "  pm.expect(simulado).to.eql(modo === 'simulado');",
+                  "});",
+                  "pm.test(etiqueta + 'codigo HTTP 403', () => pm.response.to.have.status(403));",
+                  "let datos;",
+                  "pm.test(etiqueta + 'contenido JSON', () => {",
+                  "  pm.expect(pm.response.headers.get('Content-Type')).to.match(/^application\\/json\\b/i);",
+                  "  datos = pm.response.json();",
+                  "});",
+                  "if (datos !== undefined) {",
+                  "  const esquema = {\"type\":\"object\",\"required\":[\"error\"],\"properties\":{\"error\":{\"type\":\"string\",\"minLength\":1}}};",
+                  "  pm.test(etiqueta + 'esquema de respuesta', () => pm.expect(datos).to.have.jsonSchema(esquema));",
+                  "}",
+                  "const ambito = pm.variables.get('latencia_ambito');",
+                  "const limite = Number(pm.variables.get('limite_ms'));",
+                  "pm.test(etiqueta + 'configuracion de latencia', () => {",
+                  "  pm.expect(['todos', 'prediccion']).to.include(ambito);",
+                  "  pm.expect(Number.isFinite(limite) && limite > 0).to.eql(true);",
+                  "});",
+                  "if (simulado) {",
+                  "  pm.test.skip('[SIMULADO] objetivo de latencia pendiente de API real', () => {});",
+                  "} else if (ambito === 'todos' || pm.request.url.getPath() === '/api/predicciones') {",
+                  "  pm.test('[REAL] respuesta HTTP menor que ' + limite + ' ms', () => pm.expect(pm.response.responseTime).to.be.below(limite));",
+                  "} else {",
+                  "  pm.test.skip('[REAL] endpoint fuera del alcance de latencia configurado', () => {});",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Iniciar denegado a usuario",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/api/entrenamientos",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_usuario}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"nodos\": 1, \"replicas\": 1, \"semilla\": 42}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const modo = pm.variables.get('modo');",
+                  "const simulado = pm.response.headers.get('X-Aire-Simulado') === 'true';",
+                  "const etiqueta = simulado ? '[SIMULADO] ' : '[REAL] ';",
+                  "pm.test(etiqueta + 'origen del entorno', () => {",
+                  "  pm.expect(['simulado', 'real']).to.include(modo);",
+                  "  pm.expect(simulado).to.eql(modo === 'simulado');",
+                  "});",
+                  "pm.test(etiqueta + 'codigo HTTP 403', () => pm.response.to.have.status(403));",
+                  "let datos;",
+                  "pm.test(etiqueta + 'contenido JSON', () => {",
+                  "  pm.expect(pm.response.headers.get('Content-Type')).to.match(/^application\\/json\\b/i);",
+                  "  datos = pm.response.json();",
+                  "});",
+                  "if (datos !== undefined) {",
+                  "  const esquema = {\"type\":\"object\",\"required\":[\"error\"],\"properties\":{\"error\":{\"type\":\"string\",\"minLength\":1}}};",
+                  "  pm.test(etiqueta + 'esquema de respuesta', () => pm.expect(datos).to.have.jsonSchema(esquema));",
+                  "}",
+                  "const ambito = pm.variables.get('latencia_ambito');",
+                  "const limite = Number(pm.variables.get('limite_ms'));",
+                  "pm.test(etiqueta + 'configuracion de latencia', () => {",
+                  "  pm.expect(['todos', 'prediccion']).to.include(ambito);",
+                  "  pm.expect(Number.isFinite(limite) && limite > 0).to.eql(true);",
+                  "});",
+                  "if (simulado) {",
+                  "  pm.test.skip('[SIMULADO] objetivo de latencia pendiente de API real', () => {});",
+                  "} else if (ambito === 'todos' || pm.request.url.getPath() === '/api/predicciones') {",
+                  "  pm.test('[REAL] respuesta HTTP menor que ' + limite + ' ms', () => pm.expect(pm.response.responseTime).to.be.below(limite));",
+                  "} else {",
+                  "  pm.test.skip('[REAL] endpoint fuera del alcance de latencia configurado', () => {});",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Nodos admin",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/api/cluster/nodos",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_admin}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const modo = pm.variables.get('modo');",
+                  "const simulado = pm.response.headers.get('X-Aire-Simulado') === 'true';",
+                  "const etiqueta = simulado ? '[SIMULADO] ' : '[REAL] ';",
+                  "pm.test(etiqueta + 'origen del entorno', () => {",
+                  "  pm.expect(['simulado', 'real']).to.include(modo);",
+                  "  pm.expect(simulado).to.eql(modo === 'simulado');",
+                  "});",
+                  "pm.test(etiqueta + 'codigo HTTP 200', () => pm.response.to.have.status(200));",
+                  "let datos;",
+                  "pm.test(etiqueta + 'contenido JSON', () => {",
+                  "  pm.expect(pm.response.headers.get('Content-Type')).to.match(/^application\\/json\\b/i);",
+                  "  datos = pm.response.json();",
+                  "});",
+                  "if (datos !== undefined) {",
+                  "  const esquema = {\"type\":\"array\",\"items\":{\"type\":\"object\",\"required\":[\"nombre\",\"direccion\",\"workers\",\"latencia_ms\",\"libre\"],\"properties\":{\"nombre\":{\"type\":\"string\",\"minLength\":1},\"direccion\":{\"type\":\"string\",\"description\":\"Dirección TCP remota observada por el coordinador\"},\"workers\":{\"type\":\"integer\",\"minimum\":1},\"latencia_ms\":{\"type\":\"number\",\"minimum\":0},\"libre\":{\"type\":\"boolean\"}}}};",
+                  "  pm.test(etiqueta + 'esquema de respuesta', () => pm.expect(datos).to.have.jsonSchema(esquema));",
+                  "}",
+                  "const ambito = pm.variables.get('latencia_ambito');",
+                  "const limite = Number(pm.variables.get('limite_ms'));",
+                  "pm.test(etiqueta + 'configuracion de latencia', () => {",
+                  "  pm.expect(['todos', 'prediccion']).to.include(ambito);",
+                  "  pm.expect(Number.isFinite(limite) && limite > 0).to.eql(true);",
+                  "});",
+                  "if (simulado) {",
+                  "  pm.test.skip('[SIMULADO] objetivo de latencia pendiente de API real', () => {});",
+                  "} else if (ambito === 'todos' || pm.request.url.getPath() === '/api/predicciones') {",
+                  "  pm.test('[REAL] respuesta HTTP menor que ' + limite + ' ms', () => pm.expect(pm.response.responseTime).to.be.below(limite));",
+                  "} else {",
+                  "  pm.test.skip('[REAL] endpoint fuera del alcance de latencia configurado', () => {});",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Metricas admin",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/api/metricas",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_admin}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const modo = pm.variables.get('modo');",
+                  "const simulado = pm.response.headers.get('X-Aire-Simulado') === 'true';",
+                  "const etiqueta = simulado ? '[SIMULADO] ' : '[REAL] ';",
+                  "pm.test(etiqueta + 'origen del entorno', () => {",
+                  "  pm.expect(['simulado', 'real']).to.include(modo);",
+                  "  pm.expect(simulado).to.eql(modo === 'simulado');",
+                  "});",
+                  "pm.test(etiqueta + 'codigo HTTP 200', () => pm.response.to.have.status(200));",
+                  "let datos;",
+                  "pm.test(etiqueta + 'contenido JSON', () => {",
+                  "  pm.expect(pm.response.headers.get('Content-Type')).to.match(/^application\\/json\\b/i);",
+                  "  datos = pm.response.json();",
+                  "});",
+                  "if (datos !== undefined) {",
+                  "  const esquema = {\"type\":\"object\",\"required\":[\"endpoints\",\"nodos_en_pool\",\"ultimo_entrenamiento\"],\"properties\":{\"endpoints\":{\"type\":\"object\",\"additionalProperties\":{\"type\":\"object\",\"required\":[\"pedidos\",\"p50_ms\",\"p95_ms\",\"p99_ms\"],\"properties\":{\"pedidos\":{\"type\":\"integer\",\"minimum\":0},\"p50_ms\":{\"type\":\"number\",\"minimum\":0},\"p95_ms\":{\"type\":\"number\",\"minimum\":0},\"p99_ms\":{\"type\":\"number\",\"minimum\":0}}}},\"nodos_en_pool\":{\"type\":\"integer\",\"minimum\":0},\"ultimo_entrenamiento\":{\"type\":[\"string\",\"null\"]},\"escrituras_descartadas\":{\"type\":\"integer\",\"minimum\":0,\"description\":\"Descartes al llenarse la cola de persistencia\"}}};",
+                  "  pm.test(etiqueta + 'esquema de respuesta', () => pm.expect(datos).to.have.jsonSchema(esquema));",
+                  "}",
+                  "const ambito = pm.variables.get('latencia_ambito');",
+                  "const limite = Number(pm.variables.get('limite_ms'));",
+                  "pm.test(etiqueta + 'configuracion de latencia', () => {",
+                  "  pm.expect(['todos', 'prediccion']).to.include(ambito);",
+                  "  pm.expect(Number.isFinite(limite) && limite > 0).to.eql(true);",
+                  "});",
+                  "if (simulado) {",
+                  "  pm.test.skip('[SIMULADO] objetivo de latencia pendiente de API real', () => {});",
+                  "} else if (ambito === 'todos' || pm.request.url.getPath() === '/api/predicciones') {",
+                  "  pm.test('[REAL] respuesta HTTP menor que ' + limite + ' ms', () => pm.expect(pm.response.responseTime).to.be.below(limite));",
+                  "} else {",
+                  "  pm.test.skip('[REAL] endpoint fuera del alcance de latencia configurado', () => {});",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Historial admin",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/api/entrenamientos",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_admin}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const modo = pm.variables.get('modo');",
+                  "const simulado = pm.response.headers.get('X-Aire-Simulado') === 'true';",
+                  "const etiqueta = simulado ? '[SIMULADO] ' : '[REAL] ';",
+                  "pm.test(etiqueta + 'origen del entorno', () => {",
+                  "  pm.expect(['simulado', 'real']).to.include(modo);",
+                  "  pm.expect(simulado).to.eql(modo === 'simulado');",
+                  "});",
+                  "pm.test(etiqueta + 'codigo HTTP 200', () => pm.response.to.have.status(200));",
+                  "let datos;",
+                  "pm.test(etiqueta + 'contenido JSON', () => {",
+                  "  pm.expect(pm.response.headers.get('Content-Type')).to.match(/^application\\/json\\b/i);",
+                  "  datos = pm.response.json();",
+                  "});",
+                  "if (datos !== undefined) {",
+                  "  const esquema = {\"type\":\"array\",\"items\":{\"type\":\"object\",\"required\":[\"id\",\"estado\",\"nodos\",\"replicas\",\"rondas\"],\"properties\":{\"id\":{\"type\":\"string\",\"minLength\":1},\"estado\":{\"type\":\"string\",\"enum\":[\"en_curso\",\"terminado\",\"abortado\"]},\"nodos\":{\"type\":\"array\",\"items\":{\"type\":\"string\"}},\"replicas\":{\"type\":\"integer\",\"minimum\":1},\"iteraciones\":{\"type\":\"integer\",\"minimum\":0},\"paro\":{\"type\":\"string\",\"description\":\"Motivo de terminación del algoritmo\"},\"dif_secuencial\":{\"type\":\"number\",\"minimum\":0},\"ms_total\":{\"type\":\"number\",\"minimum\":0},\"error\":{\"type\":\"string\",\"description\":\"Motivo del aborto; incluye el nodo cuando corresponde\"},\"rondas\":{\"type\":\"array\",\"items\":{\"type\":\"object\",\"required\":[\"iter\",\"inercia\",\"ms_ronda\",\"ms_fusion\",\"ms_por_nodo\"],\"properties\":{\"iter\":{\"type\":\"integer\",\"minimum\":1},\"inercia\":{\"type\":\"number\",\"minimum\":0},\"ms_ronda\":{\"type\":\"number\",\"minimum\":0},\"ms_fusion\":{\"type\":\"number\",\"minimum\":0},\"ms_por_nodo\":{\"type\":\"object\",\"description\":\"Tiempo observado por nodo desde el coordinador, en ms. No es un porcentaje de CPU.\",\"additionalProperties\":{\"type\":\"number\",\"minimum\":0}}}}}}}};",
+                  "  pm.test(etiqueta + 'esquema de respuesta', () => pm.expect(datos).to.have.jsonSchema(esquema));",
+                  "}",
+                  "const ambito = pm.variables.get('latencia_ambito');",
+                  "const limite = Number(pm.variables.get('limite_ms'));",
+                  "pm.test(etiqueta + 'configuracion de latencia', () => {",
+                  "  pm.expect(['todos', 'prediccion']).to.include(ambito);",
+                  "  pm.expect(Number.isFinite(limite) && limite > 0).to.eql(true);",
+                  "});",
+                  "if (simulado) {",
+                  "  pm.test.skip('[SIMULADO] objetivo de latencia pendiente de API real', () => {});",
+                  "} else if (ambito === 'todos' || pm.request.url.getPath() === '/api/predicciones') {",
+                  "  pm.test('[REAL] respuesta HTTP menor que ' + limite + ' ms', () => pm.expect(pm.response.responseTime).to.be.below(limite));",
+                  "} else {",
+                  "  pm.test.skip('[REAL] endpoint fuera del alcance de latencia configurado', () => {});",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Entrenamiento inexistente",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/api/entrenamientos/no-existe",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_admin}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const modo = pm.variables.get('modo');",
+                  "const simulado = pm.response.headers.get('X-Aire-Simulado') === 'true';",
+                  "const etiqueta = simulado ? '[SIMULADO] ' : '[REAL] ';",
+                  "pm.test(etiqueta + 'origen del entorno', () => {",
+                  "  pm.expect(['simulado', 'real']).to.include(modo);",
+                  "  pm.expect(simulado).to.eql(modo === 'simulado');",
+                  "});",
+                  "pm.test(etiqueta + 'codigo HTTP 404', () => pm.response.to.have.status(404));",
+                  "let datos;",
+                  "pm.test(etiqueta + 'contenido JSON', () => {",
+                  "  pm.expect(pm.response.headers.get('Content-Type')).to.match(/^application\\/json\\b/i);",
+                  "  datos = pm.response.json();",
+                  "});",
+                  "if (datos !== undefined) {",
+                  "  const esquema = {\"type\":\"object\",\"required\":[\"error\"],\"properties\":{\"error\":{\"type\":\"string\",\"minLength\":1}}};",
+                  "  pm.test(etiqueta + 'esquema de respuesta', () => pm.expect(datos).to.have.jsonSchema(esquema));",
+                  "}",
+                  "const ambito = pm.variables.get('latencia_ambito');",
+                  "const limite = Number(pm.variables.get('limite_ms'));",
+                  "pm.test(etiqueta + 'configuracion de latencia', () => {",
+                  "  pm.expect(['todos', 'prediccion']).to.include(ambito);",
+                  "  pm.expect(Number.isFinite(limite) && limite > 0).to.eql(true);",
+                  "});",
+                  "if (simulado) {",
+                  "  pm.test.skip('[SIMULADO] objetivo de latencia pendiente de API real', () => {});",
+                  "} else if (ambito === 'todos' || pm.request.url.getPath() === '/api/predicciones') {",
+                  "  pm.test('[REAL] respuesta HTTP menor que ' + limite + ' ms', () => pm.expect(pm.response.responseTime).to.be.below(limite));",
+                  "} else {",
+                  "  pm.test.skip('[REAL] endpoint fuera del alcance de latencia configurado', () => {});",
+                  "}"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Entrenamiento",
+      "item": [
+        {
+          "name": "Entrenamiento - Token usuario",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/api/auth/token",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const usuario = pm.variables.get('usuario_usuario');",
+                  "const clave = pm.variables.get('usuario_clave');",
+                  "if (typeof usuario !== 'string' || !usuario || typeof clave !== 'string' || !clave) {",
+                  "  throw new Error('Configurar usuario y clave como texto en el entorno local');",
+                  "}",
+                  "pm.request.body.update(JSON.stringify({ usuario, clave }));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const modo = pm.variables.get('modo');",
+                  "const simulado = pm.response.headers.get('X-Aire-Simulado') === 'true';",
+                  "const etiqueta = simulado ? '[SIMULADO] ' : '[REAL] ';",
+                  "pm.test(etiqueta + 'origen del entorno', () => {",
+                  "  pm.expect(['simulado', 'real']).to.include(modo);",
+                  "  pm.expect(simulado).to.eql(modo === 'simulado');",
+                  "});",
+                  "pm.test(etiqueta + 'codigo HTTP 200', () => pm.response.to.have.status(200));",
+                  "let datos;",
+                  "pm.test(etiqueta + 'contenido JSON', () => {",
+                  "  pm.expect(pm.response.headers.get('Content-Type')).to.match(/^application\\/json\\b/i);",
+                  "  datos = pm.response.json();",
+                  "});",
+                  "if (datos !== undefined) {",
+                  "  const esquema = {\"type\":\"object\",\"required\":[\"token\",\"rol\",\"expira\"],\"properties\":{\"token\":{\"type\":\"string\",\"minLength\":1},\"rol\":{\"type\":\"string\",\"enum\":[\"usuario\",\"admin\"]},\"expira\":{\"type\":\"string\",\"format\":\"date-time\"}}};",
+                  "  pm.test(etiqueta + 'esquema de respuesta', () => pm.expect(datos).to.have.jsonSchema(esquema));",
+                  "  pm.test(etiqueta + 'rol usuario', () => pm.expect(datos.rol).to.eql('usuario'));",
+                  "  if (pm.response.code === 200 && typeof datos.token === 'string') pm.variables.set('token_usuario', datos.token);",
+                  "}",
+                  "const ambito = pm.variables.get('latencia_ambito');",
+                  "const limite = Number(pm.variables.get('limite_ms'));",
+                  "pm.test(etiqueta + 'configuracion de latencia', () => {",
+                  "  pm.expect(['todos', 'prediccion']).to.include(ambito);",
+                  "  pm.expect(Number.isFinite(limite) && limite > 0).to.eql(true);",
+                  "});",
+                  "if (simulado) {",
+                  "  pm.test.skip('[SIMULADO] objetivo de latencia pendiente de API real', () => {});",
+                  "} else if (ambito === 'todos' || pm.request.url.getPath() === '/api/predicciones') {",
+                  "  pm.test('[REAL] respuesta HTTP menor que ' + limite + ' ms', () => pm.expect(pm.response.responseTime).to.be.below(limite));",
+                  "} else {",
+                  "  pm.test.skip('[REAL] endpoint fuera del alcance de latencia configurado', () => {});",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Entrenamiento - Token admin",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/api/auth/token",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const usuario = pm.variables.get('admin_usuario');",
+                  "const clave = pm.variables.get('admin_clave');",
+                  "if (typeof usuario !== 'string' || !usuario || typeof clave !== 'string' || !clave) {",
+                  "  throw new Error('Configurar usuario y clave como texto en el entorno local');",
+                  "}",
+                  "pm.request.body.update(JSON.stringify({ usuario, clave }));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const modo = pm.variables.get('modo');",
+                  "const simulado = pm.response.headers.get('X-Aire-Simulado') === 'true';",
+                  "const etiqueta = simulado ? '[SIMULADO] ' : '[REAL] ';",
+                  "pm.test(etiqueta + 'origen del entorno', () => {",
+                  "  pm.expect(['simulado', 'real']).to.include(modo);",
+                  "  pm.expect(simulado).to.eql(modo === 'simulado');",
+                  "});",
+                  "pm.test(etiqueta + 'codigo HTTP 200', () => pm.response.to.have.status(200));",
+                  "let datos;",
+                  "pm.test(etiqueta + 'contenido JSON', () => {",
+                  "  pm.expect(pm.response.headers.get('Content-Type')).to.match(/^application\\/json\\b/i);",
+                  "  datos = pm.response.json();",
+                  "});",
+                  "if (datos !== undefined) {",
+                  "  const esquema = {\"type\":\"object\",\"required\":[\"token\",\"rol\",\"expira\"],\"properties\":{\"token\":{\"type\":\"string\",\"minLength\":1},\"rol\":{\"type\":\"string\",\"enum\":[\"usuario\",\"admin\"]},\"expira\":{\"type\":\"string\",\"format\":\"date-time\"}}};",
+                  "  pm.test(etiqueta + 'esquema de respuesta', () => pm.expect(datos).to.have.jsonSchema(esquema));",
+                  "  pm.test(etiqueta + 'rol admin', () => pm.expect(datos.rol).to.eql('admin'));",
+                  "  if (pm.response.code === 200 && typeof datos.token === 'string') pm.variables.set('token_admin', datos.token);",
+                  "}",
+                  "const ambito = pm.variables.get('latencia_ambito');",
+                  "const limite = Number(pm.variables.get('limite_ms'));",
+                  "pm.test(etiqueta + 'configuracion de latencia', () => {",
+                  "  pm.expect(['todos', 'prediccion']).to.include(ambito);",
+                  "  pm.expect(Number.isFinite(limite) && limite > 0).to.eql(true);",
+                  "});",
+                  "if (simulado) {",
+                  "  pm.test.skip('[SIMULADO] objetivo de latencia pendiente de API real', () => {});",
+                  "} else if (ambito === 'todos' || pm.request.url.getPath() === '/api/predicciones') {",
+                  "  pm.test('[REAL] respuesta HTTP menor que ' + limite + ' ms', () => pm.expect(pm.response.responseTime).to.be.below(limite));",
+                  "} else {",
+                  "  pm.test.skip('[REAL] endpoint fuera del alcance de latencia configurado', () => {});",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cero nodos",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/api/entrenamientos",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_admin}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"nodos\": 0, \"replicas\": 1, \"semilla\": 42}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const modo = pm.variables.get('modo');",
+                  "const simulado = pm.response.headers.get('X-Aire-Simulado') === 'true';",
+                  "const etiqueta = simulado ? '[SIMULADO] ' : '[REAL] ';",
+                  "pm.test(etiqueta + 'origen del entorno', () => {",
+                  "  pm.expect(['simulado', 'real']).to.include(modo);",
+                  "  pm.expect(simulado).to.eql(modo === 'simulado');",
+                  "});",
+                  "pm.test(etiqueta + 'codigo HTTP 400', () => pm.response.to.have.status(400));",
+                  "let datos;",
+                  "pm.test(etiqueta + 'contenido JSON', () => {",
+                  "  pm.expect(pm.response.headers.get('Content-Type')).to.match(/^application\\/json\\b/i);",
+                  "  datos = pm.response.json();",
+                  "});",
+                  "if (datos !== undefined) {",
+                  "  const esquema = {\"type\":\"object\",\"required\":[\"error\"],\"properties\":{\"error\":{\"type\":\"string\",\"minLength\":1}}};",
+                  "  pm.test(etiqueta + 'esquema de respuesta', () => pm.expect(datos).to.have.jsonSchema(esquema));",
+                  "}",
+                  "const ambito = pm.variables.get('latencia_ambito');",
+                  "const limite = Number(pm.variables.get('limite_ms'));",
+                  "pm.test(etiqueta + 'configuracion de latencia', () => {",
+                  "  pm.expect(['todos', 'prediccion']).to.include(ambito);",
+                  "  pm.expect(Number.isFinite(limite) && limite > 0).to.eql(true);",
+                  "});",
+                  "if (simulado) {",
+                  "  pm.test.skip('[SIMULADO] objetivo de latencia pendiente de API real', () => {});",
+                  "} else if (ambito === 'todos' || pm.request.url.getPath() === '/api/predicciones') {",
+                  "  pm.test('[REAL] respuesta HTTP menor que ' + limite + ' ms', () => pm.expect(pm.response.responseTime).to.be.below(limite));",
+                  "} else {",
+                  "  pm.test.skip('[REAL] endpoint fuera del alcance de latencia configurado', () => {});",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cero replicas",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/api/entrenamientos",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_admin}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"nodos\": {{nodos_entrenamiento}}, \"replicas\": 0, \"semilla\": 42}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const modo = pm.variables.get('modo');",
+                  "const simulado = pm.response.headers.get('X-Aire-Simulado') === 'true';",
+                  "const etiqueta = simulado ? '[SIMULADO] ' : '[REAL] ';",
+                  "pm.test(etiqueta + 'origen del entorno', () => {",
+                  "  pm.expect(['simulado', 'real']).to.include(modo);",
+                  "  pm.expect(simulado).to.eql(modo === 'simulado');",
+                  "});",
+                  "pm.test(etiqueta + 'codigo HTTP 400', () => pm.response.to.have.status(400));",
+                  "let datos;",
+                  "pm.test(etiqueta + 'contenido JSON', () => {",
+                  "  pm.expect(pm.response.headers.get('Content-Type')).to.match(/^application\\/json\\b/i);",
+                  "  datos = pm.response.json();",
+                  "});",
+                  "if (datos !== undefined) {",
+                  "  const esquema = {\"type\":\"object\",\"required\":[\"error\"],\"properties\":{\"error\":{\"type\":\"string\",\"minLength\":1}}};",
+                  "  pm.test(etiqueta + 'esquema de respuesta', () => pm.expect(datos).to.have.jsonSchema(esquema));",
+                  "}",
+                  "const ambito = pm.variables.get('latencia_ambito');",
+                  "const limite = Number(pm.variables.get('limite_ms'));",
+                  "pm.test(etiqueta + 'configuracion de latencia', () => {",
+                  "  pm.expect(['todos', 'prediccion']).to.include(ambito);",
+                  "  pm.expect(Number.isFinite(limite) && limite > 0).to.eql(true);",
+                  "});",
+                  "if (simulado) {",
+                  "  pm.test.skip('[SIMULADO] objetivo de latencia pendiente de API real', () => {});",
+                  "} else if (ambito === 'todos' || pm.request.url.getPath() === '/api/predicciones') {",
+                  "  pm.test('[REAL] respuesta HTTP menor que ' + limite + ' ms', () => pm.expect(pm.response.responseTime).to.be.below(limite));",
+                  "} else {",
+                  "  pm.test.skip('[REAL] endpoint fuera del alcance de latencia configurado', () => {});",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Nodos insuficientes",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/api/entrenamientos",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_admin}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"nodos\": {{nodos_insuficientes}}, \"replicas\": 1, \"semilla\": 42}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const modo = pm.variables.get('modo');",
+                  "const simulado = pm.response.headers.get('X-Aire-Simulado') === 'true';",
+                  "const etiqueta = simulado ? '[SIMULADO] ' : '[REAL] ';",
+                  "pm.test(etiqueta + 'origen del entorno', () => {",
+                  "  pm.expect(['simulado', 'real']).to.include(modo);",
+                  "  pm.expect(simulado).to.eql(modo === 'simulado');",
+                  "});",
+                  "pm.test(etiqueta + 'codigo HTTP 422', () => pm.response.to.have.status(422));",
+                  "let datos;",
+                  "pm.test(etiqueta + 'contenido JSON', () => {",
+                  "  pm.expect(pm.response.headers.get('Content-Type')).to.match(/^application\\/json\\b/i);",
+                  "  datos = pm.response.json();",
+                  "});",
+                  "if (datos !== undefined) {",
+                  "  const esquema = {\"type\":\"object\",\"required\":[\"error\"],\"properties\":{\"error\":{\"type\":\"string\",\"minLength\":1}}};",
+                  "  pm.test(etiqueta + 'esquema de respuesta', () => pm.expect(datos).to.have.jsonSchema(esquema));",
+                  "}",
+                  "const ambito = pm.variables.get('latencia_ambito');",
+                  "const limite = Number(pm.variables.get('limite_ms'));",
+                  "pm.test(etiqueta + 'configuracion de latencia', () => {",
+                  "  pm.expect(['todos', 'prediccion']).to.include(ambito);",
+                  "  pm.expect(Number.isFinite(limite) && limite > 0).to.eql(true);",
+                  "});",
+                  "if (simulado) {",
+                  "  pm.test.skip('[SIMULADO] objetivo de latencia pendiente de API real', () => {});",
+                  "} else if (ambito === 'todos' || pm.request.url.getPath() === '/api/predicciones') {",
+                  "  pm.test('[REAL] respuesta HTTP menor que ' + limite + ' ms', () => pm.expect(pm.response.responseTime).to.be.below(limite));",
+                  "} else {",
+                  "  pm.test.skip('[REAL] endpoint fuera del alcance de latencia configurado', () => {});",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Aceptar entrenamiento",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/api/entrenamientos",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_admin}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"nodos\": {{nodos_entrenamiento}}, \"replicas\": 1, \"semilla\": 42}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const modo = pm.variables.get('modo');",
+                  "const simulado = pm.response.headers.get('X-Aire-Simulado') === 'true';",
+                  "const etiqueta = simulado ? '[SIMULADO] ' : '[REAL] ';",
+                  "pm.test(etiqueta + 'origen del entorno', () => {",
+                  "  pm.expect(['simulado', 'real']).to.include(modo);",
+                  "  pm.expect(simulado).to.eql(modo === 'simulado');",
+                  "});",
+                  "pm.test(etiqueta + 'codigo HTTP 202', () => pm.response.to.have.status(202));",
+                  "let datos;",
+                  "pm.test(etiqueta + 'contenido JSON', () => {",
+                  "  pm.expect(pm.response.headers.get('Content-Type')).to.match(/^application\\/json\\b/i);",
+                  "  datos = pm.response.json();",
+                  "});",
+                  "if (datos !== undefined) {",
+                  "  const esquema = {\"type\":\"object\",\"required\":[\"id\",\"estado\"],\"properties\":{\"id\":{\"type\":\"string\",\"minLength\":1},\"estado\":{\"type\":\"string\",\"enum\":[\"en_curso\"]}}};",
+                  "  pm.test(etiqueta + 'esquema de respuesta', () => pm.expect(datos).to.have.jsonSchema(esquema));",
+                  "  pm.test(etiqueta + 'trabajo aceptado', () => {",
+                  "    pm.expect(datos.id).to.be.a('string').and.not.empty;",
+                  "    pm.expect(datos.estado).to.eql('en_curso');",
+                  "  });",
+                  "  if (pm.response.code === 202 && typeof datos.id === 'string') {",
+                  "    pm.variables.set('entrenamiento_id', datos.id);",
+                  "    pm.variables.set('consultas_trabajo', 0);",
+                  "  }",
+                  "}",
+                  "const ambito = pm.variables.get('latencia_ambito');",
+                  "const limite = Number(pm.variables.get('limite_ms'));",
+                  "pm.test(etiqueta + 'configuracion de latencia', () => {",
+                  "  pm.expect(['todos', 'prediccion']).to.include(ambito);",
+                  "  pm.expect(Number.isFinite(limite) && limite > 0).to.eql(true);",
+                  "});",
+                  "if (simulado) {",
+                  "  pm.test.skip('[SIMULADO] objetivo de latencia pendiente de API real', () => {});",
+                  "} else if (ambito === 'todos' || pm.request.url.getPath() === '/api/predicciones') {",
+                  "  pm.test('[REAL] respuesta HTTP menor que ' + limite + ' ms', () => pm.expect(pm.response.responseTime).to.be.below(limite));",
+                  "} else {",
+                  "  pm.test.skip('[REAL] endpoint fuera del alcance de latencia configurado', () => {});",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Consultar hasta terminar",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/api/entrenamientos/{{entrenamiento_id}}",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_admin}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const modo = pm.variables.get('modo');",
+                  "const simulado = pm.response.headers.get('X-Aire-Simulado') === 'true';",
+                  "const etiqueta = simulado ? '[SIMULADO] ' : '[REAL] ';",
+                  "pm.test(etiqueta + 'origen del entorno', () => {",
+                  "  pm.expect(['simulado', 'real']).to.include(modo);",
+                  "  pm.expect(simulado).to.eql(modo === 'simulado');",
+                  "});",
+                  "pm.test(etiqueta + 'codigo HTTP 200', () => pm.response.to.have.status(200));",
+                  "let datos;",
+                  "pm.test(etiqueta + 'contenido JSON', () => {",
+                  "  pm.expect(pm.response.headers.get('Content-Type')).to.match(/^application\\/json\\b/i);",
+                  "  datos = pm.response.json();",
+                  "});",
+                  "if (datos !== undefined) {",
+                  "  const esquema = {\"type\":\"object\",\"required\":[\"id\",\"estado\",\"nodos\",\"replicas\",\"rondas\"],\"properties\":{\"id\":{\"type\":\"string\",\"minLength\":1},\"estado\":{\"type\":\"string\",\"enum\":[\"en_curso\",\"terminado\",\"abortado\"]},\"nodos\":{\"type\":\"array\",\"items\":{\"type\":\"string\"}},\"replicas\":{\"type\":\"integer\",\"minimum\":1},\"iteraciones\":{\"type\":\"integer\",\"minimum\":0},\"paro\":{\"type\":\"string\",\"description\":\"Motivo de terminación del algoritmo\"},\"dif_secuencial\":{\"type\":\"number\",\"minimum\":0},\"ms_total\":{\"type\":\"number\",\"minimum\":0},\"error\":{\"type\":\"string\",\"description\":\"Motivo del aborto; incluye el nodo cuando corresponde\"},\"rondas\":{\"type\":\"array\",\"items\":{\"type\":\"object\",\"required\":[\"iter\",\"inercia\",\"ms_ronda\",\"ms_fusion\",\"ms_por_nodo\"],\"properties\":{\"iter\":{\"type\":\"integer\",\"minimum\":1},\"inercia\":{\"type\":\"number\",\"minimum\":0},\"ms_ronda\":{\"type\":\"number\",\"minimum\":0},\"ms_fusion\":{\"type\":\"number\",\"minimum\":0},\"ms_por_nodo\":{\"type\":\"object\",\"description\":\"Tiempo observado por nodo desde el coordinador, en ms. No es un porcentaje de CPU.\",\"additionalProperties\":{\"type\":\"number\",\"minimum\":0}}}}}}};",
+                  "  pm.test(etiqueta + 'esquema de respuesta', () => pm.expect(datos).to.have.jsonSchema(esquema));",
+                  "  const n = Number(pm.variables.get('consultas_trabajo') || 0) + 1;",
+                  "  const maximo = Number(pm.variables.get('max_consultas_entrenamiento'));",
+                  "  pm.variables.set('consultas_trabajo', n);",
+                  "  pm.test(etiqueta + 'estado del trabajo', () => pm.expect(['en_curso', 'terminado']).to.include(datos.estado));",
+                  "  if (datos.estado === 'en_curso' && n < maximo) {",
+                  "    pm.execution.setNextRequest(pm.info.requestName);",
+                  "  } else {",
+                  "    pm.test(etiqueta + 'entrenamiento terminado dentro del limite de consultas', () => pm.expect(datos.estado).to.eql('terminado'));",
+                  "  }",
+                  "}",
+                  "const ambito = pm.variables.get('latencia_ambito');",
+                  "const limite = Number(pm.variables.get('limite_ms'));",
+                  "pm.test(etiqueta + 'configuracion de latencia', () => {",
+                  "  pm.expect(['todos', 'prediccion']).to.include(ambito);",
+                  "  pm.expect(Number.isFinite(limite) && limite > 0).to.eql(true);",
+                  "});",
+                  "if (simulado) {",
+                  "  pm.test.skip('[SIMULADO] objetivo de latencia pendiente de API real', () => {});",
+                  "} else if (ambito === 'todos' || pm.request.url.getPath() === '/api/predicciones') {",
+                  "  pm.test('[REAL] respuesta HTTP menor que ' + limite + ' ms', () => pm.expect(pm.response.responseTime).to.be.below(limite));",
+                  "} else {",
+                  "  pm.test.skip('[REAL] endpoint fuera del alcance de latencia configurado', () => {});",
+                  "}"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Conflicto controlado",
+      "item": [
+        {
+          "name": "Conflicto - Token usuario",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/api/auth/token",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const usuario = pm.variables.get('usuario_usuario');",
+                  "const clave = pm.variables.get('usuario_clave');",
+                  "if (typeof usuario !== 'string' || !usuario || typeof clave !== 'string' || !clave) {",
+                  "  throw new Error('Configurar usuario y clave como texto en el entorno local');",
+                  "}",
+                  "pm.request.body.update(JSON.stringify({ usuario, clave }));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const modo = pm.variables.get('modo');",
+                  "const simulado = pm.response.headers.get('X-Aire-Simulado') === 'true';",
+                  "const etiqueta = simulado ? '[SIMULADO] ' : '[REAL] ';",
+                  "pm.test(etiqueta + 'origen del entorno', () => {",
+                  "  pm.expect(['simulado', 'real']).to.include(modo);",
+                  "  pm.expect(simulado).to.eql(modo === 'simulado');",
+                  "});",
+                  "pm.test(etiqueta + 'codigo HTTP 200', () => pm.response.to.have.status(200));",
+                  "let datos;",
+                  "pm.test(etiqueta + 'contenido JSON', () => {",
+                  "  pm.expect(pm.response.headers.get('Content-Type')).to.match(/^application\\/json\\b/i);",
+                  "  datos = pm.response.json();",
+                  "});",
+                  "if (datos !== undefined) {",
+                  "  const esquema = {\"type\":\"object\",\"required\":[\"token\",\"rol\",\"expira\"],\"properties\":{\"token\":{\"type\":\"string\",\"minLength\":1},\"rol\":{\"type\":\"string\",\"enum\":[\"usuario\",\"admin\"]},\"expira\":{\"type\":\"string\",\"format\":\"date-time\"}}};",
+                  "  pm.test(etiqueta + 'esquema de respuesta', () => pm.expect(datos).to.have.jsonSchema(esquema));",
+                  "  pm.test(etiqueta + 'rol usuario', () => pm.expect(datos.rol).to.eql('usuario'));",
+                  "  if (pm.response.code === 200 && typeof datos.token === 'string') pm.variables.set('token_usuario', datos.token);",
+                  "}",
+                  "const ambito = pm.variables.get('latencia_ambito');",
+                  "const limite = Number(pm.variables.get('limite_ms'));",
+                  "pm.test(etiqueta + 'configuracion de latencia', () => {",
+                  "  pm.expect(['todos', 'prediccion']).to.include(ambito);",
+                  "  pm.expect(Number.isFinite(limite) && limite > 0).to.eql(true);",
+                  "});",
+                  "if (simulado) {",
+                  "  pm.test.skip('[SIMULADO] objetivo de latencia pendiente de API real', () => {});",
+                  "} else if (ambito === 'todos' || pm.request.url.getPath() === '/api/predicciones') {",
+                  "  pm.test('[REAL] respuesta HTTP menor que ' + limite + ' ms', () => pm.expect(pm.response.responseTime).to.be.below(limite));",
+                  "} else {",
+                  "  pm.test.skip('[REAL] endpoint fuera del alcance de latencia configurado', () => {});",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Conflicto - Token admin",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/api/auth/token",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const usuario = pm.variables.get('admin_usuario');",
+                  "const clave = pm.variables.get('admin_clave');",
+                  "if (typeof usuario !== 'string' || !usuario || typeof clave !== 'string' || !clave) {",
+                  "  throw new Error('Configurar usuario y clave como texto en el entorno local');",
+                  "}",
+                  "pm.request.body.update(JSON.stringify({ usuario, clave }));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const modo = pm.variables.get('modo');",
+                  "const simulado = pm.response.headers.get('X-Aire-Simulado') === 'true';",
+                  "const etiqueta = simulado ? '[SIMULADO] ' : '[REAL] ';",
+                  "pm.test(etiqueta + 'origen del entorno', () => {",
+                  "  pm.expect(['simulado', 'real']).to.include(modo);",
+                  "  pm.expect(simulado).to.eql(modo === 'simulado');",
+                  "});",
+                  "pm.test(etiqueta + 'codigo HTTP 200', () => pm.response.to.have.status(200));",
+                  "let datos;",
+                  "pm.test(etiqueta + 'contenido JSON', () => {",
+                  "  pm.expect(pm.response.headers.get('Content-Type')).to.match(/^application\\/json\\b/i);",
+                  "  datos = pm.response.json();",
+                  "});",
+                  "if (datos !== undefined) {",
+                  "  const esquema = {\"type\":\"object\",\"required\":[\"token\",\"rol\",\"expira\"],\"properties\":{\"token\":{\"type\":\"string\",\"minLength\":1},\"rol\":{\"type\":\"string\",\"enum\":[\"usuario\",\"admin\"]},\"expira\":{\"type\":\"string\",\"format\":\"date-time\"}}};",
+                  "  pm.test(etiqueta + 'esquema de respuesta', () => pm.expect(datos).to.have.jsonSchema(esquema));",
+                  "  pm.test(etiqueta + 'rol admin', () => pm.expect(datos.rol).to.eql('admin'));",
+                  "  if (pm.response.code === 200 && typeof datos.token === 'string') pm.variables.set('token_admin', datos.token);",
+                  "}",
+                  "const ambito = pm.variables.get('latencia_ambito');",
+                  "const limite = Number(pm.variables.get('limite_ms'));",
+                  "pm.test(etiqueta + 'configuracion de latencia', () => {",
+                  "  pm.expect(['todos', 'prediccion']).to.include(ambito);",
+                  "  pm.expect(Number.isFinite(limite) && limite > 0).to.eql(true);",
+                  "});",
+                  "if (simulado) {",
+                  "  pm.test.skip('[SIMULADO] objetivo de latencia pendiente de API real', () => {});",
+                  "} else if (ambito === 'todos' || pm.request.url.getPath() === '/api/predicciones') {",
+                  "  pm.test('[REAL] respuesta HTTP menor que ' + limite + ' ms', () => pm.expect(pm.response.responseTime).to.be.below(limite));",
+                  "} else {",
+                  "  pm.test.skip('[REAL] endpoint fuera del alcance de latencia configurado', () => {});",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Iniciar trabajo para conflicto",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/api/entrenamientos",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_admin}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"nodos\": {{nodos_entrenamiento}}, \"replicas\": 1, \"semilla\": 42}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const modo = pm.variables.get('modo');",
+                  "const simulado = pm.response.headers.get('X-Aire-Simulado') === 'true';",
+                  "const etiqueta = simulado ? '[SIMULADO] ' : '[REAL] ';",
+                  "pm.test(etiqueta + 'origen del entorno', () => {",
+                  "  pm.expect(['simulado', 'real']).to.include(modo);",
+                  "  pm.expect(simulado).to.eql(modo === 'simulado');",
+                  "});",
+                  "pm.test(etiqueta + 'codigo HTTP 202', () => pm.response.to.have.status(202));",
+                  "let datos;",
+                  "pm.test(etiqueta + 'contenido JSON', () => {",
+                  "  pm.expect(pm.response.headers.get('Content-Type')).to.match(/^application\\/json\\b/i);",
+                  "  datos = pm.response.json();",
+                  "});",
+                  "if (datos !== undefined) {",
+                  "  const esquema = {\"type\":\"object\",\"required\":[\"id\",\"estado\"],\"properties\":{\"id\":{\"type\":\"string\",\"minLength\":1},\"estado\":{\"type\":\"string\",\"enum\":[\"en_curso\"]}}};",
+                  "  pm.test(etiqueta + 'esquema de respuesta', () => pm.expect(datos).to.have.jsonSchema(esquema));",
+                  "  pm.test(etiqueta + 'trabajo aceptado', () => {",
+                  "    pm.expect(datos.id).to.be.a('string').and.not.empty;",
+                  "    pm.expect(datos.estado).to.eql('en_curso');",
+                  "  });",
+                  "  if (pm.response.code === 202 && typeof datos.id === 'string') {",
+                  "    pm.variables.set('entrenamiento_id', datos.id);",
+                  "    pm.variables.set('consultas_trabajo', 0);",
+                  "  }",
+                  "}",
+                  "const ambito = pm.variables.get('latencia_ambito');",
+                  "const limite = Number(pm.variables.get('limite_ms'));",
+                  "pm.test(etiqueta + 'configuracion de latencia', () => {",
+                  "  pm.expect(['todos', 'prediccion']).to.include(ambito);",
+                  "  pm.expect(Number.isFinite(limite) && limite > 0).to.eql(true);",
+                  "});",
+                  "if (simulado) {",
+                  "  pm.test.skip('[SIMULADO] objetivo de latencia pendiente de API real', () => {});",
+                  "} else if (ambito === 'todos' || pm.request.url.getPath() === '/api/predicciones') {",
+                  "  pm.test('[REAL] respuesta HTTP menor que ' + limite + ' ms', () => pm.expect(pm.response.responseTime).to.be.below(limite));",
+                  "} else {",
+                  "  pm.test.skip('[REAL] endpoint fuera del alcance de latencia configurado', () => {});",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Rechazar entrenamiento simultaneo",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/api/entrenamientos",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_admin}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"nodos\": {{nodos_entrenamiento}}, \"replicas\": 1, \"semilla\": 42}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const modo = pm.variables.get('modo');",
+                  "const simulado = pm.response.headers.get('X-Aire-Simulado') === 'true';",
+                  "const etiqueta = simulado ? '[SIMULADO] ' : '[REAL] ';",
+                  "pm.test(etiqueta + 'origen del entorno', () => {",
+                  "  pm.expect(['simulado', 'real']).to.include(modo);",
+                  "  pm.expect(simulado).to.eql(modo === 'simulado');",
+                  "});",
+                  "pm.test(etiqueta + 'codigo HTTP 409', () => pm.response.to.have.status(409));",
+                  "let datos;",
+                  "pm.test(etiqueta + 'contenido JSON', () => {",
+                  "  pm.expect(pm.response.headers.get('Content-Type')).to.match(/^application\\/json\\b/i);",
+                  "  datos = pm.response.json();",
+                  "});",
+                  "if (datos !== undefined) {",
+                  "  const esquema = {\"type\":\"object\",\"required\":[\"error\"],\"properties\":{\"error\":{\"type\":\"string\",\"minLength\":1}}};",
+                  "  pm.test(etiqueta + 'esquema de respuesta', () => pm.expect(datos).to.have.jsonSchema(esquema));",
+                  "}",
+                  "const ambito = pm.variables.get('latencia_ambito');",
+                  "const limite = Number(pm.variables.get('limite_ms'));",
+                  "pm.test(etiqueta + 'configuracion de latencia', () => {",
+                  "  pm.expect(['todos', 'prediccion']).to.include(ambito);",
+                  "  pm.expect(Number.isFinite(limite) && limite > 0).to.eql(true);",
+                  "});",
+                  "if (simulado) {",
+                  "  pm.test.skip('[SIMULADO] objetivo de latencia pendiente de API real', () => {});",
+                  "} else if (ambito === 'todos' || pm.request.url.getPath() === '/api/predicciones') {",
+                  "  pm.test('[REAL] respuesta HTTP menor que ' + limite + ' ms', () => pm.expect(pm.response.responseTime).to.be.below(limite));",
+                  "} else {",
+                  "  pm.test.skip('[REAL] endpoint fuera del alcance de latencia configurado', () => {});",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cerrar escenario de conflicto",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/api/entrenamientos/{{entrenamiento_id}}",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_admin}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const modo = pm.variables.get('modo');",
+                  "const simulado = pm.response.headers.get('X-Aire-Simulado') === 'true';",
+                  "const etiqueta = simulado ? '[SIMULADO] ' : '[REAL] ';",
+                  "pm.test(etiqueta + 'origen del entorno', () => {",
+                  "  pm.expect(['simulado', 'real']).to.include(modo);",
+                  "  pm.expect(simulado).to.eql(modo === 'simulado');",
+                  "});",
+                  "pm.test(etiqueta + 'codigo HTTP 200', () => pm.response.to.have.status(200));",
+                  "let datos;",
+                  "pm.test(etiqueta + 'contenido JSON', () => {",
+                  "  pm.expect(pm.response.headers.get('Content-Type')).to.match(/^application\\/json\\b/i);",
+                  "  datos = pm.response.json();",
+                  "});",
+                  "if (datos !== undefined) {",
+                  "  const esquema = {\"type\":\"object\",\"required\":[\"id\",\"estado\",\"nodos\",\"replicas\",\"rondas\"],\"properties\":{\"id\":{\"type\":\"string\",\"minLength\":1},\"estado\":{\"type\":\"string\",\"enum\":[\"en_curso\",\"terminado\",\"abortado\"]},\"nodos\":{\"type\":\"array\",\"items\":{\"type\":\"string\"}},\"replicas\":{\"type\":\"integer\",\"minimum\":1},\"iteraciones\":{\"type\":\"integer\",\"minimum\":0},\"paro\":{\"type\":\"string\",\"description\":\"Motivo de terminación del algoritmo\"},\"dif_secuencial\":{\"type\":\"number\",\"minimum\":0},\"ms_total\":{\"type\":\"number\",\"minimum\":0},\"error\":{\"type\":\"string\",\"description\":\"Motivo del aborto; incluye el nodo cuando corresponde\"},\"rondas\":{\"type\":\"array\",\"items\":{\"type\":\"object\",\"required\":[\"iter\",\"inercia\",\"ms_ronda\",\"ms_fusion\",\"ms_por_nodo\"],\"properties\":{\"iter\":{\"type\":\"integer\",\"minimum\":1},\"inercia\":{\"type\":\"number\",\"minimum\":0},\"ms_ronda\":{\"type\":\"number\",\"minimum\":0},\"ms_fusion\":{\"type\":\"number\",\"minimum\":0},\"ms_por_nodo\":{\"type\":\"object\",\"description\":\"Tiempo observado por nodo desde el coordinador, en ms. No es un porcentaje de CPU.\",\"additionalProperties\":{\"type\":\"number\",\"minimum\":0}}}}}}};",
+                  "  pm.test(etiqueta + 'esquema de respuesta', () => pm.expect(datos).to.have.jsonSchema(esquema));",
+                  "  const n = Number(pm.variables.get('consultas_trabajo') || 0) + 1;",
+                  "  const maximo = Number(pm.variables.get('max_consultas_entrenamiento'));",
+                  "  pm.variables.set('consultas_trabajo', n);",
+                  "  pm.test(etiqueta + 'estado del trabajo', () => pm.expect(['en_curso', 'terminado']).to.include(datos.estado));",
+                  "  if (datos.estado === 'en_curso' && n < maximo) {",
+                  "    pm.execution.setNextRequest(pm.info.requestName);",
+                  "  } else {",
+                  "    pm.test(etiqueta + 'entrenamiento terminado dentro del limite de consultas', () => pm.expect(datos.estado).to.eql('terminado'));",
+                  "  }",
+                  "}",
+                  "const ambito = pm.variables.get('latencia_ambito');",
+                  "const limite = Number(pm.variables.get('limite_ms'));",
+                  "pm.test(etiqueta + 'configuracion de latencia', () => {",
+                  "  pm.expect(['todos', 'prediccion']).to.include(ambito);",
+                  "  pm.expect(Number.isFinite(limite) && limite > 0).to.eql(true);",
+                  "});",
+                  "if (simulado) {",
+                  "  pm.test.skip('[SIMULADO] objetivo de latencia pendiente de API real', () => {});",
+                  "} else if (ambito === 'todos' || pm.request.url.getPath() === '/api/predicciones') {",
+                  "  pm.test('[REAL] respuesta HTTP menor que ' + limite + ' ms', () => pm.expect(pm.response.responseTime).to.be.below(limite));",
+                  "} else {",
+                  "  pm.test.skip('[REAL] endpoint fuera del alcance de latencia configurado', () => {});",
+                  "}"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

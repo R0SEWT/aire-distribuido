@@ -1,0 +1,44 @@
+{
+  "tipo": "SIMULADO; no acredita API real ni latencia",
+  "contrato": "J1, PR #55, commit 96afa6f; pendiente de revisión e integración",
+  "node": "v26.13.1",
+  "newman": "6.2.3",
+  "operacionesHTTP": 13,
+  "peticionesDefinidas": 38,
+  "peticionesEjecutadas": 40,
+  "comprobacionesRegistradas": 254,
+  "comprobacionesAprobadas": 214,
+  "comprobacionesOmitidas": 40,
+  "latenciasOmitidas": 40,
+  "fallos": 0,
+  "controlesNegativos": [
+    {
+      "falloDeliberado": "tipo-prediccion",
+      "detectado": true
+    },
+    {
+      "falloDeliberado": "codigo-prediccion",
+      "detectado": true
+    },
+    {
+      "falloDeliberado": "permisos",
+      "detectado": true
+    },
+    {
+      "falloDeliberado": "entrenamiento-sin-fin",
+      "detectado": true
+    },
+    {
+      "falloDeliberado": "simulador presentado como API real",
+      "detectado": true
+    }
+  ],
+  "controlesPositivos": [
+    {
+      "caso": "credenciales con comillas, barra y salto de línea",
+      "aprobado": true
+    }
+  ],
+  "coleccionSHA256": "600338d4b08a3033186163d62962fac2c931f6797e62ffb9c0e28a0c4e049ae2",
+  "pendienteAPIReal": true
+}

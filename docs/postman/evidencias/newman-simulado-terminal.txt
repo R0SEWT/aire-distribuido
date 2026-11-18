@@ -1,0 +1,412 @@
+PS C:\Users\HOME\Documents\GitHub\aire-distribuido> cd .worktrees\j2
+>> newman.cmd run `
+>>   docs/postman/aire-distribuido.postman_collection.json `
+>>   -e docs/postman/simulado.postman_environment.json `
+>>   --delay-request 50
+newman
+
+aire-distribuido - J2 HTTP
+
+□ Base HTTP
+└ Salud publica
+  GET http://127.0.0.1:18080/api/salud [200 OK, 321B, 17ms]
+  √  [SIMULADO] origen del entorno
+  √  [SIMULADO] codigo HTTP 200
+  √  [SIMULADO] contenido JSON
+  √  [SIMULADO] esquema de respuesta
+  √  [SIMULADO] configuracion de latencia
+  -  [skipped] [SIMULADO] objetivo de latencia pendiente de API real
+
+└ Credenciales incorrectas
+  POST http://127.0.0.1:18080/api/auth/token [401 Unauthorized, 275B, 3ms]
+  √  [SIMULADO] origen del entorno
+  √  [SIMULADO] codigo HTTP 401
+  √  [SIMULADO] contenido JSON
+  √  [SIMULADO] esquema de respuesta
+  √  [SIMULADO] configuracion de latencia
+  -  [skipped] [SIMULADO] objetivo de latencia pendiente de API real
+
+└ Base - Token usuario
+  POST http://127.0.0.1:18080/api/auth/token [200 OK, 306B, 2ms]
+  √  [SIMULADO] origen del entorno
+  √  [SIMULADO] codigo HTTP 200
+  √  [SIMULADO] contenido JSON
+  √  [SIMULADO] esquema de respuesta
+  √  [SIMULADO] rol usuario
+  √  [SIMULADO] configuracion de latencia
+  -  [skipped] [SIMULADO] objetivo de latencia pendiente de API real
+
+└ Base - Token admin
+  POST http://127.0.0.1:18080/api/auth/token [200 OK, 302B, 2ms]
+  √  [SIMULADO] origen del entorno
+  √  [SIMULADO] codigo HTTP 200
+  √  [SIMULADO] contenido JSON
+  √  [SIMULADO] esquema de respuesta
+  √  [SIMULADO] rol admin
+  √  [SIMULADO] configuracion de latencia
+  -  [skipped] [SIMULADO] objetivo de latencia pendiente de API real
+
+└ Prediccion sin token
+  POST http://127.0.0.1:18080/api/predicciones [401 Unauthorized, 283B, 1ms]
+  √  [SIMULADO] origen del entorno
+  √  [SIMULADO] codigo HTTP 401
+  √  [SIMULADO] contenido JSON
+  √  [SIMULADO] esquema de respuesta
+  √  [SIMULADO] configuracion de latencia
+  -  [skipped] [SIMULADO] objetivo de latencia pendiente de API real
+
+└ Prediccion con token invalido
+  POST http://127.0.0.1:18080/api/predicciones [401 Unauthorized, 283B, 2ms]
+  √  [SIMULADO] origen del entorno
+  √  [SIMULADO] codigo HTTP 401
+  √  [SIMULADO] contenido JSON
+  √  [SIMULADO] esquema de respuesta
+  √  [SIMULADO] configuracion de latencia
+  -  [skipped] [SIMULADO] objetivo de latencia pendiente de API real
+
+└ Prediccion valida
+  POST http://127.0.0.1:18080/api/predicciones [200 OK, 394B, 2ms]
+  √  [SIMULADO] origen del entorno
+  √  [SIMULADO] codigo HTTP 200
+  √  [SIMULADO] contenido JSON
+  √  [SIMULADO] esquema de respuesta
+  √  [SIMULADO] estacion de la lectura
+  √  [SIMULADO] configuracion de latencia
+  -  [skipped] [SIMULADO] objetivo de latencia pendiente de API real
+
+└ PM2.5 negativa
+  POST http://127.0.0.1:18080/api/predicciones [400 Bad Request, 264B, 1ms]
+  √  [SIMULADO] origen del entorno
+  √  [SIMULADO] codigo HTTP 400
+  √  [SIMULADO] contenido JSON
+  √  [SIMULADO] esquema de respuesta
+  √  [SIMULADO] configuracion de latencia
+  -  [skipped] [SIMULADO] objetivo de latencia pendiente de API real
+
+└ PM10 negativa
+  POST http://127.0.0.1:18080/api/predicciones [400 Bad Request, 264B, 1ms]
+  √  [SIMULADO] origen del entorno
+  √  [SIMULADO] codigo HTTP 400
+  √  [SIMULADO] contenido JSON
+  √  [SIMULADO] esquema de respuesta
+  √  [SIMULADO] configuracion de latencia
+  -  [skipped] [SIMULADO] objetivo de latencia pendiente de API real
+
+└ Estacion vacia
+  POST http://127.0.0.1:18080/api/predicciones [400 Bad Request, 264B, 1ms]
+  √  [SIMULADO] origen del entorno
+  √  [SIMULADO] codigo HTTP 400
+  √  [SIMULADO] contenido JSON
+  √  [SIMULADO] esquema de respuesta
+  √  [SIMULADO] configuracion de latencia
+  -  [skipped] [SIMULADO] objetivo de latencia pendiente de API real
+
+└ Fecha invalida
+  POST http://127.0.0.1:18080/api/predicciones [400 Bad Request, 264B, 1ms]
+  √  [SIMULADO] origen del entorno
+  √  [SIMULADO] codigo HTTP 400
+  √  [SIMULADO] contenido JSON
+  √  [SIMULADO] esquema de respuesta
+  √  [SIMULADO] configuracion de latencia
+  -  [skipped] [SIMULADO] objetivo de latencia pendiente de API real
+
+└ Listar estaciones
+  GET http://127.0.0.1:18080/api/estaciones [200 OK, 247B, 1ms]
+  √  [SIMULADO] origen del entorno
+  √  [SIMULADO] codigo HTTP 200
+  √  [SIMULADO] contenido JSON
+  √  [SIMULADO] esquema de respuesta
+  √  [SIMULADO] configuracion de latencia
+  -  [skipped] [SIMULADO] objetivo de latencia pendiente de API real
+
+└ Regimen de estacion
+  GET http://127.0.0.1:18080/api/estaciones/CA-AYAS-01/regimen [200 OK, 304B, 2ms]
+  √  [SIMULADO] origen del entorno
+  √  [SIMULADO] codigo HTTP 200
+  √  [SIMULADO] contenido JSON
+  √  [SIMULADO] esquema de respuesta
+  √  [SIMULADO] configuracion de latencia
+  -  [skipped] [SIMULADO] objetivo de latencia pendiente de API real
+
+└ Regimen inexistente
+  GET http://127.0.0.1:18080/api/estaciones/estacion-inexistente-j2/regimen [404 Not Found, 266B, 1ms]
+  √  [SIMULADO] origen del entorno
+  √  [SIMULADO] codigo HTTP 404
+  √  [SIMULADO] contenido JSON
+  √  [SIMULADO] esquema de respuesta
+  √  [SIMULADO] configuracion de latencia
+  -  [skipped] [SIMULADO] objetivo de latencia pendiente de API real
+
+└ Modelo activo
+  GET http://127.0.0.1:18080/api/modelos/activo [200 OK, 590B, 1ms]
+  √  [SIMULADO] origen del entorno
+  √  [SIMULADO] codigo HTTP 200
+  √  [SIMULADO] contenido JSON
+  √  [SIMULADO] esquema de respuesta
+  √  [SIMULADO] regimenes del modelo
+  √  [SIMULADO] configuracion de latencia
+  -  [skipped] [SIMULADO] objetivo de latencia pendiente de API real
+
+└ Documento OpenAPI
+  GET http://127.0.0.1:18080/openapi.yaml [200 OK, 299B, 2ms]
+  √  [SIMULADO] origen del entorno
+  √  [SIMULADO] codigo HTTP 200
+  √  [SIMULADO] contenido yaml
+  √  [SIMULADO] configuracion de latencia
+  -  [skipped] [SIMULADO] objetivo de latencia pendiente de API real
+
+└ Documentacion HTML
+  GET http://127.0.0.1:18080/docs [200 OK, 343B, 1ms]
+  √  [SIMULADO] origen del entorno
+  √  [SIMULADO] codigo HTTP 200
+  √  [SIMULADO] contenido html
+  √  [SIMULADO] configuracion de latencia
+  -  [skipped] [SIMULADO] objetivo de latencia pendiente de API real
+
+└ Nodos denegado a usuario
+  GET http://127.0.0.1:18080/api/cluster/nodos [403 Forbidden, 269B, 1ms]
+  √  [SIMULADO] origen del entorno
+  √  [SIMULADO] codigo HTTP 403
+  √  [SIMULADO] contenido JSON
+  √  [SIMULADO] esquema de respuesta
+  √  [SIMULADO] configuracion de latencia
+  -  [skipped] [SIMULADO] objetivo de latencia pendiente de API real
+
+└ Metricas denegado a usuario
+  GET http://127.0.0.1:18080/api/metricas [403 Forbidden, 269B, 1ms]
+  √  [SIMULADO] origen del entorno
+  √  [SIMULADO] codigo HTTP 403
+  √  [SIMULADO] contenido JSON
+  √  [SIMULADO] esquema de respuesta
+  √  [SIMULADO] configuracion de latencia
+  -  [skipped] [SIMULADO] objetivo de latencia pendiente de API real
+
+└ Historial denegado a usuario
+  GET http://127.0.0.1:18080/api/entrenamientos [403 Forbidden, 269B, 1ms]
+  √  [SIMULADO] origen del entorno
+  √  [SIMULADO] codigo HTTP 403
+  √  [SIMULADO] contenido JSON
+  √  [SIMULADO] esquema de respuesta
+  √  [SIMULADO] configuracion de latencia
+  -  [skipped] [SIMULADO] objetivo de latencia pendiente de API real
+
+└ Detalle denegado a usuario
+  GET http://127.0.0.1:18080/api/entrenamientos/no-existe [403 Forbidden, 269B, 2ms]
+  √  [SIMULADO] origen del entorno
+  √  [SIMULADO] codigo HTTP 403
+  √  [SIMULADO] contenido JSON
+  √  [SIMULADO] esquema de respuesta
+  √  [SIMULADO] configuracion de latencia
+  -  [skipped] [SIMULADO] objetivo de latencia pendiente de API real
+
+└ Iniciar denegado a usuario
+  POST http://127.0.0.1:18080/api/entrenamientos [403 Forbidden, 269B, 2ms]
+  √  [SIMULADO] origen del entorno
+  √  [SIMULADO] codigo HTTP 403
+  √  [SIMULADO] contenido JSON
+  √  [SIMULADO] esquema de respuesta
+  √  [SIMULADO] configuracion de latencia
+  -  [skipped] [SIMULADO] objetivo de latencia pendiente de API real
+
+└ Nodos admin
+  GET http://127.0.0.1:18080/api/cluster/nodos [200 OK, 325B, 1ms]
+  √  [SIMULADO] origen del entorno
+  √  [SIMULADO] codigo HTTP 200
+  √  [SIMULADO] contenido JSON
+  √  [SIMULADO] esquema de respuesta
+  √  [SIMULADO] configuracion de latencia
+  -  [skipped] [SIMULADO] objetivo de latencia pendiente de API real
+
+└ Metricas admin
+  GET http://127.0.0.1:18080/api/metricas [200 OK, 369B, 1ms]
+  √  [SIMULADO] origen del entorno
+  √  [SIMULADO] codigo HTTP 200
+  √  [SIMULADO] contenido JSON
+  √  [SIMULADO] esquema de respuesta
+  √  [SIMULADO] configuracion de latencia
+  -  [skipped] [SIMULADO] objetivo de latencia pendiente de API real
+
+└ Historial admin
+  GET http://127.0.0.1:18080/api/entrenamientos [200 OK, 228B, 1ms]
+  √  [SIMULADO] origen del entorno
+  √  [SIMULADO] codigo HTTP 200
+  √  [SIMULADO] contenido JSON
+  √  [SIMULADO] esquema de respuesta
+  √  [SIMULADO] configuracion de latencia
+  -  [skipped] [SIMULADO] objetivo de latencia pendiente de API real
+
+└ Entrenamiento inexistente
+  GET http://127.0.0.1:18080/api/entrenamientos/no-existe [404 Not Found, 266B, 1ms]
+  √  [SIMULADO] origen del entorno
+  √  [SIMULADO] codigo HTTP 404
+  √  [SIMULADO] contenido JSON
+  √  [SIMULADO] esquema de respuesta
+  √  [SIMULADO] configuracion de latencia
+  -  [skipped] [SIMULADO] objetivo de latencia pendiente de API real
+
+□ Entrenamiento
+└ Entrenamiento - Token usuario
+  POST http://127.0.0.1:18080/api/auth/token [200 OK, 306B, 1ms]
+  √  [SIMULADO] origen del entorno
+  √  [SIMULADO] codigo HTTP 200
+  √  [SIMULADO] contenido JSON
+  √  [SIMULADO] esquema de respuesta
+  √  [SIMULADO] rol usuario
+  √  [SIMULADO] configuracion de latencia
+  -  [skipped] [SIMULADO] objetivo de latencia pendiente de API real
+
+└ Entrenamiento - Token admin
+  POST http://127.0.0.1:18080/api/auth/token [200 OK, 302B, 1ms]
+  √  [SIMULADO] origen del entorno
+  √  [SIMULADO] codigo HTTP 200
+  √  [SIMULADO] contenido JSON
+  √  [SIMULADO] esquema de respuesta
+  √  [SIMULADO] rol admin
+  √  [SIMULADO] configuracion de latencia
+  -  [skipped] [SIMULADO] objetivo de latencia pendiente de API real
+
+└ Cero nodos
+  POST http://127.0.0.1:18080/api/entrenamientos [400 Bad Request, 286B, 1ms]
+  √  [SIMULADO] origen del entorno
+  √  [SIMULADO] codigo HTTP 400
+  √  [SIMULADO] contenido JSON
+  √  [SIMULADO] esquema de respuesta
+  √  [SIMULADO] configuracion de latencia
+  -  [skipped] [SIMULADO] objetivo de latencia pendiente de API real
+
+└ Cero replicas
+  POST http://127.0.0.1:18080/api/entrenamientos [400 Bad Request, 286B, 1ms]
+  √  [SIMULADO] origen del entorno
+  √  [SIMULADO] codigo HTTP 400
+  √  [SIMULADO] contenido JSON
+  √  [SIMULADO] esquema de respuesta
+  √  [SIMULADO] configuracion de latencia
+  -  [skipped] [SIMULADO] objetivo de latencia pendiente de API real
+
+└ Nodos insuficientes
+  POST http://127.0.0.1:18080/api/entrenamientos [422 Unprocessable Entity, 285B, 2ms]
+  √  [SIMULADO] origen del entorno
+  √  [SIMULADO] codigo HTTP 422
+  √  [SIMULADO] contenido JSON
+  √  [SIMULADO] esquema de respuesta
+  √  [SIMULADO] configuracion de latencia
+  -  [skipped] [SIMULADO] objetivo de latencia pendiente de API real
+
+└ Aceptar entrenamiento
+  POST http://127.0.0.1:18080/api/entrenamientos [202 Accepted, 273B, 2ms]
+  √  [SIMULADO] origen del entorno
+  √  [SIMULADO] codigo HTTP 202
+  √  [SIMULADO] contenido JSON
+  √  [SIMULADO] esquema de respuesta
+  √  [SIMULADO] trabajo aceptado
+  √  [SIMULADO] configuracion de latencia
+  -  [skipped] [SIMULADO] objetivo de latencia pendiente de API real
+
+└ Consultar hasta terminar
+  GET http://127.0.0.1:18080/api/entrenamientos/simulado-e-1 [200 OK, 528B, 1ms]
+  √  [SIMULADO] origen del entorno
+  √  [SIMULADO] codigo HTTP 200
+  √  [SIMULADO] contenido JSON
+  √  [SIMULADO] esquema de respuesta
+  √  [SIMULADO] estado del trabajo
+  √  [SIMULADO] configuracion de latencia
+  -  [skipped] [SIMULADO] objetivo de latencia pendiente de API real
+
+Attempting to set next request to Consultar hasta terminar
+
+└ Consultar hasta terminar
+  GET http://127.0.0.1:18080/api/entrenamientos/simulado-e-1 [200 OK, 529B, 1ms]
+  √  [SIMULADO] origen del entorno
+  √  [SIMULADO] codigo HTTP 200
+  √  [SIMULADO] contenido JSON
+  √  [SIMULADO] esquema de respuesta
+  √  [SIMULADO] estado del trabajo
+  √  [SIMULADO] entrenamiento terminado dentro del limite de consultas
+  √  [SIMULADO] configuracion de latencia
+  -  [skipped] [SIMULADO] objetivo de latencia pendiente de API real
+
+□ Conflicto controlado
+└ Conflicto - Token usuario
+  POST http://127.0.0.1:18080/api/auth/token [200 OK, 306B, 1ms]
+  √  [SIMULADO] origen del entorno
+  √  [SIMULADO] codigo HTTP 200
+  √  [SIMULADO] contenido JSON
+  √  [SIMULADO] esquema de respuesta
+  √  [SIMULADO] rol usuario
+  √  [SIMULADO] configuracion de latencia
+  -  [skipped] [SIMULADO] objetivo de latencia pendiente de API real
+
+└ Conflicto - Token admin
+  POST http://127.0.0.1:18080/api/auth/token [200 OK, 302B, 1ms]
+  √  [SIMULADO] origen del entorno
+  √  [SIMULADO] codigo HTTP 200
+  √  [SIMULADO] contenido JSON
+  √  [SIMULADO] esquema de respuesta
+  √  [SIMULADO] rol admin
+  √  [SIMULADO] configuracion de latencia
+  -  [skipped] [SIMULADO] objetivo de latencia pendiente de API real
+
+└ Iniciar trabajo para conflicto
+  POST http://127.0.0.1:18080/api/entrenamientos [202 Accepted, 273B, 2ms]
+  √  [SIMULADO] origen del entorno
+  √  [SIMULADO] codigo HTTP 202
+  √  [SIMULADO] contenido JSON
+  √  [SIMULADO] esquema de respuesta
+  √  [SIMULADO] trabajo aceptado
+  √  [SIMULADO] configuracion de latencia
+  -  [skipped] [SIMULADO] objetivo de latencia pendiente de API real
+
+└ Rechazar entrenamiento simultaneo
+  POST http://127.0.0.1:18080/api/entrenamientos [409 Conflict, 290B, 1ms]
+  √  [SIMULADO] origen del entorno
+  √  [SIMULADO] codigo HTTP 409
+  √  [SIMULADO] contenido JSON
+  √  [SIMULADO] esquema de respuesta
+  √  [SIMULADO] configuracion de latencia
+  -  [skipped] [SIMULADO] objetivo de latencia pendiente de API real
+
+└ Cerrar escenario de conflicto
+  GET http://127.0.0.1:18080/api/entrenamientos/simulado-e-2 [200 OK, 528B, 1ms]
+  √  [SIMULADO] origen del entorno
+  √  [SIMULADO] codigo HTTP 200
+  √  [SIMULADO] contenido JSON
+  √  [SIMULADO] esquema de respuesta
+  √  [SIMULADO] estado del trabajo
+  √  [SIMULADO] configuracion de latencia
+  -  [skipped] [SIMULADO] objetivo de latencia pendiente de API real
+
+Attempting to set next request to Cerrar escenario de conflicto
+
+└ Cerrar escenario de conflicto
+  GET http://127.0.0.1:18080/api/entrenamientos/simulado-e-2 [200 OK, 529B, 1ms]
+  √  [SIMULADO] origen del entorno
+  √  [SIMULADO] codigo HTTP 200
+  √  [SIMULADO] contenido JSON
+  √  [SIMULADO] esquema de respuesta
+  √  [SIMULADO] estado del trabajo
+  √  [SIMULADO] entrenamiento terminado dentro del limite de consultas
+  √  [SIMULADO] configuracion de latencia
+  -  [skipped] [SIMULADO] objetivo de latencia pendiente de API real
+
+┌─────────────────────────┬─────────────────┬─────────────────┐
+│                         │        executed │          failed │
+├─────────────────────────┼─────────────────┼─────────────────┤
+│              iterations │               1 │               0 │
+├─────────────────────────┼─────────────────┼─────────────────┤
+│                requests │              40 │               0 │
+├─────────────────────────┼─────────────────┼─────────────────┤
+│            test-scripts │              40 │               0 │
+├─────────────────────────┼─────────────────┼─────────────────┤
+│      prerequest-scripts │               6 │               0 │
+├─────────────────────────┼─────────────────┼─────────────────┤
+│              assertions │             254 │               0 │
+├─────────────────────────┴─────────────────┴─────────────────┤
+│ total run duration: 6.7s                                    │
+├─────────────────────────────────────────────────────────────┤
+│ total data received: 3.62kB (approx)                        │
+├─────────────────────────────────────────────────────────────┤
+│ average response time: 1ms [min: 1ms, max: 17ms, s.d.: 2ms] │
+└─────────────────────────────────────────────────────────────┘
+PS C:\Users\HOME\Documents\GitHub\aire-distribuido\.worktrees\j2> 
+
+
