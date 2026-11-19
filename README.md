@@ -243,7 +243,18 @@ go run ./cmd/cargar -entrada data/bronze/oefa.csv -bench 10 -workers 1,2,4,8,12
 go run ./cmd/benchmark -workers 1,2,4,8,12
 ```
 
-**5. En Docker.** La imagen final es distroless y corre sin root, así que las carpetas montadas
+**5. La API de la PC4.** Siembra el modelo desde `reports/` y sirve Swagger UI en
+<http://localhost:8080/docs>. Una predicción trae el régimen de la lectura y, aparte, la media de
+24 h de su estación con la alerta frente al ECA y la banda INCA. El secreto del JWT va por variable de entorno; sin `API_USUARIOS`, los
+usuarios de demostración son `demo`/`demo` (rol usuario) y `admin`/`admin` (rol admin). Por ahora
+el almacén es un doble en memoria; MongoDB y Redis llegan con Docker Compose:
+
+```bash
+export JWT_SECRETO=$(openssl rand -hex 32)
+go run ./cmd/api
+```
+
+**6. En Docker.** La imagen final es distroless y corre sin root, así que las carpetas montadas
 tienen que admitir escritura:
 
 ```bash
@@ -252,7 +263,7 @@ docker run --rm -v "$PWD/data:/app/data" -v "$PWD/reports:/app/reports" \
   aire-distribuido cargar -entrada data/bronze/oefa.csv
 ```
 
-**6. El informe.** Deja un `.docx` por integrante en `docs/informe/salida/`:
+**7. El informe.** Deja un `.docx` por integrante en `docs/informe/salida/`:
 
 ```bash
 bash docs/informe/render.sh
@@ -271,6 +282,7 @@ bash docs/informe/render.sh
 | `protocolo/` | Los mensajes entre el coordinador y los nodos, su codificación y la barrera de una ronda, con pruebas. |
 | `configs/` | `limpieza.json` (columnas, unidades, centinelas y rangos) y `kmeans.json` (la receta congelada). |
 | `reports/` | Lo que escriben los comandos: conteos, estandarización, modelo, regímenes, benchmarks y auditoría. |
+| `api/`, `modelo/`, `ventana/`, `almacen/`, `cmd/api/`, `docs/api/` | Parte C: la API coordinadora. JWT HS256, latencia por ruta, el modelo sembrado desde `reports/` y la predicción con el contrato de `kmeans`, la media de 24 h por estación con la alerta frente al ECA y la banda INCA, el almacén detrás de interfaces (con un doble en memoria) y el contrato OpenAPI que se sirve tal cual. |
 | `notebooks/` | El laboratorio en Colab: EDA, calibración, auditoría y figuras, procedencia y mapa. |
 | `docs/informe/` | El informe en Quarto, con su plantilla de Word, el filtro y el empaquetado de la entrega. |
 | `docs/diagramas/` | Los diagramas en draw.io y sus PNG. |
