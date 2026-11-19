@@ -86,7 +86,7 @@ paths:
             example: {estacion: CA-AYAS-01, fecha_hora: '2026-11-14T15:00:00-05:00', pm2_5: 70.2, pm10: 190.5}
       responses:
         '200':
-          description: Régimen asignado y alerta según el modelo activo
+          description: Régimen del modelo activo y, aparte, la media de 24 h de la estación frente al ECA y al INCA
           content:
             application/json:
               schema: {$ref: '#/components/schemas/Prediccion'}
@@ -94,7 +94,9 @@ paths:
                 estacion: CA-AYAS-01
                 regimen: 1
                 excede_eca: true
+                media_24h: {pm2_5: 58.3, pm10: 121.4, lecturas: 24}
                 alerta: true
+                inca: mala
                 pm2_5_medio_regimen: 65.1
                 pm10_medio_regimen: 186.7
                 modelo_id: sembrado-kmeans-json
@@ -145,7 +147,8 @@ paths:
           content:
             application/json:
               schema: {$ref: '#/components/schemas/RegimenEstacion'}
-              example: {regimen: 1, excede_eca: true, alerta: true, ts: '2026-11-14T15:00:00-05:00'}
+              example: {regimen: 1, excede_eca: true, media_24h: {pm2_5: 58.3, pm10: 121.4, lecturas: 24},
+                        alerta: true, inca: mala, ts: '2026-11-14T15:00:00-05:00'}
         '401': {$ref: '#/components/responses/NoAutenticado'}
         '404':
           description: La estación no existe, o existe pero todavía no tiene una predicción registrada
@@ -507,12 +510,14 @@ components:
         pm10: {type: number, format: double, minimum: 0, description: Concentración de PM10 en µg/m³}
     Prediccion:
       type: object
-      required: [estacion, regimen, excede_eca, alerta, pm2_5_medio_regimen, pm10_medio_regimen, modelo_id, ms]
+      required: [estacion, regimen, excede_eca, media_24h, alerta, inca, pm2_5_medio_regimen, pm10_medio_regimen, modelo_id, ms]
       properties:
         estacion: {type: string, minLength: 1}
         regimen: {type: integer, minimum: 0}
-        excede_eca: {type: boolean}
-        alerta: {type: boolean}
+        excede_eca: {type: boolean, description: 'Si la media del régimen supera el ECA; describe el régimen, no la estación'}
+        media_24h: {$ref: '#/components/schemas/Media24h'}
+        alerta: {$ref: '#/components/schemas/Alerta'}
+        inca: {$ref: '#/components/schemas/BandaINCA'}
         pm2_5_medio_regimen: {type: number, minimum: 0, description: Media horaria del régimen en µg/m³}
         pm10_medio_regimen: {type: number, minimum: 0, description: Media horaria del régimen en µg/m³}
         modelo_id: {type: string, minLength: 1}
@@ -535,12 +540,39 @@ components:
         lon: {type: number, minimum: -180, maximum: 180}
     RegimenEstacion:
       type: object
-      required: [regimen, excede_eca, alerta, ts]
+      required: [regimen, excede_eca, media_24h, alerta, inca, ts]
       properties:
         regimen: {type: integer, minimum: 0}
         excede_eca: {type: boolean}
-        alerta: {type: boolean}
+        media_24h: {$ref: '#/components/schemas/Media24h'}
+        alerta: {$ref: '#/components/schemas/Alerta'}
+        inca: {$ref: '#/components/schemas/BandaINCA'}
         ts: {type: string, format: date-time}
+    Media24h:
+      type: object
+      required: [pm2_5, pm10, lecturas]
+      description: |
+        Media de las lecturas de la estación con fecha_hora en (t − 24 h, t], donde t es la
+        fecha_hora de la lectura. La API la lleva en memoria por estación. Con menos de 18
+        lecturas en la ventana, pm2_5 y pm10 son null.
+      properties:
+        pm2_5: {type: number, minimum: 0, nullable: true}
+        pm10: {type: number, minimum: 0, nullable: true}
+        lecturas: {type: integer, minimum: 0, maximum: 24}
+    Alerta:
+      type: boolean
+      description: |
+        La media de 24 h de la estación supera el ECA (DS 003-2017-MINAM): PM2.5 > 50 µg/m³
+        o PM10 > 100 µg/m³. Es false mientras la ventana tenga menos de 18 lecturas. No
+        depende del régimen.
+    BandaINCA:
+      type: string
+      nullable: true
+      enum: [buena, moderada, mala, umbral_de_cuidado, null]
+      description: |
+        Banda del INCA (RM 181-2016-MINAM, tabla 3) de la media de 24 h; la peor entre
+        PM10 (≤ 75, ≤ 150, ≤ 250, > 250 µg/m³) y PM2.5 (≤ 12.5, ≤ 25, ≤ 125, > 125 µg/m³).
+        Se informa aparte del ECA: no se mezclan. null con menos de 18 lecturas.
     RegimenModelo:
       type: object
       required: [regimen, pm2_5_medio, pm10_medio, excede_eca, tamano]

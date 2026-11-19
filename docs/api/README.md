@@ -15,6 +15,12 @@ un `usuario` recibe 403. `x-roles` deja el rol escrito en cada operación.
 
 ## Lo que el contrato fija y la spec no decía
 
+- **Alerta e INCA**: la predicción trae el régimen (el tipo de aire, con `excede_eca` del régimen) y,
+  aparte, la media de 24 h de la estación (`media_24h`, en memoria en la API). `alerta` es que esa
+  media supere el ECA (PM2.5 > 50 o PM10 > 100 µg/m³) e `inca` es su banda del INCA; las dos son
+  normas de 24 h y se informan por separado. Hacen falta 18 lecturas en la ventana. En el gold, el
+  régimen alto solo acierta el 35 % de las horas sobre el ECA de 24 h: por eso la alerta no sale
+  del régimen.
 - **Estaciones**: `id` es el `_id` de la colección (el código OEFA) y la ficha trae todos los campos
   de §7.1; un dato que falte en la fuente llega como `null`.
 - **Entrenamientos**: tres estados, `en_curso`, `terminado` y `abortado`. El listado no trae las
