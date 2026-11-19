@@ -3,18 +3,10 @@ info:
   title: API coordinadora de aire-distribuido
   version: 0.1.0
   description: |
-    Contrato de la PC4 basado en la spec de diseño del 14 de noviembre de 2026,
-    secciones 6.1 a 6.5 (PR #51). La API coordina K-Means distribuido y asigna
-    lecturas horarias a los regímenes del modelo activo.
+    Contrato de la API de la PC4 (spec §6, PR #51). Coordina el K-Means distribuido
+    y asigna cada lectura horaria a un régimen del modelo activo.
 
-    La predicción tiene un objetivo de latencia menor de 100 ms, que debe medirse
-    con Postman y cmd/carga. El campo ms de la respuesta es el tiempo interno;
-    no sustituye la latencia de extremo a extremo.
-
-    excede_eca describe el perfil medio del régimen. El ECA usa promedios de
-    24 horas: una lectura horaria o su régimen no acreditan por sí solos un
-    incumplimiento. Los números de los ejemplos son ilustrativos y proceden
-    de los ejemplos acordados en la spec y de reports/regimenes.json.
+    Los ejemplos salen de la spec §6.5 y de reports/regimenes.json.
 servers:
   - url: http://localhost:8080
     description: API local o publicada por Docker Compose
@@ -83,8 +75,8 @@ paths:
       description: |
         Rol usuario o admin. La lectura llega en µg/m³, sin estandarizar.
         El servidor aplica la receta y la estandarización del modelo activo.
-        La persistencia se encola y no bloquea la respuesta; los descartes de
-        escritura se cuentan en las métricas si el búfer se llena.
+        La estación no se valida contra MongoDB: el camino del pedido no consulta
+        ninguna base (spec §6.2).
       x-roles: [usuario, admin]
       requestBody:
         required: true
@@ -114,7 +106,12 @@ paths:
               schema: {$ref: '#/components/schemas/Error'}
               example: {error: pm2_5 tiene que ser un número no negativo}
         '401': {$ref: '#/components/responses/NoAutenticado'}
-        '503': {$ref: '#/components/responses/NoDisponible'}
+        '503':
+          description: No hay modelo activo
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Error'}
+              example: {error: no hay modelo activo}
   /api/estaciones:
     get:
       tags: [Estaciones]
@@ -129,7 +126,9 @@ paths:
               schema:
                 type: array
                 items: {$ref: '#/components/schemas/Estacion'}
-              example: [{id: CA-AYAS-01}]
+              example:
+                - {id: CA-AYAS-01, objeto_fiscalizado: Unidad minera Antamina, tipo_actividad: minería,
+                   departamento: ANCASH, provincia: HUARI, distrito: SAN MARCOS, lat: -9.52384, lon: -77.02043}
         '401': {$ref: '#/components/responses/NoAutenticado'}
         '503': {$ref: '#/components/responses/NoDisponible'}
   /api/estaciones/{id}/regimen:
@@ -148,7 +147,14 @@ paths:
               schema: {$ref: '#/components/schemas/RegimenEstacion'}
               example: {regimen: 1, excede_eca: true, alerta: true, ts: '2026-11-14T15:00:00-05:00'}
         '401': {$ref: '#/components/responses/NoAutenticado'}
-        '404': {$ref: '#/components/responses/NoEncontrado'}
+        '404':
+          description: La estación no existe, o existe pero todavía no tiene una predicción registrada
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Error'}
+              examples:
+                desconocida: {value: {error: 'estación desconocida: CA-XX-99'}}
+                sin_regimen: {value: {error: 'la estación CA-AYAS-01 todavía no tiene un régimen registrado'}}
         '503': {$ref: '#/components/responses/NoDisponible'}
   /api/modelos/activo:
     get:
@@ -200,8 +206,8 @@ paths:
       description: |
         Rol admin. Solo se permite un entrenamiento a la vez. Si replicas es
         mayor que 1, la corrida es una medición y no reemplaza el modelo activo.
-        Si cae un nodo, se aborta y registra su nombre, sin activar un modelo
-        incompleto. Escribir un punto de control no implica reanudar la corrida.
+        Si cae un nodo, el entrenamiento queda abortado con el nombre del nodo en
+        error y no activa ningún modelo.
       x-roles: [admin]
       requestBody:
         required: true
@@ -234,17 +240,23 @@ paths:
     get:
       tags: [Entrenamientos]
       operationId: listarEntrenamientos
-      summary: Lista el historial de entrenamientos
+      summary: Lista el historial de entrenamientos, sin las rondas
+      description: Las rondas de cada entrenamiento se piden con GET /api/entrenamientos/{id}.
       x-roles: [admin]
       responses:
         '200':
-          description: Historial; una lista vacía es válida
+          description: Historial, del más reciente al más antiguo; una lista vacía es válida
           content:
             application/json:
               schema:
                 type: array
-                items: {$ref: '#/components/schemas/Entrenamiento'}
+                items: {$ref: '#/components/schemas/EntrenamientoResumen'}
               example:
+                - id: e-20261119-1540
+                  estado: abortado
+                  nodos: [H45-022, H45-023]
+                  replicas: 1
+                  error: 'ronda 1: el nodo H45-023 no respondió dentro del plazo'
                 - id: e-20261119-1530
                   estado: terminado
                   nodos: [H45-022, H45-023, H45-024, H45-032]
@@ -253,7 +265,6 @@ paths:
                   paro: tolerancia
                   dif_secuencial: 8.9e-16
                   ms_total: 31.2
-                  rondas: []
         '401': {$ref: '#/components/responses/NoAutenticado'}
         '403': {$ref: '#/components/responses/SinPermiso'}
         '503': {$ref: '#/components/responses/NoDisponible'}
@@ -272,6 +283,18 @@ paths:
             application/json:
               schema: {$ref: '#/components/schemas/Entrenamiento'}
               examples:
+                en_curso:
+                  value:
+                    id: e-20261119-1530
+                    estado: en_curso
+                    nodos: [H45-022, H45-023, H45-024, H45-032]
+                    replicas: 1
+                    rondas:
+                      - iter: 1
+                        inercia: 73075.5
+                        ms_ronda: 0.61
+                        ms_fusion: 0.003
+                        ms_por_nodo: {H45-022: 0.11, H45-023: 0.12, H45-024: 0.11, H45-032: 0.13}
                 terminado:
                   value:
                     id: e-20261119-1530
@@ -295,7 +318,7 @@ paths:
                     nodos: [H45-022, H45-023]
                     replicas: 1
                     rondas: []
-                    error: 'ronda 3 abortada: nodo H45-023 no respondió dentro del plazo'
+                    error: 'ronda 1: el nodo H45-023 no respondió dentro del plazo'
         '401': {$ref: '#/components/responses/NoAutenticado'}
         '403': {$ref: '#/components/responses/SinPermiso'}
         '404': {$ref: '#/components/responses/NoEncontrado'}
@@ -317,6 +340,7 @@ paths:
                   POST /api/predicciones: {pedidos: 12000, p50_ms: 0.3, p95_ms: 0.9, p99_ms: 2.1}
                 nodos_en_pool: 4
                 ultimo_entrenamiento: e-20261119-1530
+                escrituras_descartadas: 0
         '401': {$ref: '#/components/responses/NoAutenticado'}
         '403': {$ref: '#/components/responses/SinPermiso'}
   /openapi.yaml:
@@ -331,7 +355,6 @@ paths:
           content:
             application/yaml:
               schema: {type: string}
-              example: "openapi: 3.0.3\ninfo:\n  title: API coordinadora de aire-distribuido\n  version: 0.1.0\npaths: {}\n"
   /docs:
     get:
       tags: [Documentación]
@@ -344,39 +367,35 @@ paths:
           content:
             text/html:
               schema: {type: string}
-              example: '<!doctype html><html lang="es"><title>API aire-distribuido</title><body><div id="swagger-ui"></div></body></html>'
   /ws:
     get:
       tags: [Eventos]
       operationId: seguirEventos
       summary: Abre un WebSocket de eventos del entrenamiento
       description: |
-        Rol usuario o admin. JWT en la consulta token, para clientes del navegador.
-        Los encabezados del handshake los administra la biblioteca WebSocket del
-        cliente. Solo el servidor envía eventos. Un cliente lento se desconecta.
-        OpenAPI describe el handshake HTTP; x-websocket-events documenta los
-        payloads de entrenamiento.ronda y entrenamiento.fin de la spec §6.4.
+        Rol usuario o admin; el JWT va en la consulta token porque el navegador no
+        deja poner encabezados en el handshake. Solo el servidor envía. Cada trama
+        de texto es un objeto JSON con el nombre del evento y sus datos (esquema
+        EventoWS): {"evento": "entrenamiento.ronda", "datos": {...}}.
       security:
         - wsToken: []
       x-roles: [usuario, admin]
       x-websocket-events:
         entrenamiento.ronda:
-          schema: {$ref: '#/components/schemas/EventoRonda'}
+          schema: {$ref: '#/components/schemas/EventoWS'}
           example:
-            id: e-20261119-1530
-            iter: 1
-            inercia: 73075.5
-            ms_ronda: 0.61
-            ms_fusion: 0.003
-            ms_por_nodo: {H45-022: 0.11, H45-023: 0.12}
+            evento: entrenamiento.ronda
+            datos: {id: e-20261119-1530, iter: 1, inercia: 73075.5, ms_ronda: 0.61, ms_fusion: 0.003,
+                    ms_por_nodo: {H45-022: 0.11, H45-023: 0.12}}
         entrenamiento.fin:
-          schema:
-            oneOf:
-              - $ref: '#/components/schemas/EventoFin'
-              - $ref: '#/components/schemas/EventoError'
+          schema: {$ref: '#/components/schemas/EventoWS'}
           examples:
-            terminado: {id: e-20261119-1530, iteraciones: 44, paro: tolerancia, dif_secuencial: 8.9e-16, ms_total: 31.2}
-            abortado: {id: e-20261119-1540, error: 'nodo H45-023 no respondió dentro del plazo'}
+            terminado:
+              evento: entrenamiento.fin
+              datos: {id: e-20261119-1530, iteraciones: 44, paro: tolerancia, dif_secuencial: 8.9e-16, ms_total: 31.2}
+            abortado:
+              evento: entrenamiento.fin
+              datos: {id: e-20261119-1540, error: 'ronda 1: el nodo H45-023 no respondió dentro del plazo'}
       responses:
         '101':
           description: Conexión actualizada a WebSocket; a partir de aquí se reciben tramas de texto
@@ -436,17 +455,17 @@ components:
           schema: {$ref: '#/components/schemas/Error'}
           example: {error: se requiere el rol admin}
     NoEncontrado:
-      description: No existe el recurso o la estación aún no tiene un régimen registrado
+      description: No existe el recurso
       content:
         application/json:
           schema: {$ref: '#/components/schemas/Error'}
-          example: {error: recurso no encontrado}
+          example: {error: 'no existe el entrenamiento e-20261119-9999'}
     NoDisponible:
-      description: No hay modelo activo o el almacén necesario no está disponible
+      description: El almacén que atiende la ruta (MongoDB o Redis) no responde
       content:
         application/json:
           schema: {$ref: '#/components/schemas/Error'}
-          example: {error: servicio temporalmente no disponible}
+          example: {error: MongoDB no disponible}
   schemas:
     Error:
       type: object
@@ -470,9 +489,9 @@ components:
       type: object
       required: [api, mongo, redis, nodos_en_pool, modelo_activo]
       properties:
-        api: {type: string}
-        mongo: {type: string}
-        redis: {type: string}
+        api: {type: string, enum: [ok]}
+        mongo: {type: string, enum: [ok, error]}
+        redis: {type: string, enum: [ok, error]}
         nodos_en_pool: {type: integer, minimum: 0}
         modelo_activo: {type: string, nullable: true}
     Lectura:
@@ -500,8 +519,11 @@ components:
         ms: {type: number, minimum: 0, description: Tiempo interno de predicción en milisegundos}
     Estacion:
       type: object
-      required: [id]
-      description: Ficha pública. La API expone _id de MongoDB como id; la metadata solo se incluye cuando existe en la fuente.
+      required: [id, objeto_fiscalizado, tipo_actividad, departamento, provincia, distrito, lat, lon]
+      description: |
+        Documento de la colección estaciones (spec §7.1), sembrado desde
+        reports/estaciones_ficha.csv; id es su _id, el código OEFA. Las 33
+        estaciones tienen coordenadas; un campo que falte en la fuente llega como null.
       properties:
         id: {type: string, minLength: 1}
         objeto_fiscalizado: {type: string, nullable: true}
@@ -509,8 +531,8 @@ components:
         departamento: {type: string, nullable: true}
         provincia: {type: string, nullable: true}
         distrito: {type: string, nullable: true}
-        lat: {type: number, minimum: -90, maximum: 90, nullable: true}
-        lon: {type: number, minimum: -180, maximum: 180, nullable: true}
+        lat: {type: number, minimum: -90, maximum: 90}
+        lon: {type: number, minimum: -180, maximum: 180}
     RegimenEstacion:
       type: object
       required: [regimen, excede_eca, alerta, ts]
@@ -587,9 +609,13 @@ components:
           type: object
           description: Tiempo observado por nodo desde el coordinador, en ms. No es un porcentaje de CPU.
           additionalProperties: {type: number, minimum: 0}
-    Entrenamiento:
+    EntrenamientoResumen:
       type: object
-      required: [id, estado, nodos, replicas, rondas]
+      required: [id, estado, nodos, replicas]
+      description: |
+        Qué campos trae según el estado: en_curso, solo los de identificación;
+        terminado, además iteraciones, paro, dif_secuencial y ms_total;
+        abortado, además error.
       properties:
         id: {type: string, minLength: 1}
         estado: {type: string, enum: [en_curso, terminado, abortado]}
@@ -598,13 +624,24 @@ components:
           items: {type: string}
         replicas: {type: integer, minimum: 1}
         iteraciones: {type: integer, minimum: 0}
-        paro: {type: string, description: Motivo de terminación del algoritmo}
-        dif_secuencial: {type: number, minimum: 0}
+        paro: {$ref: '#/components/schemas/Paro'}
+        dif_secuencial: {type: number, minimum: 0, description: Mayor diferencia con el K-Means secuencial}
         ms_total: {type: number, minimum: 0}
-        error: {type: string, description: Motivo del aborto; incluye el nodo cuando corresponde}
-        rondas:
-          type: array
-          items: {$ref: '#/components/schemas/Ronda'}
+        error: {type: string, minLength: 1, description: 'Motivo del aborto, con el nodo que falló'}
+    Entrenamiento:
+      description: El resumen más las rondas completadas hasta el momento.
+      allOf:
+        - $ref: '#/components/schemas/EntrenamientoResumen'
+        - type: object
+          required: [rondas]
+          properties:
+            rondas:
+              type: array
+              items: {$ref: '#/components/schemas/Ronda'}
+    Paro:
+      type: string
+      enum: [tolerancia, max_iter]
+      description: Por qué terminó el algoritmo (constantes de kmeans/secuencial.go)
     MetricaEndpoint:
       type: object
       required: [pedidos, p50_ms, p95_ms, p99_ms]
@@ -615,7 +652,7 @@ components:
         p99_ms: {type: number, minimum: 0}
     Metricas:
       type: object
-      required: [endpoints, nodos_en_pool, ultimo_entrenamiento]
+      required: [endpoints, nodos_en_pool, ultimo_entrenamiento, escrituras_descartadas]
       properties:
         endpoints:
           type: object
@@ -636,7 +673,7 @@ components:
       properties:
         id: {type: string, minLength: 1}
         iteraciones: {type: integer, minimum: 0}
-        paro: {type: string}
+        paro: {$ref: '#/components/schemas/Paro'}
         dif_secuencial: {type: number, minimum: 0}
         ms_total: {type: number, minimum: 0}
     EventoError:
@@ -645,3 +682,15 @@ components:
       properties:
         id: {type: string, minLength: 1}
         error: {type: string, minLength: 1}
+    EventoWS:
+      type: object
+      required: [evento, datos]
+      description: Una trama de texto del WebSocket.
+      properties:
+        evento: {type: string, enum: [entrenamiento.ronda, entrenamiento.fin]}
+        datos:
+          description: EventoRonda con entrenamiento.ronda; EventoFin o EventoError con entrenamiento.fin.
+          oneOf:
+            - $ref: '#/components/schemas/EventoRonda'
+            - $ref: '#/components/schemas/EventoFin'
+            - $ref: '#/components/schemas/EventoError'
