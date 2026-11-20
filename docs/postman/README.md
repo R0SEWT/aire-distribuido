@@ -98,7 +98,8 @@ python3 docs/postman/generar_lecturas.py
 Repetir el archivo deja la API en el mismo estado (la misma estación y hora reemplaza a la
 anterior), así que el Runner se puede correr varias veces y `cmd/carga` usa estas mismas lecturas.
 Lo que sí cambia lo esperado es mandar a mano otras horas de `CA-HU-04` o `CA-ROM-01` dentro de las
-24 horas de su serie.
+24 horas de su serie. Lo que se repite sin cambiar es el estado (la ventana de 24 h y la clave de la estación en Redis);
+la colección `predicciones` de MongoDB es un registro de pedidos y suma un documento por cada uno.
 
 ## Correrla con newman
 
