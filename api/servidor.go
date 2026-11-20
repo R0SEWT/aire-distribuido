@@ -64,8 +64,7 @@ type Servidor struct {
 	catalogo     map[string]bool
 	estaciones   almacen.Estaciones
 	cache        almacen.Cache
-	modelos      almacen.Modelos
-	cacheModelo  almacen.CacheModelo
+	modelos      almacenesDeModelo
 	mongo, redis almacen.Pinger
 	openapi      []byte
 	log          *slog.Logger
@@ -102,22 +101,21 @@ func Nuevo(cfg Config) (*Servidor, error) {
 		catalogo[e.ID] = true
 	}
 	s := &Servidor{
-		firmador:    cfg.Firmador,
-		usuarios:    cfg.Usuarios,
-		catalogo:    catalogo,
-		estaciones:  cfg.Estaciones,
-		cache:       cfg.Cache,
-		modelos:     cfg.Modelos,
-		cacheModelo: cfg.CacheModelo,
-		mongo:       cfg.Mongo,
-		redis:       cfg.Redis,
-		openapi:     cfg.OpenAPI,
-		log:         log,
-		metricas:    NuevasMetricas(),
-		ventanas:    ventana.Nuevas(),
-		escritor:    nuevoEscritor(cfg.TamCola, cfg.Predicciones, cfg.Cache, log),
-		mux:         http.NewServeMux(),
-		ahora:       time.Now,
+		firmador:   cfg.Firmador,
+		usuarios:   cfg.Usuarios,
+		catalogo:   catalogo,
+		estaciones: cfg.Estaciones,
+		cache:      cfg.Cache,
+		modelos:    almacenesDeModelo{cfg.Modelos, cfg.CacheModelo},
+		mongo:      cfg.Mongo,
+		redis:      cfg.Redis,
+		openapi:    cfg.OpenAPI,
+		log:        log,
+		metricas:   NuevasMetricas(),
+		ventanas:   ventana.Nuevas(),
+		escritor:   nuevoEscritor(cfg.TamCola, cfg.Predicciones, cfg.Cache, log),
+		mux:        http.NewServeMux(),
+		ahora:      time.Now,
 	}
 	s.modelo.Store(cfg.Modelo)
 

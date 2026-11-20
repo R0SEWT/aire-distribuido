@@ -1,32 +1,22 @@
 // Comando api es la API coordinadora de la PC4 (spec §6): REST con JWT,
 // predicción del régimen de una lectura en menos de 100 ms, latencia por ruta,
-// el contrato OpenAPI y Swagger UI. Guarda en MongoDB y Redis (almacenes.go) o,
-// sin ellas, en memoria. El clúster, los entrenamientos y el WebSocket llegan
-// después.
+// el contrato OpenAPI y Swagger UI. Guarda en MongoDB y Redis o, sin ellas, en
+// el doble en memoria (almacenes.go). El clúster, los entrenamientos y el
+// WebSocket llegan después.
 //
-// Al arrancar lee el modelo de reports/kmeans.json, reports/regimenes.json y
-// reports/estandarizacion.json, y no arranca si no son de la misma corrida; si
-// Redis o MongoDB guardan un modelo activo que entrenó la API, arranca con ese.
+// Al arrancar siembra el modelo desde reports/kmeans.json, reports/regimenes.json
+// y reports/estandarizacion.json, y no arranca si no son de la misma corrida.
 // Se corre desde la raíz del repo:
 //
 //	export JWT_SECRETO=$(openssl rand -hex 32)
 //	export API_USUARIOS='ana:una-clave-larga:admin,demo:otra-clave:usuario'
 //	go run ./cmd/api                     # http://localhost:8080/docs
 //
-// Variables de entorno obligatorias:
+// Variables de entorno, las dos obligatorias:
 //
 //   - JWT_SECRETO: la clave HS256, de al menos 32 bytes.
 //   - API_USUARIOS: «usuario:clave:rol» separados por comas, con rol usuario o
 //     admin.
-//
-// Variables de entorno de las bases, opcionales (con docker compose las pone
-// docker-compose.yml):
-//
-//   - MONGO_URI y MONGO_DB: dónde está MongoDB (mongodb://localhost:27017) y
-//     la base de datos (por omisión aire_distribuido). Sin MONGO_URI, las
-//     colecciones están en memoria.
-//   - REDIS_ADDR y REDIS_DB: dónde está Redis (localhost:6379) y el número de
-//     base (por omisión 0). Sin REDIS_ADDR, la caché está en memoria.
 //
 // Para desarrollo, -demo arranca sin API_USUARIOS con los usuarios de
 // demostración demo/demo (usuario) y admin/admin (admin), con un aviso en el
@@ -35,6 +25,11 @@
 // Con -salud no levanta la API: pide /api/salud a la que ya corre en -addr y
 // sale con 0 si responde. Es el healthcheck de Docker (spec §8), porque la
 // imagen distroless no tiene curl.
+//
+// MongoDB y Redis se eligen con MONGO_URI, MONGO_DB, REDIS_ADDR y REDIS_DB
+// (almacenes.go); con docker compose las pone docker-compose.yml. Si alguna
+// guarda un modelo activo que entrenó la API, se arranca con ese en vez del de
+// reports/.
 //
 // Al recibir SIGTERM o Ctrl+C deja de aceptar pedidos, espera hasta
 // plazoPedidos a los que están en curso y el escritor vacía sus colas en a lo
