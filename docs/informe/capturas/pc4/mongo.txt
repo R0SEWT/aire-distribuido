@@ -19,8 +19,8 @@ $ docker compose -p evidencias exec -T mongo mongosh --quiet aire_distribuido --
 
 $ docker compose -p evidencias exec -T mongo mongosh --quiet aire_distribuido --eval 'printjson(db.predicciones.find({estacion: "CA-HU-04"}).sort({fecha_hora: -1, ts: -1}).limit(1).toArray()[0])'
 {
-  _id: ObjectId('6b008ca0015a36403d21da36'),
-  ts: ISODate('2026-11-20T18:08:32.128Z'),
+  _id: ObjectId('6b00c5714fde12c944d1a83b'),
+  ts: ISODate('2026-11-20T22:10:57.362Z'),
   estacion: 'CA-HU-04',
   fecha_hora: ISODate('2021-12-11T05:00:00.000Z'),
   pm2_5: 71.6,
@@ -34,8 +34,8 @@ $ docker compose -p evidencias exec -T mongo mongosh --quiet aire_distribuido --
   },
   alerta: true,
   inca: 'mala',
-  modelo_id: 'entrenado-e-20261120-1308',
-  ms: 0.024378
+  modelo_id: 'entrenado-e-20261120-1710',
+  ms: 0.00479
 }
 
 $ docker compose -p evidencias exec -T mongo mongosh --quiet aire_distribuido --eval 'printjson(db.predicciones.aggregate([{$group: {_id: "$alerta", predicciones: {$sum: 1}}}, {$sort: {_id: 1}}]).toArray())'
@@ -61,17 +61,17 @@ $ docker compose -p evidencias exec -T mongo mongosh --quiet aire_distribuido --
     activo: false
   },
   {
-    _id: 'entrenado-e-20261120-1308',
-    creado: ISODate('2026-11-20T18:08:16.341Z'),
-    origen: 'e-20261120-1308',
+    _id: 'entrenado-e-20261120-1710',
+    creado: ISODate('2026-11-20T22:10:43.157Z'),
+    origen: 'e-20261120-1710',
     inercia: 50950.36689106274,
     iteraciones: 44,
     activo: false
   },
   {
-    _id: 'entrenado-e-20261120-1308-3',
-    creado: ISODate('2026-11-20T18:08:32.363Z'),
-    origen: 'e-20261120-1308-3',
+    _id: 'entrenado-e-20261120-1710-3',
+    creado: ISODate('2026-11-20T22:10:57.520Z'),
+    origen: 'e-20261120-1710-3',
     inercia: 50950.36689106274,
     iteraciones: 44,
     activo: true
@@ -80,9 +80,9 @@ $ docker compose -p evidencias exec -T mongo mongosh --quiet aire_distribuido --
 
 $ docker compose -p evidencias exec -T mongo mongosh --quiet aire_distribuido --eval 'printjson(db.modelos.findOne({activo: true}))'
 {
-  _id: 'entrenado-e-20261120-1308-3',
-  creado: ISODate('2026-11-20T18:08:32.363Z'),
-  origen: 'e-20261120-1308-3',
+  _id: 'entrenado-e-20261120-1710-3',
+  creado: ISODate('2026-11-20T22:10:57.520Z'),
+  origen: 'e-20261120-1710-3',
   receta: {
     features: [
       'pm2_5',
@@ -175,9 +175,9 @@ $ docker compose -p evidencias exec -T mongo mongosh --quiet aire_distribuido --
 $ docker compose -p evidencias exec -T mongo mongosh --quiet aire_distribuido --eval 'printjson(db.entrenamientos.find({}, {rondas: 0}).sort({inicio: -1}).toArray())'
 [
   {
-    _id: 'e-20261120-1308-3',
-    inicio: ISODate('2026-11-20T18:08:32.223Z'),
-    fin: ISODate('2026-11-20T18:08:32.365Z'),
+    _id: 'e-20261120-1710-3',
+    inicio: ISODate('2026-11-20T22:10:57.424Z'),
+    fin: ISODate('2026-11-20T22:10:57.521Z'),
     estado: 'terminado',
     parametros: {
       nodos: 3,
@@ -186,8 +186,8 @@ $ docker compose -p evidencias exec -T mongo mongosh --quiet aire_distribuido --
     },
     nodos: [
       {
-        nombre: '69b61aa85c9a-1',
-        direccion: '172.19.0.5:39910',
+        nombre: '738df9caa875-1',
+        direccion: '172.19.0.7:53286',
         workers: 14,
         rango: {
           desde: 0,
@@ -195,8 +195,8 @@ $ docker compose -p evidencias exec -T mongo mongosh --quiet aire_distribuido --
         }
       },
       {
-        nombre: '86dd2b5bd773-1',
-        direccion: '172.19.0.7:45140',
+        nombre: '9546f5d8e1b6-1',
+        direccion: '172.19.0.5:53784',
         workers: 14,
         rango: {
           desde: 21958,
@@ -204,8 +204,8 @@ $ docker compose -p evidencias exec -T mongo mongosh --quiet aire_distribuido --
         }
       },
       {
-        nombre: '8ffe08419d84-1',
-        direccion: '172.19.0.6:56486',
+        nombre: 'c4d2e5f18af9-1',
+        direccion: '172.19.0.6:51352',
         workers: 14,
         rango: {
           desde: 43916,
@@ -216,15 +216,15 @@ $ docker compose -p evidencias exec -T mongo mongosh --quiet aire_distribuido --
     iteraciones: 44,
     paro: 'tolerancia',
     dif_secuencial: 7.549516567451064e-15,
-    ms_total: 76.374329,
-    modelo_id: 'entrenado-e-20261120-1308-3',
+    ms_total: 51.193906,
+    modelo_id: 'entrenado-e-20261120-1710-3',
     aviso: null,
     error: null
   },
   {
-    _id: 'e-20261120-1308-2',
-    inicio: ISODate('2026-11-20T18:08:18.475Z'),
-    fin: ISODate('2026-11-20T18:08:20.607Z'),
+    _id: 'e-20261120-1710-2',
+    inicio: ISODate('2026-11-20T22:10:45.298Z'),
+    fin: ISODate('2026-11-20T22:10:47.202Z'),
     estado: 'terminado',
     parametros: {
       nodos: 3,
@@ -233,8 +233,8 @@ $ docker compose -p evidencias exec -T mongo mongosh --quiet aire_distribuido --
     },
     nodos: [
       {
-        nombre: '69b61aa85c9a-1',
-        direccion: '172.19.0.5:39900',
+        nombre: '738df9caa875-1',
+        direccion: '172.19.0.7:53272',
         workers: 14,
         rango: {
           desde: 0,
@@ -242,8 +242,8 @@ $ docker compose -p evidencias exec -T mongo mongosh --quiet aire_distribuido --
         }
       },
       {
-        nombre: '86dd2b5bd773-1',
-        direccion: '172.19.0.7:45130',
+        nombre: '9546f5d8e1b6-1',
+        direccion: '172.19.0.5:53782',
         workers: 14,
         rango: {
           desde: 6587300,
@@ -251,8 +251,8 @@ $ docker compose -p evidencias exec -T mongo mongosh --quiet aire_distribuido --
         }
       },
       {
-        nombre: '8ffe08419d84-1',
-        direccion: '172.19.0.6:56482',
+        nombre: 'c4d2e5f18af9-1',
+        direccion: '172.19.0.6:51350',
         workers: 14,
         rango: {
           desde: 13174600,
@@ -263,15 +263,15 @@ $ docker compose -p evidencias exec -T mongo mongosh --quiet aire_distribuido --
     iteraciones: 44,
     paro: 'tolerancia',
     dif_secuencial: 1.0658141036401503e-14,
-    ms_total: 2080.809472,
+    ms_total: 1857.823298,
     modelo_id: null,
     aviso: null,
     error: null
   },
   {
-    _id: 'e-20261120-1308',
-    inicio: ISODate('2026-11-20T18:08:16.229Z'),
-    fin: ISODate('2026-11-20T18:08:16.342Z'),
+    _id: 'e-20261120-1710',
+    inicio: ISODate('2026-11-20T22:10:43.048Z'),
+    fin: ISODate('2026-11-20T22:10:43.158Z'),
     estado: 'terminado',
     parametros: {
       nodos: 3,
@@ -280,8 +280,8 @@ $ docker compose -p evidencias exec -T mongo mongosh --quiet aire_distribuido --
     },
     nodos: [
       {
-        nombre: '69b61aa85c9a-1',
-        direccion: '172.19.0.5:33376',
+        nombre: '738df9caa875-1',
+        direccion: '172.19.0.7:36002',
         workers: 14,
         rango: {
           desde: 0,
@@ -289,8 +289,8 @@ $ docker compose -p evidencias exec -T mongo mongosh --quiet aire_distribuido --
         }
       },
       {
-        nombre: '86dd2b5bd773-1',
-        direccion: '172.19.0.7:46192',
+        nombre: '9546f5d8e1b6-1',
+        direccion: '172.19.0.5:49484',
         workers: 14,
         rango: {
           desde: 21958,
@@ -298,8 +298,8 @@ $ docker compose -p evidencias exec -T mongo mongosh --quiet aire_distribuido --
         }
       },
       {
-        nombre: '8ffe08419d84-1',
-        direccion: '172.19.0.6:33774',
+        nombre: 'c4d2e5f18af9-1',
+        direccion: '172.19.0.6:59294',
         workers: 14,
         rango: {
           desde: 43916,
@@ -310,39 +310,39 @@ $ docker compose -p evidencias exec -T mongo mongosh --quiet aire_distribuido --
     iteraciones: 44,
     paro: 'tolerancia',
     dif_secuencial: 7.549516567451064e-15,
-    ms_total: 56.277325,
-    modelo_id: 'entrenado-e-20261120-1308',
+    ms_total: 63.749399,
+    modelo_id: 'entrenado-e-20261120-1710',
     aviso: null,
     error: null
   }
 ]
 
-$ docker compose -p evidencias exec -T mongo mongosh --quiet aire_distribuido --eval 'const e = db.entrenamientos.findOne({_id: "e-20261120-1308-3"}); printjson({_id: e._id, estado: e.estado, iteraciones: e.iteraciones, rondas_guardadas: e.rondas.length, primera_ronda: e.rondas[0], ultima_ronda: e.rondas[e.rondas.length - 1]})'
+$ docker compose -p evidencias exec -T mongo mongosh --quiet aire_distribuido --eval 'const e = db.entrenamientos.findOne({_id: "e-20261120-1710-3"}); printjson({_id: e._id, estado: e.estado, iteraciones: e.iteraciones, rondas_guardadas: e.rondas.length, primera_ronda: e.rondas[0], ultima_ronda: e.rondas[e.rondas.length - 1]})'
 {
-  _id: 'e-20261120-1308-3',
+  _id: 'e-20261120-1710-3',
   estado: 'terminado',
   iteraciones: 44,
   rondas_guardadas: 44,
   primera_ronda: {
     iter: 1,
     inercia: 73075.49583192292,
-    ms_ronda: 0.566326,
-    ms_fusion: 0.003572,
+    ms_ronda: 0.506603,
+    ms_fusion: 0.002467,
     ms_por_nodo: {
-      '69b61aa85c9a-1': 0.443155,
-      '86dd2b5bd773-1': 0.525661,
-      '8ffe08419d84-1': 0.481264
+      '9546f5d8e1b6-1': 0.362702,
+      'c4d2e5f18af9-1': 0.36035,
+      '738df9caa875-1': 0.482305
     }
   },
   ultima_ronda: {
     iter: 44,
     inercia: 50950.36689106274,
-    ms_ronda: 0.439593,
-    ms_fusion: 0.002089,
+    ms_ronda: 0.326233,
+    ms_fusion: 0.001491,
     ms_por_nodo: {
-      '86dd2b5bd773-1': 0.364353,
-      '8ffe08419d84-1': 0.27171,
-      '69b61aa85c9a-1': 0.325043
+      'c4d2e5f18af9-1': 0.213592,
+      '738df9caa875-1': 0.223955,
+      '9546f5d8e1b6-1': 0.307878
     }
   }
 }
@@ -350,32 +350,32 @@ $ docker compose -p evidencias exec -T mongo mongosh --quiet aire_distribuido --
 $ docker compose -p evidencias exec -T mongo mongosh --quiet aire_distribuido --eval 'printjson(db.eventos_cluster.find().sort({ts: 1}).limit(4).toArray())'
 [
   {
-    _id: ObjectId('6b008c88015a36403d209e4b'),
-    ts: ISODate('2026-11-20T18:08:08.931Z'),
+    _id: ObjectId('6b00c5584fde12c944d06c57'),
+    ts: ISODate('2026-11-20T22:10:32.779Z'),
     tipo: 'alta',
-    nodo: '69b61aa85c9a-1',
-    detalle: '172.19.0.5:33376: 14 workers, latencia 0.12 ms'
+    nodo: '9546f5d8e1b6-1',
+    detalle: '172.19.0.5:49484: 14 workers, latencia 0.11 ms'
   },
   {
-    _id: ObjectId('6b008c89015a36403d209e4c'),
-    ts: ISODate('2026-11-20T18:08:09.027Z'),
+    _id: ObjectId('6b00c5584fde12c944d06c58'),
+    ts: ISODate('2026-11-20T22:10:32.882Z'),
     tipo: 'alta',
-    nodo: '8ffe08419d84-1',
-    detalle: '172.19.0.6:33774: 14 workers, latencia 0.10 ms'
+    nodo: 'c4d2e5f18af9-1',
+    detalle: '172.19.0.6:59294: 14 workers, latencia 0.09 ms'
   },
   {
-    _id: ObjectId('6b008c89015a36403d209e4d'),
-    ts: ISODate('2026-11-20T18:08:09.115Z'),
+    _id: ObjectId('6b00c5584fde12c944d06c59'),
+    ts: ISODate('2026-11-20T22:10:32.977Z'),
     tipo: 'alta',
-    nodo: '86dd2b5bd773-1',
-    detalle: '172.19.0.7:46192: 14 workers, latencia 0.10 ms'
+    nodo: '738df9caa875-1',
+    detalle: '172.19.0.7:36002: 14 workers, latencia 0.07 ms'
   },
   {
-    _id: ObjectId('6b008c90015a36403d209e4f'),
-    ts: ISODate('2026-11-20T18:08:16.286Z'),
+    _id: ObjectId('6b00c5634fde12c944d06c5b'),
+    ts: ISODate('2026-11-20T22:10:43.113Z'),
     tipo: 'baja',
-    nodo: '69b61aa85c9a-1',
-    detalle: '172.19.0.5:33376: entrenamiento e-20261120-1308 terminado'
+    nodo: '738df9caa875-1',
+    detalle: '172.19.0.7:36002: entrenamiento e-20261120-1710 terminado'
   }
 ]
 

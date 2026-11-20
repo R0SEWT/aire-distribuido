@@ -8,9 +8,9 @@ Iteration 1/78
 
 ❏ 4. Datos de prueba (Runner con lecturas_prueba.csv)
 ↳ Predicción del CSV
-  POST http://localhost:8080/api/auth/token   POST http://localhost:8080/api/auth/token [200 OK, 357B, 18ms]
-[200 OK, 353B, 22ms]
-  POST http://localhost:8080/api/predicciones [200 OK, 393B, 2ms]
+  POST http://localhost:8080/api/auth/token   POST http://localhost:8080/api/auth/token [200 OK, 353B, 12ms]
+[200 OK, 357B, 19ms]
+  POST http://localhost:8080/api/predicciones [200 OK, 392B, 2ms]
   ✓  responde en menos de 100 ms (tiempo HTTP completo: 2 ms)
   ✓  la respuesta es JSON
   ✓  código HTTP 200
@@ -42,8 +42,8 @@ Iteration 2/78
 Iteration 3/78
 
 ↳ Predicción del CSV
-  POST http://localhost:8080/api/predicciones [200 OK, 390B, 2ms]
-  ✓  responde en menos de 100 ms (tiempo HTTP completo: 2 ms)
+  POST http://localhost:8080/api/predicciones [200 OK, 391B, 1ms]
+  ✓  responde en menos de 100 ms (tiempo HTTP completo: 1 ms)
   ✓  la respuesta es JSON
   ✓  código HTTP 200
   ✓  forma de la respuesta: Prediccion del contrato
@@ -58,8 +58,8 @@ Iteration 3/78
 Iteration 4/78
 
 ↳ Predicción del CSV
-  POST http://localhost:8080/api/predicciones [200 OK, 391B, 2ms]
-  ✓  responde en menos de 100 ms (tiempo HTTP completo: 2 ms)
+  POST http://localhost:8080/api/predicciones [200 OK, 391B, 1ms]
+  ✓  responde en menos de 100 ms (tiempo HTTP completo: 1 ms)
   ✓  la respuesta es JSON
   ✓  código HTTP 200
   ✓  forma de la respuesta: Prediccion del contrato
@@ -74,8 +74,8 @@ Iteration 4/78
 Iteration 5/78
 
 ↳ Predicción del CSV
-  POST http://localhost:8080/api/predicciones [200 OK, 393B, 2ms]
-  ✓  responde en menos de 100 ms (tiempo HTTP completo: 2 ms)
+  POST http://localhost:8080/api/predicciones [200 OK, 393B, 1ms]
+  ✓  responde en menos de 100 ms (tiempo HTTP completo: 1 ms)
   ✓  la respuesta es JSON
   ✓  código HTTP 200
   ✓  forma de la respuesta: Prediccion del contrato
@@ -90,8 +90,8 @@ Iteration 5/78
 Iteration 6/78
 
 ↳ Predicción del CSV
-  POST http://localhost:8080/api/predicciones [200 OK, 391B, 1ms]
-  ✓  responde en menos de 100 ms (tiempo HTTP completo: 1 ms)
+  POST http://localhost:8080/api/predicciones [200 OK, 391B, 2ms]
+  ✓  responde en menos de 100 ms (tiempo HTTP completo: 2 ms)
   ✓  la respuesta es JSON
   ✓  código HTTP 200
   ✓  forma de la respuesta: Prediccion del contrato
@@ -106,8 +106,8 @@ Iteration 6/78
 Iteration 7/78
 
 ↳ Predicción del CSV
-  POST http://localhost:8080/api/predicciones [200 OK, 392B, 3ms]
-  ✓  responde en menos de 100 ms (tiempo HTTP completo: 3 ms)
+  POST http://localhost:8080/api/predicciones [200 OK, 392B, 2ms]
+  ✓  responde en menos de 100 ms (tiempo HTTP completo: 2 ms)
   ✓  la respuesta es JSON
   ✓  código HTTP 200
   ✓  forma de la respuesta: Prediccion del contrato
@@ -138,8 +138,8 @@ Iteration 8/78
 Iteration 9/78
 
 ↳ Predicción del CSV
-  POST http://localhost:8080/api/predicciones [200 OK, 392B, 2ms]
-  ✓  responde en menos de 100 ms (tiempo HTTP completo: 2 ms)
+  POST http://localhost:8080/api/predicciones [200 OK, 392B, 1ms]
+  ✓  responde en menos de 100 ms (tiempo HTTP completo: 1 ms)
   ✓  la respuesta es JSON
   ✓  código HTTP 200
   ✓  forma de la respuesta: Prediccion del contrato
@@ -186,8 +186,8 @@ Iteration 11/78
 Iteration 12/78
 
 ↳ Predicción del CSV
-  POST http://localhost:8080/api/predicciones [200 OK, 390B, 1ms]
-  ✓  responde en menos de 100 ms (tiempo HTTP completo: 1 ms)
+  POST http://localhost:8080/api/predicciones [200 OK, 390B, 2ms]
+  ✓  responde en menos de 100 ms (tiempo HTTP completo: 2 ms)
   ✓  la respuesta es JSON
   ✓  código HTTP 200
   ✓  forma de la respuesta: Prediccion del contrato
@@ -218,8 +218,8 @@ Iteration 13/78
 Iteration 14/78
 
 ↳ Predicción del CSV
-  POST http://localhost:8080/api/predicciones [200 OK, 392B, 1ms]
-  ✓  responde en menos de 100 ms (tiempo HTTP completo: 1 ms)
+  POST http://localhost:8080/api/predicciones [200 OK, 392B, 2ms]
+  ✓  responde en menos de 100 ms (tiempo HTTP completo: 2 ms)
   ✓  la respuesta es JSON
   ✓  código HTTP 200
   ✓  forma de la respuesta: Prediccion del contrato
@@ -234,8 +234,8 @@ Iteration 14/78
 Iteration 15/78
 
 ↳ Predicción del CSV
-  POST http://localhost:8080/api/predicciones [200 OK, 390B, 2ms]
-  ✓  responde en menos de 100 ms (tiempo HTTP completo: 2 ms)
+  POST http://localhost:8080/api/predicciones [200 OK, 390B, 1ms]
+  ✓  responde en menos de 100 ms (tiempo HTTP completo: 1 ms)
   ✓  la respuesta es JSON
   ✓  código HTTP 200
   ✓  forma de la respuesta: Prediccion del contrato
@@ -266,7 +266,7 @@ Iteration 16/78
 Iteration 17/78
 
 ↳ Predicción del CSV
-  POST http://localhost:8080/api/predicciones [200 OK, 389B, 1ms]
+  POST http://localhost:8080/api/predicciones [200 OK, 390B, 1ms]
   ✓  responde en menos de 100 ms (tiempo HTTP completo: 1 ms)
   ✓  la respuesta es JSON
   ✓  código HTTP 200
@@ -282,7 +282,7 @@ Iteration 17/78
 Iteration 18/78
 
 ↳ Predicción del CSV
-  POST http://localhost:8080/api/predicciones [200 OK, 391B, 1ms]
+  POST http://localhost:8080/api/predicciones [200 OK, 390B, 1ms]
   ✓  responde en menos de 100 ms (tiempo HTTP completo: 1 ms)
   ✓  la respuesta es JSON
   ✓  código HTTP 200
@@ -330,8 +330,8 @@ Iteration 20/78
 Iteration 21/78
 
 ↳ Predicción del CSV
-  POST http://localhost:8080/api/predicciones [200 OK, 394B, 1ms]
-  ✓  responde en menos de 100 ms (tiempo HTTP completo: 1 ms)
+  POST http://localhost:8080/api/predicciones [200 OK, 394B, 2ms]
+  ✓  responde en menos de 100 ms (tiempo HTTP completo: 2 ms)
   ✓  la respuesta es JSON
   ✓  código HTTP 200
   ✓  forma de la respuesta: Prediccion del contrato
@@ -346,7 +346,7 @@ Iteration 21/78
 Iteration 22/78
 
 ↳ Predicción del CSV
-  POST http://localhost:8080/api/predicciones [200 OK, 392B, 1ms]
+  POST http://localhost:8080/api/predicciones [200 OK, 391B, 1ms]
   ✓  responde en menos de 100 ms (tiempo HTTP completo: 1 ms)
   ✓  la respuesta es JSON
   ✓  código HTTP 200
@@ -378,8 +378,8 @@ Iteration 23/78
 Iteration 24/78
 
 ↳ Predicción del CSV
-  POST http://localhost:8080/api/predicciones [200 OK, 392B, 2ms]
-  ✓  responde en menos de 100 ms (tiempo HTTP completo: 2 ms)
+  POST http://localhost:8080/api/predicciones [200 OK, 392B, 1ms]
+  ✓  responde en menos de 100 ms (tiempo HTTP completo: 1 ms)
   ✓  la respuesta es JSON
   ✓  código HTTP 200
   ✓  forma de la respuesta: Prediccion del contrato
@@ -394,8 +394,8 @@ Iteration 24/78
 Iteration 25/78
 
 ↳ Predicción del CSV
-  POST http://localhost:8080/api/predicciones [200 OK, 394B, 2ms]
-  ✓  responde en menos de 100 ms (tiempo HTTP completo: 2 ms)
+  POST http://localhost:8080/api/predicciones [200 OK, 393B, 1ms]
+  ✓  responde en menos de 100 ms (tiempo HTTP completo: 1 ms)
   ✓  la respuesta es JSON
   ✓  código HTTP 200
   ✓  forma de la respuesta: Prediccion del contrato
@@ -410,7 +410,7 @@ Iteration 25/78
 Iteration 26/78
 
 ↳ Predicción del CSV
-  POST http://localhost:8080/api/predicciones [200 OK, 391B, 1ms]
+  POST http://localhost:8080/api/predicciones [200 OK, 392B, 1ms]
   ✓  responde en menos de 100 ms (tiempo HTTP completo: 1 ms)
   ✓  la respuesta es JSON
   ✓  código HTTP 200
@@ -442,7 +442,7 @@ Iteration 27/78
 Iteration 28/78
 
 ↳ Predicción del CSV
-  POST http://localhost:8080/api/predicciones [200 OK, 391B, 1ms]
+  POST http://localhost:8080/api/predicciones [200 OK, 392B, 1ms]
   ✓  responde en menos de 100 ms (tiempo HTTP completo: 1 ms)
   ✓  la respuesta es JSON
   ✓  código HTTP 200
@@ -458,8 +458,8 @@ Iteration 28/78
 Iteration 29/78
 
 ↳ Predicción del CSV
-  POST http://localhost:8080/api/predicciones [200 OK, 393B, 2ms]
-  ✓  responde en menos de 100 ms (tiempo HTTP completo: 2 ms)
+  POST http://localhost:8080/api/predicciones [200 OK, 392B, 1ms]
+  ✓  responde en menos de 100 ms (tiempo HTTP completo: 1 ms)
   ✓  la respuesta es JSON
   ✓  código HTTP 200
   ✓  forma de la respuesta: Prediccion del contrato
@@ -474,8 +474,8 @@ Iteration 29/78
 Iteration 30/78
 
 ↳ Predicción del CSV
-  POST http://localhost:8080/api/predicciones [200 OK, 394B, 2ms]
-  ✓  responde en menos de 100 ms (tiempo HTTP completo: 2 ms)
+  POST http://localhost:8080/api/predicciones [200 OK, 394B, 1ms]
+  ✓  responde en menos de 100 ms (tiempo HTTP completo: 1 ms)
   ✓  la respuesta es JSON
   ✓  código HTTP 200
   ✓  forma de la respuesta: Prediccion del contrato
@@ -490,8 +490,8 @@ Iteration 30/78
 Iteration 31/78
 
 ↳ Predicción del CSV
-  POST http://localhost:8080/api/predicciones [200 OK, 390B, 1ms]
-  ✓  responde en menos de 100 ms (tiempo HTTP completo: 1 ms)
+  POST http://localhost:8080/api/predicciones [200 OK, 390B, 2ms]
+  ✓  responde en menos de 100 ms (tiempo HTTP completo: 2 ms)
   ✓  la respuesta es JSON
   ✓  código HTTP 200
   ✓  forma de la respuesta: Prediccion del contrato
@@ -506,7 +506,7 @@ Iteration 31/78
 Iteration 32/78
 
 ↳ Predicción del CSV
-  POST http://localhost:8080/api/predicciones [200 OK, 389B, 1ms]
+  POST http://localhost:8080/api/predicciones [200 OK, 390B, 1ms]
   ✓  responde en menos de 100 ms (tiempo HTTP completo: 1 ms)
   ✓  la respuesta es JSON
   ✓  código HTTP 200
@@ -522,7 +522,7 @@ Iteration 32/78
 Iteration 33/78
 
 ↳ Predicción del CSV
-  POST http://localhost:8080/api/predicciones [200 OK, 390B, 1ms]
+  POST http://localhost:8080/api/predicciones [200 OK, 389B, 1ms]
   ✓  responde en menos de 100 ms (tiempo HTTP completo: 1 ms)
   ✓  la respuesta es JSON
   ✓  código HTTP 200
@@ -570,7 +570,7 @@ Iteration 35/78
 Iteration 36/78
 
 ↳ Predicción del CSV
-  POST http://localhost:8080/api/predicciones [200 OK, 391B, 1ms]
+  POST http://localhost:8080/api/predicciones [200 OK, 392B, 1ms]
   ✓  responde en menos de 100 ms (tiempo HTTP completo: 1 ms)
   ✓  la respuesta es JSON
   ✓  código HTTP 200
@@ -666,7 +666,7 @@ Iteration 41/78
 Iteration 42/78
 
 ↳ Predicción del CSV
-  POST http://localhost:8080/api/predicciones [200 OK, 391B, 1ms]
+  POST http://localhost:8080/api/predicciones [200 OK, 390B, 1ms]
   ✓  responde en menos de 100 ms (tiempo HTTP completo: 1 ms)
   ✓  la respuesta es JSON
   ✓  código HTTP 200
@@ -682,7 +682,7 @@ Iteration 42/78
 Iteration 43/78
 
 ↳ Predicción del CSV
-  POST http://localhost:8080/api/predicciones [200 OK, 389B, 1ms]
+  POST http://localhost:8080/api/predicciones [200 OK, 391B, 1ms]
   ✓  responde en menos de 100 ms (tiempo HTTP completo: 1 ms)
   ✓  la respuesta es JSON
   ✓  código HTTP 200
@@ -762,8 +762,8 @@ Iteration 47/78
 Iteration 48/78
 
 ↳ Predicción del CSV
-  POST http://localhost:8080/api/predicciones [200 OK, 419B, 2ms]
-  ✓  responde en menos de 100 ms (tiempo HTTP completo: 2 ms)
+  POST http://localhost:8080/api/predicciones [200 OK, 419B, 1ms]
+  ✓  responde en menos de 100 ms (tiempo HTTP completo: 1 ms)
   ✓  la respuesta es JSON
   ✓  código HTTP 200
   ✓  forma de la respuesta: Prediccion del contrato
@@ -794,7 +794,7 @@ Iteration 49/78
 Iteration 50/78
 
 ↳ Predicción del CSV
-  POST http://localhost:8080/api/predicciones [200 OK, 407B, 1ms]
+  POST http://localhost:8080/api/predicciones [200 OK, 408B, 1ms]
   ✓  responde en menos de 100 ms (tiempo HTTP completo: 1 ms)
   ✓  la respuesta es JSON
   ✓  código HTTP 200
@@ -810,7 +810,7 @@ Iteration 50/78
 Iteration 51/78
 
 ↳ Predicción del CSV
-  POST http://localhost:8080/api/predicciones [200 OK, 419B, 1ms]
+  POST http://localhost:8080/api/predicciones [200 OK, 418B, 1ms]
   ✓  responde en menos de 100 ms (tiempo HTTP completo: 1 ms)
   ✓  la respuesta es JSON
   ✓  código HTTP 200
@@ -826,8 +826,8 @@ Iteration 51/78
 Iteration 52/78
 
 ↳ Predicción del CSV
-  POST http://localhost:8080/api/predicciones [200 OK, 421B, 2ms]
-  ✓  responde en menos de 100 ms (tiempo HTTP completo: 2 ms)
+  POST http://localhost:8080/api/predicciones [200 OK, 421B, 1ms]
+  ✓  responde en menos de 100 ms (tiempo HTTP completo: 1 ms)
   ✓  la respuesta es JSON
   ✓  código HTTP 200
   ✓  forma de la respuesta: Prediccion del contrato
@@ -881,7 +881,7 @@ Iteration 54/78
 Iteration 55/78
 
 ↳ Predicción del CSV
-  POST http://localhost:8080/api/predicciones [200 OK, 393B, 1ms]
+  POST http://localhost:8080/api/predicciones [200 OK, 392B, 1ms]
   ✓  responde en menos de 100 ms (tiempo HTTP completo: 1 ms)
   ✓  la respuesta es JSON
   ✓  código HTTP 200
@@ -945,8 +945,8 @@ Iteration 58/78
 Iteration 59/78
 
 ↳ Predicción del CSV
-  POST http://localhost:8080/api/predicciones [200 OK, 391B, 0µs]
-  ✓  responde en menos de 100 ms (tiempo HTTP completo: 0 ms)
+  POST http://localhost:8080/api/predicciones [200 OK, 391B, 1ms]
+  ✓  responde en menos de 100 ms (tiempo HTTP completo: 1 ms)
   ✓  la respuesta es JSON
   ✓  código HTTP 200
   ✓  forma de la respuesta: Prediccion del contrato
@@ -961,8 +961,8 @@ Iteration 59/78
 Iteration 60/78
 
 ↳ Predicción del CSV
-  POST http://localhost:8080/api/predicciones [200 OK, 390B, 1ms]
-  ✓  responde en menos de 100 ms (tiempo HTTP completo: 1 ms)
+  POST http://localhost:8080/api/predicciones [200 OK, 391B, 2ms]
+  ✓  responde en menos de 100 ms (tiempo HTTP completo: 2 ms)
   ✓  la respuesta es JSON
   ✓  código HTTP 200
   ✓  forma de la respuesta: Prediccion del contrato
@@ -977,8 +977,8 @@ Iteration 60/78
 Iteration 61/78
 
 ↳ Predicción del CSV
-  POST http://localhost:8080/api/predicciones [200 OK, 393B, 1ms]
-  ✓  responde en menos de 100 ms (tiempo HTTP completo: 1 ms)
+  POST http://localhost:8080/api/predicciones [200 OK, 393B, 2ms]
+  ✓  responde en menos de 100 ms (tiempo HTTP completo: 2 ms)
   ✓  la respuesta es JSON
   ✓  código HTTP 200
   ✓  forma de la respuesta: Prediccion del contrato
@@ -993,8 +993,8 @@ Iteration 61/78
 Iteration 62/78
 
 ↳ Predicción del CSV
-  POST http://localhost:8080/api/predicciones [200 OK, 391B, 1ms]
-  ✓  responde en menos de 100 ms (tiempo HTTP completo: 1 ms)
+  POST http://localhost:8080/api/predicciones [200 OK, 391B, 2ms]
+  ✓  responde en menos de 100 ms (tiempo HTTP completo: 2 ms)
   ✓  la respuesta es JSON
   ✓  código HTTP 200
   ✓  forma de la respuesta: Prediccion del contrato
@@ -1025,8 +1025,8 @@ Iteration 63/78
 Iteration 64/78
 
 ↳ Predicción del CSV
-  POST http://localhost:8080/api/predicciones [200 OK, 392B, 1ms]
-  ✓  responde en menos de 100 ms (tiempo HTTP completo: 1 ms)
+  POST http://localhost:8080/api/predicciones [200 OK, 392B, 2ms]
+  ✓  responde en menos de 100 ms (tiempo HTTP completo: 2 ms)
   ✓  la respuesta es JSON
   ✓  código HTTP 200
   ✓  forma de la respuesta: Prediccion del contrato
@@ -1041,7 +1041,7 @@ Iteration 64/78
 Iteration 65/78
 
 ↳ Predicción del CSV
-  POST http://localhost:8080/api/predicciones [200 OK, 393B, 1ms]
+  POST http://localhost:8080/api/predicciones [200 OK, 394B, 1ms]
   ✓  responde en menos de 100 ms (tiempo HTTP completo: 1 ms)
   ✓  la respuesta es JSON
   ✓  código HTTP 200
@@ -1057,8 +1057,8 @@ Iteration 65/78
 Iteration 66/78
 
 ↳ Predicción del CSV
-  POST http://localhost:8080/api/predicciones [200 OK, 394B, 2ms]
-  ✓  responde en menos de 100 ms (tiempo HTTP completo: 2 ms)
+  POST http://localhost:8080/api/predicciones [200 OK, 394B, 1ms]
+  ✓  responde en menos de 100 ms (tiempo HTTP completo: 1 ms)
   ✓  la respuesta es JSON
   ✓  código HTTP 200
   ✓  forma de la respuesta: Prediccion del contrato
@@ -1153,8 +1153,8 @@ Iteration 71/78
 Iteration 72/78
 
 ↳ Predicción del CSV
-  POST http://localhost:8080/api/predicciones [200 OK, 421B, 2ms]
-  ✓  responde en menos de 100 ms (tiempo HTTP completo: 2 ms)
+  POST http://localhost:8080/api/predicciones [200 OK, 420B, 1ms]
+  ✓  responde en menos de 100 ms (tiempo HTTP completo: 1 ms)
   ✓  la respuesta es JSON
   ✓  código HTTP 200
   ✓  forma de la respuesta: Prediccion del contrato
@@ -1169,7 +1169,7 @@ Iteration 72/78
 Iteration 73/78
 
 ↳ Predicción del CSV
-  POST http://localhost:8080/api/predicciones [200 OK, 422B, 1ms]
+  POST http://localhost:8080/api/predicciones [200 OK, 421B, 1ms]
   ✓  responde en menos de 100 ms (tiempo HTTP completo: 1 ms)
   ✓  la respuesta es JSON
   ✓  código HTTP 200
@@ -1282,11 +1282,11 @@ Iteration 78/78
 ├─────────────────────────┼─────────────────┼─────────────────┤
 │              assertions │             714 │               0 │
 ├─────────────────────────┴─────────────────┴─────────────────┤
-│ total run duration: 2.9s                                    │
+│ total run duration: 2.4s                                    │
 ├─────────────────────────────────────────────────────────────┤
 │ total data received: 22.13kB (approx)                       │
 ├─────────────────────────────────────────────────────────────┤
-│ average response time: 1ms [min: 1ms, max: 22ms, s.d.: 2ms] │
+│ average response time: 1ms [min: 1ms, max: 19ms, s.d.: 2ms] │
 └─────────────────────────────────────────────────────────────┘
 
 código de salida: 0

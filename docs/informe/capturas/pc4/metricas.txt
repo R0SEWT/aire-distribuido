@@ -3,21 +3,21 @@ $ curl -s -H "Authorization: Bearer $TOKEN" localhost:8080/api/metricas
   "endpoints": {
     "GET /api/cluster/nodos": {
       "pedidos": 13,
-      "p50_ms": 0.0349,
-      "p95_ms": 0.09452,
-      "p99_ms": 0.09452
+      "p50_ms": 0.03805,
+      "p95_ms": 0.09051,
+      "p99_ms": 0.09051
     },
     "GET /api/entrenamientos": {
       "pedidos": 4,
-      "p50_ms": 0.7241,
-      "p95_ms": 1.024,
-      "p99_ms": 1.024
+      "p50_ms": 0.664,
+      "p95_ms": 0.939,
+      "p99_ms": 0.939
     },
     "GET /api/entrenamientos/{id}": {
-      "pedidos": 14,
-      "p50_ms": 0.8992,
-      "p95_ms": 13.78,
-      "p99_ms": 13.78
+      "pedidos": 13,
+      "p50_ms": 0.7896,
+      "p95_ms": 2.435,
+      "p99_ms": 2.435
     },
     "GET /api/estaciones": {
       "pedidos": 1,
@@ -27,27 +27,27 @@ $ curl -s -H "Authorization: Bearer $TOKEN" localhost:8080/api/metricas
     },
     "GET /api/estaciones/{id}/regimen": {
       "pedidos": 5,
-      "p50_ms": 0.2061,
-      "p95_ms": 0.256,
-      "p99_ms": 0.256
+      "p50_ms": 0.189,
+      "p95_ms": 0.5347,
+      "p99_ms": 0.5347
     },
     "GET /api/metricas": {
-      "pedidos": 4,
-      "p50_ms": 0.08667,
-      "p95_ms": 0.1337,
-      "p99_ms": 0.1337
+      "pedidos": 6,
+      "p50_ms": 0.083,
+      "p95_ms": 0.1226,
+      "p99_ms": 0.1226
     },
     "GET /api/modelos/activo": {
       "pedidos": 3,
-      "p50_ms": 0.07288,
-      "p95_ms": 0.1031,
-      "p99_ms": 0.1031
+      "p50_ms": 0.06979,
+      "p95_ms": 0.07611,
+      "p99_ms": 0.07611
     },
     "GET /api/salud": {
-      "pedidos": 17,
-      "p50_ms": 0.4695,
-      "p95_ms": 1.218,
-      "p99_ms": 1.218
+      "pedidos": 11,
+      "p50_ms": 0.4123,
+      "p95_ms": 0.4496,
+      "p99_ms": 0.4496
     },
     "GET /docs": {
       "pedidos": 1,
@@ -57,31 +57,31 @@ $ curl -s -H "Authorization: Bearer $TOKEN" localhost:8080/api/metricas
     },
     "GET /openapi.yaml": {
       "pedidos": 1,
-      "p50_ms": 0.09051,
-      "p95_ms": 0.09051,
-      "p99_ms": 0.09051
+      "p50_ms": 0.1076,
+      "p95_ms": 0.1076,
+      "p99_ms": 0.1076
     },
     "POST /api/auth/token": {
-      "pedidos": 12,
-      "p50_ms": 0.05154,
-      "p95_ms": 0.09452,
-      "p99_ms": 0.09452
+      "pedidos": 13,
+      "p50_ms": 0.05382,
+      "p95_ms": 0.1396,
+      "p99_ms": 0.1396
     },
     "POST /api/entrenamientos": {
       "pedidos": 9,
-      "p50_ms": 0.064,
-      "p95_ms": 1.878,
-      "p99_ms": 1.878
+      "p50_ms": 0.083,
+      "p95_ms": 2.139,
+      "p99_ms": 2.139
     },
     "POST /api/predicciones": {
       "pedidos": 80890,
-      "p50_ms": 0.02691,
-      "p95_ms": 0.07288,
-      "p99_ms": 0.2915
+      "p50_ms": 0.01987,
+      "p95_ms": 0.03974,
+      "p99_ms": 0.1733
     }
   },
   "nodos_en_pool": 3,
-  "ultimo_entrenamiento": "e-20261120-1308-3",
+  "ultimo_entrenamiento": "e-20261120-1710-3",
   "escrituras_descartadas": 0,
   "escrituras_fallidas": 0,
   "escritura": {
@@ -89,18 +89,18 @@ $ curl -s -H "Authorization: Bearer $TOKEN" localhost:8080/api/metricas
       "escritas": 80879,
       "descartadas": 0,
       "fallidas": 0,
-      "lotes": 23807
+      "lotes": 23247
     },
     "redis": {
       "escritas": 80879,
       "descartadas": 0,
       "fallidas": 0,
-      "lotes": 32464
+      "lotes": 31872
     }
   },
   "puntos_de_control": {
-    "escritos": 132,
+    "escritos": 129,
     "fallidos": 0,
-    "omitidos": 0
+    "omitidos": 3
   }
 }

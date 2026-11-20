@@ -1,11 +1,11 @@
 {
   "metadatos": {
-    "momento": "2026-11-20T13:08:25.842744182-05:00",
+    "momento": "2026-11-20T17:10:52.61239592-05:00",
     "maquina": "A019803",
     "version_go": "go1.27.4",
     "gomaxprocs": 14,
     "cpus_logicas": 14,
-    "commit": "df38ea01d6ceccd3ab952d9ed5ca52dfcc9ab61a",
+    "commit": "d091ce5d3e4b8c2ff7ec3a42250a9ec9bdaea09f",
     "arbol_sucio": false
   },
   "parametros": {
@@ -30,22 +30,22 @@
     "mongo": "ok",
     "redis": "ok",
     "nodos_en_pool": 3,
-    "modelo_activo": "entrenado-e-20261120-1308"
+    "modelo_activo": "entrenado-e-20261120-1710"
   },
-  "medicion": "Latencia del lado del cliente: desde antes de enviar el pedido hasta leer el cuerpo completo de la respuesta, con un JWT y sobre conexiones keep-alive ya abiertas por el calentamiento. Cada nivel tiene siempre `clientes` pedidos en vuelo. Percentiles por rango más cercano sobre los pedidos que respondieron 200; pedidos_por_segundo son esos pedidos sobre duracion_s. respuestas_distintas: respondieron 200 con un régimen que no es el regimen_esperado del archivo. cumple: sin errores, sin respuestas distintas y p99_ms \u003c limite_ms.",
+  "medicion": "Latencia del lado del cliente: desde antes de enviar el pedido hasta leer el cuerpo completo de la respuesta, con un JWT y sobre conexiones keep-alive ya abiertas por el calentamiento. Cada nivel tiene siempre `clientes` pedidos en vuelo. Percentiles por rango más cercano sobre los pedidos que respondieron 200; pedidos_por_segundo son esos pedidos sobre duracion_s. respuestas_distintas: respondieron 200 con un régimen que no es el regimen_esperado del archivo. cumple: sin errores, sin respuestas distintas y p99_ms \u003c limite_ms. escrituras: lo que GET /api/metricas sumó en cada almacén entre antes y después de la corrida, con el calentamiento; la API responde antes de escribir, así que una predicción descartada o fallida respondió 200 igual. No entra en cumple.",
   "niveles": [
     {
       "clientes": 1,
       "pedidos": 20000,
       "errores": 0,
       "respuestas_distintas": 0,
-      "duracion_s": 3.66282957,
-      "pedidos_por_segundo": 5460.259511883322,
-      "p50_ms": 0.162867,
-      "p95_ms": 0.238961,
-      "p99_ms": 0.467292,
-      "max_ms": 3.474292,
-      "media_ms": 0.17481091050000022,
+      "duracion_s": 3.021022876,
+      "pedidos_por_segundo": 6620.274265013543,
+      "p50_ms": 0.14099,
+      "p95_ms": 0.182982,
+      "p99_ms": 0.227397,
+      "max_ms": 1.615002,
+      "media_ms": 0.14400429780000049,
       "sobre_el_limite": 0,
       "cumple": true
     },
@@ -54,13 +54,13 @@
       "pedidos": 20000,
       "errores": 0,
       "respuestas_distintas": 0,
-      "duracion_s": 1.153601156,
-      "pedidos_por_segundo": 17337.014527055486,
-      "p50_ms": 0.189521,
-      "p95_ms": 0.38668,
-      "p99_ms": 0.675436,
-      "max_ms": 2.403862,
-      "media_ms": 0.21415175754999977,
+      "duracion_s": 0.783660729,
+      "pedidos_por_segundo": 25521.24823904504,
+      "p50_ms": 0.133363,
+      "p95_ms": 0.227338,
+      "p99_ms": 0.408938,
+      "max_ms": 1.429096,
+      "media_ms": 0.14516215325000043,
       "sobre_el_limite": 0,
       "cumple": true
     },
@@ -69,13 +69,13 @@
       "pedidos": 20000,
       "errores": 0,
       "respuestas_distintas": 0,
-      "duracion_s": 0.805568058,
-      "pedidos_por_segundo": 24827.20088188998,
-      "p50_ms": 0.508638,
-      "p95_ms": 1.315569,
-      "p99_ms": 1.801912,
-      "max_ms": 5.074341,
-      "media_ms": 0.603029456800002,
+      "duracion_s": 0.496312938,
+      "pedidos_por_segundo": 40297.156226864274,
+      "p50_ms": 0.307747,
+      "p95_ms": 0.805749,
+      "p99_ms": 1.213832,
+      "max_ms": 2.265769,
+      "media_ms": 0.3702348956,
       "sobre_el_limite": 0,
       "cumple": true
     },
@@ -84,16 +84,34 @@
       "pedidos": 20000,
       "errores": 0,
       "respuestas_distintas": 0,
-      "duracion_s": 0.569355642,
-      "pedidos_por_segundo": 35127.429193017466,
-      "p50_ms": 1.469385,
-      "p95_ms": 3.42056,
-      "p99_ms": 4.386413,
-      "max_ms": 7.92926,
-      "media_ms": 1.6679583437500045,
+      "duracion_s": 0.362309176,
+      "pedidos_por_segundo": 55201.47245732468,
+      "p50_ms": 0.931576,
+      "p95_ms": 2.176737,
+      "p99_ms": 2.891317,
+      "max_ms": 5.012831,
+      "media_ms": 1.0571934910000031,
       "sobre_el_limite": 0,
       "cumple": true
     }
   ],
-  "cumple": true
+  "cumple": true,
+  "escrituras": {
+    "medido": true,
+    "predicciones_aceptadas": 80800,
+    "completas": true,
+    "espera_s": 0.000329258,
+    "mongo": {
+      "escritas": 80800,
+      "descartadas": 0,
+      "fallidas": 0,
+      "lotes": 23168
+    },
+    "redis": {
+      "escritas": 80800,
+      "descartadas": 0,
+      "fallidas": 0,
+      "lotes": 31793
+    }
+  }
 }
