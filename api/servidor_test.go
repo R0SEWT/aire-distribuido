@@ -671,7 +671,7 @@ func TestPrediccionEnMenosDe100ms(t *testing.T) {
 // Con la cola de escritura llena, la predicción responde igual y el descarte
 // se ve en /api/metricas.
 func TestColaLlenaNoFrenaLaPrediccion(t *testing.T) {
-	bloqueo := &prediccionesBloqueadas{entro: make(chan struct{}, 1), soltar: make(chan struct{})}
+	bloqueo := nuevasPrediccionesBloqueadas()
 	defer close(bloqueo.soltar)
 	e := nuevoEntorno(t, func(c *Config) { c.Predicciones = bloqueo; c.TamCola = 1 })
 	tok := e.token(t, "demo", "demo")
@@ -680,9 +680,18 @@ func TestColaLlenaNoFrenaLaPrediccion(t *testing.T) {
 	for range 5 {
 		objeto(t, e.pedir(t, "POST", "/api/predicciones", tok, lecturaEjemplo), 200)
 	}
-	obj := objeto(t, e.pedir(t, "GET", "/api/metricas", e.token(t, "admin", "clave-admin"), ""), 200)
-	if obj["escrituras_descartadas"] != 4.0 {
-		t.Fatalf("escrituras_descartadas = %v, se esperaban 4 (una en curso y una en la cola de 1)", obj["escrituras_descartadas"])
+	// El almacén trabado es MongoDB. El total suma además lo que la cola de
+	// Redis, también de 1, haya descartado en la ráfaga.
+	var m struct {
+		Total     float64                    `json:"escrituras_descartadas"`
+		Escritura map[string]estadoEscritura `json:"escritura"`
+	}
+	w := e.pedir(t, "GET", "/api/metricas", e.token(t, "admin", "clave-admin"), "")
+	if err := json.Unmarshal(w.Body.Bytes(), &m); err != nil || w.Code != 200 {
+		t.Fatalf("métricas: %d, %v", w.Code, err)
+	}
+	if n := m.Escritura["mongo"].Descartadas; n != 4 || m.Total < 4 {
+		t.Fatalf("%d descartes en MongoDB (%v en total), se esperaban 4 (una en curso y una en la cola de 1): %s", n, m.Total, w.Body)
 	}
 }
 

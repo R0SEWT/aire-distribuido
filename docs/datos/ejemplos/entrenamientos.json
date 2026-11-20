@@ -60,7 +60,9 @@
       }
     }
   ],
+  "iteraciones": 44,
   "paro": "tolerancia",
   "dif_secuencial": 0.0,
+  "ms_total": 31.2,
   "error": null
 }

@@ -20,7 +20,9 @@ import (
 	"math"
 	"os"
 	"slices"
+	"time"
 
+	"github.com/R0SEWT/aire-distribuido/almacen"
 	"github.com/R0SEWT/aire-distribuido/kmeans"
 )
 
@@ -47,7 +49,13 @@ type Regimen struct {
 
 // Modelo es un modelo listo para predecir.
 type Modelo struct {
-	ID          string
+	ID string
+	// Origen es de dónde salió: almacen.OrigenSembrado para el que se lee de
+	// reports/ o el id del entrenamiento que lo produjo. Creado es cuándo se
+	// entrenó y GoldSHA256, la huella del gold con que se entrenó.
+	Origen      string
+	Creado      time.Time
+	GoldSHA256  string
 	Receta      kmeans.Receta
 	Iteraciones int
 	Inercia     float64
@@ -125,6 +133,9 @@ var derivables = []string{kmeans.FeaturePM25, kmeans.FeaturePM10, kmeans.Feature
 
 // reporteKmeans es lo que se usa de reports/kmeans.json.
 type reporteKmeans struct {
+	Metadatos struct {
+		Momento time.Time `json:"momento"`
+	} `json:"metadatos"`
 	Receta      kmeans.Receta `json:"receta"`
 	Gold        infoGold      `json:"gold"`
 	K           int           `json:"k"`
@@ -215,6 +226,9 @@ func armar(rk reporteKmeans, rr reporteRegimenes, est *kmeans.Estandarizacion) (
 	}
 	m := &Modelo{
 		ID:          IDSembrado,
+		Origen:      almacen.OrigenSembrado,
+		Creado:      rk.Metadatos.Momento,
+		GoldSHA256:  rk.Gold.Sha256,
 		Receta:      rec,
 		Iteraciones: rk.Iteraciones,
 		Inercia:     rk.Inercia,

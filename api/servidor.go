@@ -6,8 +6,8 @@
 //
 // El camino de una predicción no espera a ningún almacén: el modelo vive en
 // memoria detrás de un atomic.Pointer, la media de 24 h de cada estación
-// también (paquete ventana) y la escritura va a una cola con búfer
-// (escritor.go).
+// también (paquete ventana) y la escritura va a dos colas con búfer, una por
+// almacén, que se vacían por lotes (escritor.go).
 package api
 
 import (
@@ -162,8 +162,9 @@ func (c *capturado) Header() http.Header         { return c.cabecera }
 func (c *capturado) WriteHeader(codigo int)      { c.codigo = codigo }
 func (c *capturado) Write(b []byte) (int, error) { return c.cuerpo.Write(b) }
 
-// Escribir corre la goroutine que guarda las predicciones hasta que ctx se
-// cancela; antes de volver escribe lo que quedó en la cola.
+// Escribir corre las goroutines que guardan las predicciones hasta que ctx se
+// cancela; antes de volver escribe lo que quedó en las colas, sin pasarse de
+// plazoVaciado.
 func (s *Servidor) Escribir(ctx context.Context) { s.escritor.correr(ctx) }
 
 // ActivarModelo reemplaza el modelo activo. Las predicciones en curso terminan
