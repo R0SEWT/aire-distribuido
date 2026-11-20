@@ -6,7 +6,7 @@ notebooks/
 experimentos/
 
 # De docs/ y reports/ solo entra lo que la API lee al arrancar: el contrato, el
-# modelo que siembra y la ficha de estaciones.
+# modelo que siembra, la ficha de estaciones y los centroides iniciales.
 docs/*
 !docs/api/
 reports/*
@@ -14,6 +14,7 @@ reports/*
 !reports/regimenes.json
 !reports/estandarizacion.json
 !reports/estaciones_ficha.csv
+!reports/centroides_iniciales.json
 
 # Git y configuración de herramientas.
 .git

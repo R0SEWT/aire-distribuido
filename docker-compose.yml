@@ -3,7 +3,10 @@
 #
 #   cp .env.example .env                 # y completar JWT_SECRETO y API_USUARIOS
 #   docker compose up --build            # API en http://localhost:8080/docs
-#   docker compose up --build --scale nodo=4
+#   docker compose up --build --scale nodo=3
+#
+# El gold (data/gold/oefa_features.csv, o la carpeta de GOLD_DIR) no se versiona
+# ni va en la imagen: se monta de solo lectura en la API y en los nodos.
 #
 # Las bases no tienen autenticación y solo publican su puerto en localhost: es
 # un entorno de desarrollo (docs/datos/README.md).
@@ -15,7 +18,18 @@ services:
     # -cola es el búfer de cada cola de escritura (una por base). Con el valor
     # por omisión, 1024, una ráfaga de 20 000 predicciones llegó a perder un
     # tercio en MongoDB; con 32768 no perdió ninguna. Son unos 10 MB.
-    command: ["api", "-addr", ":8080", "-cola", "32768"]
+    #
+    # La API es también el coordinador del clúster: los nodos la llaman en el
+    # 7070 (-nodos-addr), que no se publica al anfitrión porque solo lo usan
+    # los nodos de esta red. Para entrenar necesita el mismo gold que ellos.
+    command: ["api", "-addr", ":8080", "-cola", "32768", "-nodos-addr", ":7070", "-gold", "/datos/gold/oefa_features.csv"]
+    expose:
+      - "7070"
+    volumes:
+      - ${GOLD_DIR:-./data/gold}:/datos/gold:ro
+    # Al apagar, la API corta el entrenamiento en curso y despide a los nodos
+    # antes de terminar los pedidos y vaciar las colas: se le da margen.
+    stop_grace_period: 20s
     environment:
       # Sin valor, la API no arranca y dice cuál falta (docker compose logs api).
       JWT_SECRETO: ${JWT_SECRETO:-}
@@ -43,8 +57,8 @@ services:
 
   # Un nodo de cómputo. Sin container_name ni puertos: solo abre la conexión de
   # salida hacia el coordinador, así que se escala con --scale nodo=K y cada
-  # réplica se presenta con el nombre de su contenedor. Mientras el coordinador
-  # no escuche, reintenta cada dos segundos.
+  # réplica se presenta con el nombre de su contenedor más su PID. Si el
+  # coordinador no escucha o cierra la corrida, vuelve a llamar a los dos segundos.
   nodo:
     build: .
     image: aire-distribuido

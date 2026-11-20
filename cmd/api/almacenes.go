@@ -131,23 +131,30 @@ func avisar(log *slog.Logger, nombre string, p almacen.Pinger, datos ...any) {
 }
 
 // modeloActivo decide con qué modelo arranca la API (spec §6.2) y lo deja
-// guardado como activo en Redis y en MongoDB.
+// guardado como activo en MongoDB y en Redis.
 //
-// Si Redis (modelo:activo) o, en su defecto, MongoDB (el modelo con activo =
-// true) guardan un modelo que entrenó la API, se arranca con ese: es el
-// arranque en caliente, que no pierde un entrenamiento al reiniciar. Si no hay
-// ninguno, si lo guardado no se puede usar o si es el modelo sembrado, se
-// arranca con sembrado, el que se acaba de leer de reports/: los archivos son
-// la fuente del modelo sembrado, y así un reports/ nuevo no queda tapado por
-// una copia vieja en Redis.
+// Si MongoDB (el modelo con activo = true) o Redis (modelo:activo) guardan un
+// modelo que entrenó la API, se arranca con ese: es el arranque en caliente,
+// que no pierde un entrenamiento al reiniciar. Las dos bases pueden no
+// coincidir, porque activar un modelo son dos escrituras y cualquiera puede
+// fallar: gana el más nuevo por creado, esté donde esté, y con el mismo creado
+// al milisegundo (que es lo que MongoDB guarda), el de MongoDB, que es la base
+// persistente. La otra queda al día al final.
+//
+// Si no hay ninguno, si lo guardado no se puede usar o si es el modelo
+// sembrado, se arranca con sembrado, el que se acaba de leer de reports/: los
+// archivos son la fuente del modelo sembrado, y así un reports/ nuevo no queda
+// tapado por una copia vieja.
 func (a *almacenes) modeloActivo(sembrado *modelo.Modelo, log *slog.Logger) *modelo.Modelo {
 	m, fuente := sembrado, "reports/"
+	hayGuardado := false
+	// MongoDB primero: entre dos del mismo creado queda el primero.
 	for _, f := range []struct {
 		nombre string
 		leer   func(context.Context) (almacen.Modelo, error)
 	}{
-		{"Redis (modelo:activo)", a.cacheModelo.ModeloActivo},
 		{"MongoDB (modelos)", a.modelos.Activo},
+		{"Redis (modelo:activo)", a.cacheModelo.ModeloActivo},
 	} {
 		var doc almacen.Modelo
 		err := conPlazo(func(ctx context.Context) (err error) { doc, err = f.leer(ctx); return })
@@ -163,8 +170,18 @@ func (a *almacenes) modeloActivo(sembrado *modelo.Modelo, log *slog.Logger) *mod
 			log.Warn("el modelo activo guardado no se puede usar", "de", f.nombre, "err", err)
 			continue
 		}
-		m, fuente = guardado, f.nombre
-		break
+		elegido, descartado, deDescartado := guardado, m, fuente
+		if hayGuardado && !creadoAlMs(guardado).After(creadoAlMs(m)) {
+			elegido, descartado, deDescartado = m, guardado, f.nombre
+		}
+		if hayGuardado && elegido.ID != descartado.ID {
+			log.Warn("las bases guardan modelos activos distintos: se usa el más nuevo por creado",
+				"elegido", elegido.ID, "descartado", descartado.ID, "de", deDescartado, "creado", descartado.Creado)
+		}
+		if elegido == guardado {
+			m, fuente = guardado, f.nombre
+		}
+		hayGuardado = true
 	}
 	doc := m.Documento()
 	doc.Activo = true
@@ -178,3 +195,7 @@ func (a *almacenes) modeloActivo(sembrado *modelo.Modelo, log *slog.Logger) *mod
 		"k", m.K(), "features", m.Features(), "iteraciones", m.Iteraciones)
 	return m
 }
+
+// creadoAlMs es el creado de un modelo con la precisión con que lo guarda
+// MongoDB, para comparar entre bases.
+func creadoAlMs(m *modelo.Modelo) time.Time { return m.Creado.Truncate(time.Millisecond) }

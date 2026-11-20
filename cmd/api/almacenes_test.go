@@ -201,6 +201,73 @@ func TestModeloActivoAlArrancar(t *testing.T) {
 		comprobarGuardado(t, cache, modelos, modelo.IDSembrado)
 	})
 
+	// Las dos bases pueden guardar modelos distintos: ActivarModelo escribe
+	// primero en una y después en la otra, y cualquiera de las dos escrituras
+	// puede fallar. Gana el más nuevo por creado, esté donde esté.
+	viejo, nuevo := entrenado(t), entrenado(t)
+	viejo.Creado = time.Date(2026, 11, 19, 15, 30, 0, 0, time.UTC)
+	nuevo.ID, nuevo.Origen, nuevo.Creado = "entrenado-e-20261120-1000", "e-20261120-1000", time.Date(2026, 11, 20, 10, 0, 0, 0, time.UTC)
+
+	t.Run("un modelo:activo viejo en Redis no le gana al activo más nuevo de MongoDB", func(t *testing.T) {
+		a, cache, modelos := almacenesEnMemoria(t)
+		cache.GuardarModeloActivo(ctx, viejo)
+		modelos.Guardar(ctx, nuevo)
+		var log bytes.Buffer
+		if m := a.modeloActivo(sembrado, logA(&log)); m.ID != nuevo.ID {
+			t.Fatalf("modelo = %s; se esperaba el más nuevo, %s, que estaba en MongoDB\n%s", m.ID, nuevo.ID, log.String())
+		}
+		if !strings.Contains(log.String(), "MongoDB (modelos)") {
+			t.Errorf("el log no dice de dónde salió el modelo:\n%s", log.String())
+		}
+		comprobarGuardado(t, cache, modelos, nuevo.ID) // y Redis queda al día
+	})
+
+	t.Run("un activo viejo en MongoDB no le gana a un modelo:activo más nuevo", func(t *testing.T) {
+		a, cache, modelos := almacenesEnMemoria(t)
+		cache.GuardarModeloActivo(ctx, nuevo)
+		modelos.Guardar(ctx, viejo)
+		if m := a.modeloActivo(sembrado, logMudo()); m.ID != nuevo.ID {
+			t.Fatalf("modelo = %s; se esperaba el más nuevo, %s, que estaba en Redis", m.ID, nuevo.ID)
+		}
+		comprobarGuardado(t, cache, modelos, nuevo.ID) // y MongoDB queda al día
+	})
+
+	t.Run("el mismo modelo en las dos, con el creado de MongoDB al milisegundo", func(t *testing.T) {
+		a, cache, modelos := almacenesEnMemoria(t)
+		enRedis, enMongo := nuevo, nuevo
+		enRedis.Creado = nuevo.Creado.Add(123456 * time.Nanosecond) // Redis guarda los nanosegundos; MongoDB, no
+		cache.GuardarModeloActivo(ctx, enRedis)
+		modelos.Guardar(ctx, enMongo)
+		var log bytes.Buffer
+		if m := a.modeloActivo(sembrado, logA(&log)); m.ID != nuevo.ID || !strings.Contains(log.String(), "MongoDB (modelos)") {
+			t.Fatalf("modelo = %s; con el mismo creado al milisegundo se toma el de MongoDB\n%s", m.ID, log.String())
+		}
+	})
+
+	t.Run("el más nuevo no se puede usar: queda el otro", func(t *testing.T) {
+		a, cache, modelos := almacenesEnMemoria(t)
+		roto := nuevo
+		roto.CentroidesStd = roto.CentroidesStd[:1]
+		modelos.Guardar(ctx, roto)
+		cache.GuardarModeloActivo(ctx, viejo)
+		if m := a.modeloActivo(sembrado, logMudo()); m.ID != viejo.ID {
+			t.Fatalf("modelo = %s; el de MongoDB está roto y se esperaba el de Redis, %s", m.ID, viejo.ID)
+		}
+		comprobarGuardado(t, cache, modelos, viejo.ID)
+	})
+
+	t.Run("MongoDB tiene activo el sembrado y Redis, uno entrenado", func(t *testing.T) {
+		a, cache, modelos := almacenesEnMemoria(t)
+		copia := sembrado.Documento()
+		copia.Activo = true
+		modelos.Guardar(ctx, copia)
+		cache.GuardarModeloActivo(ctx, viejo)
+		if m := a.modeloActivo(sembrado, logMudo()); m.ID != viejo.ID {
+			t.Fatalf("modelo = %s; se esperaba el entrenado de Redis, %s", m.ID, viejo.ID)
+		}
+		comprobarGuardado(t, cache, modelos, viejo.ID)
+	})
+
 	t.Run("Redis no responde y MongoDB tiene el entrenado", func(t *testing.T) {
 		a, _, modelos := almacenesEnMemoria(t)
 		a.cacheModelo = cacheRota{}

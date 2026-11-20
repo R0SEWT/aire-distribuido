@@ -18,9 +18,10 @@
 #   - configs/: la receta del K-Means y las reglas de limpieza. La imagen es el
 #     código más la receta congelada; para probar otra sin reconstruir,
 #     -v "$PWD/configs:/app/configs:ro".
-#   - reports/kmeans.json, regimenes.json, estandarizacion.json y
-#     estaciones_ficha.csv, y docs/api/openapi.yaml: lo que la API lee al
-#     arrancar (el modelo que siembra, el catálogo de estaciones y el contrato
+#   - reports/kmeans.json, regimenes.json, estandarizacion.json,
+#     estaciones_ficha.csv y centroides_iniciales.json, y docs/api/openapi.yaml:
+#     lo que la API lee al arrancar (el modelo que siembra, el catálogo de
+#     estaciones, los centroides iniciales de un entrenamiento y el contrato
 #     que sirve). .dockerignore deja pasar solo esos archivos de reports/ y docs/.
 #
 # Los datos no van dentro: data/ se monta (el gold, de solo lectura, en los
@@ -46,7 +47,8 @@ RUN go build ./... \
  && mkdir -p /out/bin /out/app/configs /out/app/reports /out/app/docs/api \
  && CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /out/bin/ ./cmd/... \
  && cp -r configs/. /out/app/configs/ \
- && cp reports/kmeans.json reports/regimenes.json reports/estandarizacion.json reports/estaciones_ficha.csv /out/app/reports/ \
+ && cp reports/kmeans.json reports/regimenes.json reports/estandarizacion.json reports/estaciones_ficha.csv \
+       reports/centroides_iniciales.json /out/app/reports/ \
  && cp docs/api/openapi.yaml /out/app/docs/api/
 
 # distroless/static: sin shell, con certificados, zona horaria (tzdata, para
