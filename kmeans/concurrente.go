@@ -84,7 +84,7 @@ func Concurrente(d *Datos, centroidesIniciales []float64, op OpcionesConc) (*Res
 
 	for it := 1; it <= op.MaxIter; it++ {
 		repartir(trabajos, &barrera, cantChunks, false)
-		if cerrarIteracion(r, cent, Fusionar(parciales, k, dim), it, op.Opciones) {
+		if CerrarIteracion(r, cent, Fusionar(parciales, k, dim), it, op.Opciones) {
 			break
 		}
 	}

@@ -1,0 +1,13 @@
+{
+  "fecha_hora": "2021-12-10T01:00:00-05:00",
+  "regimen": 0,
+  "excede_eca": false,
+  "media_24h": {
+    "pm2_5": null,
+    "pm10": null,
+    "lecturas": 1
+  },
+  "alerta": false,
+  "inca": null,
+  "ts": "2026-11-16T22:05:00-05:00"
+}
