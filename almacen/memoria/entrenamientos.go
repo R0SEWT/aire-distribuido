@@ -53,7 +53,7 @@ func (s *Entrenamientos) Cerrar(_ context.Context, id string, c almacen.CierreEn
 	}
 	e.Fin, e.Estado = c.Fin, c.Estado
 	e.Iteraciones, e.Paro, e.DifSecuencial, e.MsTotal = c.Iteraciones, c.Paro, c.DifSecuencial, c.MsTotal
-	e.ModeloID, e.Error = c.ModeloID, c.Error
+	e.ModeloID, e.Aviso, e.Error = c.ModeloID, c.Aviso, c.Error
 	return nil
 }
 

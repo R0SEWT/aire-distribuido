@@ -12,6 +12,18 @@ import (
 	"github.com/R0SEWT/aire-distribuido/protocolo"
 )
 
+// Tolerancia separa los dos efectos que pueden apartar el modelo distribuido
+// del de una sola máquina. Reasociar la suma de los parciales de K nodos
+// cambia los centroides en unos pocos ulp (del orden de 1e-16 en el espacio
+// estandarizado, donde son de orden 1). Que una sola fila cambie de cluster
+// mueve un centroide del orden de su distancia a la fila dividida por el
+// tamaño del cluster: con el cluster más grande del gold real (48 161 filas) y
+// una fila de la frontera, más de 1e-5. 1e-9 queda a cuatro órdenes de
+// magnitud de cada uno: dentro, es redondeo; fuera, es otra asignación. Es el
+// -tolerancia por omisión de cmd/distribuido y la compuerta con que la API
+// decide si activa el modelo de un entrenamiento.
+const Tolerancia = 1e-9
+
 // Cargar le manda a cada nodo su rango del gold identificado por huella
 // (CARGAR) y espera su LISTO, a todos a la vez y con un mismo instante límite:
 // la carga es una barrera más, la primera de la corrida. rangos[i] es el del
@@ -19,9 +31,27 @@ import (
 // Devuelve cuánto tardó cada nodo; si alguno falla, el error nombra a cada uno
 // que falló y la corrida no puede seguir.
 func Cargar(enlaces []*protocolo.Enlace, rangos []protocolo.Rango, huella string, limite time.Time) ([]time.Duration, error) {
+	return CargarCtx(context.Background(), enlaces, rangos, huella, limite)
+}
+
+// CargarCtx es Cargar con un contexto. Si se cancela ctx mientras los nodos
+// cargan, vuelve enseguida con un error que cumple errors.Is(err, ErrCancelada)
+// en vez de esperar al límite: cierra las conexiones de todos los nodos, que
+// es lo único que destraba la lectura de un LISTO, igual que LloydCtx a mitad
+// de una ronda.
+func CargarCtx(ctx context.Context, enlaces []*protocolo.Enlace, rangos []protocolo.Rango, huella string, limite time.Time) ([]time.Duration, error) {
 	if len(enlaces) == 0 || len(enlaces) != len(rangos) {
 		return nil, fmt.Errorf("%d nodos y %d rangos", len(enlaces), len(rangos))
 	}
+	if ctx.Err() != nil {
+		return nil, fmt.Errorf("%w antes de la carga: %w", ErrCancelada, context.Cause(ctx))
+	}
+	dejarDeCortar := context.AfterFunc(ctx, func() {
+		for _, e := range enlaces {
+			e.Cerrar()
+		}
+	})
+	defer dejarDeCortar()
 	tiempos := make([]time.Duration, len(enlaces))
 	errs := make([]error, len(enlaces))
 	var barrera sync.WaitGroup
@@ -35,6 +65,11 @@ func Cargar(enlaces []*protocolo.Enlace, rangos []protocolo.Rango, huella string
 	}
 	barrera.Wait()
 	if err := errors.Join(errs...); err != nil {
+		// El error de una carga que se cortó por la cancelación es el de la
+		// cancelación, no el del nodo al que se le cerró la conexión.
+		if ctx.Err() != nil {
+			return nil, fmt.Errorf("%w durante la carga: %w", ErrCancelada, context.Cause(ctx))
+		}
 		return nil, fmt.Errorf("carga abortada: %w", err)
 	}
 	return tiempos, nil
@@ -243,5 +278,14 @@ func fusionar(enlaces []*protocolo.Enlace, ms []protocolo.Mensaje, ronda, k, dim
 			return kmeans.Parcial{}, fmt.Errorf("ronda %d abortada: nodo %q: %w: %v", ronda, enlaces[i].Nodo, protocolo.ErrProtocolo, err)
 		}
 	}
-	return kmeans.Fusionar(ps, k, dim), nil
+	p := kmeans.Fusionar(ps, k, dim)
+	// Cada parcial es finito, pero su suma puede no serlo: con valores
+	// desmesurados la inercia o una suma desbordan a +Inf. Una ronda así no
+	// tiene centroides ni inercia que publicar (JSON ni siquiera puede
+	// escribirlos): la corrida se aborta aquí.
+	if err := p.Validar(k, dim); err != nil {
+		return kmeans.Parcial{}, fmt.Errorf("ronda %d abortada: la fusión de los parciales de los %d nodos no es finita: %w: %v "+
+			"(algún nodo mandó valores desmesurados)", ronda, len(enlaces), protocolo.ErrProtocolo, err)
+	}
+	return p, nil
 }

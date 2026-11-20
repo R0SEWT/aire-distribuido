@@ -37,7 +37,7 @@ func TestEntrenamientosCicloDeVida(t *testing.T) {
 	}
 	fin := t0.Add(time.Second)
 	cierre := almacen.CierreEntrenamiento{Fin: fin, Estado: almacen.EstadoTerminado, Iteraciones: 3, Paro: "tolerancia",
-		DifSecuencial: 1e-16, MsTotal: 12.5, ModeloID: "entrenado-e-1"}
+		DifSecuencial: 1e-16, MsTotal: 12.5, ModeloID: "entrenado-e-1", Aviso: "un aviso"}
 	if err := s.Cerrar(ctx, "e-1", cierre); err != nil {
 		t.Fatal(err)
 	}
@@ -47,7 +47,7 @@ func TestEntrenamientosCicloDeVida(t *testing.T) {
 		t.Fatal(err)
 	}
 	if e.Estado != almacen.EstadoTerminado || !e.Fin.Equal(fin) || e.Iteraciones != 3 || e.Paro != "tolerancia" ||
-		e.DifSecuencial != 1e-16 || e.MsTotal != 12.5 || e.ModeloID != "entrenado-e-1" || e.Parametros.Semilla != 42 {
+		e.DifSecuencial != 1e-16 || e.MsTotal != 12.5 || e.ModeloID != "entrenado-e-1" || e.Aviso != "un aviso" || e.Parametros.Semilla != 42 {
 		t.Fatalf("cerrado = %+v", e)
 	}
 	if len(e.Rondas) != 3 || e.Rondas[2].Iter != 3 || len(e.Nodos) != 2 {

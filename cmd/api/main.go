@@ -96,6 +96,10 @@ func main() {
 	}
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
+	// La primera señal empieza el apagado ordenado. Desde ahí se dejan de
+	// capturar: una segunda (otro Ctrl+C) termina el proceso en el acto, por si
+	// el apagado ordenado se queda esperando a algo.
+	context.AfterFunc(ctx, stop)
 	if err := correr(ctx, os.Args[1:], os.Getenv, os.Stderr, nil); err != nil {
 		fmt.Fprintln(os.Stderr, "api:", err)
 		os.Exit(1)

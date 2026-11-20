@@ -308,6 +308,9 @@ func TestEntrenamientoConTresNodos(t *testing.T) {
 	if _, hay := det["error"]; hay {
 		t.Fatalf("un entrenamiento terminado no trae error: %v", det)
 	}
+	if _, hay := det["aviso"]; hay || det["modelo_id"] != "entrenado-"+id {
+		t.Fatalf("activó su modelo: trae modelo_id y ningún aviso: %v", det)
+	}
 	if got := fmt.Sprint(det["nodos"]); got != "[nodo-1 nodo-2 nodo-3]" {
 		t.Fatalf("nodos = %s", got)
 	}
@@ -446,6 +449,10 @@ func TestEntrenamientoConReplicasNoActivaElModelo(t *testing.T) {
 	}
 	if ec.srv.modelo.Load() != antes {
 		t.Fatalf("con replicas = 3 se activó el modelo %s", ec.srv.modelo.Load().ID)
+	}
+	// Es lo pedido, no un problema: ni modelo_id ni aviso.
+	if _, hay := det["modelo_id"]; hay || det["aviso"] != nil {
+		t.Fatalf("una medición no trae modelo_id ni aviso: %v", det)
 	}
 	doc, _ := ec.entorno.ent.Obtener(context.Background(), id)
 	if doc.ModeloID != "" || doc.Nodos[1].Hasta != 3600 {
@@ -630,7 +637,9 @@ func TestApretonDeManosDelWebSocket(t *testing.T) {
 	}
 	rechazo("sin token", "/ws", nil, 401, msgNoAutenticado)
 	rechazo("token inválido", "/ws?token=abc.def.ghi", nil, 401, msgNoAutenticado)
-	rechazo("usuario común", "/ws?token="+usuario, nil, 403, "se requiere el rol admin")
+	rechazo("subprotocolo sin token", "/ws", map[string]string{"Sec-WebSocket-Protocol": "aire.jwt"}, 401, msgNoAutenticado)
+	rechazo("token inválido en el subprotocolo", "/ws", map[string]string{"Sec-WebSocket-Protocol": "aire.jwt, abc.def.ghi"}, 401, msgNoAutenticado)
+	rechazo("token en otro subprotocolo", "/ws", map[string]string{"Sec-WebSocket-Protocol": "chat, " + admin}, 401, msgNoAutenticado)
 	rechazo("otro origen", "/ws?token="+admin, map[string]string{"Origin": "http://otro.example"}, 403, "origen")
 	if resp := rechazo("otra versión", "/ws?token="+admin, map[string]string{"Sec-WebSocket-Version": "8"}, 400, "13"); resp.Header.Get("Sec-WebSocket-Version") != "13" {
 		t.Fatal("el 400 por versión tiene que decir cuál habla el servidor")
@@ -662,16 +671,48 @@ func TestApretonDeManosDelWebSocket(t *testing.T) {
 		if c == nil {
 			t.Fatalf("%s: %d", nombre, resp.StatusCode)
 		}
+		if resp.Header.Get("Sec-WebSocket-Protocol") != "" {
+			t.Fatalf("%s: el servidor confirmó un subprotocolo que nadie ofreció: %v", nombre, resp.Header)
+		}
 		clientes = append(clientes, c)
 	}
-	// Quedó anotado antes del 101: lo que se difunde ahora le llega a los cuatro.
+	// El navegador: el token va en Sec-WebSocket-Protocol, detrás de aire.jwt.
+	// El 101 confirma aire.jwt (un navegador corta si no) y nunca el token.
+	for _, ofrecidos := range []string{"aire.jwt, " + admin, "chat,aire.jwt," + admin} {
+		c, resp := abrirWS(t, ts.URL, "/ws", map[string]string{"Sec-WebSocket-Protocol": ofrecidos, "Origin": "http://localhost:5173"})
+		if c == nil || resp.Header.Get("Sec-WebSocket-Protocol") != "aire.jwt" {
+			t.Fatalf("token en el subprotocolo (%q): %v", ofrecidos[:12], resp)
+		}
+		clientes = append(clientes, c)
+	}
+	// Quien ofrece aire.jwt pero trae el token en la consulta también recibe la confirmación.
+	if c, resp := abrirWS(t, ts.URL, "/ws?token="+admin, map[string]string{"Sec-WebSocket-Protocol": "aire.jwt"}); c == nil ||
+		resp.Header.Get("Sec-WebSocket-Protocol") != "aire.jwt" {
+		t.Fatalf("aire.jwt ofrecido con el token en la consulta: %v", resp)
+	} else {
+		clientes = append(clientes, c)
+	}
+	// Un usuario común también entra (spec §6.1), por cualquiera de los tres caminos.
+	comun, resp := abrirWS(t, ts.URL, "/ws", map[string]string{"Sec-WebSocket-Protocol": "aire.jwt, " + usuario})
+	if comun == nil {
+		t.Fatalf("un usuario común tiene que poder abrir /ws: %d", resp.StatusCode)
+	}
+	// Quedaron anotados antes del 101: lo que se difunde ahora les llega a
+	// todos los admin. Los eventos de un entrenamiento son solo para ellos: el
+	// usuario común no los recibe, y sí lo que es para todos.
 	if err := e.srv.hub.Difundir(eventoRonda, map[string]int{"iter": 1}, rolesEventosEntrenamiento...); err != nil {
+		t.Fatal(err)
+	}
+	if err := e.srv.hub.Difundir("para.todos", 1); err != nil {
 		t.Fatal(err)
 	}
 	for _, c := range clientes {
 		if got := c.leerTexto(t); got != `{"evento":"entrenamiento.ronda","datos":{"iter":1}}` {
 			t.Fatalf("trama = %q", got)
 		}
+	}
+	if got := comun.leerTexto(t); got != `{"evento":"para.todos","datos":1}` {
+		t.Fatalf("lo primero que recibe el usuario común es %q: los eventos de entrenamiento son de admin", got)
 	}
 	// El apretón queda medido como una ruta más, sin la duración de la conexión.
 	if mt := objeto(t, e.pedir(t, "GET", "/api/metricas", admin, ""), 200); mt["endpoints"].(map[string]any)["GET /ws"] == nil {
@@ -717,8 +758,9 @@ func TestDePuntaAPuntaLasRondasLleganAlWebSocketYAlAlmacen(t *testing.T) {
 			defer ts.Close()
 			ec.lanzarNodos(t, nodos)
 			ws, _ := abrirWS(t, ts.URL, "/ws?token="+ec.admin, nil)
-			otro, _ := abrirWS(t, ts.URL, "/ws?token="+ec.admin, nil) // dos clientes: los dos reciben todo
-			if ws == nil || otro == nil {
+			otro, _ := abrirWS(t, ts.URL, "/ws", map[string]string{"Sec-WebSocket-Protocol": "aire.jwt, " + ec.admin}) // dos clientes: los dos reciben todo
+			comun, _ := abrirWS(t, ts.URL, "/ws?token="+ec.token(t, "demo", "demo"), nil)
+			if ws == nil || otro == nil || comun == nil {
 				t.Fatal("no abrió el WebSocket")
 			}
 
@@ -777,8 +819,9 @@ func TestDePuntaAPuntaLasRondasLleganAlWebSocketYAlAlmacen(t *testing.T) {
 			if det["estado"] != "terminado" || det["iteraciones"] != float64(ref.Iteraciones) {
 				t.Fatalf("detalle = %v", det)
 			}
-			if len(fin) != 5 || fin["iteraciones"] != det["iteraciones"] || fin["paro"] != det["paro"] ||
-				fin["dif_secuencial"] != det["dif_secuencial"] || fin["ms_total"] != det["ms_total"] {
+			if len(fin) != 6 || fin["iteraciones"] != det["iteraciones"] || fin["paro"] != det["paro"] ||
+				fin["dif_secuencial"] != det["dif_secuencial"] || fin["ms_total"] != det["ms_total"] ||
+				fin["modelo_id"] != "entrenado-"+aceptado.ID || det["modelo_id"] != fin["modelo_id"] {
 				t.Fatalf("el evento de fin %v no es el resumen del detalle %v", fin, det)
 			}
 			enAlmacen := det["rondas"].([]any)
@@ -794,6 +837,11 @@ func TestDePuntaAPuntaLasRondasLleganAlWebSocketYAlAlmacen(t *testing.T) {
 				if fmt.Sprint(r) != fmt.Sprint(enAlmacen[i]) || fmt.Sprint(rondasOtro[i]["inercia"]) != fmt.Sprint(r["inercia"]) {
 					t.Fatalf("ronda %d: por el WebSocket %v y en el almacén %v", i+1, r, enAlmacen[i])
 				}
+			}
+			// El usuario común estuvo conectado todo el entrenamiento y no vio nada de él.
+			ec.srv.hub.Difundir("para.todos", 1)
+			if got := comun.leerTexto(t); got != `{"evento":"para.todos","datos":1}` {
+				t.Fatalf("el usuario común recibió %q de un entrenamiento, que es de admin", got)
 			}
 			m := ec.srv.modelo.Load()
 			if m.ID != "entrenado-"+aceptado.ID {
@@ -961,4 +1009,164 @@ func TestConElGoldRealYUnNodoElModeloEsElDeKmeansJSONBitABit(t *testing.T) {
 	}
 	t.Logf("gold real, 1 nodo: %d iteraciones, inercia %v, dif_secuencial %v, ms_total %v: bit a bit con reports/kmeans.json",
 		ref.Iteraciones, m.Inercia, det["dif_secuencial"], det["ms_total"])
+}
+
+// nodoFalso es un nodo escrito a mano para las pruebas: se presenta, responde
+// los PING y, según cómo se arme, carga su rango y calcula sus PARCIAL. Con
+// cargar en false nunca confirma el CARGAR; con mentira distinta de 1 calcula
+// bien y multiplica sus sumas, que siguen bien formadas y con los conteos de su
+// rango: nada del protocolo lo delata.
+func (ec *entornoCluster) nodoFalso(t *testing.T, nombre string, cargar bool, mentira float64) {
+	t.Helper()
+	conn, err := net.Dial("tcp", ec.dirNodos)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { conn.Close() })
+	go func() {
+		cod, dec := protocolo.NuevoCodificador(conn), protocolo.NuevoDecodificador(conn)
+		cod.Escribir(protocolo.Mensaje{Tipo: protocolo.Hola, Version: protocolo.Version, Nodo: nombre, Workers: 1})
+		var datos *kmeans.Datos
+		for {
+			m, err := dec.Leer()
+			if err != nil {
+				return
+			}
+			switch {
+			case m.Tipo == protocolo.Ping:
+				cod.Escribir(protocolo.Mensaje{Tipo: protocolo.Pong})
+			case m.Tipo == protocolo.Cargar && cargar:
+				datos = cluster.FilasVirtuales(ec.ent.Gold.Datos, *m.Rango)
+				cod.Escribir(protocolo.Mensaje{Tipo: protocolo.Listo, N: datos.N, Huella: m.Huella})
+			case m.Tipo == protocolo.Iterar:
+				p := kmeans.ParcialesPorChunks(datos, m.Centroides, 1, chunkDePrueba)
+				for i := range p.Sumas {
+					p.Sumas[i] *= mentira
+				}
+				cod.Escribir(protocolo.Mensaje{Tipo: protocolo.Parcial, Iter: m.Iter, Sumas: p.Sumas, Conteos: p.Conteos, Inercia: p.Inercia})
+			}
+		}
+	}()
+}
+
+// Un nodo que devuelve PARCIAL bien formados pero falsos lleva la corrida a
+// otros centroides sin que nada falle. El entrenamiento termina, con su
+// dif_secuencial a la vista, pero el modelo NO se activa: sigue el anterior.
+func TestUnNodoQueMienteNoActivaElModelo(t *testing.T) {
+	ec := nuevoEntornoCluster(t)
+	ec.lanzarNodos(t, 1)
+	ec.nodoFalso(t, "nodo-2-mentiroso", true, 1.5)
+	ec.esperarLibres(t, 2)
+	antes := ec.srv.modelo.Load()
+	ts := httptest.NewServer(ec.srv)
+	defer ts.Close()
+	ws, _ := abrirWS(t, ts.URL, "/ws?token="+ec.admin, nil)
+
+	id := ec.entrenar(t, `{"nodos": 2, "replicas": 1, "semilla": 42}`)
+	det := ec.esperarFin(t, id)
+	if det["estado"] != "terminado" {
+		t.Fatalf("nada del protocolo falla: el entrenamiento termina. Detalle: %v", det)
+	}
+	dif, _ := det["dif_secuencial"].(float64)
+	aviso, _ := det["aviso"].(string)
+	if dif <= cluster.Tolerancia {
+		t.Fatalf("dif_secuencial = %g: la mentira tenía que notarse", dif)
+	}
+	if _, hay := det["modelo_id"]; hay || !strings.Contains(aviso, "no se activó") || !strings.Contains(aviso, "dif_secuencial") {
+		t.Fatalf("no tiene que activar el modelo y tiene que decir por qué: %v", det)
+	}
+	if _, hay := det["error"]; hay {
+		t.Fatalf("no es un aborto: no trae error: %v", det)
+	}
+	if ec.srv.modelo.Load() != antes {
+		t.Fatalf("se activó el modelo %s con dif_secuencial %g", ec.srv.modelo.Load().ID, dif)
+	}
+	// El fin por el WebSocket y el historial dicen lo mismo.
+	var fin map[string]any
+	for fin == nil {
+		var sobre struct {
+			Evento string         `json:"evento"`
+			Datos  map[string]any `json:"datos"`
+		}
+		json.Unmarshal([]byte(ws.leerTexto(t)), &sobre)
+		if sobre.Evento == eventoFin {
+			fin = sobre.Datos
+		}
+	}
+	if fin["aviso"] != aviso || fin["modelo_id"] != nil || fin["dif_secuencial"] != dif {
+		t.Fatalf("evento de fin = %v", fin)
+	}
+	doc, _ := ec.entorno.ent.Obtener(context.Background(), id)
+	if doc.ModeloID != "" || doc.Aviso != aviso || doc.Estado != almacen.EstadoTerminado {
+		t.Fatalf("documento = %+v", doc)
+	}
+	// Y se sigue prediciendo con el modelo de antes.
+	if pred := objeto(t, ec.pedir(t, "POST", "/api/predicciones", ec.admin, lecturaEjemplo), 200); pred["modelo_id"] != antes.ID {
+		t.Fatalf("la predicción usó %v", pred["modelo_id"])
+	}
+}
+
+// Apagar mientras los nodos cargan su rango: no se espera al plazo de la carga
+// (30 s por omisión). El entrenamiento queda abortado por la cancelación, no
+// por un plazo vencido, y durante el apagado un pedido nuevo recibe 503, no 409.
+func TestApagarDuranteLaCargaNoEsperaElPlazo(t *testing.T) {
+	ent, ruta := entrenadorSintetico(t)
+	ent.PlazoCarga = time.Minute
+	ln, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer ln.Close()
+	base := nuevoEntorno(t) // solo para reusar su configuración armada
+	srv, err := Nuevo(Config{
+		Modelo: base.srv.modelo.Load(), Firmador: base.srv.firmador, Usuarios: base.srv.usuarios,
+		Catalogo: []almacen.Estacion{{ID: "CA-AYAS-01"}}, Estaciones: base.srv.estaciones, Predicciones: base.pred, Cache: base.cache,
+		Mongo: base.cache, Redis: base.cache, OpenAPI: []byte("x"), TamCola: 4, Log: logMudo,
+		Entrenamientos: base.ent, Eventos: base.ev, Nodos: ln, Entrenador: ent,
+		Pool: cluster.OpcionesPool{PlazoHola: time.Second, CadaLatido: 20 * time.Millisecond, PlazoLatido: 500 * time.Millisecond},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	ctx, apagar := context.WithCancel(context.Background())
+	coordinado := make(chan struct{})
+	go func() { srv.Coordinar(ctx); close(coordinado) }()
+	defer func() { apagar(); <-coordinado }()
+	ec := &entornoCluster{entorno: &entorno{srv: srv, pred: base.pred, cache: base.cache, ent: base.ent, ev: base.ev},
+		ent: ent, goldRuta: ruta, dirNodos: ln.Addr().String()}
+	ec.admin = ec.token(t, "admin", "clave-admin")
+	ts := httptest.NewServer(srv)
+	defer ts.Close()
+
+	ec.nodoFalso(t, "nodo-1-no-carga", false, 1)
+	ec.esperarLibres(t, 1)
+	const pedido = `{"nodos": 1, "replicas": 1, "semilla": 42}`
+	id := ec.entrenar(t, pedido)
+	if det := objeto(t, ec.pedir(t, "GET", "/api/entrenamientos/"+id, ec.admin, ""), 200); det["estado"] != "en_curso" {
+		t.Fatalf("mientras el nodo no confirma la carga está en curso: %v", det)
+	}
+
+	// Empezó el apagado y el entrenamiento todavía no se cortó: 503, no 409, y
+	// no se abren WebSockets.
+	srv.apagando.Store(true)
+	mensajeDeError(t, ec.pedir(t, "POST", "/api/entrenamientos", ec.admin, pedido), http.StatusServiceUnavailable, errApagando.Error())
+	if c, resp := abrirWS(t, ts.URL, "/ws?token="+ec.admin, nil); c != nil || resp.StatusCode != http.StatusServiceUnavailable {
+		t.Fatalf("un WebSocket durante el apagado: %v", resp)
+	}
+
+	inicio := time.Now()
+	apagar()
+	select {
+	case <-coordinado:
+	case <-time.After(10 * time.Second):
+		t.Fatal("Coordinar no volvió: el apagado esperó a la carga")
+	}
+	if d := time.Since(inicio); d > 3*time.Second {
+		t.Fatalf("apagar durante la carga tardó %v con un plazo de carga de un minuto", d)
+	}
+	doc, err := base.ent.Obtener(context.Background(), id)
+	if err != nil || doc.Estado != almacen.EstadoAbortado || !strings.Contains(doc.Error, "cancelada") || !strings.Contains(doc.Error, "apagando") ||
+		strings.Contains(doc.Error, "plazo vencido") || strings.Contains(doc.Error, "nodo-1-no-carga") {
+		t.Fatalf("tiene que quedar abortado por la cancelación, sin culpar al nodo ni a un plazo: %+v, %v", doc, err)
+	}
 }

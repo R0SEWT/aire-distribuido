@@ -92,6 +92,11 @@ type Servidor struct {
 	mux          *http.ServeMux
 	ahora        func() time.Time
 
+	// apagando se pone al empezar el apagado ordenado (Coordinar): desde ahí
+	// no se lanzan entrenamientos ni se abren WebSockets, aunque el
+	// entrenamiento en curso todavía esté terminando de cortarse.
+	apagando atomic.Bool
+
 	cors    *cors
 	hub     *Hub
 	pool    *cluster.Pool // nil: sin clúster
@@ -244,6 +249,7 @@ func (s *Servidor) Coordinar(ctx context.Context) {
 	}
 
 	<-ctx.Done()
+	s.apagando.Store(true)
 	s.coord.apagar()
 	pararPool()
 	pool.Wait()

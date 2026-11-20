@@ -399,35 +399,63 @@ func (h *Hub) escribir(c *clienteWS, saludo []byte) {
 	}
 }
 
-// Quién puede abrir el WebSocket y quién recibe los eventos de un
-// entrenamiento. Hoy los dos eventos que existen son de entrenamientos, que
-// son cosa de admin (las rutas de /api/entrenamientos lo son), así que el
-// WebSocket también: un usuario común no tiene nada que escuchar. El hub ya
-// reparte por rol (Difundir): cuando haya eventos para todos, como las alertas
-// de la SPA, alcanza con sumar RolUsuario a rolesWS y los de entrenamientos
-// siguen llegando solo a los admin.
+// Quién puede abrir el WebSocket y quién recibe cada evento (spec §6.1 y
+// §6.4). Lo abren usuario y admin. Los dos eventos que existen hoy son de
+// entrenamientos, que son cosa de admin (las rutas de /api/entrenamientos lo
+// son): el hub se los reparte solo a los clientes admin. Un usuario común
+// conectado hoy no recibe nada; el WebSocket queda abierto para los eventos
+// que sí son de todos, como las alertas de la SPA.
 var (
-	rolesWS                   = []string{RolAdmin}
+	rolesWS                   = []string{RolUsuario, RolAdmin}
 	rolesEventosEntrenamiento = []string{RolAdmin}
 )
 
-// tokenWS saca el JWT del apretón de manos. El navegador no deja poner
-// Authorization en un WebSocket, así que el contrato lo manda en la consulta
-// (?token=…); un cliente que sí puede (Postman, curl, otro servicio) lo manda
-// en Authorization, como en el resto de la API.
-func tokenWS(r *http.Request) (string, bool) {
+// subprotocoloJWT es el subprotocolo con que un navegador manda su token sin
+// ponerlo en la URL: new WebSocket(url, ["aire.jwt", token]) llega como
+// «Sec-WebSocket-Protocol: aire.jwt, <token>». El servidor confirma aire.jwt
+// (nunca el token) en su 101; un navegador que ofrece subprotocolos corta la
+// conexión si el servidor no elige uno.
+const subprotocoloJWT = "aire.jwt"
+
+// tokenWS saca el JWT del apretón de manos, de donde venga, en este orden:
+//
+//   - Authorization: Bearer, como en el resto de la API. Lo usa quien puede
+//     poner encabezados (Postman, curl, otro servicio); el navegador no puede.
+//   - Sec-WebSocket-Protocol: aire.jwt seguido del token. Es lo recomendado
+//     para el navegador: el token no queda en la URL, que es lo que guardan el
+//     historial y los logs de un proxy.
+//   - La consulta (?token=…), que es lo que dice el contrato desde el
+//     principio y lo más fácil de probar a mano. La API nunca escribe la
+//     consulta en su log.
+//
+// Devuelve además el subprotocolo que hay que confirmar en el 101: aire.jwt si
+// el cliente lo ofreció, venga de donde venga el token.
+func tokenWS(r *http.Request) (token, subprotocolo string, ok bool) {
+	var ofrecidos []string
+	for _, v := range r.Header.Values("Sec-WebSocket-Protocol") {
+		for _, p := range strings.Split(v, ",") {
+			ofrecidos = append(ofrecidos, strings.TrimSpace(p))
+		}
+	}
+	i := slices.Index(ofrecidos, subprotocoloJWT)
+	if i >= 0 {
+		subprotocolo = subprotocoloJWT
+	}
 	if tok, ok := tokenBearer(r); ok {
-		return tok, true
+		return tok, subprotocolo, true
+	}
+	if i >= 0 && i+1 < len(ofrecidos) && ofrecidos[i+1] != "" {
+		return ofrecidos[i+1], subprotocolo, true
 	}
 	tok := r.URL.Query().Get("token")
-	return tok, tok != ""
+	return tok, subprotocolo, tok != ""
 }
 
 // GET /ws
 //
 // El apretón de manos de RFC 6455. Se valida todo ANTES de tomar la conexión,
 // mientras todavía se puede responder con un error HTTP: que sea un apretón
-// (400), el origen (403), el token (401) y el rol (403). Después se toma la
+// (400), el origen (403) y el token (401). Después se toma la
 // conexión, se anota en el hub y recién entonces sale el 101.
 func (s *Servidor) seguirEventos(w http.ResponseWriter, r *http.Request) {
 	clave, msg := validarApreton(r)
@@ -440,7 +468,7 @@ func (s *Servidor) seguirEventos(w http.ResponseWriter, r *http.Request) {
 		escribirError(w, http.StatusForbidden, "el origen "+recortar(r.Header.Get("Origin"), 128)+" no puede abrir este WebSocket")
 		return
 	}
-	tok, ok := tokenWS(r)
+	tok, subprotocolo, ok := tokenWS(r)
 	if !ok {
 		noAutenticado(w)
 		return
@@ -454,7 +482,7 @@ func (s *Servidor) seguirEventos(w http.ResponseWriter, r *http.Request) {
 		escribirError(w, http.StatusForbidden, "se requiere el rol "+strings.Join(rolesWS, " o "))
 		return
 	}
-	if !s.hub.admite() {
+	if s.apagando.Load() || !s.hub.admite() {
 		escribirError(w, http.StatusServiceUnavailable, errApagando.Error())
 		return
 	}
@@ -463,5 +491,5 @@ func (s *Servidor) seguirEventos(w http.ResponseWriter, r *http.Request) {
 		s.log.Error("websocket: no se pudo tomar la conexión", "err", err)
 		return
 	}
-	s.hub.Atender(conn, lector, rec.Rol, time.Unix(rec.Expira, 0), respuesta101(clave, ""))
+	s.hub.Atender(conn, lector, rec.Rol, time.Unix(rec.Expira, 0), respuesta101(clave, subprotocolo))
 }

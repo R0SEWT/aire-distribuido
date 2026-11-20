@@ -235,6 +235,12 @@ func (s *Servidor) iniciarEntrenamiento(w http.ResponseWriter, r *http.Request) 
 		escribirError(w, http.StatusBadRequest, msg)
 		return
 	}
+	// Antes que el semáforo: durante el apagado la respuesta es 503, también
+	// si el entrenamiento en curso todavía se está cortando (sería un 409).
+	if s.apagando.Load() {
+		escribirError(w, http.StatusServiceUnavailable, errApagando.Error())
+		return
+	}
 	if c.ent == nil {
 		escribirError(w, http.StatusServiceUnavailable, "esta API no puede entrenar: arrancó sin el gold (-gold)")
 		return
@@ -396,7 +402,9 @@ func (c *coordinador) correr(e almacen.Entrenamiento, miembros []*cluster.Miembr
 	// al FIN, como ms.total de cmd/distribuido.
 	t0 := time.Now()
 	var corrida *cluster.Corrida
-	_, err := cluster.Cargar(enlaces, rangos, cluster.HuellaDeSha256(c.ent.Sha256), t0.Add(c.ent.plazoCarga()))
+	// La carga y Lloyd llevan el contexto del coordinador: al apagar, ninguno
+	// de los dos espera a su plazo.
+	_, err := cluster.CargarCtx(c.ctx, enlaces, rangos, cluster.HuellaDeSha256(c.ent.Sha256), t0.Add(c.ent.plazoCarga()))
 	if err == nil {
 		corrida, err = cluster.LloydCtx(c.ctx, enlaces, inicio.Centroides, op,
 			cluster.OpcionesLloyd{Plazo: c.ent.plazoRonda(), Primera: 1, AlRonda: alRonda})
@@ -420,13 +428,17 @@ func (c *coordinador) correr(e almacen.Entrenamiento, miembros []*cluster.Miembr
 		}
 		r := corrida.Resultado
 		cierre.Iteraciones, cierre.Paro, cierre.MsTotal = r.Iteraciones, r.Paro, ms(time.Since(t0))
-		cierre.DifSecuencial, cierre.ModeloID = c.cerrarConModelo(e, corrida, inicio, op)
+		cierre.DifSecuencial, cierre.ModeloID, cierre.Aviso = c.cerrarConModelo(e, corrida, inicio, op)
 	}
 	cierre.Fin = enLima(c.s.ahora()).Truncate(time.Millisecond)
 	c.conPlazo(func(ctx context.Context) error { return c.entrenamientos.Cerrar(ctx, e.ID, cierre) }, "cerrar el entrenamiento", e.ID)
 
-	// El semáforo se devuelve antes de avisar el fin: quien reaccione al
-	// evento ya puede lanzar otro, y el detalle ya tiene el estado final.
+	// El semáforo se devuelve antes de avisar el fin, y el detalle ya tiene el
+	// estado final: quien reaccione al evento no recibe un 409 ni lee un
+	// entrenamiento a medio cerrar. Otro entrenamiento todavía tiene que
+	// esperar a los nodos: se les cerró la conexión y vuelven a llamar después
+	// de su pausa entre intentos (el -espera de cmd/nodo, 2 s); hasta entonces
+	// el pool está vacío y el pedido recibe 422.
 	c.mu.Lock()
 	c.enCurso = ""
 	c.mu.Unlock()
@@ -440,14 +452,19 @@ func (c *coordinador) correr(e almacen.Entrenamiento, miembros []*cluster.Miembr
 		return
 	}
 	c.log.Info("entrenamiento terminado", "id", e.ID, "iteraciones", cierre.Iteraciones, "paro", cierre.Paro,
-		"dif_secuencial", cierre.DifSecuencial, "ms_total", cierre.MsTotal, "modelo", cierre.ModeloID)
+		"dif_secuencial", cierre.DifSecuencial, "ms_total", cierre.MsTotal, "modelo", cierre.ModeloID, "aviso", cierre.Aviso)
+	// El fin es el resumen del detalle, sin la identificación.
+	res := resumir(almacen.Entrenamiento{ID: e.ID, Estado: cierre.Estado, Iteraciones: cierre.Iteraciones, Paro: cierre.Paro,
+		DifSecuencial: cierre.DifSecuencial, MsTotal: cierre.MsTotal, ModeloID: cierre.ModeloID, Aviso: cierre.Aviso})
 	c.difundir(eventoFin, struct {
-		ID            string  `json:"id"`
-		Iteraciones   int     `json:"iteraciones"`
-		Paro          string  `json:"paro"`
-		DifSecuencial float64 `json:"dif_secuencial"`
-		MsTotal       float64 `json:"ms_total"`
-	}{e.ID, cierre.Iteraciones, cierre.Paro, cierre.DifSecuencial, cierre.MsTotal}, e.ID)
+		ID            string   `json:"id"`
+		Iteraciones   *int     `json:"iteraciones"`
+		Paro          string   `json:"paro"`
+		DifSecuencial *float64 `json:"dif_secuencial"`
+		MsTotal       *float64 `json:"ms_total"`
+		ModeloID      string   `json:"modelo_id,omitempty"`
+		Aviso         string   `json:"aviso,omitempty"`
+	}{e.ID, res.Iteraciones, res.Paro, res.DifSecuencial, res.MsTotal, res.ModeloID, res.Aviso}, e.ID)
 }
 
 // cerrarConModelo hace lo que sigue a una corrida que terminó bien: la compara
@@ -455,12 +472,23 @@ func (c *coordinador) correr(e almacen.Entrenamiento, miembros []*cluster.Miembr
 // (dif_secuencial: la mayor diferencia absoluta entre centroides, en el espacio
 // estandarizado) y, si replicas es 1, arma el modelo nuevo y lo activa. Con
 // réplicas la corrida es una medición: los centroides son los mismos salvo
-// redondeo, pero la tabla no es el gold, y no se activa nada. Devuelve la
-// diferencia y el id del modelo activado ("" si no se activó).
-func (c *coordinador) cerrarConModelo(e almacen.Entrenamiento, corrida *cluster.Corrida, inicio kmeans.Inicio, op kmeans.Opciones) (float64, string) {
+// redondeo, pero la tabla no es el gold, y no se activa nada.
+//
+// La comparación es también la compuerta del modelo: el coordinador no ve las
+// filas de los nodos, solo comprueba la forma de cada PARCIAL y que sus conteos
+// sumen su rango, así que un nodo con otros datos o con un cálculo roto puede
+// llevar la corrida a otros centroides sin que nada falle. Si dif_secuencial
+// supera cluster.Tolerancia (dentro es redondeo; fuera, otra asignación), el
+// entrenamiento queda terminado, con sus números a la vista, pero el modelo NO
+// se activa y sigue el anterior.
+//
+// Devuelve la diferencia, el id del modelo activado ("" si no se activó) y,
+// si tenía que activarlo y no lo hizo, el aviso que dice por qué.
+func (c *coordinador) cerrarConModelo(e almacen.Entrenamiento, corrida *cluster.Corrida, inicio kmeans.Inicio, op kmeans.Opciones) (dif float64, modeloID, aviso string) {
 	r, d := corrida.Resultado, c.ent.Gold.Datos
-	dif := math.NaN()
-	if sec, err := kmeans.Secuencial(d, inicio.Centroides, op); err != nil {
+	dif = math.NaN()
+	sec, err := kmeans.Secuencial(d, inicio.Centroides, op)
+	if err != nil {
 		c.log.Error("K-Means secuencial de referencia", "id", e.ID, "err", err)
 	} else {
 		dif = 0
@@ -469,7 +497,19 @@ func (c *coordinador) cerrarConModelo(e almacen.Entrenamiento, corrida *cluster.
 		}
 	}
 	if e.Parametros.Replicas != 1 {
-		return dif, ""
+		return dif, "", ""
+	}
+	noActivado := func(motivo string) (float64, string, string) {
+		aviso := "el modelo no se activó y sigue el anterior: " + motivo
+		c.log.Error("entrenamiento terminado sin activar su modelo", "id", e.ID, "aviso", aviso)
+		return dif, "", aviso
+	}
+	switch {
+	case err != nil:
+		return noActivado("no se pudo comparar con el K-Means secuencial")
+	case !(dif <= cluster.Tolerancia): // también si es NaN
+		return noActivado(fmt.Sprintf("dif_secuencial %.3g supera la tolerancia %g; los centroides no son los del K-Means "+
+			"secuencial sobre este gold (algún nodo devolvió parciales que no corresponden a sus filas)", dif, cluster.Tolerancia))
 	}
 	// Las asignaciones quedan repartidas en los nodos y el protocolo no las
 	// trae: se recalculan aquí, con los centroides finales, para perfilar cada
@@ -483,11 +523,10 @@ func (c *coordinador) cerrarConModelo(e almacen.Entrenamiento, corrida *cluster.
 			Centroides: r.Centroides, Iteraciones: r.Iteraciones, Inercia: r.Inercia, Regimenes: regimenes})
 	}
 	if err != nil {
-		c.log.Error("el entrenamiento terminó, pero su modelo no se puede activar: sigue el anterior", "id", e.ID, "err", err)
-		return dif, ""
+		return noActivado("no se pudo armar con estos centroides: " + err.Error())
 	}
 	c.s.ActivarModelo(m)
-	return dif, m.ID
+	return dif, m.ID, ""
 }
 
 // difundir manda un evento al hub. Si el hub lo descarta, queda en el log: el
@@ -540,7 +579,8 @@ func ms(d time.Duration) float64 { return float64(d.Nanoseconds()) / 1e6 }
 
 // resumenEntrenamiento es EntrenamientoResumen en el contrato. Qué campos trae
 // depende del estado: en curso, solo los de identificación; terminado, además
-// iteraciones, paro, dif_secuencial y ms_total; abortado, además error.
+// iteraciones, paro, dif_secuencial y ms_total, y modelo_id si activó su
+// modelo o aviso si tenía que activarlo y no lo hizo; abortado, además error.
 type resumenEntrenamiento struct {
 	ID            string   `json:"id"`
 	Estado        string   `json:"estado"`
@@ -550,6 +590,8 @@ type resumenEntrenamiento struct {
 	Paro          string   `json:"paro,omitempty"`
 	DifSecuencial *float64 `json:"dif_secuencial,omitempty"`
 	MsTotal       *float64 `json:"ms_total,omitempty"`
+	ModeloID      string   `json:"modelo_id,omitempty"`
+	Aviso         string   `json:"aviso,omitempty"`
 	Error         string   `json:"error,omitempty"`
 }
 
@@ -561,6 +603,7 @@ func resumir(e almacen.Entrenamiento) resumenEntrenamiento {
 	switch e.Estado {
 	case almacen.EstadoTerminado:
 		r.Iteraciones, r.Paro, r.MsTotal = &e.Iteraciones, e.Paro, &e.MsTotal
+		r.ModeloID, r.Aviso = e.ModeloID, e.Aviso
 		// Si el secuencial de referencia no se pudo correr, no hay diferencia
 		// que informar (y NaN no se puede escribir en JSON).
 		if !math.IsNaN(e.DifSecuencial) {
