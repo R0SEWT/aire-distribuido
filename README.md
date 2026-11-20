@@ -285,13 +285,17 @@ usa el del equipo más su PID. La SPA del TB2 necesita `CORS_ORIGENES` (por ejem
 `http://localhost:5173`) para llamar a la API desde otro origen.
 
 **6. En Docker.** `docker-compose.yml` levanta la API, los nodos de cómputo, MongoDB y Redis; el
-seed crea las colecciones y carga las estaciones en cada arranque. Los nodos leen el gold de
-`data/gold`, montado de solo lectura:
+seed crea las colecciones y carga las estaciones en cada arranque. La API y los nodos leen el gold
+de `data/gold` (o de `GOLD_DIR`), montado de solo lectura, y los nodos llaman a la API por la red
+interna del Compose:
 
 ```bash
 cp .env.example .env                       # y completar JWT_SECRETO y API_USUARIOS
-docker compose up --build --scale nodo=2   # http://localhost:8080/docs
+docker compose up --build --scale nodo=3   # http://localhost:8080/docs
 ```
+
+Un entrenamiento lanzado por HTTP queda en MongoDB con sus rondas; el modelo que activa se guarda
+en MongoDB y en Redis, y la API vuelve a arrancar con él.
 
 La API responde cada predicción sin esperar a las bases: la encola y la escribe por lotes. Si una
 cola se llena, la predicción responde igual pero no se guarda, y `/api/metricas` lo cuenta en
