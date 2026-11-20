@@ -3,9 +3,17 @@
 data/
 .beads/
 notebooks/
-docs/
 experimentos/
-reports/
+
+# De docs/ y reports/ solo entra lo que la API lee al arrancar: el contrato, el
+# modelo que siembra y la ficha de estaciones.
+docs/*
+!docs/api/
+reports/*
+!reports/kmeans.json
+!reports/regimenes.json
+!reports/estandarizacion.json
+!reports/estaciones_ficha.csv
 
 # Git y configuración de herramientas.
 .git

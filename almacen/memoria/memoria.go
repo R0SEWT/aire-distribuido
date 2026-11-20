@@ -1,7 +1,8 @@
 // Package memoria es el doble en memoria de las interfaces de almacen: lo que
 // usan las pruebas, el CI (que no levanta MongoDB ni Redis) y la API cuando
 // arranca sin MONGO_URI o sin REDIS_ADDR. Cada tipo es seguro para usarse desde
-// varias goroutines. Modelos, Entrenamientos y Eventos están en documentos.go.
+// varias goroutines. Modelos está en documentos.go; Entrenamientos y Eventos, en
+// entrenamientos.go.
 package memoria
 
 import (

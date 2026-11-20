@@ -6,11 +6,15 @@
 // # Documentos
 //
 // Cada documento tiene los campos de §7.1 con los nombres de
-// docs/datos/ejemplos/. Los tipos de almacen que ya son documentos (Modelo,
-// Entrenamiento, EventoCluster) se guardan tal cual: el driver usa su etiqueta
-// json como nombre del campo. Estacion y Prediccion tienen aquí su tipo de
-// documento (estacionDoc, prediccionDoc), porque en la API se llaman distinto
-// (id en vez de _id) o no llevan etiquetas.
+// docs/datos/ejemplos/ (snake_case y _id). almacen.Modelo ya es un documento y
+// se guarda tal cual: el driver usa su etiqueta json como nombre del campo. Los
+// demás tipos de almacen tienen aquí su tipo de documento con etiquetas bson
+// (estacionDoc, prediccionDoc, entrenamientoDoc, eventoDoc), porque en la API
+// se llaman distinto (id en vez de _id) o no llevan etiquetas.
+//
+// Un campo que todavía no tiene valor se guarda como null, no como cero ni
+// como texto vacío: el fin, el paro, dif_secuencial y ms_total de un
+// entrenamiento en curso, o el error de uno que terminó bien.
 //
 // # Fechas
 //
@@ -291,6 +295,105 @@ func (m *Modelos) Activo(ctx context.Context) (almacen.Modelo, error) {
 	return mod, noEncontrado(err)
 }
 
+// entrenamientoDoc es un documento de entrenamientos. Los campos del resultado
+// son punteros: null mientras no hay resultado.
+type entrenamientoDoc struct {
+	ID            string          `bson:"_id"`
+	Inicio        time.Time       `bson:"inicio"`
+	Fin           *time.Time      `bson:"fin"`
+	Estado        string          `bson:"estado"`
+	Parametros    parametrosDoc   `bson:"parametros"`
+	Nodos         []nodoDoc       `bson:"nodos"`
+	Rondas        []almacen.Ronda `bson:"rondas"`
+	Iteraciones   int             `bson:"iteraciones"`
+	Paro          *string         `bson:"paro"`
+	DifSecuencial *float64        `bson:"dif_secuencial"`
+	MsTotal       *float64        `bson:"ms_total"`
+	ModeloID      *string         `bson:"modelo_id"`
+	Error         *string         `bson:"error"`
+}
+
+type parametrosDoc struct {
+	Nodos    int   `bson:"nodos"`
+	Replicas int   `bson:"replicas"`
+	Semilla  int64 `bson:"semilla"`
+}
+
+type nodoDoc struct {
+	Nombre    string   `bson:"nombre"`
+	Direccion string   `bson:"direccion"`
+	Workers   int      `bson:"workers"`
+	Rango     rangoDoc `bson:"rango"`
+}
+
+// rangoDoc es el rango de filas del gold de un nodo, [desde, hasta).
+type rangoDoc struct {
+	Desde int `bson:"desde"`
+	Hasta int `bson:"hasta"`
+}
+
+// textoONulo guarda un texto vacío como null.
+func textoONulo(s string) *string {
+	if s == "" {
+		return nil
+	}
+	return &s
+}
+
+func deref[T any](p *T) T {
+	var cero T
+	if p == nil {
+		return cero
+	}
+	return *p
+}
+
+// resultado son los campos que escribe el cierre. dif_secuencial y ms_total
+// solo tienen valor si la corrida terminó: en una abortada no se midieron, y
+// un 0 ahí se leería como «idéntico al secuencial».
+type resultado struct {
+	fin                    *time.Time
+	paro, modeloID, motivo *string
+	dif, ms                *float64
+}
+
+func resultadoDe(estado string, fin time.Time, paro string, dif, ms float64, modeloID, motivo string) resultado {
+	r := resultado{paro: textoONulo(paro), modeloID: textoONulo(modeloID), motivo: textoONulo(motivo)}
+	if !fin.IsZero() {
+		r.fin = &fin
+	}
+	if estado == almacen.EstadoTerminado {
+		r.dif, r.ms = &dif, &ms
+	}
+	return r
+}
+
+func aEntrenamientoDoc(e almacen.Entrenamiento) entrenamientoDoc {
+	r := resultadoDe(e.Estado, e.Fin, e.Paro, e.DifSecuencial, e.MsTotal, e.ModeloID, e.Error)
+	d := entrenamientoDoc{
+		ID: e.ID, Inicio: e.Inicio, Fin: r.fin, Estado: e.Estado, Parametros: parametrosDoc(e.Parametros),
+		Nodos: make([]nodoDoc, len(e.Nodos)), Rondas: e.Rondas, Iteraciones: e.Iteraciones,
+		Paro: r.paro, DifSecuencial: r.dif, MsTotal: r.ms, ModeloID: r.modeloID, Error: r.motivo,
+	}
+	for i, n := range e.Nodos {
+		d.Nodos[i] = nodoDoc{n.Nombre, n.Direccion, n.Workers, rangoDoc{n.Desde, n.Hasta}}
+	}
+	return d
+}
+
+func (d entrenamientoDoc) entrenamiento() almacen.Entrenamiento {
+	e := almacen.Entrenamiento{
+		ID: d.ID, Inicio: d.Inicio, Fin: deref(d.Fin), Estado: d.Estado, Parametros: almacen.ParametrosEntrenamiento(d.Parametros),
+		Nodos: make([]almacen.NodoEntrenamiento, len(d.Nodos)), Rondas: d.Rondas, Iteraciones: d.Iteraciones,
+		Paro: deref(d.Paro), DifSecuencial: deref(d.DifSecuencial), MsTotal: deref(d.MsTotal),
+		ModeloID: deref(d.ModeloID), Error: deref(d.Error),
+	}
+	for i, n := range d.Nodos {
+		e.Nodos[i] = almacen.NodoEntrenamiento{Nombre: n.Nombre, Direccion: n.Direccion, Workers: n.Workers, Desde: n.Rango.Desde, Hasta: n.Rango.Hasta}
+	}
+	return e
+}
+
 // Entrenamientos implementa almacen.Entrenamientos.
 type Entrenamientos struct{ col *driver.Collection }
 
@@ -300,9 +403,9 @@ func (e *Entrenamientos) Crear(ctx context.Context, en almacen.Entrenamiento) er
 	if en.ID == "" {
 		return errors.New("mongo: el entrenamiento no tiene id")
 	}
-	_, err := e.col.InsertOne(ctx, en)
+	_, err := e.col.InsertOne(ctx, aEntrenamientoDoc(en))
 	if driver.IsDuplicateKeyError(err) {
-		return fmt.Errorf("mongo: ya existe el entrenamiento %s", en.ID)
+		return fmt.Errorf("mongo: entrenamiento %s: %w", en.ID, almacen.ErrYaExiste)
 	}
 	return err
 }
@@ -312,15 +415,18 @@ func (e *Entrenamientos) AgregarRonda(ctx context.Context, id string, r almacen.
 	return e.actualizar(ctx, id, bson.D{{Key: "$push", Value: bson.D{{Key: "rondas", Value: r}}}})
 }
 
-func (e *Entrenamientos) Terminar(ctx context.Context, id string, c almacen.Cierre) error {
+// Cerrar es un $set de los campos del resultado: no toca las rondas.
+func (e *Entrenamientos) Cerrar(ctx context.Context, id string, c almacen.CierreEntrenamiento) error {
+	r := resultadoDe(c.Estado, c.Fin, c.Paro, c.DifSecuencial, c.MsTotal, c.ModeloID, c.Error)
 	return e.actualizar(ctx, id, bson.D{{Key: "$set", Value: bson.D{
-		{Key: "fin", Value: c.Fin},
+		{Key: "fin", Value: r.fin},
 		{Key: "estado", Value: c.Estado},
 		{Key: "iteraciones", Value: c.Iteraciones},
-		{Key: "paro", Value: c.Paro},
-		{Key: "dif_secuencial", Value: c.DifSecuencial},
-		{Key: "ms_total", Value: c.MsTotal},
-		{Key: "error", Value: c.Error},
+		{Key: "paro", Value: r.paro},
+		{Key: "dif_secuencial", Value: r.dif},
+		{Key: "ms_total", Value: r.ms},
+		{Key: "modelo_id", Value: r.modeloID},
+		{Key: "error", Value: r.motivo},
 	}}})
 }
 
@@ -336,9 +442,11 @@ func (e *Entrenamientos) actualizar(ctx context.Context, id string, cambio bson.
 }
 
 func (e *Entrenamientos) Obtener(ctx context.Context, id string) (almacen.Entrenamiento, error) {
-	var en almacen.Entrenamiento
-	err := e.col.FindOne(ctx, bson.D{{Key: "_id", Value: id}}).Decode(&en)
-	return en, noEncontrado(err)
+	var d entrenamientoDoc
+	if err := e.col.FindOne(ctx, bson.D{{Key: "_id", Value: id}}).Decode(&d); err != nil {
+		return almacen.Entrenamiento{}, noEncontrado(err)
+	}
+	return d.entrenamiento(), nil
 }
 
 // Listar usa el índice inicio y no trae las rondas.
@@ -349,11 +457,24 @@ func (e *Entrenamientos) Listar(ctx context.Context) ([]almacen.Entrenamiento, e
 	if err != nil {
 		return nil, err
 	}
-	lista := []almacen.Entrenamiento{}
-	if err := cur.All(ctx, &lista); err != nil {
+	var docs []entrenamientoDoc
+	if err := cur.All(ctx, &docs); err != nil {
 		return nil, err
 	}
+	lista := make([]almacen.Entrenamiento, len(docs))
+	for i, d := range docs {
+		lista[i] = d.entrenamiento()
+	}
 	return lista, nil
+}
+
+// eventoDoc es un documento de eventos_cluster. El _id es el ObjectId que
+// genera el driver.
+type eventoDoc struct {
+	TS      time.Time `bson:"ts"`
+	Tipo    string    `bson:"tipo"`
+	Nodo    string    `bson:"nodo"`
+	Detalle string    `bson:"detalle"`
 }
 
 // Eventos implementa almacen.Eventos.
@@ -361,13 +482,14 @@ type Eventos struct{ col *driver.Collection }
 
 var _ almacen.Eventos = (*Eventos)(nil)
 
-func (e *Eventos) Registrar(ctx context.Context, ev almacen.EventoCluster) error {
-	_, err := e.col.InsertOne(ctx, ev)
+func (e *Eventos) Guardar(ctx context.Context, ev almacen.EventoCluster) error {
+	_, err := e.col.InsertOne(ctx, eventoDoc(ev))
 	return err
 }
 
-// Recientes usa el índice ts. Entre dos eventos del mismo milisegundo, primero
-// el que se insertó último (el ObjectId crece con el tiempo).
+// Recientes devuelve a lo sumo n eventos, del más reciente al más antiguo.
+// Usa el índice ts. Entre dos eventos del mismo milisegundo, primero el que se
+// insertó último (el ObjectId crece con el tiempo).
 func (e *Eventos) Recientes(ctx context.Context, n int) ([]almacen.EventoCluster, error) {
 	lista := []almacen.EventoCluster{}
 	if n <= 0 {
@@ -378,8 +500,12 @@ func (e *Eventos) Recientes(ctx context.Context, n int) ([]almacen.EventoCluster
 	if err != nil {
 		return nil, err
 	}
-	if err := cur.All(ctx, &lista); err != nil {
+	var docs []eventoDoc
+	if err := cur.All(ctx, &docs); err != nil {
 		return nil, err
+	}
+	for _, d := range docs {
+		lista = append(lista, almacen.EventoCluster(d))
 	}
 	return lista, nil
 }

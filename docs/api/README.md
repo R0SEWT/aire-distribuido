@@ -33,5 +33,9 @@ un `usuario` recibe 403. `x-roles` deja el rol escrito en cada operación.
 - **Errores**: siempre `{"error": "…"}`. 404 cuando no existe el recurso (para el régimen de una
   estación, también cuando todavía no tiene predicciones), 503 cuando no hay modelo activo o no
   responde el almacén de la ruta.
+- **Métricas de escritura**: la predicción no espera a MongoDB ni a Redis; se encola y una
+  goroutine por almacén la escribe por lotes. `/api/metricas` cuenta lo que no llegó:
+  `escrituras_descartadas` (una cola llena) y `escrituras_fallidas` (el almacén rechazó el lote), y
+  en `escritura` el detalle de cada almacén. `/api/salud` informa si cada base responde.
 - **WebSocket**: cada trama es `{"evento": "entrenamiento.ronda" | "entrenamiento.fin", "datos":
   {…}}`, con los datos de §6.4.

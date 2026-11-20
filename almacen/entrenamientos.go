@@ -2,8 +2,12 @@ package almacen
 
 import (
 	"context"
+	"errors"
 	"time"
 )
+
+// ErrYaExiste es lo que devuelve Crear cuando ya hay un documento con ese id.
+var ErrYaExiste = errors.New("ya existe")
 
 // Estados de un entrenamiento (esquema EntrenamientoResumen del contrato).
 const (
@@ -12,54 +16,27 @@ const (
 	EstadoAbortado  = "abortado"
 )
 
-// Entrenamiento es un documento de la colección entrenamientos: una corrida
-// del K-Means distribuido lanzada por la API, con sus rondas (a lo sumo
-// max_iter = 100, por eso van dentro del documento).
-//
-// Mientras está en curso, Fin, Paro, DifSecuencial, MsTotal y Error son nil.
-// Iteraciones y MsTotal se guardan como campos y no se derivan: Rondas puede
-// no tener todas las rondas (AgregarRonda es una escritura aparte que puede
-// fallar) y las fechas se guardan con precisión de milisegundos, que no
-// alcanza para una corrida de 30 ms.
-type Entrenamiento struct {
-	ID            string                  `json:"_id"`
-	Inicio        time.Time               `json:"inicio"`
-	Fin           *time.Time              `json:"fin"`
-	Estado        string                  `json:"estado"`
-	Parametros    ParametrosEntrenamiento `json:"parametros"`
-	Nodos         []NodoEntrenamiento     `json:"nodos"`
-	Rondas        []Ronda                 `json:"rondas"`
-	Iteraciones   int                     `json:"iteraciones"`
-	Paro          *string                 `json:"paro"`
-	DifSecuencial *float64                `json:"dif_secuencial"`
-	MsTotal       *float64                `json:"ms_total"`
-	Error         *string                 `json:"error"`
-}
-
-// ParametrosEntrenamiento es lo que se pidió en POST /api/entrenamientos.
+// ParametrosEntrenamiento es lo que pidió POST /api/entrenamientos.
 type ParametrosEntrenamiento struct {
-	Nodos    int   `json:"nodos"`
-	Replicas int   `json:"replicas"`
-	Semilla  int64 `json:"semilla"`
+	Nodos    int
+	Replicas int
+	Semilla  int64
 }
 
-// NodoEntrenamiento es un nodo que participó en la corrida y su rango de filas
-// del gold, [Desde, Hasta).
+// NodoEntrenamiento es un nodo que participó, con el rango [Desde, Hasta) de
+// la tabla que le tocó. El orden de los nodos es el de los rangos y el de la
+// fusión.
 type NodoEntrenamiento struct {
-	Nombre    string `json:"nombre"`
-	Direccion string `json:"direccion"`
-	Workers   int    `json:"workers"`
-	Rango     Rango  `json:"rango"`
+	Nombre    string
+	Direccion string
+	Workers   int
+	Desde     int
+	Hasta     int
 }
 
-// Rango es un rango de filas del gold, [Desde, Hasta).
-type Rango struct {
-	Desde int `json:"desde"`
-	Hasta int `json:"hasta"`
-}
-
-// Ronda es una iteración de Lloyd vista desde el coordinador (esquema Ronda
-// del contrato). MsPorNodo es el tiempo de cómputo de cada nodo, por nombre.
+// Ronda es una iteración del entrenamiento (esquema Ronda del contrato).
+// MsRonda es la barrera de red, MsFusion lo que el coordinador hace después y
+// MsPorNodo lo que tardó cada nodo, medido en el coordinador.
 type Ronda struct {
 	Iter      int                `json:"iter"`
 	Inercia   float64            `json:"inercia"`
@@ -68,71 +45,70 @@ type Ronda struct {
 	MsPorNodo map[string]float64 `json:"ms_por_nodo"`
 }
 
-// Cierre es cómo terminó un entrenamiento: lo que Terminar escribe sobre el
-// documento. Con Estado = EstadoAbortado, Error dice por qué y los demás
-// punteros pueden ser nil.
-type Cierre struct {
-	Fin           time.Time
-	Estado        string
+// Entrenamiento es un documento de la colección entrenamientos (§7.1). Las
+// rondas van dentro: son a lo sumo max_iter por corrida. Mientras está en
+// curso, Fin es el tiempo cero y los campos del resultado están vacíos;
+// terminado, tiene Iteraciones, Paro, DifSecuencial, MsTotal y, si activó un
+// modelo, ModeloID; abortado, tiene Error con el nodo que falló.
+type Entrenamiento struct {
+	ID         string
+	Inicio     time.Time
+	Fin        time.Time
+	Estado     string
+	Parametros ParametrosEntrenamiento
+	Nodos      []NodoEntrenamiento
+	Rondas     []Ronda
+
 	Iteraciones   int
-	Paro          *string
-	DifSecuencial *float64
-	MsTotal       *float64
-	Error         *string
+	Paro          string
+	DifSecuencial float64
+	MsTotal       float64
+	ModeloID      string
+	Error         string
+}
+
+// CierreEntrenamiento es el estado final de un entrenamiento: lo que Cerrar
+// escribe sobre el documento que Crear dejó en curso.
+type CierreEntrenamiento struct {
+	Fin    time.Time
+	Estado string // EstadoTerminado o EstadoAbortado
+
+	Iteraciones   int
+	Paro          string
+	DifSecuencial float64
+	MsTotal       float64
+	ModeloID      string
+	Error         string
 }
 
 // Entrenamientos es la colección entrenamientos.
 type Entrenamientos interface {
-	// Crear guarda un entrenamiento nuevo. Falla si ya existe uno con su id.
+	// Crear guarda un entrenamiento nuevo, en curso y sin rondas. Si el id ya
+	// existe devuelve ErrYaExiste y no cambia nada.
 	Crear(ctx context.Context, e Entrenamiento) error
 	// AgregarRonda agrega una ronda al final de las del entrenamiento, o
 	// devuelve ErrNoEncontrado.
 	AgregarRonda(ctx context.Context, id string, r Ronda) error
-	// Terminar escribe el cierre sin tocar las rondas, o devuelve
-	// ErrNoEncontrado.
-	Terminar(ctx context.Context, id string, c Cierre) error
-	// Obtener devuelve un entrenamiento con sus rondas o ErrNoEncontrado.
+	// Cerrar escribe el estado final, o devuelve ErrNoEncontrado.
+	Cerrar(ctx context.Context, id string, c CierreEntrenamiento) error
+	// Obtener devuelve un entrenamiento con sus rondas, o ErrNoEncontrado.
 	Obtener(ctx context.Context, id string) (Entrenamiento, error)
-	// Listar devuelve los entrenamientos del más reciente al más antiguo, sin
-	// las rondas (Rondas es nil). Una lista vacía es válida.
+	// Listar devuelve el historial SIN las rondas, del más reciente al más
+	// antiguo por Inicio. Una lista vacía es válida.
 	Listar(ctx context.Context) ([]Entrenamiento, error)
 }
 
-// Tipos de evento del clúster.
-const (
-	EventoAlta  = "alta"
-	EventoBaja  = "baja"
-	EventoError = "error"
-)
-
-// EventoCluster es un documento de la colección eventos_cluster: un nodo que
-// entró al pool, salió o falló. Los latidos no se guardan.
+// EventoCluster es un documento de la colección eventos_cluster (§7.1): un
+// nodo que entró al pool (alta), que salió (baja) o que no llegó a entrar o
+// hizo abortar una corrida (error). Los latidos no se guardan.
 type EventoCluster struct {
-	TS      time.Time `json:"ts"`
-	Tipo    string    `json:"tipo"`
-	Nodo    string    `json:"nodo"`
-	Detalle string    `json:"detalle"`
+	TS      time.Time
+	Tipo    string
+	Nodo    string
+	Detalle string
 }
 
 // Eventos es la colección eventos_cluster.
 type Eventos interface {
-	Registrar(ctx context.Context, e EventoCluster) error
-	// Recientes devuelve a lo sumo n eventos, del más reciente al más antiguo.
-	Recientes(ctx context.Context, n int) ([]EventoCluster, error)
-}
-
-// PuntoControl es el valor de la clave entrenamiento:{id}:punto de Redis: los
-// centroides estandarizados de la última ronda completa. Se escribe en cada
-// ronda como registro; la PC4 no reanuda desde él (spec §5.2).
-type PuntoControl struct {
-	Iter       int         `json:"iter"`
-	Centroides [][]float64 `json:"centroides"`
-}
-
-// PuntosControl son las claves entrenamiento:{id}:punto de Redis.
-type PuntosControl interface {
-	GuardarPunto(ctx context.Context, entrenamiento string, p PuntoControl) error
-	// Punto devuelve el último punto de control de un entrenamiento o
-	// ErrNoEncontrado.
-	Punto(ctx context.Context, entrenamiento string) (PuntoControl, error)
+	Guardar(ctx context.Context, e EventoCluster) error
 }

@@ -108,8 +108,6 @@ func TestLosDocumentosTienenLosCamposDeSusEjemplos(t *testing.T) {
 		return slices.DeleteFunc(campos, func(c string) bool { return c == "_id" })
 	}
 	inca := "buena"
-	fin := time.Date(2026, 11, 16, 22, 0, 0, 31_200_000, time.UTC)
-	paro, dif, ms := "tolerancia", 0.0, 31.2
 	var modelo almacen.Modelo
 	camposModelo := leerEjemplo(t, "modelos.json", &modelo)
 	casos := map[string]struct {
@@ -120,12 +118,11 @@ func TestLosDocumentosTienenLosCamposDeSusEjemplos(t *testing.T) {
 		// El _id de una predicción y el de un evento los genera MongoDB.
 		"predicciones": {prediccionDoc(almacen.Prediccion{Estacion: "CA-AYAS-01", INCA: &inca}), sinID(leerEjemplo(t, "predicciones.json", nil))},
 		"modelos":      {modelo, camposModelo},
-		"entrenamientos": {almacen.Entrenamiento{
-			ID: "e-1", Fin: &fin, Estado: almacen.EstadoTerminado, Paro: &paro, DifSecuencial: &dif, MsTotal: &ms,
-			Nodos:  []almacen.NodoEntrenamiento{{Nombre: "n1"}},
+		"entrenamientos": {aEntrenamientoDoc(almacen.Entrenamiento{
+			ID: "e-1", Estado: almacen.EstadoTerminado, Nodos: []almacen.NodoEntrenamiento{{Nombre: "n1", Hasta: 10}},
 			Rondas: []almacen.Ronda{{Iter: 1, MsPorNodo: map[string]float64{"n1": 0.1}}},
-		}, leerEjemplo(t, "entrenamientos.json", nil)},
-		"eventos_cluster": {almacen.EventoCluster{Tipo: almacen.EventoAlta}, sinID(leerEjemplo(t, "eventos_cluster.json", nil))},
+		}), leerEjemplo(t, "entrenamientos.json", nil)},
+		"eventos_cluster": {eventoDoc(almacen.EventoCluster{Tipo: "alta"}), sinID(leerEjemplo(t, "eventos_cluster.json", nil))},
 	}
 	for nombre, c := range casos {
 		t.Run(nombre, func(t *testing.T) {
@@ -154,16 +151,28 @@ func TestTiposDeLosCampos(t *testing.T) {
 	if tipo := pred.Lookup("media_24h", "pm2_5").Type; tipo != bson.TypeNull {
 		t.Errorf("media_24h.pm2_5 sin media es %v, se esperaba null", tipo)
 	}
-	en := codificar(t, almacen.Entrenamiento{ID: "e-1", Inicio: ts, Estado: almacen.EstadoEnCurso})
+	// En curso: lo que todavía no tiene valor es null y las rondas, un arreglo.
+	en := codificar(t, aEntrenamientoDoc(almacen.Entrenamiento{ID: "e-1", Inicio: ts, Estado: almacen.EstadoEnCurso}))
 	for campo, tipo := range map[string]bson.Type{
 		"_id": bson.TypeString, "inicio": bson.TypeDateTime, "fin": bson.TypeNull, "rondas": bson.TypeArray,
-		"nodos": bson.TypeArray, "ms_total": bson.TypeNull, "error": bson.TypeNull,
+		"nodos": bson.TypeArray, "paro": bson.TypeNull, "dif_secuencial": bson.TypeNull, "ms_total": bson.TypeNull,
+		"modelo_id": bson.TypeNull, "error": bson.TypeNull,
 	} {
 		if got := en.Lookup(campo).Type; got != tipo {
-			t.Errorf("entrenamientos.%s es %v, se esperaba %v", campo, got, tipo)
+			t.Errorf("entrenamientos.%s en curso es %v, se esperaba %v", campo, got, tipo)
 		}
 	}
-	if tipo := codificar(t, almacen.EventoCluster{TS: ts}).Lookup("ts").Type; tipo != bson.TypeDateTime {
+	// Terminado con diferencia 0 contra el secuencial: el 0 se guarda, no es null.
+	fin := codificar(t, aEntrenamientoDoc(almacen.Entrenamiento{ID: "e-1", Inicio: ts, Fin: ts.Add(time.Second),
+		Estado: almacen.EstadoTerminado, Paro: "tolerancia", MsTotal: 31.2}))
+	for campo, tipo := range map[string]bson.Type{
+		"fin": bson.TypeDateTime, "paro": bson.TypeString, "dif_secuencial": bson.TypeDouble, "ms_total": bson.TypeDouble, "error": bson.TypeNull,
+	} {
+		if got := fin.Lookup(campo).Type; got != tipo {
+			t.Errorf("entrenamientos.%s terminado es %v, se esperaba %v", campo, got, tipo)
+		}
+	}
+	if tipo := codificar(t, eventoDoc(almacen.EventoCluster{TS: ts})).Lookup("ts").Type; tipo != bson.TypeDateTime {
 		t.Errorf("eventos_cluster.ts es %v", tipo)
 	}
 	if tipo := codificar(t, almacen.Modelo{Creado: ts}).Lookup("creado").Type; tipo != bson.TypeDateTime {

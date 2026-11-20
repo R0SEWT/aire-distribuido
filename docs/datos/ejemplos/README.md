@@ -19,7 +19,7 @@ PC4 ya haya sido ejecutada. La clasificación usada a continuación es:
 | Archivo | Destino | Clasificación | Procedencia y límites |
 |---|---|---|---|
 | `modelos.json` | MongoDB `modelos` | Real, salvo el estado operativo | Receta, hash, estandarización, centroides, regímenes, inercia e iteraciones de `reports/kmeans.json`, `reports/estandarizacion.json` y `reports/regimenes.json`. `_id`, `origen = sembrado` y el arranque con este modelo están definidos en la spec. `activo = true` representa el estado inicial previsto para PC4. |
-| `entrenamientos.json` | MongoDB `entrenamientos` | Sintético con resultados PC3 de referencia | Identificador, timestamps, nodos, direcciones reservadas, tiempos y rangos representan una futura corrida PC4 y no fueron observados. La semilla, el tamaño del Gold, la iteración final, la inercia y el paro reproducen el resultado real de PC3 para que el ejemplo sea internamente coherente. |
+| `entrenamientos.json` | MongoDB `entrenamientos` | Sintético con resultados PC3 de referencia | Identificador, timestamps, nodos, direcciones reservadas, tiempos y rangos representan una futura corrida PC4 y no fueron observados. La semilla, el tamaño del Gold, la iteración final, la inercia y el paro reproducen el resultado real de PC3 para que el ejemplo sea internamente coherente. `iteraciones`, `ms_total` y `modelo_id` son campos del documento: `rondas` muestra una sola ronda y las fechas se guardan al milisegundo, así que no se pueden derivar. |
 | `predicciones.json` | MongoDB `predicciones` | Medición real, resultado derivado y persistencia sintética | La lectura de `CA-AYAS-01` y `fecha_hora` se verificaron en el Silver local; su vector estandarizado y el régimen 0, en el Gold y las asignaciones locales. Esos CSV se regeneran con el procedimiento indicado abajo y no están versionados. `_id` y `ts` representan una persistencia de ejemplo. `media_24h`, `alerta` e `inca` siguen la regla de «Alerta, ECA e INCA». `ms` es un valor sintético: PC3 no midió una petición HTTP. |
 | `eventos_cluster.json` | MongoDB `eventos_cluster` | Sintético | Ejemplo de evento `alta` del mismo nodo sintético usado en `entrenamientos.json`. No es evidencia de un nodo real. La red `192.0.2.0/24` está reservada para documentación. |
 | `estaciones.json` | MongoDB `estaciones` | Real | Fila `CA-AYAS-01` de `reports/estaciones_ficha.csv`. Las coordenadas son números JSON. |
@@ -88,5 +88,10 @@ lectura: por eso `media_24h` trae `lecturas: 1` con medias `null`, `alerta` es `
   error. Aquí `null` representa una ausencia legítima del contrato.
 - Los tiempos de ronda y por nodo de `entrenamientos.json` solo ilustran tipos y estructura. Deben
   reemplazarse por resultados de laboratorio o de Compose antes de usarlos como evidencia.
-- Los JSON usan cadenas ISO 8601 para poder validarse como JSON portable. Al sembrar MongoDB, los campos
-  temporales deben convertirse a su tipo fecha si la implementación adopta BSON Date.
+- Los JSON usan cadenas ISO 8601 para poder validarse como JSON portable. En MongoDB esos campos son
+  BSON Date (`almacen/mongo`): el instante es el mismo, pero no se guarda el desfase `-05:00` ni lo que
+  haya por debajo del milisegundo. En Redis sí son cadenas, siempre en la hora de Lima.
+- `estandarizacion` no lleva `ddof`: el documento guarda lo que la API necesita para predecir
+  (features, log1p, nivel, n, media y desviación), no todo `reports/estandarizacion.json`.
+- Las pruebas de `almacen` y `almacen/mongo` comprueban que los documentos que escribe la API tengan
+  exactamente los campos de estos ejemplos. Si cambia un ejemplo o un documento, fallan.

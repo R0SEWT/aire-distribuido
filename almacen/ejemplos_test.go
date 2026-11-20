@@ -43,19 +43,17 @@ func leerEjemplo(t *testing.T, archivo string) []byte {
 	return b
 }
 
-// Los valores de Redis y los documentos que se guardan tal cual tienen
+// Los valores de Redis y el documento del modelo, que se guarda tal cual, tienen
 // exactamente los campos de su ejemplo en docs/datos/ejemplos/: ni uno más ni
 // uno menos. Cada ejemplo se lee en su tipo y se vuelve a escribir; si un
 // campo del ejemplo no existiera en el tipo, se perdería en el camino.
 func TestLosDocumentosTienenLosCamposDeSusEjemplos(t *testing.T) {
-	sinEntrar := []string{"rondas.ms_por_nodo", "estandarizacion.por_estacion"}
+	sinEntrar := []string{"estandarizacion.por_estacion"}
 	for archivo, destino := range map[string]any{
 		"redis-estacion-regimen.json":    &almacen.RegimenEstacion{},
 		"redis-modelo-activo.json":       &almacen.Modelo{},
 		"modelos.json":                   &almacen.Modelo{},
 		"redis-entrenamiento-punto.json": &almacen.PuntoControl{},
-		"entrenamientos.json":            &almacen.Entrenamiento{},
-		"eventos_cluster.json":           &almacen.EventoCluster{},
 	} {
 		t.Run(archivo, func(t *testing.T) {
 			ejemplo := leerEjemplo(t, archivo)
@@ -70,10 +68,6 @@ func TestLosDocumentosTienenLosCamposDeSusEjemplos(t *testing.T) {
 			json.Unmarshal(ejemplo, &a)
 			json.Unmarshal(escrito, &b)
 			esperados := camposJSON(a, "", sinEntrar)
-			if archivo == "eventos_cluster.json" {
-				// El _id de un evento es el ObjectId que genera MongoDB.
-				esperados = slices.DeleteFunc(esperados, func(c string) bool { return c == "_id" })
-			}
 			if got := camposJSON(b, "", sinEntrar); !slices.Equal(got, esperados) {
 				t.Errorf("campos del tipo:\n  %v\ncampos del ejemplo:\n  %v", got, esperados)
 			}

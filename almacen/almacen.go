@@ -17,12 +17,13 @@
 //   - Cache: en Redis, la clave estacion:{id}:regimen con el último régimen de
 //     cada estación. Es la única fuente de ese dato.
 //   - CacheModelo: en Redis, la clave modelo:activo.
-//   - PuntosControl: en Redis, las claves entrenamiento:{id}:punto.
+//   - PuntosControl: en Redis, las claves entrenamiento:{id}:punto (puntos.go).
 //
-// Los tipos que son documentos (Modelo, Entrenamiento, EventoCluster,
-// PuntoControl, RegimenEstacion) llevan en la etiqueta json el nombre del campo
-// tal como se guarda: es el mismo en el documento de MongoDB y en el valor JSON
-// de Redis. docs/datos/ejemplos/ tiene un ejemplo de cada uno.
+// Modelo, RegimenEstacion y PuntoControl son valores JSON de Redis y llevan en
+// la etiqueta json el nombre del campo tal como se guarda; Modelo es además,
+// con esos mismos nombres, el documento de MongoDB. Los demás documentos tienen
+// su tipo con etiquetas bson en almacen/mongo. docs/datos/ejemplos/ tiene un
+// ejemplo de cada uno.
 package almacen
 
 import (

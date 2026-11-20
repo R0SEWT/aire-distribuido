@@ -257,23 +257,40 @@ func TestEntrenamientosCicloCompleto(t *testing.T) {
 		ID: "e-20261119-1530", Inicio: t0, Estado: almacen.EstadoEnCurso,
 		Parametros: almacen.ParametrosEntrenamiento{Nodos: 2, Replicas: 1, Semilla: 42},
 		Nodos: []almacen.NodoEntrenamiento{
-			{Nombre: "H45-022", Direccion: "10.11.38.69:56455", Workers: 24, Rango: almacen.Rango{Desde: 0, Hasta: 32937}},
-			{Nombre: "pc.lab.upc", Direccion: "10.11.38.70:51000", Workers: 24, Rango: almacen.Rango{Desde: 32937, Hasta: 65873}},
+			{Nombre: "H45-022", Direccion: "10.11.38.69:56455", Workers: 24, Desde: 0, Hasta: 32937},
+			{Nombre: "pc.lab.upc", Direccion: "10.11.38.70:51000", Workers: 24, Desde: 32937, Hasta: 65873},
 		},
 	}
 	if err := e.Crear(ctx, nuevo); err != nil {
 		t.Fatal(err)
 	}
-	if err := e.Crear(ctx, nuevo); err == nil || !strings.Contains(err.Error(), "ya existe") {
-		t.Fatalf("Crear con un id repetido = %v", err)
+	if err := e.Crear(ctx, nuevo); !errors.Is(err, almacen.ErrYaExiste) {
+		t.Fatalf("Crear con un id repetido = %v, se esperaba ErrYaExiste", err)
 	}
 	if err := e.Crear(ctx, almacen.Entrenamiento{ID: "e-20261119-1600", Inicio: t0.Add(30 * time.Minute), Estado: almacen.EstadoEnCurso}); err != nil {
 		t.Fatal(err)
 	}
-	// En curso: sin fin ni resultado, y con las rondas como arreglo vacío.
+	// En curso: se lee igual que se guardó, sin fin ni resultado ni rondas.
 	en, err := e.Obtener(ctx, nuevo.ID)
-	if err != nil || en.Estado != almacen.EstadoEnCurso || en.Fin != nil || en.MsTotal != nil || len(en.Rondas) != 0 || len(en.Nodos) != 2 {
+	if err != nil || !en.Fin.IsZero() || len(en.Rondas) != 0 {
 		t.Fatalf("Obtener en curso = %+v, %v", en, err)
+	}
+	en.Rondas = nil
+	if !reflect.DeepEqual(en, nuevo) {
+		t.Fatalf("en curso se leyó\n%+v\nse guardó\n%+v", en, nuevo)
+	}
+	// En el documento, el rango de cada nodo es un objeto y lo que falta es null.
+	raw, err := e.col.FindOne(ctx, bson.D{{Key: "_id", Value: nuevo.ID}}).Raw()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if v := raw.Lookup("nodos", "1", "rango", "hasta"); v.AsInt64() != 65873 {
+		t.Errorf("nodos.1.rango.hasta = %v", v)
+	}
+	for _, campo := range []string{"fin", "paro", "dif_secuencial", "ms_total", "modelo_id", "error"} {
+		if tipo := raw.Lookup(campo).Type; tipo != bson.TypeNull {
+			t.Errorf("%s en curso es %v, se esperaba null", campo, tipo)
+		}
 	}
 	for i := 1; i <= 3; i++ {
 		// Un nombre de nodo con puntos es una clave válida de ms_por_nodo.
@@ -283,21 +300,21 @@ func TestEntrenamientosCicloCompleto(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	paro, dif, ms := "tolerancia", 8.9e-16, 31.2
-	if err := e.Terminar(ctx, nuevo.ID, almacen.Cierre{Fin: t0.Add(31200 * time.Microsecond), Estado: almacen.EstadoTerminado,
-		Iteraciones: 3, Paro: &paro, DifSecuencial: &dif, MsTotal: &ms}); err != nil {
+	cierre := almacen.CierreEntrenamiento{Fin: t0.Add(31200 * time.Microsecond), Estado: almacen.EstadoTerminado,
+		Iteraciones: 3, Paro: "tolerancia", DifSecuencial: 8.9e-16, MsTotal: 31.2, ModeloID: "entrenado-e-20261119-1530"}
+	if err := e.Cerrar(ctx, nuevo.ID, cierre); err != nil {
 		t.Fatal(err)
 	}
 	en, err = e.Obtener(ctx, nuevo.ID)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if en.Estado != almacen.EstadoTerminado || en.Iteraciones != 3 || en.Paro == nil || *en.Paro != paro ||
-		en.DifSecuencial == nil || *en.DifSecuencial != dif || en.Error != nil {
+	if en.Estado != almacen.EstadoTerminado || en.Iteraciones != 3 || en.Paro != "tolerancia" ||
+		en.DifSecuencial != 8.9e-16 || en.ModeloID != "entrenado-e-20261119-1530" || en.Error != "" {
 		t.Errorf("cierre = %+v", en)
 	}
 	// ms_total es un campo: con fin - inicio al milisegundo saldrían 31 ms.
-	if en.MsTotal == nil || *en.MsTotal != 31.2 || en.Fin == nil || en.Fin.Sub(en.Inicio) != 31*time.Millisecond {
+	if en.MsTotal != 31.2 || en.Fin.Sub(en.Inicio) != 31*time.Millisecond {
 		t.Errorf("ms_total = %v, fin - inicio = %v", en.MsTotal, en.Fin.Sub(en.Inicio))
 	}
 	if len(en.Rondas) != 3 || en.Rondas[2].Iter != 3 || en.Rondas[0].MsPorNodo["pc.lab.upc"] != 0.12 || !reflect.DeepEqual(en.Nodos, nuevo.Nodos) {
@@ -305,19 +322,24 @@ func TestEntrenamientosCicloCompleto(t *testing.T) {
 	}
 	lista, err := e.Listar(ctx)
 	if err != nil || len(lista) != 2 || lista[0].ID != "e-20261119-1600" || lista[1].ID != nuevo.ID ||
-		lista[1].Rondas != nil || lista[1].Iteraciones != 3 {
+		lista[1].Rondas != nil || lista[1].Iteraciones != 3 || len(lista[1].Nodos) != 2 {
 		t.Fatalf("Listar = %+v, %v; se esperaban dos, el más reciente primero y sin rondas", lista, err)
 	}
+	// Abortado: el motivo queda y lo que no se midió sigue siendo null.
 	motivo := "el nodo H45-022 dejó de responder en la ronda 7"
-	if err := e.Terminar(ctx, "e-20261119-1600", almacen.Cierre{Fin: t0.Add(time.Hour), Estado: almacen.EstadoAbortado, Iteraciones: 6, Error: &motivo}); err != nil {
+	if err := e.Cerrar(ctx, "e-20261119-1600", almacen.CierreEntrenamiento{Fin: t0.Add(time.Hour), Estado: almacen.EstadoAbortado, Iteraciones: 6, Error: motivo}); err != nil {
 		t.Fatal(err)
 	}
-	if ab, err := e.Obtener(ctx, "e-20261119-1600"); err != nil || ab.Estado != almacen.EstadoAbortado || ab.Error == nil || *ab.Error != motivo || ab.MsTotal != nil {
+	if ab, err := e.Obtener(ctx, "e-20261119-1600"); err != nil || ab.Estado != almacen.EstadoAbortado || ab.Error != motivo || ab.Iteraciones != 6 {
 		t.Errorf("abortado = %+v, %v", ab, err)
+	}
+	raw, _ = e.col.FindOne(ctx, bson.D{{Key: "_id", Value: "e-20261119-1600"}}).Raw()
+	if raw.Lookup("ms_total").Type != bson.TypeNull || raw.Lookup("dif_secuencial").Type != bson.TypeNull || raw.Lookup("error").Type != bson.TypeString {
+		t.Errorf("documento abortado: ms_total %v, dif_secuencial %v, error %v", raw.Lookup("ms_total").Type, raw.Lookup("dif_secuencial").Type, raw.Lookup("error").Type)
 	}
 	for nombre, err := range map[string]error{
 		"AgregarRonda": e.AgregarRonda(ctx, "e-x", almacen.Ronda{}),
-		"Terminar":     e.Terminar(ctx, "e-x", almacen.Cierre{}),
+		"Cerrar":       e.Cerrar(ctx, "e-x", almacen.CierreEntrenamiento{}),
 	} {
 		if !errors.Is(err, almacen.ErrNoEncontrado) {
 			t.Errorf("%s de un entrenamiento que no existe = %v, se esperaba ErrNoEncontrado", nombre, err)
@@ -331,20 +353,20 @@ func TestEntrenamientosCicloCompleto(t *testing.T) {
 	}
 }
 
-func TestEventosRecientes(t *testing.T) {
+func TestEventosGuardaYDevuelveLosRecientes(t *testing.T) {
 	e := temporal(t).Eventos()
 	t0 := time.Date(2026, 11, 19, 20, 0, 0, 0, time.UTC)
 	for i, ev := range []almacen.EventoCluster{
-		{TS: t0, Tipo: almacen.EventoAlta, Nodo: "H45-022", Detalle: "24 workers desde 10.11.38.69:56455"},
-		{TS: t0.Add(time.Second), Tipo: almacen.EventoError, Nodo: "H45-022", Detalle: "no respondió la ronda 7"},
-		{TS: t0.Add(time.Second), Tipo: almacen.EventoBaja, Nodo: "H45-022"},
+		{TS: t0, Tipo: "alta", Nodo: "H45-022", Detalle: "24 workers desde 10.11.38.69:56455"},
+		{TS: t0.Add(time.Second), Tipo: "error", Nodo: "H45-022", Detalle: "no respondió la ronda 7"},
+		{TS: t0.Add(time.Second), Tipo: "baja", Nodo: "H45-022"},
 	} {
-		if err := e.Registrar(ctx, ev); err != nil {
+		if err := e.Guardar(ctx, ev); err != nil {
 			t.Fatalf("evento %d: %v", i, err)
 		}
 	}
 	rec, err := e.Recientes(ctx, 2)
-	if err != nil || len(rec) != 2 || rec[0].Tipo != almacen.EventoBaja || rec[1].Tipo != almacen.EventoError || !rec[1].TS.Equal(t0.Add(time.Second)) {
+	if err != nil || len(rec) != 2 || rec[0].Tipo != "baja" || rec[1].Tipo != "error" || !rec[1].TS.Equal(t0.Add(time.Second)) {
 		t.Fatalf("Recientes(2) = %+v, %v", rec, err)
 	}
 	if todos, _ := e.Recientes(ctx, 10); len(todos) != 3 || todos[2].Detalle != "24 workers desde 10.11.38.69:56455" {

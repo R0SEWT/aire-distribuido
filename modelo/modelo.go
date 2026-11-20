@@ -179,6 +179,7 @@ func Sembrar(a Archivos) (*Modelo, error) {
 	if err != nil {
 		return nil, fmt.Errorf("sembrar el modelo desde %s, %s y %s: %w", a.Kmeans, a.Regimenes, a.Estandarizacion, err)
 	}
+	m.Origen, m.Creado, m.GoldSHA256 = almacen.OrigenSembrado, rk.Metadatos.Momento, rk.Gold.Sha256
 	return m, nil
 }
 
@@ -226,9 +227,6 @@ func armar(rk reporteKmeans, rr reporteRegimenes, est *kmeans.Estandarizacion) (
 	}
 	m := &Modelo{
 		ID:          IDSembrado,
-		Origen:      almacen.OrigenSembrado,
-		Creado:      rk.Metadatos.Momento,
-		GoldSHA256:  rk.Gold.Sha256,
 		Receta:      rec,
 		Iteraciones: rk.Iteraciones,
 		Inercia:     rk.Inercia,

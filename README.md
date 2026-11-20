@@ -68,7 +68,8 @@ entra en un nivel alto de PM2,5 y PM10, y con cuánta anticipación eso avisa de
 supera el Estándar de Calidad Ambiental (ECA)**. La PC3 responde el dónde y el cuándo; la
 anticipación se mide en el TB2.
 
-El sistema tiene las cuatro partes del enunciado, todas en Go con la biblioteca estándar:
+El sistema tiene las cuatro partes del enunciado, todas en Go con la biblioteca estándar (la única
+dependencia son los drivers de MongoDB y Redis, confinados en `almacen/mongo` y `almacen/redis`):
 
 | Parte | Qué hace | Entregable |
 |---|---|---|
@@ -246,8 +247,7 @@ go run ./cmd/benchmark -workers 1,2,4,8,12
 **5. La API de la PC4.** Siembra el modelo desde `reports/` y sirve Swagger UI en
 <http://localhost:8080/docs>. Una predicción trae el régimen de la lectura y, aparte, la media de
 24 h de su estación con la alerta frente al ECA y la banda INCA. No arranca sin el secreto del JWT
-ni sin usuarios (`usuario:clave:rol`, con rol `usuario` o `admin`). Por ahora el almacén es un
-doble en memoria; MongoDB y Redis llegan con Docker Compose:
+ni sin usuarios (`usuario:clave:rol`, con rol `usuario` o `admin`):
 
 ```bash
 export JWT_SECRETO=$(openssl rand -hex 32)
@@ -255,12 +255,26 @@ export API_USUARIOS='ana:una-clave-larga:admin,demo:otra-clave:usuario'
 go run ./cmd/api
 ```
 
+Así guarda en memoria. Con `MONGO_URI` (y `MONGO_DB`) guarda las predicciones y el modelo en
+MongoDB, y con `REDIS_ADDR`, el último régimen de cada estación y el modelo activo en Redis;
+`/api/salud` dice si cada base responde. Con Docker Compose ya vienen puestas (paso 6).
+
 Para desarrollo, `go run ./cmd/api -demo` arranca sin `API_USUARIOS` con los usuarios de
 demostración `demo`/`demo` (rol usuario) y `admin`/`admin` (rol admin), y lo avisa en el log.
 Solo en una máquina propia: con `-demo`, cualquiera que alcance el puerto entra como admin.
 
-**6. En Docker.** La imagen final es distroless y corre sin root, así que las carpetas montadas
-tienen que admitir escritura:
+**6. En Docker.** `docker-compose.yml` levanta la API, los nodos de cómputo, MongoDB y Redis; el
+seed crea las colecciones y carga las estaciones en cada arranque. Los nodos leen el gold de
+`data/gold`, montado de solo lectura:
+
+```bash
+cp .env.example .env                       # y completar JWT_SECRETO y API_USUARIOS
+docker compose up --build --scale nodo=2   # http://localhost:8080/docs
+```
+
+Qué guarda cada base, cómo consultarla y cómo correr las pruebas de integración está en
+[`docs/datos/README.md`](docs/datos/README.md). La misma imagen sirve suelta para los comandos de
+la PC3; es distroless y corre sin root, así que las carpetas montadas tienen que admitir escritura:
 
 ```bash
 docker build -t aire-distribuido .
