@@ -89,11 +89,11 @@ func TestUsuariosObligatorios(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = armar(op, entornoCon(map[string]string{"JWT_SECRETO": secreto}), logMudo(), nil)
+	_, _, err = armar(op, entornoCon(map[string]string{"JWT_SECRETO": secreto}), logMudo(), nil)
 	if err == nil || !strings.Contains(err.Error(), "API_USUARIOS") || !strings.Contains(err.Error(), "-demo") {
 		t.Fatalf("sin API_USUARIOS ni -demo: %v; tiene que negarse a arrancar y nombrar las dos salidas", err)
 	}
-	srv, err := armar(op, entornoCon(map[string]string{"JWT_SECRETO": secreto, "API_USUARIOS": "ana:una-clave-larga:admin"}), logMudo(), nil)
+	srv, _, err := armar(op, entornoCon(map[string]string{"JWT_SECRETO": secreto, "API_USUARIOS": "ana:una-clave-larga:admin"}), logMudo(), nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -131,7 +131,7 @@ func TestArmarFallaConUnaConfiguracionMala(t *testing.T) {
 			if c.cambiar != nil {
 				c.cambiar(&o)
 			}
-			_, err := armar(o, entornoCon(c.vars), logMudo(), nil)
+			_, _, err := armar(o, entornoCon(c.vars), logMudo(), nil)
 			if err == nil || !strings.Contains(err.Error(), c.texto) {
 				t.Fatalf("armar = %v, se esperaba un error que mencione %q", err, c.texto)
 			}

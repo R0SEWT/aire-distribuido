@@ -323,11 +323,15 @@ func (s *Servidor) modeloActivo(w http.ResponseWriter, r *http.Request) {
 // GET /api/metricas
 func (s *Servidor) consultarMetricas(w http.ResponseWriter, r *http.Request) {
 	s.responder(w, r, http.StatusOK, struct {
-		Endpoints             map[string]resumenRuta `json:"endpoints"`
-		NodosEnPool           int                    `json:"nodos_en_pool"`
-		UltimoEntrenamiento   *string                `json:"ultimo_entrenamiento"`
-		EscriturasDescartadas uint64                 `json:"escrituras_descartadas"`
-	}{s.metricas.Resumen(), s.nodosEnPool(), s.coord.ultimoEntrenamiento(), s.escritor.descartes.Load()})
+		Endpoints             map[string]resumenRuta     `json:"endpoints"`
+		NodosEnPool           int                        `json:"nodos_en_pool"`
+		UltimoEntrenamiento   *string                    `json:"ultimo_entrenamiento"`
+		EscriturasDescartadas uint64                     `json:"escrituras_descartadas"`
+		EscriturasFallidas    uint64                     `json:"escrituras_fallidas"`
+		Escritura             map[string]estadoEscritura `json:"escritura"`
+		PuntosDeControl       estadoPuntos               `json:"puntos_de_control"`
+	}{s.metricas.Resumen(), s.nodosEnPool(), s.coord.ultimoEntrenamiento(), s.escritor.descartadas(), s.escritor.fallidas(),
+		s.escritor.estado(), s.cuentaPuntos.estado()})
 }
 
 // GET /openapi.yaml: el contrato tal cual está en docs/api/openapi.yaml.

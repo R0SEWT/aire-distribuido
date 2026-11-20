@@ -128,11 +128,12 @@ var errApagando = errors.New("la API se está apagando")
 // id y no la espera. Solo hay uno a la vez: sem es un semáforo de capacidad 1
 // (un canal con búfer de un lugar); quien no puede tomarlo responde 409.
 //
-// Cada ronda tiene DOS consumidores, y cada uno tiene su propio canal: el
+// Cada ronda tiene TRES consumidores, y cada uno tiene su propio canal: el
 // almacén (una goroutine por entrenamiento que escribe en Entrenamientos, con
 // un canal donde caben todas las rondas, así que nunca frena a Lloyd ni pierde
-// una) y el hub del WebSocket (su canal de difusión). No comparten un canal:
-// de un canal compartido cada ronda la recibiría uno solo de los dos.
+// una), el hub del WebSocket (su canal de difusión) y el punto de control en
+// Redis (un buzón de un lugar, porque solo importa el último: puntos.go). No
+// comparten un canal: de un canal compartido cada ronda la recibiría uno solo.
 type coordinador struct {
 	s              *Servidor
 	pool           *cluster.Pool
@@ -388,6 +389,7 @@ func (c *coordinador) correr(e almacen.Entrenamiento, miembros []*cluster.Miembr
 			c.conPlazo(func(ctx context.Context) error { return c.entrenamientos.AgregarRonda(ctx, e.ID, r) }, "guardar la ronda", e.ID)
 		}
 	}()
+	puntos := c.abrirPuntos(e.ID) // el punto de control de cada ronda (puntos.go)
 	alRonda := func(r cluster.Ronda) {
 		ronda := almacen.Ronda{Iter: r.Iter, Inercia: r.Inercia, MsRonda: ms(r.Barrera), MsFusion: ms(r.Fusion),
 			MsPorNodo: make(map[string]float64, len(enlaces))}
@@ -396,6 +398,7 @@ func (c *coordinador) correr(e almacen.Entrenamiento, miembros []*cluster.Miembr
 		}
 		paraAlmacen <- ronda                                                 // al almacén, por su canal
 		c.difundir(eventoRonda, eventoDeRonda{ID: e.ID, Ronda: ronda}, e.ID) // al hub, por el suyo
+		puntos.dejar(puntoDe(r.Iter, op.K, r.Centroides))                    // a Redis, por su buzón
 	}
 
 	// La corrida: CARGAR a todos, Lloyd y FIN. ms_total va del primer CARGAR
@@ -411,6 +414,9 @@ func (c *coordinador) correr(e almacen.Entrenamiento, miembros []*cluster.Miembr
 	}
 	close(paraAlmacen)
 	<-guardadas // las rondas ya están en el almacén antes de escribir el estado final
+	// Y el punto de la última ronda completa, en Redis: también si la corrida
+	// se abortó, que es cuando dice hasta dónde llegó.
+	puntos.cerrar()
 
 	cierre := almacen.CierreEntrenamiento{Estado: almacen.EstadoTerminado}
 	if err != nil {
@@ -520,7 +526,10 @@ func (c *coordinador) cerrarConModelo(e almacen.Entrenamiento, corrida *cluster.
 	var m *modelo.Modelo
 	if err == nil {
 		m, err = modelo.Nuevo(modelo.Piezas{ID: "entrenado-" + e.ID, Receta: c.ent.Receta, Estandarizacion: c.ent.Estandarizacion,
-			Centroides: r.Centroides, Iteraciones: r.Iteraciones, Inercia: r.Inercia, Regimenes: regimenes})
+			Centroides: r.Centroides, Iteraciones: r.Iteraciones, Inercia: r.Inercia, Regimenes: regimenes,
+			// La procedencia se guarda con el modelo: al arrancar, la API se
+			// queda con el más nuevo por Creado.
+			Origen: e.ID, Creado: enLima(c.s.ahora()).Truncate(time.Millisecond), GoldSHA256: c.ent.Sha256})
 	}
 	if err != nil {
 		return noActivado("no se pudo armar con estos centroides: " + err.Error())

@@ -1,7 +1,8 @@
 // Package memoria es el doble en memoria de las interfaces de almacen: lo que
-// usan las pruebas, el CI (que no levanta MongoDB ni Redis) y el esqueleto de
-// la API mientras no existan almacen/mongo y almacen/redis. Cada tipo es seguro
-// para usarse desde varias goroutines.
+// usan las pruebas, el CI (que no levanta MongoDB ni Redis) y la API cuando
+// arranca sin MONGO_URI o sin REDIS_ADDR. Cada tipo es seguro para usarse desde
+// varias goroutines. Modelos está en documentos.go; Entrenamientos y Eventos, en
+// entrenamientos.go.
 package memoria
 
 import (
@@ -61,10 +62,14 @@ var _ almacen.Predicciones = (*Predicciones)(nil)
 
 func NuevasPredicciones() *Predicciones { return &Predicciones{} }
 
-func (p *Predicciones) Guardar(_ context.Context, pr almacen.Prediccion) error {
+func (p *Predicciones) Guardar(ctx context.Context, pr almacen.Prediccion) error {
+	return p.GuardarLote(ctx, []almacen.Prediccion{pr})
+}
+
+func (p *Predicciones) GuardarLote(_ context.Context, ps []almacen.Prediccion) error {
 	p.mu.Lock()
 	defer p.mu.Unlock()
-	p.todas = append(p.todas, pr)
+	p.todas = append(p.todas, ps...)
 	return nil
 }
 
@@ -77,25 +82,42 @@ func (p *Predicciones) Todas() []almacen.Prediccion {
 
 func (p *Predicciones) Ping(context.Context) error { return nil }
 
-// Cache es la caché de Redis en memoria.
+// Cache es la caché de Redis en memoria: el régimen por estación, el modelo
+// activo y los puntos de control.
 type Cache struct {
 	mu        sync.RWMutex
 	regimenes map[string]almacen.RegimenEstacion
+	modelo    *almacen.Modelo
+	puntos    map[string]almacen.PuntoControl
 }
 
-var _ almacen.Cache = (*Cache)(nil)
+var (
+	_ almacen.Cache         = (*Cache)(nil)
+	_ almacen.CacheModelo   = (*Cache)(nil)
+	_ almacen.PuntosControl = (*Cache)(nil)
+)
 
-func NuevaCache() *Cache { return &Cache{regimenes: map[string]almacen.RegimenEstacion{}} }
+func NuevaCache() *Cache {
+	return &Cache{regimenes: map[string]almacen.RegimenEstacion{}, puntos: map[string]almacen.PuntoControl{}}
+}
 
-// GuardarRegimen no reemplaza un régimen de una fecha_hora posterior: compara
-// y escribe con el mismo lock.
-func (c *Cache) GuardarRegimen(_ context.Context, estacion string, r almacen.RegimenEstacion) error {
+// GuardarRegimen guarda el régimen de una sola estación, con la regla de
+// GuardarRegimenes.
+func (c *Cache) GuardarRegimen(ctx context.Context, estacion string, r almacen.RegimenEstacion) error {
+	return c.GuardarRegimenes(ctx, map[string]almacen.RegimenEstacion{estacion: r})
+}
+
+// GuardarRegimenes no reemplaza un régimen de una fecha_hora posterior:
+// compara y escribe con el mismo lock.
+func (c *Cache) GuardarRegimenes(_ context.Context, rs map[string]almacen.RegimenEstacion) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	if guardado, ok := c.regimenes[estacion]; ok && guardado.FechaHora.After(r.FechaHora) {
-		return nil
+	for estacion, r := range rs {
+		if guardado, ok := c.regimenes[estacion]; ok && guardado.FechaHora.After(r.FechaHora) {
+			continue
+		}
+		c.regimenes[estacion] = r
 	}
-	c.regimenes[estacion] = r
 	return nil
 }
 
@@ -110,3 +132,36 @@ func (c *Cache) Regimen(_ context.Context, estacion string) (almacen.RegimenEsta
 }
 
 func (c *Cache) Ping(context.Context) error { return nil }
+
+func (c *Cache) GuardarModeloActivo(_ context.Context, m almacen.Modelo) error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.modelo = &m
+	return nil
+}
+
+func (c *Cache) ModeloActivo(context.Context) (almacen.Modelo, error) {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	if c.modelo == nil {
+		return almacen.Modelo{}, almacen.ErrNoEncontrado
+	}
+	return *c.modelo, nil
+}
+
+func (c *Cache) GuardarPunto(_ context.Context, entrenamiento string, p almacen.PuntoControl) error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.puntos[entrenamiento] = p
+	return nil
+}
+
+func (c *Cache) Punto(_ context.Context, entrenamiento string) (almacen.PuntoControl, error) {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	p, ok := c.puntos[entrenamiento]
+	if !ok {
+		return almacen.PuntoControl{}, almacen.ErrNoEncontrado
+	}
+	return p, nil
+}

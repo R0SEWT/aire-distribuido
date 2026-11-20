@@ -1,20 +1,29 @@
 // Package almacen define lo que la API guarda y consulta, detrás de interfaces
-// pequeñas (spec de la PC4, §7.3): la API solo conoce estas interfaces. El
-// doble en memoria (almacen/memoria) sirve para las pruebas, el CI y el
-// esqueleto de la API; las implementaciones con MongoDB y Redis llegan después
-// en almacen/mongo y almacen/redis.
+// pequeñas (spec de la PC4, §7.3): la API solo conoce estas interfaces. Hay
+// tres implementaciones: el doble en memoria (almacen/memoria), que usan las
+// pruebas, el CI y la API cuando no se le configura una base; almacen/mongo y
+// almacen/redis, las reales. Los drivers de MongoDB y Redis solo se importan en
+// esos dos paquetes: el resto del repositorio sigue con la biblioteca estándar.
 //
 // Qué guarda cada una (§7.1 y §7.2):
 //
 //   - Estaciones: la colección estaciones de MongoDB, sembrada desde
-//     reports/estaciones_ficha.csv (LeerFichaEstaciones).
+//     reports/estaciones_ficha.csv (LeerFichaEstaciones y docs/datos/seed.js).
 //   - Predicciones: la colección predicciones de MongoDB, un documento por
 //     lectura predicha.
+//   - Modelos: la colección modelos de MongoDB (modelos.go).
+//   - Entrenamientos y Eventos: las colecciones entrenamientos y
+//     eventos_cluster de MongoDB (entrenamientos.go).
 //   - Cache: en Redis, la clave estacion:{id}:regimen con el último régimen de
 //     cada estación. Es la única fuente de ese dato.
+//   - CacheModelo: en Redis, la clave modelo:activo.
+//   - PuntosControl: en Redis, las claves entrenamiento:{id}:punto (puntos.go).
 //
-// Modelos, Entrenamientos y Eventos (las otras tres interfaces de §7.3) llegan
-// con el entrenamiento por la API.
+// Modelo, RegimenEstacion y PuntoControl son valores JSON de Redis y llevan en
+// la etiqueta json el nombre del campo tal como se guarda; Modelo es además,
+// con esos mismos nombres, el documento de MongoDB. Los demás documentos tienen
+// su tipo con etiquetas bson en almacen/mongo. docs/datos/ejemplos/ tiene un
+// ejemplo de cada uno.
 package almacen
 
 import (
@@ -93,16 +102,21 @@ type Estaciones interface {
 
 // Predicciones es la colección predicciones.
 type Predicciones interface {
-	Guardar(ctx context.Context, p Prediccion) error
+	// GuardarLote guarda varias predicciones en una sola ida y vuelta al
+	// almacén. Si devuelve un error, puede que una parte del lote se haya
+	// guardado.
+	GuardarLote(ctx context.Context, ps []Prediccion) error
 }
 
 // Cache es la caché de Redis.
 type Cache interface {
-	// GuardarRegimen guarda el régimen de una estación, salvo que el guardado
-	// sea de una fecha_hora posterior a la de r: una lectura más antigua no lo
-	// reemplaza (una de la misma hora, sí). La comparación y la escritura son
-	// una sola operación.
-	GuardarRegimen(ctx context.Context, estacion string, r RegimenEstacion) error
+	// GuardarRegimenes guarda el régimen de varias estaciones (la clave del
+	// mapa es el id de la estación) en una sola ida y vuelta. En cada
+	// estación, si el régimen guardado es de una fecha_hora posterior a la del
+	// nuevo, no se reemplaza: una lectura más antigua no pisa a una más
+	// reciente (una de la misma hora, sí). La comparación y la escritura de
+	// cada estación son una sola operación atómica.
+	GuardarRegimenes(ctx context.Context, rs map[string]RegimenEstacion) error
 	// Regimen devuelve el último régimen de una estación o ErrNoEncontrado.
 	Regimen(ctx context.Context, estacion string) (RegimenEstacion, error)
 }

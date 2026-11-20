@@ -52,6 +52,8 @@ $GO run ./cmd/cargar -entrada data/sample/oefa_muestra.csv -workers 4      # sil
 $GO run ./cmd/entrenar -codo 2:10                      # regímenes, ECA, codo (lee configs/kmeans.json)
 $GO run ./cmd/benchmark -workers 1,2,4,8,11 -chunk 1000,10000 -repes 5     # speedup del K-Means
 docker build -t aire-distribuido . && docker run --rm aire-distribuido cargar -h
+cp .env.example .env && docker compose up --build --scale nodo=2      # api, nodos, mongo, redis
+$GO test -race -tags integracion ./almacen/... ./cmd/api/              # con mongo y redis arriba
 cd docs/informe && bash render.sh                      # Quarto → los tres .docx (salida/)
 ```
 
@@ -79,6 +81,9 @@ cd docs/informe && bash render.sh                      # Quarto → los tres .do
 - **Spec antes que código**: cada parte tiene su diseño en `docs/specs/` revisado contra el
   enunciado y la rúbrica antes de implementar. Las decisiones abiertas se marcan en la spec.
 - **Solo biblioteca estándar de Go**; configs en JSON por eso. TDD y `go test -race` siempre.
+  La única excepción son los drivers de MongoDB y Redis, que solo se importan en `almacen/mongo` y
+  `almacen/redis` (spec de la PC4 §13.1; `imports_test.go` lo vigila). Sus pruebas contra bases
+  reales llevan la etiqueta `integracion` y no corren en el CI.
 - **Determinismo**: mismo resultado bit a bit para cualquier número de workers (reducciones en orden
   de bloque o de chunk, filas ordenadas por estación y fecha-hora); con tolerancia entre nodos y
   contra el secuencial.

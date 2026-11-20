@@ -111,6 +111,12 @@ type Ronda struct {
 	// PorNodo es lo que tardó cada nodo, en el orden de los enlaces
 	// (protocolo.Enlace.TiempoRonda). La barrera va al ritmo del más lento.
 	PorNodo []time.Duration
+	// Centroides son los k*D centroides con que cerró la iteración, por filas:
+	// los que la ronda siguiente manda a los nodos y, en la última, los del
+	// modelo. Es una copia para quien recibe la ronda: puede guardarla o
+	// pisarla sin tocar la corrida. El coordinador de la API la guarda como
+	// punto de control.
+	Centroides []float64
 }
 
 // OpcionesLloyd es lo que LloydCtx necesita además del contrato numérico.
@@ -243,7 +249,8 @@ func LloydCtx(ctx context.Context, enlaces []*protocolo.Enlace, cent0 []float64,
 			for i, e := range enlaces {
 				porNodo[i] = e.TiempoRonda
 			}
-			ol.AlRonda(Ronda{Iter: it, Inercia: p.Inercia, Barrera: barrera, Fusion: c.Fusiones[it-1], PorNodo: porNodo})
+			ol.AlRonda(Ronda{Iter: it, Inercia: p.Inercia, Barrera: barrera, Fusion: c.Fusiones[it-1], PorNodo: porNodo,
+				Centroides: slices.Clone(cent)})
 		}
 		n++
 		if convergio {

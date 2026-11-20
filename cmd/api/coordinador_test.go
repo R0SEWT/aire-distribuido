@@ -345,12 +345,12 @@ func TestArrancaSinGoldYNoArrancaConOtroGold(t *testing.T) {
 	registro := slogDe(&salida)
 	entorno := entornoCon(map[string]string{"JWT_SECRETO": secreto, "API_USUARIOS": usuariosPrueba})
 	op.gold = "no-existe/oefa_features.csv"
-	if _, err := armar(op, entorno, registro, nil); err != nil || !strings.Contains(salida.String(), "no puede entrenar") {
+	if _, _, err := armar(op, entorno, registro, nil); err != nil || !strings.Contains(salida.String(), "no puede entrenar") {
 		t.Fatalf("sin el gold tiene que arrancar con un aviso: %v\n%s", err, salida.String())
 	}
 	_, gold, _ := repoSintetico(t)
 	op.gold, op.receta = gold, "../../configs/kmeans.json"
-	if _, err := armar(op, entorno, registro, nil); err == nil || !strings.Contains(err.Error(), "estandarización") {
+	if _, _, err := armar(op, entorno, registro, nil); err == nil || !strings.Contains(err.Error(), "estandarización") {
 		t.Fatalf("un gold que no es el de reports/estandarizacion.json: %v", err)
 	}
 	for _, args := range [][]string{{"-plazo-ronda", "0s"}, {"-latido", "-1s"}, {"-max-filas", "0"}} {
@@ -358,7 +358,7 @@ func TestArrancaSinGoldYNoArrancaConOtroGold(t *testing.T) {
 			t.Errorf("leerOpciones aceptó %v", args)
 		}
 	}
-	if _, err := armar(op, entornoCon(map[string]string{"JWT_SECRETO": secreto, "API_USUARIOS": usuariosPrueba, "CORS_ORIGENES": "localhost"}), registro, nil); err == nil ||
+	if _, _, err := armar(op, entornoCon(map[string]string{"JWT_SECRETO": secreto, "API_USUARIOS": usuariosPrueba, "CORS_ORIGENES": "localhost"}), registro, nil); err == nil ||
 		!strings.Contains(err.Error(), "CORS") {
 		t.Fatalf("un CORS_ORIGENES mal escrito: %v", err)
 	}

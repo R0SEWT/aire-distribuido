@@ -391,6 +391,7 @@ func TestRegimenDeUnaEstacion(t *testing.T) {
 		t.Fatalf("ts = %v (%v): tiene que ser el momento de la predicción, en hora de Lima", obj["ts"], err)
 	}
 	// Y la predicción quedó guardada con su lectura.
+	e.esperarEscritas(t, 1)
 	todas := e.pred.Todas()
 	if len(todas) != 1 || todas[0].Estacion != "CA-AYAS-01" || todas[0].PM25 != 70.2 || todas[0].PM10 != 190.5 ||
 		todas[0].ModeloID != modelo.IDSembrado || todas[0].FechaHora.Format(time.RFC3339) != "2026-11-14T15:00:00-05:00" {
@@ -520,9 +521,7 @@ func TestRegimenNoRetrocedeConUnaLecturaMasAntigua(t *testing.T) {
 		t.Fatalf("la lectura de cinco días antes se mide con su propia ventana: %v", vieja)
 	}
 	// Se espera a que el escritor procese las 25 predicciones.
-	for limite := time.Now().Add(2 * time.Second); len(e.pred.Todas()) < 25 && time.Now().Before(limite); {
-		time.Sleep(5 * time.Millisecond)
-	}
+	e.esperarEscritas(t, 25)
 	w := e.pedir(t, "GET", "/api/estaciones/CA-MAC-01/regimen", tok, "")
 	reg := objeto(t, w, 200, camposRegimenEstacion...)
 	if reg["fecha_hora"] != "2026-11-14T00:00:00-05:00" || reg["alerta"] != true ||
@@ -565,9 +564,7 @@ func TestFechaFuturaYSubHoraria(t *testing.T) {
 		t.Fatalf("la hora siguiente a las fechas rechazadas: %v", obj)
 	}
 	// Se espera a que el escritor procese las 25 predicciones.
-	for limite := time.Now().Add(2 * time.Second); len(e.pred.Todas()) < 25 && time.Now().Before(limite); {
-		time.Sleep(5 * time.Millisecond)
-	}
+	e.esperarEscritas(t, 25)
 	reg := objeto(t, e.pedir(t, "GET", "/api/estaciones/CA-ROM-01/regimen", tok, ""), 200, camposRegimenEstacion...)
 	if reg["alerta"] != true || !strings.HasPrefix(reg["fecha_hora"].(string), "2026-11-14T01:00:00") {
 		t.Fatalf("régimen de CA-ROM-01 tras las fechas rechazadas: %v", reg)
@@ -703,7 +700,7 @@ func TestPrediccionEnMenosDe100ms(t *testing.T) {
 // Con la cola de escritura llena, la predicción responde igual y el descarte
 // se ve en /api/metricas.
 func TestColaLlenaNoFrenaLaPrediccion(t *testing.T) {
-	bloqueo := &prediccionesBloqueadas{entro: make(chan struct{}, 1), soltar: make(chan struct{})}
+	bloqueo := nuevasPrediccionesBloqueadas()
 	defer close(bloqueo.soltar)
 	e := nuevoEntorno(t, func(c *Config) { c.Predicciones = bloqueo; c.TamCola = 1 })
 	tok := e.token(t, "demo", "demo")
@@ -712,9 +709,18 @@ func TestColaLlenaNoFrenaLaPrediccion(t *testing.T) {
 	for range 5 {
 		objeto(t, e.pedir(t, "POST", "/api/predicciones", tok, lecturaEjemplo), 200)
 	}
-	obj := objeto(t, e.pedir(t, "GET", "/api/metricas", e.token(t, "admin", "clave-admin"), ""), 200)
-	if obj["escrituras_descartadas"] != 4.0 {
-		t.Fatalf("escrituras_descartadas = %v, se esperaban 4 (una en curso y una en la cola de 1)", obj["escrituras_descartadas"])
+	// El almacén trabado es MongoDB. El total suma además lo que la cola de
+	// Redis, también de 1, haya descartado en la ráfaga.
+	var m struct {
+		Total     float64                    `json:"escrituras_descartadas"`
+		Escritura map[string]estadoEscritura `json:"escritura"`
+	}
+	w := e.pedir(t, "GET", "/api/metricas", e.token(t, "admin", "clave-admin"), "")
+	if err := json.Unmarshal(w.Body.Bytes(), &m); err != nil || w.Code != 200 {
+		t.Fatalf("métricas: %d, %v", w.Code, err)
+	}
+	if n := m.Escritura["mongo"].Descartadas; n != 4 || m.Total < 4 {
+		t.Fatalf("%d descartes en MongoDB (%v en total), se esperaban 4 (una en curso y una en la cola de 1): %s", n, m.Total, w.Body)
 	}
 }
 

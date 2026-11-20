@@ -3,11 +3,13 @@
 // el contrato OpenAPI y Swagger UI; y el coordinador del clúster (§5.2): los
 // nodos (cmd/nodo) la llaman por TCP en -nodos-addr, quedan en su pool, y un
 // admin lanza un entrenamiento distribuido por HTTP y lo sigue por WebSocket.
-// MongoDB y Redis llegan después: por ahora el almacén es el doble en memoria
-// (almacen/memoria), sembrado con la ficha de estaciones.
+// Guarda en MongoDB y Redis o, sin ellas, en el doble en memoria
+// (almacenes.go).
 //
-// Al arrancar siembra el modelo desde reports/kmeans.json, reports/regimenes.json
-// y reports/estandarizacion.json, y no arranca si no son de la misma corrida.
+// Al arrancar lee el modelo de reports/kmeans.json, reports/regimenes.json y
+// reports/estandarizacion.json, y no arranca si no son de la misma corrida. Si
+// MongoDB o Redis guardan un modelo más nuevo que entrenó la API, arranca con
+// ese (almacenes.go, modeloActivo).
 // Se corre desde la raíz del repo:
 //
 //	export JWT_SECRETO=$(openssl rand -hex 32)
@@ -22,6 +24,9 @@
 //   - CORS_ORIGENES: los orígenes que pueden llamar a la API desde un
 //     navegador, separados por comas («http://localhost:5173»), o «*». Sin
 //     ella, solo el mismo origen (Swagger UI). La necesita la SPA del TB2.
+//   - MONGO_URI y MONGO_DB, REDIS_ADDR y REDIS_DB: dónde están MongoDB y Redis
+//     (almacenes.go). Sin MONGO_URI las colecciones están en memoria; sin
+//     REDIS_ADDR, la caché. Con docker compose las pone docker-compose.yml.
 //
 // Para entrenar hace falta el gold (-gold), el mismo archivo que tienen los
 // nodos: de él salen la huella y el tamaño de la tabla que se reparte, la
@@ -38,6 +43,10 @@
 // Con -salud no levanta la API: pide /api/salud a la que ya corre en -addr y
 // sale con 0 si responde. Es el healthcheck de Docker (spec §8), porque la
 // imagen distroless no tiene curl.
+//
+// Al recibir SIGTERM o Ctrl+C corta el entrenamiento en curso y despide a los
+// nodos, deja de aceptar pedidos, espera hasta plazoPedidos a los que están en
+// curso y el escritor vacía sus colas en a lo sumo 3 s más.
 package main
 
 import (
@@ -57,13 +66,15 @@ import (
 	"time"
 
 	"github.com/R0SEWT/aire-distribuido/almacen"
-	"github.com/R0SEWT/aire-distribuido/almacen/memoria"
 	"github.com/R0SEWT/aire-distribuido/api"
 	"github.com/R0SEWT/aire-distribuido/cluster"
 	"github.com/R0SEWT/aire-distribuido/modelo"
 )
 
 const usuariosDemo = "demo:demo:usuario,admin:admin:admin"
+
+// plazoPedidos es lo que el apagado espera a los pedidos en curso.
+const plazoPedidos = 5 * time.Second
 
 type opciones struct {
 	addr                               string
@@ -143,17 +154,18 @@ func leerOpciones(args []string) (opciones, error) {
 	return op, nil
 }
 
-// armar lee la configuración, siembra el modelo y las estaciones y crea el
+// armar lee la configuración, siembra el modelo, abre los almacenes y crea el
 // servidor. Todo lo que puede fallar falla aquí, antes de escuchar. nodos es el
 // listener donde llaman los nodos del clúster, o nil si la API no tiene clúster.
-func armar(op opciones, getenv func(string) string, log *slog.Logger, nodos net.Listener) (*api.Servidor, error) {
+// Devuelve también cómo cerrar las conexiones a las bases.
+func armar(op opciones, getenv func(string) string, log *slog.Logger, nodos net.Listener) (*api.Servidor, func(), error) {
 	secreto := getenv("JWT_SECRETO")
 	if secreto == "" {
-		return nil, errors.New("falta la variable de entorno JWT_SECRETO (por ejemplo: export JWT_SECRETO=$(openssl rand -hex 32))")
+		return nil, nil, errors.New("falta la variable de entorno JWT_SECRETO (por ejemplo: export JWT_SECRETO=$(openssl rand -hex 32))")
 	}
 	firmador, err := api.NuevoFirmador([]byte(secreto), op.duracionJWT)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	listaUsuarios := getenv("API_USUARIOS")
 	switch {
@@ -163,72 +175,76 @@ func armar(op opciones, getenv func(string) string, log *slog.Logger, nodos net.
 		log.Warn("-demo: usuarios de demostración demo/demo (usuario) y admin/admin (admin); solo para desarrollo")
 		listaUsuarios = usuariosDemo
 	case listaUsuarios == "":
-		return nil, errors.New("falta la variable de entorno API_USUARIOS (usuario:clave:rol separados por comas; " +
+		return nil, nil, errors.New("falta la variable de entorno API_USUARIOS (usuario:clave:rol separados por comas; " +
 			"para desarrollo, -demo usa los usuarios de demostración)")
 	}
 	usuarios, err := api.LeerUsuarios(listaUsuarios)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	m, err := modelo.Sembrar(modelo.Archivos{Kmeans: op.kmeans, Regimenes: op.regimenes, Estandarizacion: op.estandarizacion})
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	f, err := os.Open(op.estaciones)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	defer f.Close()
 	ficha, err := almacen.LeerFichaEstaciones(f)
 	if err != nil {
-		return nil, fmt.Errorf("%s: %w", op.estaciones, err)
-	}
-	estaciones, err := memoria.NuevasEstaciones(ficha)
-	if err != nil {
-		return nil, err
+		return nil, nil, fmt.Errorf("%s: %w", op.estaciones, err)
 	}
 	contrato, err := os.ReadFile(op.openapi)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	origenes, err := api.LeerOrigenesCORS(getenv("CORS_ORIGENES"))
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	entrenador, err := leerEntrenador(op, log)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	cache := memoria.NuevaCache()
+	alm, err := abrirAlmacenes(getenv, ficha, log)
+	if err != nil {
+		return nil, nil, err
+	}
 	srv, err := api.Nuevo(api.Config{
-		Entrenamientos: memoria.NuevosEntrenamientos(),
-		Eventos:        memoria.NuevosEventos(),
+		Entrenamientos: alm.entrenamientos,
+		Eventos:        alm.eventos,
+		Puntos:         alm.puntos,
 		Nodos:          nodos,
 		Pool:           cluster.OpcionesPool{PlazoHola: op.plazoHola, CadaLatido: op.latido},
 		Entrenador:     entrenador,
 		OrigenesCORS:   origenes,
-		Modelo:         m,
+		Modelo:         alm.modeloActivo(m, log),
 		Firmador:       firmador,
 		Usuarios:       usuarios,
 		Catalogo:       ficha,
-		Estaciones:     estaciones,
-		Predicciones:   memoria.NuevasPredicciones(),
-		Cache:          cache,
-		Mongo:          estaciones,
-		Redis:          cache,
+		Estaciones:     alm.estaciones,
+		Predicciones:   alm.predicciones,
+		Cache:          alm.cache,
+		Modelos:        alm.modelos,
+		CacheModelo:    alm.cacheModelo,
+		Mongo:          alm.mongo,
+		Redis:          alm.redis,
 		OpenAPI:        contrato,
 		TamCola:        op.cola,
 		Log:            log,
 	})
 	if err != nil {
-		return nil, err
+		alm.cerrar()
+		return nil, nil, err
 	}
-	log.Info("modelo sembrado", "id", m.ID, "k", m.K(), "features", m.Features(), "iteraciones", m.Iteraciones)
-	log.Info("almacén en memoria (sin MongoDB ni Redis)", "estaciones", len(ficha))
+	// Lo que el coordinador lleva en memoria y está en el almacén: el último
+	// entrenamiento y los que quedaron en curso cuando la API anterior murió.
+	srv.RecuperarEntrenamientos(plazoArranque)
 	if len(origenes) > 0 {
 		log.Info("CORS", "origenes", origenes)
 	}
-	return srv, nil
+	return srv, alm.cerrar, nil
 }
 
 // leerEntrenador carga lo que hace falta para entrenar. Sin gold (-gold "" o
@@ -260,8 +276,9 @@ func leerEntrenador(op opciones, log *slog.Logger) (*api.Entrenador, error) {
 
 // correr levanta la API hasta que ctx se cancela; entonces corta el
 // entrenamiento en curso, despide a los nodos y a los clientes del WebSocket,
-// deja de aceptar pedidos, espera a los que están en curso y vacía la cola de
-// escritura. escuchando, si no es nil, recibe las direcciones reales de HTTP y
+// deja de aceptar pedidos, espera a los que están en curso (hasta
+// plazoPedidos), vacía las colas de escritura y cierra las conexiones a las
+// bases. escuchando, si no es nil, recibe las direcciones reales de HTTP y
 // de los nodos (útil con :0); la de los nodos es "" si no hay clúster.
 func correr(ctx context.Context, args []string, getenv func(string) string, salida io.Writer, escuchando func(http, nodos string)) error {
 	op, err := leerOpciones(args)
@@ -278,10 +295,11 @@ func correr(ctx context.Context, args []string, getenv func(string) string, sali
 		defer lnNodos.Close()
 		dirNodos = lnNodos.Addr().String()
 	}
-	srv, err := armar(op, getenv, log, lnNodos)
+	srv, cerrarAlmacenes, err := armar(op, getenv, log, lnNodos)
 	if err != nil {
 		return err
 	}
+	defer cerrarAlmacenes() // al final: después del coordinador y del escritor
 	ln, err := net.Listen("tcp", op.addr)
 	if err != nil {
 		return err
@@ -325,10 +343,13 @@ func correr(ctx context.Context, args []string, getenv func(string) string, sali
 	log.Info("apagando: se corta el entrenamiento en curso, se terminan los pedidos y se vacía la cola de escritura")
 	pararCoordinador()
 	<-coordinadorListo
-	apagar, cancelar := context.WithTimeout(context.Background(), 10*time.Second)
+	apagar, cancelar := context.WithTimeout(context.Background(), plazoPedidos)
 	defer cancelar()
 	if err := hs.Shutdown(apagar); err != nil {
-		return err
+		// Algún pedido no terminó a tiempo: se corta, y el escritor igual
+		// vacía lo que tenga.
+		_ = hs.Close()
+		return fmt.Errorf("los pedidos en curso no terminaron en %v: %w", plazoPedidos, err)
 	}
 	if err := <-sirviendo; !errors.Is(err, http.ErrServerClosed) {
 		return err

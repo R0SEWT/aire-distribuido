@@ -1,45 +1,15 @@
-// Seed idempotente de las colecciones e índices de PC4.
-// mongosh lo ejecuta automáticamente al inicializar un volumen vacío y también
-// se puede volver a ejecutar manualmente. La ficha versionada es la única
-// fuente del catálogo; este script no completa ubicaciones por inferencia.
+// Seed idempotente de las colecciones e índices de PC4. Lo ejecuta el servicio
+// seed de docker-compose.yml en cada «docker compose up», contra el MongoDB ya
+// sano, y se puede volver a ejecutar a mano (docker compose run --rm seed). La
+// ficha versionada es la única fuente del catálogo: este script no completa
+// ubicaciones por inferencia y borra de MongoDB las estaciones que ya no están
+// en la ficha.
 
 const fs = require("fs");
 
 const databaseName = process.env.MONGO_INITDB_DATABASE || "aire_distribuido";
 const estacionesPath = process.env.ESTACIONES_CSV || "/seed/estaciones_ficha.csv";
-const initializationMarker =
-  process.env.INITIALIZATION_MARKER || "/data/db/.pc4-seed-completo";
 const database = db.getSiblingDB(databaseName);
-
-// El healthcheck no debe anunciar readiness mientras corre el seed. D2 asume
-// ejecución controlada en desarrollo local: no se lanzan dos seeds a la vez.
-if (fs.existsSync(initializationMarker)) {
-  fs.unlinkSync(initializationMarker);
-}
-
-const colecciones = [
-  "modelos",
-  "entrenamientos",
-  "predicciones",
-  "eventos_cluster",
-  "estaciones",
-];
-
-const existentes = new Set(database.getCollectionNames());
-for (const nombre of colecciones) {
-  if (!existentes.has(nombre)) {
-    database.createCollection(nombre);
-  }
-}
-
-database.modelos.createIndex({ activo: 1 }, { name: "activo" });
-database.modelos.createIndex({ creado: 1 }, { name: "creado" });
-database.entrenamientos.createIndex({ inicio: 1 }, { name: "inicio" });
-database.predicciones.createIndex(
-  { estacion: 1, ts: 1 },
-  { name: "estacion_ts" },
-);
-database.eventos_cluster.createIndex({ ts: 1 }, { name: "ts" });
 
 function parsearCSV(texto) {
   const filas = [];
@@ -90,24 +60,34 @@ function textoONull(valor) {
     : limpio;
 }
 
-function numeroONull(valor, campo, estacion) {
+// Una coordenada es obligatoria, un número decimal y está en rango, igual que
+// en almacen/ficha.go: el contrato de la API no deja que lat o lon sean null,
+// y una estación sin coordenada dejaría sin respuesta a GET /api/estaciones.
+function coordenada(valor, campo, limite, estacion) {
   const texto = textoONull(valor);
   if (texto === null) {
-    return null;
+    throw new Error(`${estacion}: ${campo} ausente`);
+  }
+  if (!/^[+-]?(\d+\.?\d*|\.\d+)([eE][+-]?\d+)?$/.test(texto)) {
+    throw new Error(`${estacion}: ${campo} no numérica: ${JSON.stringify(valor)}`);
   }
   const numero = Number(texto);
-  if (!Number.isFinite(numero)) {
-    throw new Error(`${estacion}: ${campo} no es numérico: ${JSON.stringify(valor)}`);
+  if (!Number.isFinite(numero) || numero < -limite || numero > limite) {
+    throw new Error(`${estacion}: ${campo} fuera de [-${limite}, ${limite}]: ${texto}`);
   }
   return numero;
 }
 
+// Primero se lee y se valida la ficha completa; la base no se toca hasta que
+// toda la ficha es válida. Un error aquí deja MongoDB como estaba.
 const filas = parsearCSV(fs.readFileSync(estacionesPath, "utf8"));
 if (filas.length < 2) {
   throw new Error(`la ficha de estaciones está vacía: ${estacionesPath}`);
 }
 
-const cabecera = filas[0];
+// Excel y otros programas anteponen una marca de orden de bytes (BOM) al
+// archivo: queda pegada al nombre de la primera columna.
+const cabecera = filas[0].map((nombre) => nombre.replace(/^\ufeff/, ""));
 const indice = Object.fromEntries(cabecera.map((nombre, i) => [nombre, i]));
 const requeridas = [
   "estacion",
@@ -153,8 +133,8 @@ for (const fila of filas.slice(1)) {
     departamento: textoONull(fila[indice.departamento]),
     provincia: textoONull(fila[indice.provincia]),
     distrito: textoONull(fila[indice.distrito]),
-    lat: numeroONull(fila[indice.lat], "lat", estacion),
-    lon: numeroONull(fila[indice.lon], "lon", estacion),
+    lat: coordenada(fila[indice.lat], "lat", 90, estacion),
+    lon: coordenada(fila[indice.lon], "lon", 180, estacion),
   };
 
   operaciones.push({
@@ -170,26 +150,52 @@ if (operaciones.length === 0) {
   throw new Error("la ficha no contiene estaciones");
 }
 
-database.estaciones.bulkWrite(operaciones, { ordered: true });
+// La ficha es válida: recién ahora se escribe.
+const colecciones = [
+  "modelos",
+  "entrenamientos",
+  "predicciones",
+  "eventos_cluster",
+  "estaciones",
+];
 
-const idsFuente = [...ids];
-const estacionesDeLaFuente = database.estaciones.countDocuments({
-  _id: { $in: idsFuente },
-});
-if (estacionesDeLaFuente !== idsFuente.length) {
-  throw new Error(
-    `se cargaron ${estacionesDeLaFuente} de ${idsFuente.length} estaciones de la ficha`,
-  );
+const existentes = new Set(database.getCollectionNames());
+for (const nombre of colecciones) {
+  if (!existentes.has(nombre)) {
+    database.createCollection(nombre);
+  }
 }
 
-// Señal local del volumen, escrita únicamente después de crear índices y
-// comprobar toda la carga. No agrega una sexta colección ni cambia el contrato.
-fs.writeFileSync(initializationMarker, "ok\n", { encoding: "utf8" });
+database.modelos.createIndex({ activo: 1 }, { name: "activo" });
+database.modelos.createIndex({ creado: 1 }, { name: "creado" });
+database.entrenamientos.createIndex({ inicio: 1 }, { name: "inicio" });
+database.predicciones.createIndex(
+  { estacion: 1, ts: 1 },
+  { name: "estacion_ts" },
+);
+database.eventos_cluster.createIndex({ ts: 1 }, { name: "ts" });
+
+database.estaciones.bulkWrite(operaciones, { ordered: true });
+
+// La ficha es el catálogo completo: una estación que salió de la ficha sale
+// también de MongoDB. Va después del bulkWrite para que, si la carga falla, no
+// se borre nada.
+const idsFuente = [...ids];
+const retiradas = database.estaciones.deleteMany({
+  _id: { $nin: idsFuente },
+}).deletedCount;
+
+const estacionesEnMongo = database.estaciones.countDocuments({});
+if (estacionesEnMongo !== idsFuente.length) {
+  throw new Error(
+    `MongoDB tiene ${estacionesEnMongo} estaciones y la ficha, ${idsFuente.length}`,
+  );
+}
 
 printjson({
   database: databaseName,
   estaciones_en_fuente: operaciones.length,
-  estaciones_de_la_fuente_en_mongo: estacionesDeLaFuente,
-  estaciones_en_mongo: database.estaciones.countDocuments({}),
+  estaciones_retiradas: retiradas,
+  estaciones_en_mongo: estacionesEnMongo,
   colecciones: database.getCollectionNames().sort(),
 });

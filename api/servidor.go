@@ -7,8 +7,8 @@
 //
 // El camino de una predicción no espera a ningún almacén: el modelo vive en
 // memoria detrás de un atomic.Pointer, la media de 24 h de cada estación
-// también (paquete ventana) y la escritura va a una cola con búfer
-// (escritor.go).
+// también (paquete ventana) y la escritura va a dos colas con búfer, una por
+// almacén, que se vacían por lotes (escritor.go).
 package api
 
 import (
@@ -49,6 +49,14 @@ type Config struct {
 	Estaciones   almacen.Estaciones
 	Predicciones almacen.Predicciones
 	Cache        almacen.Cache
+	// Modelos y CacheModelo son donde ActivarModelo guarda el modelo activo
+	// (la colección modelos y la clave modelo:activo). Pueden ser nil: el
+	// modelo se activa igual, solo en memoria.
+	Modelos     almacen.Modelos
+	CacheModelo almacen.CacheModelo
+	// Puntos es donde el coordinador deja, en cada ronda, el punto de control
+	// del entrenamiento (las claves entrenamiento:{id}:punto). Puede ser nil.
+	Puntos       almacen.PuntosControl
 	Mongo, Redis almacen.Pinger // lo que /api/salud informa como mongo y redis
 	OpenAPI      []byte         // docs/api/openapi.yaml, que se sirve tal cual
 	TamCola      int            // búfer de la cola de escritura
@@ -83,6 +91,9 @@ type Servidor struct {
 	catalogo     map[string]bool
 	estaciones   almacen.Estaciones
 	cache        almacen.Cache
+	modelos      almacenesDeModelo
+	puntos       almacen.PuntosControl
+	cuentaPuntos cuentaPuntos
 	mongo, redis almacen.Pinger
 	openapi      []byte
 	log          *slog.Logger
@@ -137,6 +148,7 @@ func Nuevo(cfg Config) (*Servidor, error) {
 		catalogo:   catalogo,
 		estaciones: cfg.Estaciones,
 		cache:      cfg.Cache,
+		modelos:    almacenesDeModelo{cfg.Modelos, cfg.CacheModelo},
 		mongo:      cfg.Mongo,
 		redis:      cfg.Redis,
 		openapi:    cfg.OpenAPI,
@@ -152,6 +164,7 @@ func Nuevo(cfg Config) (*Servidor, error) {
 		cronica:    make(chan almacen.EventoCluster, tamCronica),
 	}
 	s.modelo.Store(cfg.Modelo)
+	s.puntos = cfg.Puntos
 	if cfg.Nodos != nil {
 		op := cfg.Pool
 		op.AlEvento = s.registrarEvento
@@ -219,8 +232,9 @@ func (c *capturado) Header() http.Header         { return c.cabecera }
 func (c *capturado) WriteHeader(codigo int)      { c.codigo = codigo }
 func (c *capturado) Write(b []byte) (int, error) { return c.cuerpo.Write(b) }
 
-// Escribir corre la goroutine que guarda las predicciones hasta que ctx se
-// cancela; antes de volver escribe lo que quedó en la cola.
+// Escribir corre las goroutines que guardan las predicciones hasta que ctx se
+// cancela; antes de volver escribe lo que quedó en las colas, sin pasarse de
+// plazoVaciado.
 func (s *Servidor) Escribir(ctx context.Context) { s.escritor.correr(ctx) }
 
 // tamCronica es el búfer de los eventos del clúster camino al almacén. Son
@@ -309,8 +323,13 @@ func (s *Servidor) DireccionNodos() net.Addr {
 }
 
 // ActivarModelo reemplaza el modelo activo. Las predicciones en curso terminan
-// con el anterior; ninguna toma un lock.
-func (s *Servidor) ActivarModelo(m *modelo.Modelo) { s.modelo.Store(m) }
+// con el anterior; ninguna toma un lock. Después lo guarda como activo en
+// MongoDB y Redis, si la API los tiene (modelo_activo.go): eso puede tardar
+// hasta plazoEscritura por almacén, así que no se llama desde un handler.
+func (s *Servidor) ActivarModelo(m *modelo.Modelo) {
+	s.modelo.Store(m)
+	s.guardarModeloActivo(m)
+}
 
 // ruta registra un handler medido. roles nil es una ruta libre; si no, hace
 // falta un JWT válido con alguno de esos roles.

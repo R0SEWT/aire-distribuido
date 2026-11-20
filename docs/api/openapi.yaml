@@ -372,6 +372,11 @@ paths:
                 nodos_en_pool: 4
                 ultimo_entrenamiento: e-20261119-1530
                 escrituras_descartadas: 0
+                escrituras_fallidas: 0
+                escritura:
+                  mongo: {escritas: 12000, descartadas: 0, fallidas: 0, lotes: 3120}
+                  redis: {escritas: 12000, descartadas: 0, fallidas: 0, lotes: 3050}
+                puntos_de_control: {escritos: 44, fallidos: 0, omitidos: 0}
         '401': {$ref: '#/components/responses/NoAutenticado'}
         '403': {$ref: '#/components/responses/SinPermiso'}
   /openapi.yaml:
@@ -765,16 +770,48 @@ components:
         p50_ms: {type: number, minimum: 0}
         p95_ms: {type: number, minimum: 0}
         p99_ms: {type: number, minimum: 0}
+    EscrituraAlmacen:
+      type: object
+      required: [escritas, descartadas, fallidas, lotes]
+      description: |
+        Lo que el escritor de predicciones hizo en un almacén desde que arrancó la API. La
+        predicción responde sin esperar al almacén: se encola y una goroutine por almacén la
+        escribe por lotes.
+      properties:
+        escritas: {type: integer, minimum: 0, description: Predicciones en lotes que el almacén aceptó}
+        descartadas: {type: integer, minimum: 0, description: 'Predicciones que no se escribieron: la cola estaba llena, o quedaron sin escribir al apagar'}
+        fallidas: {type: integer, minimum: 0, description: Predicciones en lotes que el almacén rechazó o no respondió a tiempo}
+        lotes: {type: integer, minimum: 0, description: Idas y vueltas al almacén}
     Metricas:
       type: object
-      required: [endpoints, nodos_en_pool, ultimo_entrenamiento, escrituras_descartadas]
+      required: [endpoints, nodos_en_pool, ultimo_entrenamiento, escrituras_descartadas, escrituras_fallidas, escritura, puntos_de_control]
       properties:
         endpoints:
           type: object
           additionalProperties: {$ref: '#/components/schemas/MetricaEndpoint'}
         nodos_en_pool: {type: integer, minimum: 0}
         ultimo_entrenamiento: {type: string, nullable: true}
-        escrituras_descartadas: {type: integer, minimum: 0, description: Descartes al llenarse la cola de persistencia}
+        escrituras_descartadas: {type: integer, minimum: 0, description: 'Descartes al llenarse una cola de persistencia; suma de los dos almacenes'}
+        escrituras_fallidas: {type: integer, minimum: 0, description: 'Escrituras que el almacén rechazó; suma de los dos almacenes'}
+        escritura:
+          type: object
+          required: [mongo, redis]
+          description: El detalle por almacén.
+          properties:
+            mongo: {$ref: '#/components/schemas/EscrituraAlmacen'}
+            redis: {$ref: '#/components/schemas/EscrituraAlmacen'}
+        puntos_de_control:
+          type: object
+          required: [escritos, fallidos, omitidos]
+          description: |
+            Los puntos de control de los entrenamientos (la clave entrenamiento:{id}:punto de
+            Redis, con la iteración y los centroides de la última ronda completa) desde que
+            arrancó la API. Se escribe uno por ronda sin frenar la corrida: si Redis no llega a
+            guardar uno antes de la ronda siguiente, se omite, porque solo importa el último.
+          properties:
+            escritos: {type: integer, minimum: 0, description: Puntos que Redis guardó}
+            fallidos: {type: integer, minimum: 0, description: Escrituras que Redis rechazó o no respondió a tiempo}
+            omitidos: {type: integer, minimum: 0, description: Puntos reemplazados por el de una ronda posterior antes de escribirse}
     EventoRonda:
       allOf:
         - $ref: '#/components/schemas/Ronda'
