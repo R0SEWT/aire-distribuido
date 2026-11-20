@@ -16,14 +16,15 @@
 //
 // # Lado del coordinador
 //
-// EsperarNodos junta los nodos que se presentan, Repartir les asigna rangos
-// contiguos iguales en orden de nodo, Cargar se los manda a todos a la vez y
-// Lloyd corre las iteraciones: cada una es una protocolo.Ronda (fan-out del
-// ITERAR, fan-in de los PARCIAL con un plazo común), kmeans.Fusionar de los
-// parciales en orden de nodo y kmeans.CerrarIteracion, el mismo código que
-// cierra cada iteración en una sola máquina. Si un nodo cae o no responde a
-// tiempo, la ronda se aborta con un error que lo nombra y no hay modelo:
-// Abortar les avisa a los demás y Terminar cierra una corrida que salió bien.
+// EsperarNodos junta los nodos que se presentan y comprueba con un PING que
+// siguen ahí, Repartir les asigna rangos contiguos iguales en orden de nodo,
+// Cargar se los manda a todos a la vez y Lloyd corre las iteraciones: cada una
+// es una protocolo.Ronda (fan-out del ITERAR, fan-in de los PARCIAL con un
+// plazo común), kmeans.Fusionar de los parciales en orden de nodo y
+// kmeans.CerrarIteracion, el mismo código que cierra cada iteración en una
+// sola máquina. Si un nodo cae o no responde a tiempo, la ronda se aborta con
+// un error que lo nombra y no hay modelo: Abortar les avisa a los demás y
+// Terminar cierra una corrida que salió bien.
 //
 // cmd/nodo y cmd/distribuido son los comandos; cmd/smoke usa la misma espera
 // de nodos. La API de la parte C puede usar este paquete tal cual.

@@ -351,7 +351,8 @@ func TestUnNodoCaidoAbortaLaCorridaConUnErrorQueLoNombra(t *testing.T) {
 	}
 }
 
-// nodoMudo carga su rango como un nodo sano y después no responde nada.
+// nodoMudo se presenta, responde el PING de la espera y carga su rango como
+// un nodo sano; después no responde nada.
 func nodoMudo(t *testing.T, addr string) {
 	t.Helper()
 	go func() {
@@ -367,7 +368,10 @@ func nodoMudo(t *testing.T, addr string) {
 			if err != nil {
 				return
 			}
-			if m.Tipo == protocolo.Cargar {
+			switch m.Tipo {
+			case protocolo.Ping:
+				cod.Escribir(protocolo.Mensaje{Tipo: protocolo.Pong})
+			case protocolo.Cargar:
 				cod.Escribir(protocolo.Mensaje{Tipo: protocolo.Listo, N: m.Rango.Len(), Huella: m.Huella})
 			}
 		}

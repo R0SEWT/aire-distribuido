@@ -12,6 +12,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -236,7 +237,8 @@ func TestTresNodosConReplicasVirtuales(t *testing.T) {
 	}
 }
 
-// nodoMudo carga su rango como un nodo sano y después no responde nada.
+// nodoMudo se presenta, responde el PING de la espera y carga su rango como
+// un nodo sano; después no responde nada.
 func nodoMudo(t *testing.T, ln net.Listener) {
 	t.Helper()
 	go func() {
@@ -252,7 +254,10 @@ func nodoMudo(t *testing.T, ln net.Listener) {
 			if err != nil {
 				return
 			}
-			if m.Tipo == protocolo.Cargar {
+			switch m.Tipo {
+			case protocolo.Ping:
+				cod.Escribir(protocolo.Mensaje{Tipo: protocolo.Pong})
+			case protocolo.Cargar:
 				cod.Escribir(protocolo.Mensaje{Tipo: protocolo.Listo, N: m.Rango.Len(), Huella: m.Huella})
 			}
 		}
@@ -454,6 +459,59 @@ func TestConCtrlCYMenosNodosElTopeSeCompruebaOtraVez(t *testing.T) {
 	for range 2 {
 		if err := <-errs; !errors.Is(err, cluster.ErrCoordinador) || !strings.Contains(err.Error(), "-replicas 2") {
 			t.Fatalf("cada nodo tenía que recibir el ERROR con el motivo; terminó con %v", err)
+		}
+	}
+}
+
+// avisador es la salida de un log que avisa, cerrando visto, la primera vez
+// que se escribe una línea con marca.
+type avisador struct {
+	marca string
+	visto chan struct{}
+	una   sync.Once
+}
+
+func (a *avisador) Write(p []byte) (int, error) {
+	if strings.Contains(string(p), a.marca) {
+		a.una.Do(func() { close(a.visto) })
+	}
+	return len(p), nil
+}
+
+func TestUnNodoQueMuereTrasElHolaNoOcupaUnCupo(t *testing.T) {
+	// -nodos 2. pc-00 se presenta y se apaga; después llegan pc-01 y pc-02.
+	// La corrida sale con los dos vivos, no se aborta en la carga por pc-00.
+	op, _ := archivos(t)
+	op.nodos = 2
+	ln := escuchar(t)
+	llego := &avisador{marca: "] pc-00 ", visto: make(chan struct{})}
+	errs := make(chan (<-chan error), 1)
+	go func() {
+		conn, err := net.Dial("tcp", ln.Addr().String())
+		if err != nil {
+			t.Error(err)
+			return
+		}
+		hola := protocolo.Mensaje{Tipo: protocolo.Hola, Version: protocolo.Version, Nodo: "pc-00", Workers: 2}
+		if err := protocolo.NuevoCodificador(conn).Escribir(hola); err != nil {
+			t.Error(err)
+		}
+		conn.Close()
+		<-llego.visto // el coordinador ya contó a pc-00: ahora llegan los vivos
+		errs <- lanzarNodos(t, ln, op.gold, 2)
+	}()
+
+	if err := correr(context.Background(), op, ln, log.New(llego, "", 0), io.Discard, nil); err != nil {
+		t.Fatalf("correr: %v", err)
+	}
+	s := leerSalida(t, op.salida)
+	if len(s.Nodos) != 2 || s.Nodos[0].Nodo != "pc-01" || s.Nodos[1].Nodo != "pc-02" {
+		t.Fatalf("la corrida tenía que salir con pc-01 y pc-02: %+v", s.Nodos)
+	}
+	vivos := <-errs
+	for range 2 {
+		if err := <-vivos; err != nil {
+			t.Fatalf("un nodo terminó con error: %v", err)
 		}
 	}
 }

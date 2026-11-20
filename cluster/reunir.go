@@ -37,6 +37,12 @@ func Enlaces(ms []*Miembro) []*protocolo.Enlace {
 // conexión tiene plazoHola para presentarse. Si un nodo con el mismo nombre
 // vuelve a llamar, la conexión nueva reemplaza a la vieja.
 //
+// Un nodo que se apagó después de su HOLA no ocupa un cupo: cuando están los n,
+// antes de darlos por reunidos, les manda un PING a todos a la vez
+// (protocolo.Latido, con plazoHola para el PONG). Al que no responde lo suelta
+// y sigue esperando a otro hasta que se cancele ctx. Si la espera termina por
+// ctx, devuelve a los que se presentaron sin comprobarlos.
+//
 // No cierra ln, y al volver ya no acepta ni queda ninguna goroutine suya: se
 // puede volver a llamar sobre el mismo listener (un pool de nodos) y la espera
 // siguiente recibe todas sus conexiones. Las que estaban a medio presentarse
@@ -69,6 +75,9 @@ func EsperarNodos(ctx context.Context, ln net.Listener, n int, plazoHola time.Du
 			}
 			porNombre[m.Enlace.Nodo] = m
 			lg.Printf("[%d/%d] %s desde %s (%d workers)", len(porNombre), n, m.Enlace.Nodo, m.Direccion, m.Enlace.Workers)
+			if len(porNombre) == n {
+				soltarCaidos(porNombre, plazoHola, lg)
+			}
 		case <-ctx.Done():
 			lg.Printf("dejo de esperar con %d de %d nodos: %v", len(porNombre), n, context.Cause(ctx))
 			n = len(porNombre)
@@ -88,6 +97,31 @@ func EsperarNodos(ctx context.Context, ln net.Listener, n int, plazoHola time.Du
 // HOLA que ya venía en camino se atiende: el nodo con otra versión se entera
 // de por qué no entra, en vez de leer un EOF. El que no dijo nada se corta.
 const graciaSaludo = time.Second
+
+// soltarCaidos comprueba con un PING que cada miembro sigue ahí, a todos a la
+// vez y con un mismo instante límite, y saca de porNombre al que no responde.
+// Los enlaces son de quien llama: todavía no los usa nadie más.
+func soltarCaidos(porNombre map[string]*Miembro, plazo time.Duration, lg *log.Logger) {
+	limite := time.Now().Add(plazo)
+	errs := make(map[string]error, len(porNombre))
+	var mu sync.Mutex
+	var barrera sync.WaitGroup
+	for nombre, m := range porNombre {
+		barrera.Go(func() {
+			if _, err := protocolo.Latido(m.Enlace, limite); err != nil {
+				mu.Lock()
+				errs[nombre] = err
+				mu.Unlock()
+			}
+		})
+	}
+	barrera.Wait()
+	for nombre, err := range errs {
+		lg.Printf("%s se presentó y ya no responde (%v): lo suelto y sigo esperando", nombre, err)
+		porNombre[nombre].Enlace.Cerrar()
+		delete(porNombre, nombre)
+	}
+}
 
 // recepcion es lo que una espera tiene corriendo: el aceptador y un saludo por
 // cada conexión que todavía no mandó su HOLA. cerrar los termina a todos.

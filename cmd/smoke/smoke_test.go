@@ -16,8 +16,9 @@ import (
 
 var silencio = log.New(io.Discard, "", 0)
 
-// nodoFalso llama a addr, se presenta y atiende PING y FIN. Con mudo lee los
-// PING pero no responde. Devuelve por fin el último mensaje que recibió (FIN o
+// nodoFalso llama a addr, se presenta y atiende PING y FIN. Con mudo responde
+// solo el primer PING, el de la espera de nodos (cluster.EsperarNodos comprueba
+// que cada uno sigue ahí), y después los lee pero no responde. Devuelve por fin el último mensaje que recibió (FIN o
 // ERROR), o un error si la conexión se cortó sin ninguno de los dos.
 func nodoFalso(t *testing.T, addr, nombre string, version int, mudo bool) <-chan error {
 	t.Helper()
@@ -34,7 +35,7 @@ func nodoFalso(t *testing.T, addr, nombre string, version int, mudo bool) <-chan
 			fin <- err
 			return
 		}
-		for {
+		for pings := 0; ; {
 			m, err := dec.Leer()
 			if err != nil {
 				fin <- err
@@ -42,7 +43,7 @@ func nodoFalso(t *testing.T, addr, nombre string, version int, mudo bool) <-chan
 			}
 			switch m.Tipo {
 			case protocolo.Ping:
-				if !mudo {
+				if pings++; !mudo || pings == 1 {
 					cod.Escribir(protocolo.Mensaje{Tipo: protocolo.Pong})
 				}
 			case protocolo.Fin:

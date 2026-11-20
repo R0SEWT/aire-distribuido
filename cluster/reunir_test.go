@@ -3,6 +3,7 @@ package cluster
 import (
 	"context"
 	"errors"
+	"io"
 	"log"
 	"net"
 	"os"
@@ -185,6 +186,77 @@ func TestEsperarNodosAtiendeUnHolaQueLlegaAlTerminar(t *testing.T) {
 	}
 	if err := <-respuesta; !strings.Contains(err.Error(), "ERROR: ") || !strings.Contains(err.Error(), "versión") {
 		t.Fatalf("el nodo de otra versión tenía que recibir un ERROR que la nombre; recibió %v", err)
+	}
+	Terminar(Enlaces(ms), time.Second)
+}
+
+// nodoQueMuere llama a addr, se presenta y corta la conexión sin esperar nada:
+// un equipo que se apagó después del HOLA.
+func nodoQueMuere(t *testing.T, addr, nombre string) {
+	t.Helper()
+	conn, err := net.Dial("tcp", addr)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer conn.Close()
+	hola := protocolo.Mensaje{Tipo: protocolo.Hola, Version: protocolo.Version, Nodo: nombre, Workers: 4}
+	if err := protocolo.NuevoCodificador(conn).Escribir(hola); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestEsperarNodosSueltaAlNodoQueMurioDespuesDelHola(t *testing.T) {
+	// Se esperan 2. pc-a se presenta y muere; después llegan pc-b y pc-c, vivos.
+	// pc-a no puede ocupar un cupo: el grupo es pc-b y pc-c.
+	ln := escuchar(t)
+	addr := ln.Addr().String()
+	llegoA := &avisador{marca: "] pc-a ", visto: make(chan struct{})}
+	llegoB := &avisador{marca: "] pc-b ", visto: make(chan struct{})}
+	fines := make(chan (<-chan error), 2)
+	go func() {
+		// En este orden: pc-a tiene que estar en el grupo cuando llega pc-b.
+		nodoQueMuere(t, addr, "pc-a")
+		<-llegoA.visto
+		fines <- nodoFalso(t, addr, "pc-b", protocolo.Version)
+		<-llegoB.visto
+		fines <- nodoFalso(t, addr, "pc-c", protocolo.Version)
+	}()
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	ms := EsperarNodos(ctx, ln, 2, time.Second, log.New(io.MultiWriter(llegoA, llegoB), "", 0))
+	if got := nombres(ms); got != "pc-b,pc-c" {
+		t.Fatalf("nodos = %q; pc-a murió después del HOLA y pc-c estaba disponible", got)
+	}
+	sinGoroutinesDeReunir(t)
+	Terminar(Enlaces(ms), time.Second)
+	for range 2 {
+		if err := <-<-fines; err != nil {
+			t.Fatalf("pc-b y pc-c tenían que recibir FIN; uno recibió %v", err)
+		}
+	}
+}
+
+func TestEsperarNodosSueltaAlNodoQueNoRespondeElPing(t *testing.T) {
+	// Un nodo colgado no cierra la conexión: se nota porque no contesta el PING
+	// dentro del plazo. Sin nadie que lo reemplace, la espera vence sin él.
+	ln := escuchar(t)
+	conn, err := net.Dial("tcp", ln.Addr().String())
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer conn.Close()
+	hola := protocolo.Mensaje{Tipo: protocolo.Hola, Version: protocolo.Version, Nodo: "pc-colgado", Workers: 4}
+	if err := protocolo.NuevoCodificador(conn).Escribir(hola); err != nil {
+		t.Fatal(err)
+	}
+	nodoFalso(t, ln.Addr().String(), "pc-01", protocolo.Version)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+
+	ms := EsperarNodos(ctx, ln, 2, 100*time.Millisecond, silencio)
+	if got := nombres(ms); got != "pc-01" {
+		t.Fatalf("nodos = %q; pc-colgado no respondió el PING y no puede quedar en el grupo", got)
 	}
 	Terminar(Enlaces(ms), time.Second)
 }
