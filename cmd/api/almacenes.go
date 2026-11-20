@@ -19,9 +19,18 @@ import (
 // baseMongoPorOmision es la base de datos que siembra docs/datos/seed.js.
 const baseMongoPorOmision = "aire_distribuido"
 
-// plazoArranque es lo que la API espera a cada base al arrancar, para el aviso
-// del log y para leer y guardar el modelo activo.
-const plazoArranque = 3 * time.Second
+// plazoArranque es lo que la API espera, al arrancar, a cada operación sobre
+// una base: el ping del aviso del log y cada lectura y cada escritura del
+// modelo activo. Es por operación y no para todas juntas: una base colgada
+// consume el suyo y no deja sin tiempo a la otra.
+var plazoArranque = 3 * time.Second
+
+// conPlazo corre una operación del arranque con su propio plazo.
+func conPlazo(op func(context.Context) error) error {
+	ctx, cancel := context.WithTimeout(context.Background(), plazoArranque)
+	defer cancel()
+	return op(ctx)
+}
 
 // almacenes es lo que la API guarda y consulta, ya elegido entre las bases
 // reales y el doble en memoria.
@@ -114,9 +123,7 @@ func abrirAlmacenes(getenv func(string) string, ficha []almacen.Estacion, log *s
 
 // avisar deja en el log si la base responde al arrancar.
 func avisar(log *slog.Logger, nombre string, p almacen.Pinger, datos ...any) {
-	ctx, cancel := context.WithTimeout(context.Background(), plazoArranque)
-	defer cancel()
-	if err := p.Ping(ctx); err != nil {
+	if err := conPlazo(p.Ping); err != nil {
 		log.Warn(nombre+" no responde: la API arranca igual y /api/salud lo informa", append(datos, "err", err)...)
 		return
 	}
@@ -134,8 +141,6 @@ func avisar(log *slog.Logger, nombre string, p almacen.Pinger, datos ...any) {
 // la fuente del modelo sembrado, y así un reports/ nuevo no queda tapado por
 // una copia vieja en Redis.
 func (a *almacenes) modeloActivo(sembrado *modelo.Modelo, log *slog.Logger) *modelo.Modelo {
-	ctx, cancel := context.WithTimeout(context.Background(), plazoArranque)
-	defer cancel()
 	m, fuente := sembrado, "reports/"
 	for _, f := range []struct {
 		nombre string
@@ -144,7 +149,8 @@ func (a *almacenes) modeloActivo(sembrado *modelo.Modelo, log *slog.Logger) *mod
 		{"Redis (modelo:activo)", a.cacheModelo.ModeloActivo},
 		{"MongoDB (modelos)", a.modelos.Activo},
 	} {
-		doc, err := f.leer(ctx)
+		var doc almacen.Modelo
+		err := conPlazo(func(ctx context.Context) (err error) { doc, err = f.leer(ctx); return })
 		if errors.Is(err, almacen.ErrNoEncontrado) || (err == nil && doc.Origen == almacen.OrigenSembrado) {
 			continue
 		}
@@ -162,10 +168,10 @@ func (a *almacenes) modeloActivo(sembrado *modelo.Modelo, log *slog.Logger) *mod
 	}
 	doc := m.Documento()
 	doc.Activo = true
-	if err := a.cacheModelo.GuardarModeloActivo(ctx, doc); err != nil {
+	if err := conPlazo(func(ctx context.Context) error { return a.cacheModelo.GuardarModeloActivo(ctx, doc) }); err != nil {
 		log.Warn("no se guardó el modelo activo en Redis", "err", err)
 	}
-	if err := a.modelos.Guardar(ctx, doc); err != nil {
+	if err := conPlazo(func(ctx context.Context) error { return a.modelos.Guardar(ctx, doc) }); err != nil {
 		log.Warn("no se guardó el modelo activo en MongoDB", "err", err)
 	}
 	log.Info("modelo activo", "id", m.ID, "origen", m.Origen, "leido_de", fuente,

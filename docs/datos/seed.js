@@ -11,30 +11,6 @@ const databaseName = process.env.MONGO_INITDB_DATABASE || "aire_distribuido";
 const estacionesPath = process.env.ESTACIONES_CSV || "/seed/estaciones_ficha.csv";
 const database = db.getSiblingDB(databaseName);
 
-const colecciones = [
-  "modelos",
-  "entrenamientos",
-  "predicciones",
-  "eventos_cluster",
-  "estaciones",
-];
-
-const existentes = new Set(database.getCollectionNames());
-for (const nombre of colecciones) {
-  if (!existentes.has(nombre)) {
-    database.createCollection(nombre);
-  }
-}
-
-database.modelos.createIndex({ activo: 1 }, { name: "activo" });
-database.modelos.createIndex({ creado: 1 }, { name: "creado" });
-database.entrenamientos.createIndex({ inicio: 1 }, { name: "inicio" });
-database.predicciones.createIndex(
-  { estacion: 1, ts: 1 },
-  { name: "estacion_ts" },
-);
-database.eventos_cluster.createIndex({ ts: 1 }, { name: "ts" });
-
 function parsearCSV(texto) {
   const filas = [];
   let fila = [];
@@ -84,24 +60,34 @@ function textoONull(valor) {
     : limpio;
 }
 
-function numeroONull(valor, campo, estacion) {
+// Una coordenada es obligatoria, un número decimal y está en rango, igual que
+// en almacen/ficha.go: el contrato de la API no deja que lat o lon sean null,
+// y una estación sin coordenada dejaría sin respuesta a GET /api/estaciones.
+function coordenada(valor, campo, limite, estacion) {
   const texto = textoONull(valor);
   if (texto === null) {
-    return null;
+    throw new Error(`${estacion}: ${campo} ausente`);
+  }
+  if (!/^[+-]?(\d+\.?\d*|\.\d+)([eE][+-]?\d+)?$/.test(texto)) {
+    throw new Error(`${estacion}: ${campo} no numérica: ${JSON.stringify(valor)}`);
   }
   const numero = Number(texto);
-  if (!Number.isFinite(numero)) {
-    throw new Error(`${estacion}: ${campo} no es numérico: ${JSON.stringify(valor)}`);
+  if (!Number.isFinite(numero) || numero < -limite || numero > limite) {
+    throw new Error(`${estacion}: ${campo} fuera de [-${limite}, ${limite}]: ${texto}`);
   }
   return numero;
 }
 
+// Primero se lee y se valida la ficha completa; la base no se toca hasta que
+// toda la ficha es válida. Un error aquí deja MongoDB como estaba.
 const filas = parsearCSV(fs.readFileSync(estacionesPath, "utf8"));
 if (filas.length < 2) {
   throw new Error(`la ficha de estaciones está vacía: ${estacionesPath}`);
 }
 
-const cabecera = filas[0];
+// Excel y otros programas anteponen una marca de orden de bytes (BOM) al
+// archivo: queda pegada al nombre de la primera columna.
+const cabecera = filas[0].map((nombre) => nombre.replace(/^\ufeff/, ""));
 const indice = Object.fromEntries(cabecera.map((nombre, i) => [nombre, i]));
 const requeridas = [
   "estacion",
@@ -147,8 +133,8 @@ for (const fila of filas.slice(1)) {
     departamento: textoONull(fila[indice.departamento]),
     provincia: textoONull(fila[indice.provincia]),
     distrito: textoONull(fila[indice.distrito]),
-    lat: numeroONull(fila[indice.lat], "lat", estacion),
-    lon: numeroONull(fila[indice.lon], "lon", estacion),
+    lat: coordenada(fila[indice.lat], "lat", 90, estacion),
+    lon: coordenada(fila[indice.lon], "lon", 180, estacion),
   };
 
   operaciones.push({
@@ -163,6 +149,31 @@ for (const fila of filas.slice(1)) {
 if (operaciones.length === 0) {
   throw new Error("la ficha no contiene estaciones");
 }
+
+// La ficha es válida: recién ahora se escribe.
+const colecciones = [
+  "modelos",
+  "entrenamientos",
+  "predicciones",
+  "eventos_cluster",
+  "estaciones",
+];
+
+const existentes = new Set(database.getCollectionNames());
+for (const nombre of colecciones) {
+  if (!existentes.has(nombre)) {
+    database.createCollection(nombre);
+  }
+}
+
+database.modelos.createIndex({ activo: 1 }, { name: "activo" });
+database.modelos.createIndex({ creado: 1 }, { name: "creado" });
+database.entrenamientos.createIndex({ inicio: 1 }, { name: "inicio" });
+database.predicciones.createIndex(
+  { estacion: 1, ts: 1 },
+  { name: "estacion_ts" },
+);
+database.eventos_cluster.createIndex({ ts: 1 }, { name: "ts" });
 
 database.estaciones.bulkWrite(operaciones, { ordered: true });
 

@@ -18,6 +18,25 @@ import (
 
 var logMudo = slog.New(slog.NewTextHandler(io.Discard, nil))
 
+// esperarEscritas espera a que los dos almacenes hayan escrito n predicciones.
+// Cada uno tiene su goroutine: que MongoDB ya tenga una predicción no dice que
+// Redis ya tenga su régimen, ni al revés. Una prueba que lee de un almacén
+// después de predecir espera con esto, sobre lo que de verdad va a leer.
+func (e *entorno) esperarEscritas(t testing.TB, n uint64) {
+	t.Helper()
+	limite := time.Now().Add(5 * time.Second)
+	for {
+		est := e.srv.escritor.estado()
+		if est["mongo"].Escritas >= n && est["redis"].Escritas >= n {
+			return
+		}
+		if time.Now().After(limite) {
+			t.Fatalf("el escritor no llegó a %d predicciones escritas en los dos almacenes: %+v", n, est)
+		}
+		time.Sleep(time.Millisecond)
+	}
+}
+
 // arrancar corre el escritor y devuelve cómo pararlo y esperar a que termine.
 func arrancar(e *escritor) (parar func()) {
 	ctx, cancel := context.WithCancel(context.Background())
@@ -247,9 +266,11 @@ func TestEscritorApagadoAcotado(t *testing.T) {
 	if d := time.Since(inicio); d < e.plazoVaciado || d > e.plazoVaciado+time.Second {
 		t.Fatalf("el escritor volvió a los %v; se esperaba poco más que el plazo de %v", d, e.plazoVaciado)
 	}
+	// El reparto es siempre el mismo: el primer lote del vaciado espera al
+	// almacén hasta que vence el plazo y falla; el resto ya no se intenta.
 	mongo := e.estado()["mongo"]
-	if mongo.Escritas != 0 || mongo.Fallidas+mongo.Descartadas != total || mongo.Descartadas == 0 {
-		t.Fatalf("mongo = %+v; las %d predicciones tienen que quedar contadas entre fallidas y descartadas", mongo, total)
+	if mongo.Escritas != 0 || mongo.Fallidas != maxLote || mongo.Descartadas != total-maxLote || mongo.Lotes != 1 {
+		t.Fatalf("mongo = %+v; se esperaba un lote fallido de %d y %d descartadas", mongo, maxLote, total-maxLote)
 	}
 	// Redis respondía: lo suyo se escribió todo.
 	if redis := e.estado()["redis"]; redis.Escritas != total {

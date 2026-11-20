@@ -386,6 +386,7 @@ func TestRegimenDeUnaEstacion(t *testing.T) {
 		t.Fatalf("ts = %v (%v): tiene que ser el momento de la predicción, en hora de Lima", obj["ts"], err)
 	}
 	// Y la predicción quedó guardada con su lectura.
+	e.esperarEscritas(t, 1)
 	todas := e.pred.Todas()
 	if len(todas) != 1 || todas[0].Estacion != "CA-AYAS-01" || todas[0].PM25 != 70.2 || todas[0].PM10 != 190.5 ||
 		todas[0].ModeloID != modelo.IDSembrado || todas[0].FechaHora.Format(time.RFC3339) != "2026-11-14T15:00:00-05:00" {
@@ -515,9 +516,7 @@ func TestRegimenNoRetrocedeConUnaLecturaMasAntigua(t *testing.T) {
 		t.Fatalf("la lectura de cinco días antes se mide con su propia ventana: %v", vieja)
 	}
 	// Se espera a que el escritor procese las 25 predicciones.
-	for limite := time.Now().Add(2 * time.Second); len(e.pred.Todas()) < 25 && time.Now().Before(limite); {
-		time.Sleep(5 * time.Millisecond)
-	}
+	e.esperarEscritas(t, 25)
 	w := e.pedir(t, "GET", "/api/estaciones/CA-MAC-01/regimen", tok, "")
 	reg := objeto(t, w, 200, camposRegimenEstacion...)
 	if reg["fecha_hora"] != "2026-11-14T00:00:00-05:00" || reg["alerta"] != true ||
@@ -560,9 +559,7 @@ func TestFechaFuturaYSubHoraria(t *testing.T) {
 		t.Fatalf("la hora siguiente a las fechas rechazadas: %v", obj)
 	}
 	// Se espera a que el escritor procese las 25 predicciones.
-	for limite := time.Now().Add(2 * time.Second); len(e.pred.Todas()) < 25 && time.Now().Before(limite); {
-		time.Sleep(5 * time.Millisecond)
-	}
+	e.esperarEscritas(t, 25)
 	reg := objeto(t, e.pedir(t, "GET", "/api/estaciones/CA-ROM-01/regimen", tok, ""), 200, camposRegimenEstacion...)
 	if reg["alerta"] != true || !strings.HasPrefix(reg["fecha_hora"].(string), "2026-11-14T01:00:00") {
 		t.Fatalf("régimen de CA-ROM-01 tras las fechas rechazadas: %v", reg)

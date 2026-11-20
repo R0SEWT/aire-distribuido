@@ -8,6 +8,7 @@ import (
 	"os"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/R0SEWT/aire-distribuido/almacen"
 	"github.com/R0SEWT/aire-distribuido/almacen/memoria"
@@ -97,9 +98,7 @@ func TestConLasBasesCaidasLaAPIArrancaIgual(t *testing.T) {
 		t.Fatalf("una base que no responde no tiene que impedir el arranque: %v", err)
 	}
 	defer a.cerrar()
-	ctx, cancel := context.WithTimeout(context.Background(), plazoArranque)
-	defer cancel()
-	if a.mongo.Ping(ctx) == nil || a.redis.Ping(ctx) == nil {
+	if conPlazo(a.mongo.Ping) == nil || conPlazo(a.redis.Ping) == nil {
 		t.Fatal("Ping respondió sin bases")
 	}
 	sembrado := sembradoDelRepo(t)
@@ -220,4 +219,65 @@ func (cacheRota) GuardarModeloActivo(context.Context, almacen.Modelo) error {
 
 func (cacheRota) ModeloActivo(context.Context) (almacen.Modelo, error) {
 	return almacen.Modelo{}, errors.New("Redis no responde")
+}
+
+// Cada operación del arranque tiene su propio plazo: un Redis colgado, que
+// consume entero el suyo, no le quita tiempo a MongoDB, que responde. La API
+// arranca con el modelo entrenado que MongoDB tiene activo y lo deja guardado.
+func TestUnRedisColgadoNoDejaSinPlazoAMongoDB(t *testing.T) {
+	original := plazoArranque
+	plazoArranque = 50 * time.Millisecond
+	t.Cleanup(func() { plazoArranque = original })
+
+	ctx := context.Background()
+	a, _, modelos := almacenesEnMemoria(t)
+	a.cacheModelo = cacheColgada{}
+	a.modelos = modelosConPlazo{modelos}
+	modelos.Guardar(ctx, entrenado(t))
+	var log bytes.Buffer
+	inicio := time.Now()
+	m := a.modeloActivo(sembradoDelRepo(t), logA(&log))
+	if m.ID != "m-e-20261119-1530" {
+		t.Fatalf("modelo = %s; con Redis colgado se esperaba el entrenado de MongoDB\n%s", m.ID, log.String())
+	}
+	if activo, err := modelos.Activo(ctx); err != nil || activo.ID != m.ID {
+		t.Fatalf("modelos activo = %q, %v", activo.ID, err)
+	}
+	// Redis consumió sus dos plazos (leer y guardar) y nada más.
+	if d := time.Since(inicio); d < 2*plazoArranque || d > 2*plazoArranque+time.Second {
+		t.Fatalf("el arranque tardó %v con un plazo de %v por operación", d, plazoArranque)
+	}
+	if n := strings.Count(log.String(), "level=WARN"); n != 2 {
+		t.Fatalf("se esperaban dos avisos, los de Redis:\n%s", log.String())
+	}
+}
+
+// cacheColgada no responde hasta que vence el plazo de quien la llama.
+type cacheColgada struct{}
+
+func (cacheColgada) GuardarModeloActivo(ctx context.Context, _ almacen.Modelo) error {
+	<-ctx.Done()
+	return ctx.Err()
+}
+
+func (cacheColgada) ModeloActivo(ctx context.Context) (almacen.Modelo, error) {
+	<-ctx.Done()
+	return almacen.Modelo{}, ctx.Err()
+}
+
+// modelosConPlazo falla, como una base real, si el contexto ya venció.
+type modelosConPlazo struct{ *memoria.Modelos }
+
+func (m modelosConPlazo) Guardar(ctx context.Context, mod almacen.Modelo) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	return m.Modelos.Guardar(ctx, mod)
+}
+
+func (m modelosConPlazo) Activo(ctx context.Context) (almacen.Modelo, error) {
+	if err := ctx.Err(); err != nil {
+		return almacen.Modelo{}, err
+	}
+	return m.Modelos.Activo(ctx)
 }

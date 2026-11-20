@@ -147,11 +147,21 @@ func (c *cola) estado() estadoEscritura {
 	return estadoEscritura{c.escritas.Load(), c.descartadas.Load(), c.fallidas.Load(), c.lotes.Load()}
 }
 
-// correr es la goroutine del almacén. El canal no se cierra nunca: un handler
-// que todavía esté respondiendo no puede mandar a un canal cerrado.
+// correr es la goroutine del almacén: escribe lo que llega hasta que ctx se
+// cancela y entonces vacía la cola. Desde que ctx se cancela no empieza ninguna
+// escritura fuera del vaciado, así que qué se escribe y qué se descarta al
+// apagar no depende del azar. El canal no se cierra nunca: un handler que
+// todavía esté respondiendo no puede mandar a un canal cerrado.
 func (c *cola) correr(ctx, duro context.Context) {
 	lote := make([]almacen.Prediccion, 0, maxLote)
 	for {
+		// Se mira antes del select: con ctx cancelado y la cola con datos, el
+		// select elegiría al azar entre los dos casos y el vaciado empezaría
+		// una, dos o ninguna escritura después.
+		if ctx.Err() != nil {
+			c.vaciar(duro, lote)
+			return
+		}
 		select {
 		case p := <-c.ch:
 			lote = c.completar(append(lote[:0], p))

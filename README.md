@@ -272,6 +272,11 @@ cp .env.example .env                       # y completar JWT_SECRETO y API_USUAR
 docker compose up --build --scale nodo=2   # http://localhost:8080/docs
 ```
 
+La API responde cada predicción sin esperar a las bases: la encola y la escribe por lotes. Si una
+cola se llena, la predicción responde igual pero no se guarda, y `/api/metricas` lo cuenta en
+`escrituras_descartadas`. El Compose arranca la API con `-cola 32768` (por omisión son 1024) para
+que una ráfaga de decenas de miles de predicciones quepa entera.
+
 Qué guarda cada base, cómo consultarla y cómo correr las pruebas de integración está en
 [`docs/datos/README.md`](docs/datos/README.md). La misma imagen sirve suelta para los comandos de
 la PC3; es distroless y corre sin root, así que las carpetas montadas tienen que admitir escritura:

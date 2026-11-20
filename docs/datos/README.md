@@ -37,8 +37,11 @@ MongoDB ya sano; la API espera a que termine bien. Es idempotente y se puede rep
 docker compose run --rm seed
 ```
 
-- **Si falla** (una ficha mal formada), `docker compose up` lo dice y la API no arranca. Se corrige la
-  ficha y se vuelve a levantar: no hace falta borrar el volumen.
+- **Valida antes de escribir**, con las reglas de `almacen/ficha.go`: toda estación tiene `lat` y `lon`,
+  numéricas y en rango, y no se repite; una marca de orden de bytes (BOM) al inicio se ignora. Una ficha
+  que la API no podría leer no entra: el seed sale con error y MongoDB queda como estaba.
+- **Si falla**, `docker compose up` lo dice y la API no arranca. Se corrige la ficha y se vuelve a
+  levantar: no hace falta borrar el volumen.
 - **La ficha es el catálogo completo.** Las estaciones presentes se insertan o se reemplazan, y las que ya
   no están en la ficha se borran de MongoDB (`estaciones_retiradas` en la salida del seed). Los campos
   `NA`, `-` o vacíos se guardan como `null`; no se inventan metadatos ni se completan ubicaciones.
@@ -78,6 +81,10 @@ Decisiones de diseño:
 - **La predicción no espera a las bases.** Se encola y una goroutine por almacén la escribe por lotes;
   si una base se cae, la API sigue prediciendo, `/api/salud` lo informa y `/api/metricas` cuenta lo que
   no se pudo escribir.
+- **El tamaño de las colas.** Cada base tiene su cola, de `-cola` predicciones (1024 por omisión). Si
+  llegan más rápido de lo que la base las escribe y la cola se llena, las que no entran se descartan y
+  quedan contadas en `escrituras_descartadas`. El Compose pasa `-cola 32768`: con 1024, una ráfaga de
+  20 000 predicciones llegó a perder un tercio en MongoDB; con 32768, ninguna.
 
 ## Consultar
 

@@ -12,7 +12,10 @@ services:
   api:
     build: .
     image: aire-distribuido
-    command: ["api", "-addr", ":8080"]
+    # -cola es el búfer de cada cola de escritura (una por base). Con el valor
+    # por omisión, 1024, una ráfaga de 20 000 predicciones llegó a perder un
+    # tercio en MongoDB; con 32768 no perdió ninguna. Son unos 10 MB.
+    command: ["api", "-addr", ":8080", "-cola", "32768"]
     environment:
       # Sin valor, la API no arranca y dice cuál falta (docker compose logs api).
       JWT_SECRETO: ${JWT_SECRETO:-}
