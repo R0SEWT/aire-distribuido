@@ -111,6 +111,7 @@ paths:
                 negativo: {value: {error: pm2_5 tiene que ser un número no negativo}}
                 fuera_de_rango: {value: {error: 'pm10 no puede superar 10000 µg/m³'}}
                 estacion: {value: {error: 'estación desconocida: CA-XX-99'}}
+                fecha_futura: {value: {error: fecha_hora no puede estar más de 1 hora adelante de la hora del servidor}}
         '401': {$ref: '#/components/responses/NoAutenticado'}
         '503':
           description: No hay modelo activo
@@ -512,7 +513,8 @@ components:
           format: date-time
           description: |
             Fecha RFC3339 con zona explícita; los ejemplos usan America/Lima (UTC-5).
-            Se trunca a la hora. Se aceptan fechas históricas y lecturas desordenadas.
+            Se trunca a la hora. Se aceptan fechas históricas y lecturas desordenadas, pero no
+            una fecha más de 1 hora adelante del reloj del servidor.
         pm2_5: {type: number, format: double, minimum: 0, maximum: 10000, description: Concentración de PM2.5 en µg/m³}
         pm10: {type: number, format: double, minimum: 0, maximum: 10000, description: Concentración de PM10 en µg/m³}
     Prediccion:
