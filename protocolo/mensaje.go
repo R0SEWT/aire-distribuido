@@ -29,7 +29,9 @@ const (
 )
 
 // Rango es un intervalo semiabierto [Desde, Hasta) de filas de la tabla ancha,
-// en el orden del gold (estación, fecha-hora).
+// en el orden del gold (estación, fecha-hora). La tabla puede ser virtual: la
+// fila i es la fila i mod N de un gold de N filas, así que Hasta puede pasar de
+// N (réplicas virtuales; ver el comentario del paquete).
 type Rango struct {
 	Desde int `json:"desde"`
 	Hasta int `json:"hasta"`
@@ -51,8 +53,9 @@ type Mensaje struct {
 	Nodo    string `json:"nodo,omitempty"`
 	Workers int    `json:"workers,omitempty"`
 
-	// CARGAR y LISTO. Huella es el sha256 del gold: todos los nodos tienen que
-	// tener la misma tabla en el mismo orden, o los rangos no significan nada.
+	// CARGAR y LISTO. Huella es el sha256 del gold real, como "sha256:" y 64
+	// dígitos hexadecimales en minúscula: todos los nodos tienen que tener la
+	// misma tabla en el mismo orden, o los rangos no significan nada.
 	Rango  *Rango `json:"rango,omitempty"`
 	Huella string `json:"huella,omitempty"`
 	N      int    `json:"n,omitempty"`
