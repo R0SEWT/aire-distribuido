@@ -14,8 +14,8 @@
       "direccion": "192.0.2.1:5001",
       "workers": 4,
       "rango": {
-        "inicio": 0,
-        "fin": 16469
+        "desde": 0,
+        "hasta": 16469
       }
     },
     {
@@ -23,8 +23,8 @@
       "direccion": "192.0.2.2:5002",
       "workers": 4,
       "rango": {
-        "inicio": 16469,
-        "fin": 32937
+        "desde": 16469,
+        "hasta": 32937
       }
     },
     {
@@ -32,8 +32,8 @@
       "direccion": "192.0.2.3:5003",
       "workers": 4,
       "rango": {
-        "inicio": 32937,
-        "fin": 49405
+        "desde": 32937,
+        "hasta": 49405
       }
     },
     {
@@ -41,8 +41,8 @@
       "direccion": "192.0.2.4:5004",
       "workers": 4,
       "rango": {
-        "inicio": 49405,
-        "fin": 65873
+        "desde": 49405,
+        "hasta": 65873
       }
     }
   ],

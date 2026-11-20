@@ -7,7 +7,13 @@
   "pm10": 2.1,
   "regimen": 0,
   "excede_eca": false,
+  "media_24h": {
+    "pm2_5": null,
+    "pm10": null,
+    "lecturas": 1
+  },
   "alerta": false,
+  "inca": null,
   "modelo_id": "sembrado-kmeans-json",
-  "ms": null
+  "ms": 0.04
 }
