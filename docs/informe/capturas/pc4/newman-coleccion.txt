@@ -1,0 +1,561 @@
+$ npx newman@6 run docs/postman/aire-distribuido.postman_collection.json -e docs/postman/local.postman_environment.json --env-var usuario_usuario=demo --env-var usuario_clave="$CLAVE_DEMO" --env-var admin_usuario=admin --env-var admin_clave="$CLAVE_ADMIN" --color off
+
+newman
+
+aire-distribuido - PC4
+
+❏ 1. Base HTTP
+↳ Salud pública
+  POST http://localhost:8080/api/auth/token   POST http://localhost:8080/api/auth/token [200 OK, 357B, 20ms]
+[200 OK, 353B, 22ms]
+  GET http://localhost:8080/api/salud [200 OK, 219B, 4ms]
+  ✓  responde en menos de 100 ms (tiempo HTTP completo: 4 ms)
+  ✓  la respuesta es JSON
+  ✓  código HTTP 200
+  ✓  forma de la respuesta: Salud del contrato
+  ✓  MongoDB y Redis responden
+  ✓  hay un modelo activo
+
+↳ Credenciales incorrectas
+  POST http://localhost:8080/api/auth/token [401 Unauthorized, 173B, 1ms]
+  ✓  responde en menos de 100 ms (tiempo HTTP completo: 1 ms)
+  ✓  la respuesta es JSON
+  ✓  código HTTP 401
+  ✓  forma de la respuesta: Error del contrato
+  ✓  el error dice: usuario o clave incorrectos
+
+↳ Credenciales sin clave
+  POST http://localhost:8080/api/auth/token [400 Bad Request, 203B, 2ms]
+  ✓  responde en menos de 100 ms (tiempo HTTP completo: 2 ms)
+  ✓  la respuesta es JSON
+  ✓  código HTTP 400
+  ✓  forma de la respuesta: Error del contrato
+
+↳ Token usuario
+  POST http://localhost:8080/api/auth/token [200 OK, 357B, 1ms]
+  ✓  responde en menos de 100 ms (tiempo HTTP completo: 1 ms)
+  ✓  la respuesta es JSON
+  ✓  código HTTP 200
+  ✓  forma de la respuesta: Token del contrato
+  ✓  rol usuario
+  ✓  el token es un JWT y expira en el futuro
+
+↳ Token admin
+  POST http://localhost:8080/api/auth/token [200 OK, 353B, 2ms]
+  ✓  responde en menos de 100 ms (tiempo HTTP completo: 2 ms)
+  ✓  la respuesta es JSON
+  ✓  código HTTP 200
+  ✓  forma de la respuesta: Token del contrato
+  ✓  rol admin
+  ✓  el token es un JWT y expira en el futuro
+
+↳ Predicción sin token
+  POST http://localhost:8080/api/predicciones [401 Unauthorized, 232B, 2ms]
+  ✓  responde en menos de 100 ms (tiempo HTTP completo: 2 ms)
+  ✓  la respuesta es JSON
+  ✓  código HTTP 401
+  ✓  forma de la respuesta: Error del contrato
+  ✓  el error dice: token ausente, inválido o expirado
+
+↳ Predicción con token inválido
+  POST http://localhost:8080/api/predicciones [401 Unauthorized, 232B, 3ms]
+  ✓  responde en menos de 100 ms (tiempo HTTP completo: 3 ms)
+  ✓  la respuesta es JSON
+  ✓  código HTTP 401
+  ✓  forma de la respuesta: Error del contrato
+  ✓  el error dice: token ausente, inválido o expirado
+
+↳ Predicción válida
+  POST http://localhost:8080/api/predicciones [200 OK, 386B, 2ms]
+  ✓  responde en menos de 100 ms (tiempo HTTP completo: 2 ms)
+  ✓  la respuesta es JSON
+  ✓  código HTTP 200
+  ✓  forma de la respuesta: Prediccion del contrato
+  ✓  es la estación de la lectura
+  ✓  70.2 y 190.5 µg/m³ caen en un régimen que excede el ECA
+  ✓  el tiempo interno de la predicción también queda bajo el límite
+  ✓  media_24h, alerta e inca son coherentes con la regla de las 18 lecturas
+
+↳ PM2.5 negativa
+  POST http://localhost:8080/api/predicciones [400 Bad Request, 187B, 1ms]
+  ✓  responde en menos de 100 ms (tiempo HTTP completo: 1 ms)
+  ✓  la respuesta es JSON
+  ✓  código HTTP 400
+  ✓  forma de la respuesta: Error del contrato
+  ✓  el error dice: pm2_5 tiene que ser un número no negativo
+
+↳ PM10 negativa
+  POST http://localhost:8080/api/predicciones [400 Bad Request, 186B, 1ms]
+  ✓  responde en menos de 100 ms (tiempo HTTP completo: 1 ms)
+  ✓  la respuesta es JSON
+  ✓  código HTTP 400
+  ✓  forma de la respuesta: Error del contrato
+  ✓  el error dice: pm10 tiene que ser un número no negativo
+
+↳ PM2.5 mayor de 10 000
+  POST http://localhost:8080/api/predicciones [400 Bad Request, 181B, 1ms]
+  ✓  responde en menos de 100 ms (tiempo HTTP completo: 1 ms)
+  ✓  la respuesta es JSON
+  ✓  código HTTP 400
+  ✓  forma de la respuesta: Error del contrato
+  ✓  el error dice: pm2_5 no puede superar 10000
+
+↳ PM10 mayor de 10 000
+  POST http://localhost:8080/api/predicciones [400 Bad Request, 180B, 1ms]
+  ✓  responde en menos de 100 ms (tiempo HTTP completo: 1 ms)
+  ✓  la respuesta es JSON
+  ✓  código HTTP 400
+  ✓  forma de la respuesta: Error del contrato
+  ✓  el error dice: pm10 no puede superar 10000
+
+↳ Estación vacía
+  POST http://localhost:8080/api/predicciones [400 Bad Request, 186B, 1ms]
+  ✓  responde en menos de 100 ms (tiempo HTTP completo: 1 ms)
+  ✓  la respuesta es JSON
+  ✓  código HTTP 400
+  ✓  forma de la respuesta: Error del contrato
+  ✓  el error dice: estacion tiene que ser un texto no vacío
+
+↳ Estación desconocida
+  POST http://localhost:8080/api/predicciones [400 Bad Request, 176B, 1ms]
+  ✓  responde en menos de 100 ms (tiempo HTTP completo: 1 ms)
+  ✓  la respuesta es JSON
+  ✓  código HTTP 400
+  ✓  forma de la respuesta: Error del contrato
+  ✓  el error dice: estación desconocida: CA-XX-99
+
+↳ Fecha inválida
+  POST http://localhost:8080/api/predicciones [400 Bad Request, 228B, 1ms]
+  ✓  responde en menos de 100 ms (tiempo HTTP completo: 1 ms)
+  ✓  la respuesta es JSON
+  ✓  código HTTP 400
+  ✓  forma de la respuesta: Error del contrato
+  ✓  el error dice: fecha_hora tiene que ser una fecha RFC3339
+
+↳ Fecha futura
+  POST http://localhost:8080/api/predicciones [400 Bad Request, 218B, 2ms]
+  ✓  responde en menos de 100 ms (tiempo HTTP completo: 2 ms)
+  ✓  la respuesta es JSON
+  ✓  código HTTP 400
+  ✓  forma de la respuesta: Error del contrato
+  ✓  el error dice: fecha_hora no puede estar más de 1 hora adelante
+
+↳ Cuerpo que no es JSON
+  POST http://localhost:8080/api/predicciones [400 Bad Request, 222B, 1ms]
+  ✓  responde en menos de 100 ms (tiempo HTTP completo: 1 ms)
+  ✓  la respuesta es JSON
+  ✓  código HTTP 400
+  ✓  forma de la respuesta: Error del contrato
+
+↳ Listar estaciones
+  GET http://localhost:8080/api/estaciones [200 OK, 7.41kB, 2ms]
+  ✓  responde en menos de 100 ms (tiempo HTTP completo: 2 ms)
+  ✓  la respuesta es JSON
+  ✓  código HTTP 200
+  ✓  forma de la respuesta: lista de Estacion del contrato
+  ✓  trae la estación del entorno
+
+↳ Régimen de estación
+  GET http://localhost:8080/api/estaciones/CA-AYAS-01/regimen [200 OK, 309B, 1ms]
+  ✓  responde en menos de 100 ms (tiempo HTTP completo: 1 ms)
+  ✓  la respuesta es JSON
+  ✓  código HTTP 200
+  ✓  forma de la respuesta: RegimenEstacion del contrato
+  ✓  es el estado que dejó «Predicción válida»
+  ✓  las fechas van en la hora de Lima
+
+↳ Régimen de estación desconocida
+  GET http://localhost:8080/api/estaciones/CA-XX-99/regimen [404 Not Found, 174B, 1ms]
+  ✓  responde en menos de 100 ms (tiempo HTTP completo: 1 ms)
+  ✓  la respuesta es JSON
+  ✓  código HTTP 404
+  ✓  forma de la respuesta: Error del contrato
+  ✓  el error dice: estación desconocida: CA-XX-99
+
+↳ Régimen de estación sin lecturas
+  GET http://localhost:8080/api/estaciones/CA-01/regimen [404 Not Found, 202B, 2ms]
+  ✓  responde en menos de 100 ms (tiempo HTTP completo: 2 ms)
+  ✓  la respuesta es JSON
+  ✓  código HTTP 404
+  ✓  forma de la respuesta: Error del contrato
+  ✓  el error dice: todavía no tiene un régimen registrado
+
+↳ Modelo activo
+  GET http://localhost:8080/api/modelos/activo [200 OK, 706B, 2ms]
+  ✓  responde en menos de 100 ms (tiempo HTTP completo: 2 ms)
+  ✓  la respuesta es JSON
+  ✓  código HTTP 200
+  ✓  forma de la respuesta: Modelo del contrato
+  ✓  un régimen por centroide, numerados desde 0
+  ✓  las features de la receta
+  ✓  excede_eca sale de las medias del régimen
+
+↳ Documento OpenAPI
+  GET http://localhost:8080/openapi.yaml [200 OK, 37.49kB, 1ms]
+  ✓  responde en menos de 100 ms (tiempo HTTP completo: 1 ms)
+  ✓  código HTTP 200
+  ✓  es el contrato en YAML
+
+↳ Documentación HTML
+  GET http://localhost:8080/docs [200 OK, 687B, 1ms]
+  ✓  responde en menos de 100 ms (tiempo HTTP completo: 1 ms)
+  ✓  código HTTP 200
+  ✓  es la página de Swagger UI
+
+↳ Nodos sin token
+  GET http://localhost:8080/api/cluster/nodos [401 Unauthorized, 232B, 1ms]
+  ✓  responde en menos de 100 ms (tiempo HTTP completo: 1 ms)
+  ✓  la respuesta es JSON
+  ✓  código HTTP 401
+  ✓  forma de la respuesta: Error del contrato
+  ✓  el error dice: token ausente, inválido o expirado
+
+↳ Nodos denegado a usuario
+  GET http://localhost:8080/api/cluster/nodos [403 Forbidden, 167B, 1ms]
+  ✓  responde en menos de 100 ms (tiempo HTTP completo: 1 ms)
+  ✓  la respuesta es JSON
+  ✓  código HTTP 403
+  ✓  forma de la respuesta: Error del contrato
+  ✓  el error dice: se requiere el rol admin
+
+↳ Métricas denegado a usuario
+  GET http://localhost:8080/api/metricas [403 Forbidden, 167B, 1ms]
+  ✓  responde en menos de 100 ms (tiempo HTTP completo: 1 ms)
+  ✓  la respuesta es JSON
+  ✓  código HTTP 403
+  ✓  forma de la respuesta: Error del contrato
+  ✓  el error dice: se requiere el rol admin
+
+↳ Historial denegado a usuario
+  GET http://localhost:8080/api/entrenamientos [403 Forbidden, 167B, 1ms]
+  ✓  responde en menos de 100 ms (tiempo HTTP completo: 1 ms)
+  ✓  la respuesta es JSON
+  ✓  código HTTP 403
+  ✓  forma de la respuesta: Error del contrato
+  ✓  el error dice: se requiere el rol admin
+
+↳ Detalle denegado a usuario
+  GET http://localhost:8080/api/entrenamientos/no-existe [403 Forbidden, 167B, 1ms]
+  ✓  responde en menos de 100 ms (tiempo HTTP completo: 1 ms)
+  ✓  la respuesta es JSON
+  ✓  código HTTP 403
+  ✓  forma de la respuesta: Error del contrato
+  ✓  el error dice: se requiere el rol admin
+
+↳ Iniciar denegado a usuario
+  POST http://localhost:8080/api/entrenamientos [403 Forbidden, 167B, 1ms]
+  ✓  responde en menos de 100 ms (tiempo HTTP completo: 1 ms)
+  ✓  la respuesta es JSON
+  ✓  código HTTP 403
+  ✓  forma de la respuesta: Error del contrato
+  ✓  el error dice: se requiere el rol admin
+
+↳ Nodos admin
+  GET http://localhost:8080/api/cluster/nodos [200 OK, 449B, 1ms]
+  ✓  responde en menos de 100 ms (tiempo HTTP completo: 1 ms)
+  ✓  la respuesta es JSON
+  ✓  código HTTP 200
+  ✓  forma de la respuesta: lista de Nodo del contrato
+  ✓  están los nodos del entorno (nodos_entrenamiento)
+  ✓  cada nodo tiene un nombre distinto
+
+↳ Métricas admin
+  GET http://localhost:8080/api/metricas [200 OK, 1.57kB, 1ms]
+  ✓  responde en menos de 100 ms (tiempo HTTP completo: 1 ms)
+  ✓  la respuesta es JSON
+  ✓  código HTTP 200
+  ✓  forma de la respuesta: Metricas del contrato
+  ✓  midió las predicciones, con los percentiles en orden
+  ✓  el p99 de las predicciones, medido en el servidor, queda bajo el límite
+  ✓  los totales son la suma de los dos almacenes
+  ✓  la predicción válida se escribió en MongoDB y en Redis
+
+↳ Historial admin
+  GET http://localhost:8080/api/entrenamientos [200 OK, 125B, 2ms]
+  ✓  responde en menos de 100 ms (tiempo HTTP completo: 2 ms)
+  ✓  la respuesta es JSON
+  ✓  código HTTP 200
+  ✓  forma de la respuesta: lista de EntrenamientoResumen del contrato
+
+↳ Entrenamiento inexistente
+  GET http://localhost:8080/api/entrenamientos/e-20000101-0000 [404 Not Found, 185B, 2ms]
+  ✓  responde en menos de 100 ms (tiempo HTTP completo: 2 ms)
+  ✓  la respuesta es JSON
+  ✓  código HTTP 404
+  ✓  forma de la respuesta: Error del contrato
+  ✓  el error dice: no existe el entrenamiento e-20000101-0000
+
+❏ 2. Entrenamiento
+↳ Cero nodos
+  POST http://localhost:8080/api/entrenamientos [400 Bad Request, 192B, 1ms]
+  ✓  responde en menos de 100 ms (tiempo HTTP completo: 1 ms)
+  ✓  la respuesta es JSON
+  ✓  código HTTP 400
+  ✓  forma de la respuesta: Error del contrato
+
+↳ Cero réplicas
+  POST http://localhost:8080/api/entrenamientos [400 Bad Request, 195B, 1ms]
+  ✓  responde en menos de 100 ms (tiempo HTTP completo: 1 ms)
+  ✓  la respuesta es JSON
+  ✓  código HTTP 400
+  ✓  forma de la respuesta: Error del contrato
+
+↳ Sin semilla
+  POST http://localhost:8080/api/entrenamientos [400 Bad Request, 184B, 1ms]
+  ✓  responde en menos de 100 ms (tiempo HTTP completo: 1 ms)
+  ✓  la respuesta es JSON
+  ✓  código HTTP 400
+  ✓  forma de la respuesta: Error del contrato
+
+↳ Esperar nodos libres
+  GET http://localhost:8080/api/cluster/nodos [200 OK, 449B, 1ms]
+  ✓  responde en menos de 100 ms (tiempo HTTP completo: 1 ms)
+  ✓  la respuesta es JSON
+  ✓  código HTTP 200
+  ✓  forma de la respuesta: lista de Nodo del contrato
+  ✓  hay 3 nodos libres en el pool
+
+↳ Nodos insuficientes
+  POST http://localhost:8080/api/entrenamientos [422 Unprocessable Entity, 200B, 2ms]
+  ✓  responde en menos de 100 ms (tiempo HTTP completo: 2 ms)
+  ✓  la respuesta es JSON
+  ✓  código HTTP 422
+  ✓  forma de la respuesta: Error del contrato
+  ✓  el error dice: nodos libres en el pool y se pidieron
+
+↳ Aceptar entrenamiento
+  POST http://localhost:8080/api/entrenamientos [202 Accepted, 174B, 2ms]
+  ✓  responde en menos de 100 ms (tiempo HTTP completo: 2 ms)
+  ✓  la respuesta es JSON
+  ✓  código HTTP 202
+  ✓  forma de la respuesta: EntrenamientoAceptado del contrato
+  ✓  el id es e-AAAAMMDD-HHMM, con sufijo si se repite el minuto
+
+↳ Consultar hasta terminar
+  GET http://localhost:8080/api/entrenamientos/e-20261120-1308 [200 OK, 8.09kB, 3ms]
+  ✓  responde en menos de 100 ms (tiempo HTTP completo: 3 ms)
+  ✓  la respuesta es JSON
+  ✓  código HTTP 200
+  ✓  forma de la respuesta: Entrenamiento del contrato
+  ✓  es el entrenamiento que se lanzó
+  ✓  el entrenamiento terminó (consulta 1)
+  ✓  una ronda por iteración, con el tiempo de cada nodo
+  ✓  usó los nodos pedidos
+  ✓  coincide con el K-Means secuencial (dif_secuencial ≤ 1e-9)
+  ✓  paró por tolerancia o por max_iter
+  ✓  con replicas = 1 dejó activo su modelo
+
+↳ Historial con el entrenamiento
+  GET http://localhost:8080/api/entrenamientos [200 OK, 383B, 2ms]
+  ✓  responde en menos de 100 ms (tiempo HTTP completo: 2 ms)
+  ✓  la respuesta es JSON
+  ✓  código HTTP 200
+  ✓  forma de la respuesta: lista de EntrenamientoResumen del contrato
+  ✓  el más reciente es el que se acaba de lanzar, terminado y sin las rondas
+
+↳ Métricas tras entrenar
+  GET http://localhost:8080/api/metricas [200 OK, 1.58kB, 1ms]
+  ✓  responde en menos de 100 ms (tiempo HTTP completo: 1 ms)
+  ✓  la respuesta es JSON
+  ✓  código HTTP 200
+  ✓  forma de la respuesta: Metricas del contrato
+  ✓  ultimo_entrenamiento es el que se acaba de lanzar
+  ✓  se escribieron puntos de control en Redis
+
+↳ Modelo activo tras entrenar
+  GET http://localhost:8080/api/modelos/activo [200 OK, 712B, 1ms]
+  ✓  responde en menos de 100 ms (tiempo HTTP completo: 1 ms)
+  ✓  la respuesta es JSON
+  ✓  código HTTP 200
+  ✓  forma de la respuesta: Modelo del contrato
+  ✓  el modelo activo es el del entrenamiento
+
+❏ 3. Conflicto controlado
+↳ Esperar nodos libres para el conflicto
+  GET http://localhost:8080/api/cluster/nodos [200 OK, 125B, 0µs]
+  ✓  responde en menos de 100 ms (tiempo HTTP completo: 0 ms)
+  ✓  la respuesta es JSON
+  ✓  código HTTP 200
+  ✓  forma de la respuesta: lista de Nodo del contrato
+
+Attempting to set next request to Esperar nodos libres para el conflicto
+
+↳ Esperar nodos libres para el conflicto
+  GET http://localhost:8080/api/cluster/nodos [200 OK, 125B, 2ms]
+  ✓  responde en menos de 100 ms (tiempo HTTP completo: 2 ms)
+  ✓  la respuesta es JSON
+  ✓  código HTTP 200
+  ✓  forma de la respuesta: lista de Nodo del contrato
+
+Attempting to set next request to Esperar nodos libres para el conflicto
+
+↳ Esperar nodos libres para el conflicto
+  GET http://localhost:8080/api/cluster/nodos [200 OK, 125B, 2ms]
+  ✓  responde en menos de 100 ms (tiempo HTTP completo: 2 ms)
+  ✓  la respuesta es JSON
+  ✓  código HTTP 200
+  ✓  forma de la respuesta: lista de Nodo del contrato
+
+Attempting to set next request to Esperar nodos libres para el conflicto
+
+↳ Esperar nodos libres para el conflicto
+  GET http://localhost:8080/api/cluster/nodos [200 OK, 125B, 1ms]
+  ✓  responde en menos de 100 ms (tiempo HTTP completo: 1 ms)
+  ✓  la respuesta es JSON
+  ✓  código HTTP 200
+  ✓  forma de la respuesta: lista de Nodo del contrato
+
+Attempting to set next request to Esperar nodos libres para el conflicto
+
+↳ Esperar nodos libres para el conflicto
+  GET http://localhost:8080/api/cluster/nodos [200 OK, 125B, 1ms]
+  ✓  responde en menos de 100 ms (tiempo HTTP completo: 1 ms)
+  ✓  la respuesta es JSON
+  ✓  código HTTP 200
+  ✓  forma de la respuesta: lista de Nodo del contrato
+
+Attempting to set next request to Esperar nodos libres para el conflicto
+
+↳ Esperar nodos libres para el conflicto
+  GET http://localhost:8080/api/cluster/nodos [200 OK, 125B, 1ms]
+  ✓  responde en menos de 100 ms (tiempo HTTP completo: 1 ms)
+  ✓  la respuesta es JSON
+  ✓  código HTTP 200
+  ✓  forma de la respuesta: lista de Nodo del contrato
+
+Attempting to set next request to Esperar nodos libres para el conflicto
+
+↳ Esperar nodos libres para el conflicto
+  GET http://localhost:8080/api/cluster/nodos [200 OK, 450B, 1ms]
+  ✓  responde en menos de 100 ms (tiempo HTTP completo: 1 ms)
+  ✓  la respuesta es JSON
+  ✓  código HTTP 200
+  ✓  forma de la respuesta: lista de Nodo del contrato
+  ✓  hay 3 nodos libres en el pool
+
+↳ Iniciar entrenamiento largo
+  POST http://localhost:8080/api/entrenamientos [202 Accepted, 176B, 2ms]
+  ✓  responde en menos de 100 ms (tiempo HTTP completo: 2 ms)
+  ✓  la respuesta es JSON
+  ✓  código HTTP 202
+  ✓  forma de la respuesta: EntrenamientoAceptado del contrato
+  ✓  el id es e-AAAAMMDD-HHMM, con sufijo si se repite el minuto
+
+↳ Rechazar entrenamiento simultáneo
+  POST http://localhost:8080/api/entrenamientos [409 Conflict, 193B, 1ms]
+  ✓  responde en menos de 100 ms (tiempo HTTP completo: 1 ms)
+  ✓  la respuesta es JSON
+  ✓  código HTTP 409
+  ✓  forma de la respuesta: Error del contrato
+  ✓  el error trae el id del entrenamiento en curso
+
+↳ Cerrar escenario de conflicto
+  GET http://localhost:8080/api/entrenamientos/e-20261120-1308-2 [200 OK, 1.15kB, 5ms]
+  ✓  responde en menos de 100 ms (tiempo HTTP completo: 5 ms)
+  ✓  la respuesta es JSON
+  ✓  código HTTP 200
+  ✓  forma de la respuesta: Entrenamiento del contrato
+  ✓  es el entrenamiento que se lanzó
+
+Attempting to set next request to Cerrar escenario de conflicto
+
+↳ Cerrar escenario de conflicto
+  GET http://localhost:8080/api/entrenamientos/e-20261120-1308-2 [200 OK, 2.23kB, 15ms]
+  ✓  responde en menos de 100 ms (tiempo HTTP completo: 15 ms)
+  ✓  la respuesta es JSON
+  ✓  código HTTP 200
+  ✓  forma de la respuesta: Entrenamiento del contrato
+  ✓  es el entrenamiento que se lanzó
+
+Attempting to set next request to Cerrar escenario de conflicto
+
+↳ Cerrar escenario de conflicto
+  GET http://localhost:8080/api/entrenamientos/e-20261120-1308-2 [200 OK, 3.48kB, 2ms]
+  ✓  responde en menos de 100 ms (tiempo HTTP completo: 2 ms)
+  ✓  la respuesta es JSON
+  ✓  código HTTP 200
+  ✓  forma de la respuesta: Entrenamiento del contrato
+  ✓  es el entrenamiento que se lanzó
+
+Attempting to set next request to Cerrar escenario de conflicto
+
+↳ Cerrar escenario de conflicto
+  GET http://localhost:8080/api/entrenamientos/e-20261120-1308-2 [200 OK, 4.56kB, 5ms]
+  ✓  responde en menos de 100 ms (tiempo HTTP completo: 5 ms)
+  ✓  la respuesta es JSON
+  ✓  código HTTP 200
+  ✓  forma de la respuesta: Entrenamiento del contrato
+  ✓  es el entrenamiento que se lanzó
+
+Attempting to set next request to Cerrar escenario de conflicto
+
+↳ Cerrar escenario de conflicto
+  GET http://localhost:8080/api/entrenamientos/e-20261120-1308-2 [200 OK, 5.81kB, 2ms]
+  ✓  responde en menos de 100 ms (tiempo HTTP completo: 2 ms)
+  ✓  la respuesta es JSON
+  ✓  código HTTP 200
+  ✓  forma de la respuesta: Entrenamiento del contrato
+  ✓  es el entrenamiento que se lanzó
+
+Attempting to set next request to Cerrar escenario de conflicto
+
+↳ Cerrar escenario de conflicto
+  GET http://localhost:8080/api/entrenamientos/e-20261120-1308-2 [200 OK, 6.89kB, 3ms]
+  ✓  responde en menos de 100 ms (tiempo HTTP completo: 3 ms)
+  ✓  la respuesta es JSON
+  ✓  código HTTP 200
+  ✓  forma de la respuesta: Entrenamiento del contrato
+  ✓  es el entrenamiento que se lanzó
+
+Attempting to set next request to Cerrar escenario de conflicto
+
+↳ Cerrar escenario de conflicto
+  GET http://localhost:8080/api/entrenamientos/e-20261120-1308-2 [200 OK, 8.14kB, 5ms]
+  ✓  responde en menos de 100 ms (tiempo HTTP completo: 5 ms)
+  ✓  la respuesta es JSON
+  ✓  código HTTP 200
+  ✓  forma de la respuesta: Entrenamiento del contrato
+  ✓  es el entrenamiento que se lanzó
+
+Attempting to set next request to Cerrar escenario de conflicto
+
+↳ Cerrar escenario de conflicto
+  GET http://localhost:8080/api/entrenamientos/e-20261120-1308-2 [200 OK, 8.24kB, 2ms]
+  ✓  responde en menos de 100 ms (tiempo HTTP completo: 2 ms)
+  ✓  la respuesta es JSON
+  ✓  código HTTP 200
+  ✓  forma de la respuesta: Entrenamiento del contrato
+  ✓  es el entrenamiento que se lanzó
+  ✓  el entrenamiento terminó (consulta 8)
+  ✓  una ronda por iteración, con el tiempo de cada nodo
+  ✓  usó los nodos pedidos
+  ✓  coincide con el K-Means secuencial (dif_secuencial ≤ 1e-9)
+  ✓  paró por tolerancia o por max_iter
+  ✓  con replicas > 1 es una medición: no activa su modelo
+
+❏ 4. Datos de prueba (Runner con lecturas_prueba.csv)
+↳ Predicción del CSV
+
+↳ Estado de la estación al cerrar la serie
+
+┌─────────────────────────┬─────────────────┬─────────────────┐
+│                         │        executed │          failed │
+├─────────────────────────┼─────────────────┼─────────────────┤
+│              iterations │               1 │               0 │
+├─────────────────────────┼─────────────────┼─────────────────┤
+│                requests │              63 │               0 │
+├─────────────────────────┼─────────────────┼─────────────────┤
+│            test-scripts │             122 │               0 │
+├─────────────────────────┼─────────────────┼─────────────────┤
+│      prerequest-scripts │              85 │               0 │
+├─────────────────────────┼─────────────────┼─────────────────┤
+│              assertions │             315 │               0 │
+├─────────────────────────┴─────────────────┴─────────────────┤
+│ total run duration: 5.6s                                    │
+├─────────────────────────────────────────────────────────────┤
+│ total data received: 101kB (approx)                         │
+├─────────────────────────────────────────────────────────────┤
+│ average response time: 2ms [min: 1ms, max: 22ms, s.d.: 3ms] │
+└─────────────────────────────────────────────────────────────┘
+
+código de salida: 0

@@ -1,0 +1,14 @@
+$ docker compose -p evidencias ps -a --format 'table {{.Name}}\t{{.Service}}\t{{.Status}}\t{{.Ports}}'
+NAME                 SERVICE   STATUS                      PORTS
+evidencias-api-1     api       Up 34 seconds (healthy)     7070/tcp, 127.0.0.1:8080->8080/tcp
+evidencias-mongo-1   mongo     Up 41 seconds (healthy)     127.0.0.1:27017->27017/tcp
+evidencias-nodo-1    nodo      Up 29 seconds               
+evidencias-nodo-2    nodo      Up 29 seconds               
+evidencias-nodo-3    nodo      Up 29 seconds               
+evidencias-redis-1   redis     Up 41 seconds (healthy)     127.0.0.1:6379->6379/tcp
+evidencias-seed-1    seed      Exited (0) 35 seconds ago   
+
+$ docker compose -p evidencias logs api | grep -c .
+33
+
+$ docker compose -p evidencias logs api | grep -i -E 'level=(WARN|ERROR)' | tail -20

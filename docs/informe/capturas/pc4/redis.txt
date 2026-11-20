@@ -1,0 +1,137 @@
+$ docker compose -p evidencias exec -T redis redis-cli DBSIZE
+18
+
+$ docker compose -p evidencias exec -T redis redis-cli --scan --pattern modelo:*
+modelo:activo
+
+$ docker compose -p evidencias exec -T redis redis-cli --scan --pattern entrenamiento:*
+entrenamiento:e-20261120-1308-3:punto
+entrenamiento:e-20261120-1308:punto
+entrenamiento:e-20261120-1308-2:punto
+
+$ docker compose -p evidencias exec -T redis redis-cli --scan --pattern 'estacion:*' | sort
+estacion:CA-AYAS-01:regimen
+estacion:CA-CG-01:regimen
+estacion:CA-CG-02:regimen
+estacion:CA-CH-03:regimen
+estacion:CA-COLQ-01:regimen
+estacion:CA-CP-01:regimen
+estacion:CA-ESP-01:regimen
+estacion:CA-HU-04:regimen
+estacion:CA-HU-09:regimen
+estacion:CA-HUA-01:regimen
+estacion:CA-HUAR-01:regimen
+estacion:CA-JUPR-01:regimen
+estacion:CA-MAC-01:regimen
+estacion:CA-ROM-01:regimen
+
+$ docker compose -p evidencias exec -T redis redis-cli GET estacion:CA-HU-04:regimen
+{"fecha_hora":"2021-12-11T00:00:00-05:00","regimen":1,"excede_eca":true,"media_24h":{"pm2_5":80.3625,"pm10":117.24166666666666,"lecturas":24},"alerta":true,"inca":"mala","ts":"2026-11-20T13:08:32-05:00"}
+
+$ docker compose -p evidencias exec -T redis redis-cli GET estacion:CA-ROM-01:regimen
+{"fecha_hora":"2022-06-05T00:00:00-05:00","regimen":2,"excede_eca":false,"media_24h":{"pm2_5":38.59916666666666,"pm10":58.541666666666664,"lecturas":24},"alerta":false,"inca":"mala","ts":"2026-11-20T13:08:32-05:00"}
+
+$ docker compose -p evidencias exec -T redis redis-cli GET estacion:CA-AYAS-01:regimen
+{"fecha_hora":"2026-11-14T15:00:00-05:00","regimen":1,"excede_eca":true,"media_24h":{"pm2_5":null,"pm10":null,"lecturas":1},"alerta":false,"inca":null,"ts":"2026-11-20T13:08:15-05:00"}
+
+$ docker compose -p evidencias exec -T redis redis-cli GET entrenamiento:e-20261120-1308-3:punto
+{"iter":44,"centroides":[[-0.3810318622031203,-0.3734783717613215],[3.8292692196401195,4.165192564331026],[0.7708406277322727,0.7164537638219931]]}
+
+$ docker compose -p evidencias exec -T redis redis-cli GET modelo:activo | jq .
+{
+  "_id": "entrenado-e-20261120-1308-3",
+  "creado": "2026-11-20T13:08:32.363-05:00",
+  "origen": "e-20261120-1308-3",
+  "receta": {
+    "features": [
+      "pm2_5",
+      "pm10"
+    ],
+    "log1p": [],
+    "nivel": "absoluto",
+    "k": 3,
+    "semilla": 42,
+    "semillas": 10,
+    "tolerancia": 1e-06,
+    "max_iter": 100,
+    "workers": 0,
+    "chunk": 1000
+  },
+  "gold_sha256": "2fdace5ad8599149c9ed2b177151881025d895a50738519d9358d537236f87f7",
+  "estandarizacion": {
+    "features": [
+      "pm2_5",
+      "pm10"
+    ],
+    "log1p": [],
+    "nivel": "absoluto",
+    "n": 65873,
+    "media": [
+      14.113365111654247,
+      31.547649264493792
+    ],
+    "desv": [
+      13.321236195790332,
+      37.240576817625694
+    ]
+  },
+  "centroides_std": [
+    [
+      -0.3810318622031203,
+      -0.3734783717613215
+    ],
+    [
+      3.8292692196401195,
+      4.165192564331026
+    ],
+    [
+      0.7708406277322727,
+      0.7164537638219931
+    ]
+  ],
+  "centroides": [
+    [
+      9.037549677124646,
+      17.63909927119453
+    ],
+    [
+      65.12396484375,
+      186.66182291666672
+    ],
+    [
+      24.38191518298714,
+      58.228800692383786
+    ]
+  ],
+  "regimenes": [
+    {
+      "regimen": 0,
+      "pm2_5_medio": 9.037549677124652,
+      "pm10_medio": 17.63909927119451,
+      "excede_eca": false,
+      "tamano": 48161
+    },
+    {
+      "regimen": 1,
+      "pm2_5_medio": 65.12396484374996,
+      "pm10_medio": 186.6618229166667,
+      "excede_eca": true,
+      "tamano": 1536
+    },
+    {
+      "regimen": 2,
+      "pm2_5_medio": 24.381915182987196,
+      "pm10_medio": 58.22880069238359,
+      "excede_eca": false,
+      "tamano": 16176
+    }
+  ],
+  "inercia": 50950.36689106274,
+  "iteraciones": 44,
+  "activo": true
+}
+
+$ docker compose -p evidencias exec -T redis redis-cli CONFIG GET appendonly
+appendonly
+yes
+

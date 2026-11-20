@@ -1,0 +1,631 @@
+$ TOKEN=$(curl -s -X POST localhost:8080/api/auth/token -d "{\"usuario\":\"admin\",\"clave\":\"$CLAVE_ADMIN\"}" | jq -r .token)
+
+$ curl -s -H "Authorization: Bearer $TOKEN" localhost:8080/api/cluster/nodos
+[
+  {
+    "nombre": "69b61aa85c9a-1",
+    "direccion": "172.19.0.5:39910",
+    "workers": 14,
+    "latencia_ms": 0.165114,
+    "libre": true
+  },
+  {
+    "nombre": "86dd2b5bd773-1",
+    "direccion": "172.19.0.7:45140",
+    "workers": 14,
+    "latencia_ms": 0.146107,
+    "libre": true
+  },
+  {
+    "nombre": "8ffe08419d84-1",
+    "direccion": "172.19.0.6:56486",
+    "workers": 14,
+    "latencia_ms": 0.137438,
+    "libre": true
+  }
+]
+
+$ curl -s -w '\nHTTP %{http_code} en %{time_total} s\n' -X POST localhost:8080/api/entrenamientos -H "Authorization: Bearer $TOKEN" -d '{"nodos": 3, "replicas": 1, "semilla": 42}'
+{"id":"e-20261120-1308-3","estado":"en_curso"}
+
+HTTP 202 en 0.002560 s
+
+$ curl -s -H "Authorization: Bearer $TOKEN" localhost:8080/api/entrenamientos/e-20261120-1308-3
+{
+  "id": "e-20261120-1308-3",
+  "estado": "terminado",
+  "nodos": [
+    "69b61aa85c9a-1",
+    "86dd2b5bd773-1",
+    "8ffe08419d84-1"
+  ],
+  "replicas": 1,
+  "iteraciones": 44,
+  "paro": "tolerancia",
+  "dif_secuencial": 7.549516567451064e-15,
+  "ms_total": 76.374329,
+  "modelo_id": "entrenado-e-20261120-1308-3",
+  "rondas": [
+    {
+      "iter": 1,
+      "inercia": 73075.49583192292,
+      "ms_ronda": 0.566326,
+      "ms_fusion": 0.003572,
+      "ms_por_nodo": {
+        "69b61aa85c9a-1": 0.443155,
+        "86dd2b5bd773-1": 0.525661,
+        "8ffe08419d84-1": 0.481264
+      }
+    },
+    {
+      "iter": 2,
+      "inercia": 57902.130936429574,
+      "ms_ronda": 0.435426,
+      "ms_fusion": 0.003238,
+      "ms_por_nodo": {
+        "69b61aa85c9a-1": 0.330954,
+        "86dd2b5bd773-1": 0.37198,
+        "8ffe08419d84-1": 0.362693
+      }
+    },
+    {
+      "iter": 3,
+      "inercia": 52392.0973607289,
+      "ms_ronda": 1.122342,
+      "ms_fusion": 0.002525,
+      "ms_por_nodo": {
+        "69b61aa85c9a-1": 0.735869,
+        "86dd2b5bd773-1": 1.100586,
+        "8ffe08419d84-1": 1.02433
+      }
+    },
+    {
+      "iter": 4,
+      "inercia": 51221.650206398655,
+      "ms_ronda": 0.629226,
+      "ms_fusion": 0.002501,
+      "ms_por_nodo": {
+        "69b61aa85c9a-1": 0.488873,
+        "86dd2b5bd773-1": 0.430555,
+        "8ffe08419d84-1": 0.422198
+      }
+    },
+    {
+      "iter": 5,
+      "inercia": 51016.41848217332,
+      "ms_ronda": 0.526342,
+      "ms_fusion": 0.002679,
+      "ms_por_nodo": {
+        "69b61aa85c9a-1": 0.456752,
+        "86dd2b5bd773-1": 0.417719,
+        "8ffe08419d84-1": 0.275361
+      }
+    },
+    {
+      "iter": 6,
+      "inercia": 50973.706197781634,
+      "ms_ronda": 0.649642,
+      "ms_fusion": 0.002926,
+      "ms_por_nodo": {
+        "69b61aa85c9a-1": 0.590384,
+        "86dd2b5bd773-1": 0.361852,
+        "8ffe08419d84-1": 0.322111
+      }
+    },
+    {
+      "iter": 7,
+      "inercia": 50960.75965189435,
+      "ms_ronda": 0.60332,
+      "ms_fusion": 0.002404,
+      "ms_por_nodo": {
+        "69b61aa85c9a-1": 0.440134,
+        "86dd2b5bd773-1": 0.526188,
+        "8ffe08419d84-1": 0.458791
+      }
+    },
+    {
+      "iter": 8,
+      "inercia": 50956.46917524796,
+      "ms_ronda": 0.576045,
+      "ms_fusion": 0.002677,
+      "ms_por_nodo": {
+        "69b61aa85c9a-1": 0.38274,
+        "86dd2b5bd773-1": 0.499377,
+        "8ffe08419d84-1": 0.347743
+      }
+    },
+    {
+      "iter": 9,
+      "inercia": 50954.11888044051,
+      "ms_ronda": 0.59385,
+      "ms_fusion": 0.004411,
+      "ms_por_nodo": {
+        "69b61aa85c9a-1": 0.471302,
+        "86dd2b5bd773-1": 0.511776,
+        "8ffe08419d84-1": 0.36371
+      }
+    },
+    {
+      "iter": 10,
+      "inercia": 50952.87719383878,
+      "ms_ronda": 0.501842,
+      "ms_fusion": 0.002282,
+      "ms_por_nodo": {
+        "69b61aa85c9a-1": 0.431504,
+        "86dd2b5bd773-1": 0.338543,
+        "8ffe08419d84-1": 0.246417
+      }
+    },
+    {
+      "iter": 11,
+      "inercia": 50952.064120608564,
+      "ms_ronda": 0.432296,
+      "ms_fusion": 0.002089,
+      "ms_por_nodo": {
+        "69b61aa85c9a-1": 0.360747,
+        "86dd2b5bd773-1": 0.296313,
+        "8ffe08419d84-1": 0.269612
+      }
+    },
+    {
+      "iter": 12,
+      "inercia": 50951.83892860823,
+      "ms_ronda": 0.461021,
+      "ms_fusion": 0.002215,
+      "ms_por_nodo": {
+        "69b61aa85c9a-1": 0.328219,
+        "86dd2b5bd773-1": 0.409906,
+        "8ffe08419d84-1": 0.319784
+      }
+    },
+    {
+      "iter": 13,
+      "inercia": 50951.688069691925,
+      "ms_ronda": 0.483568,
+      "ms_fusion": 0.002342,
+      "ms_por_nodo": {
+        "69b61aa85c9a-1": 0.426285,
+        "86dd2b5bd773-1": 0.305349,
+        "8ffe08419d84-1": 0.354257
+      }
+    },
+    {
+      "iter": 14,
+      "inercia": 50951.45495920114,
+      "ms_ronda": 0.41197,
+      "ms_fusion": 0.002161,
+      "ms_por_nodo": {
+        "69b61aa85c9a-1": 0.350642,
+        "86dd2b5bd773-1": 0.316901,
+        "8ffe08419d84-1": 0.231262
+      }
+    },
+    {
+      "iter": 15,
+      "inercia": 50951.27761226739,
+      "ms_ronda": 0.452522,
+      "ms_fusion": 0.001722,
+      "ms_por_nodo": {
+        "69b61aa85c9a-1": 0.270331,
+        "86dd2b5bd773-1": 0.376654,
+        "8ffe08419d84-1": 0.310456
+      }
+    },
+    {
+      "iter": 16,
+      "inercia": 50951.244942342724,
+      "ms_ronda": 0.448735,
+      "ms_fusion": 0.001621,
+      "ms_por_nodo": {
+        "69b61aa85c9a-1": 0.384788,
+        "86dd2b5bd773-1": 0.35363,
+        "8ffe08419d84-1": 0.442681
+      }
+    },
+    {
+      "iter": 17,
+      "inercia": 50951.129004544055,
+      "ms_ronda": 0.437745,
+      "ms_fusion": 0.001683,
+      "ms_por_nodo": {
+        "69b61aa85c9a-1": 0.380628,
+        "86dd2b5bd773-1": 0.266771,
+        "8ffe08419d84-1": 0.334098
+      }
+    },
+    {
+      "iter": 18,
+      "inercia": 50950.88931514143,
+      "ms_ronda": 0.436385,
+      "ms_fusion": 0.00266,
+      "ms_por_nodo": {
+        "69b61aa85c9a-1": 0.377227,
+        "86dd2b5bd773-1": 0.353563,
+        "8ffe08419d84-1": 0.248689
+      }
+    },
+    {
+      "iter": 19,
+      "inercia": 50950.78837586024,
+      "ms_ronda": 0.479361,
+      "ms_fusion": 0.001951,
+      "ms_por_nodo": {
+        "69b61aa85c9a-1": 0.345393,
+        "86dd2b5bd773-1": 0.410139,
+        "8ffe08419d84-1": 0.403397
+      }
+    },
+    {
+      "iter": 20,
+      "inercia": 50950.72862721378,
+      "ms_ronda": 0.462952,
+      "ms_fusion": 0.00201,
+      "ms_por_nodo": {
+        "69b61aa85c9a-1": 0.403483,
+        "86dd2b5bd773-1": 0.280342,
+        "8ffe08419d84-1": 0.360546
+      }
+    },
+    {
+      "iter": 21,
+      "inercia": 50950.691795724815,
+      "ms_ronda": 0.505495,
+      "ms_fusion": 0.001881,
+      "ms_por_nodo": {
+        "69b61aa85c9a-1": 0.44594,
+        "86dd2b5bd773-1": 0.308904,
+        "8ffe08419d84-1": 0.264133
+      }
+    },
+    {
+      "iter": 22,
+      "inercia": 50950.656403589004,
+      "ms_ronda": 0.497482,
+      "ms_fusion": 0.002169,
+      "ms_por_nodo": {
+        "69b61aa85c9a-1": 0.428104,
+        "86dd2b5bd773-1": 0.393299,
+        "8ffe08419d84-1": 0.473598
+      }
+    },
+    {
+      "iter": 23,
+      "inercia": 50950.62173734862,
+      "ms_ronda": 0.572849,
+      "ms_fusion": 0.001924,
+      "ms_por_nodo": {
+        "69b61aa85c9a-1": 0.34421,
+        "86dd2b5bd773-1": 0.490978,
+        "8ffe08419d84-1": 0.325806
+      }
+    },
+    {
+      "iter": 24,
+      "inercia": 50950.60454995614,
+      "ms_ronda": 0.480906,
+      "ms_fusion": 0.00177,
+      "ms_por_nodo": {
+        "69b61aa85c9a-1": 0.416271,
+        "86dd2b5bd773-1": 0.33148,
+        "8ffe08419d84-1": 0.25619
+      }
+    },
+    {
+      "iter": 25,
+      "inercia": 50950.60239975706,
+      "ms_ronda": 0.597161,
+      "ms_fusion": 0.001851,
+      "ms_por_nodo": {
+        "69b61aa85c9a-1": 0.555791,
+        "86dd2b5bd773-1": 0.366994,
+        "8ffe08419d84-1": 0.338492
+      }
+    },
+    {
+      "iter": 26,
+      "inercia": 50950.601451978924,
+      "ms_ronda": 0.474996,
+      "ms_fusion": 0.002121,
+      "ms_por_nodo": {
+        "69b61aa85c9a-1": 0.385977,
+        "86dd2b5bd773-1": 0.399432,
+        "8ffe08419d84-1": 0.353322
+      }
+    },
+    {
+      "iter": 27,
+      "inercia": 50950.60104951449,
+      "ms_ronda": 0.481711,
+      "ms_fusion": 0.001676,
+      "ms_por_nodo": {
+        "69b61aa85c9a-1": 0.290858,
+        "86dd2b5bd773-1": 0.413201,
+        "8ffe08419d84-1": 0.331677
+      }
+    },
+    {
+      "iter": 28,
+      "inercia": 50950.60065124928,
+      "ms_ronda": 0.598277,
+      "ms_fusion": 0.001945,
+      "ms_por_nodo": {
+        "69b61aa85c9a-1": 0.313014,
+        "86dd2b5bd773-1": 0.263781,
+        "8ffe08419d84-1": 0.59067
+      }
+    },
+    {
+      "iter": 29,
+      "inercia": 50950.60019212868,
+      "ms_ronda": 0.42708,
+      "ms_fusion": 0.001756,
+      "ms_por_nodo": {
+        "69b61aa85c9a-1": 0.286636,
+        "86dd2b5bd773-1": 0.359799,
+        "8ffe08419d84-1": 0.270048
+      }
+    },
+    {
+      "iter": 30,
+      "inercia": 50950.594176710874,
+      "ms_ronda": 0.391858,
+      "ms_fusion": 0.001761,
+      "ms_por_nodo": {
+        "69b61aa85c9a-1": 0.351031,
+        "86dd2b5bd773-1": 0.328515,
+        "8ffe08419d84-1": 0.227342
+      }
+    },
+    {
+      "iter": 31,
+      "inercia": 50950.59358233407,
+      "ms_ronda": 0.677472,
+      "ms_fusion": 0.001415,
+      "ms_por_nodo": {
+        "69b61aa85c9a-1": 0.473507,
+        "86dd2b5bd773-1": 0.614918,
+        "8ffe08419d84-1": 0.51882
+      }
+    },
+    {
+      "iter": 32,
+      "inercia": 50950.59347480232,
+      "ms_ronda": 0.402837,
+      "ms_fusion": 0.001639,
+      "ms_por_nodo": {
+        "69b61aa85c9a-1": 0.261969,
+        "86dd2b5bd773-1": 0.316046,
+        "8ffe08419d84-1": 0.299937
+      }
+    },
+    {
+      "iter": 33,
+      "inercia": 50950.593372498726,
+      "ms_ronda": 0.410554,
+      "ms_fusion": 0.004754,
+      "ms_por_nodo": {
+        "69b61aa85c9a-1": 0.387958,
+        "86dd2b5bd773-1": 0.343866,
+        "8ffe08419d84-1": 0.378202
+      }
+    },
+    {
+      "iter": 34,
+      "inercia": 50950.577523181484,
+      "ms_ronda": 0.562796,
+      "ms_fusion": 0.001644,
+      "ms_por_nodo": {
+        "69b61aa85c9a-1": 0.317663,
+        "86dd2b5bd773-1": 0.487922,
+        "8ffe08419d84-1": 0.279178
+      }
+    },
+    {
+      "iter": 35,
+      "inercia": 50950.49956202014,
+      "ms_ronda": 0.487552,
+      "ms_fusion": 0.004275,
+      "ms_por_nodo": {
+        "69b61aa85c9a-1": 0.365397,
+        "86dd2b5bd773-1": 0.415752,
+        "8ffe08419d84-1": 0.373963
+      }
+    },
+    {
+      "iter": 36,
+      "inercia": 50950.45060272424,
+      "ms_ronda": 0.572405,
+      "ms_fusion": 0.002313,
+      "ms_por_nodo": {
+        "69b61aa85c9a-1": 0.326916,
+        "86dd2b5bd773-1": 0.499144,
+        "8ffe08419d84-1": 0.306887
+      }
+    },
+    {
+      "iter": 37,
+      "inercia": 50950.39885730196,
+      "ms_ronda": 0.365303,
+      "ms_fusion": 0.002384,
+      "ms_por_nodo": {
+        "69b61aa85c9a-1": 0.340018,
+        "86dd2b5bd773-1": 0.338415,
+        "8ffe08419d84-1": 0.357105
+      }
+    },
+    {
+      "iter": 38,
+      "inercia": 50950.39167835453,
+      "ms_ronda": 0.396268,
+      "ms_fusion": 0.002434,
+      "ms_por_nodo": {
+        "69b61aa85c9a-1": 0.297765,
+        "86dd2b5bd773-1": 0.232687,
+        "8ffe08419d84-1": 0.388804
+      }
+    },
+    {
+      "iter": 39,
+      "inercia": 50950.38940575072,
+      "ms_ronda": 0.439138,
+      "ms_fusion": 0.00224,
+      "ms_por_nodo": {
+        "69b61aa85c9a-1": 0.324566,
+        "86dd2b5bd773-1": 0.42028,
+        "8ffe08419d84-1": 0.233271
+      }
+    },
+    {
+      "iter": 40,
+      "inercia": 50950.376894926565,
+      "ms_ronda": 0.377859,
+      "ms_fusion": 0.002303,
+      "ms_por_nodo": {
+        "69b61aa85c9a-1": 0.356655,
+        "86dd2b5bd773-1": 0.321227,
+        "8ffe08419d84-1": 0.297938
+      }
+    },
+    {
+      "iter": 41,
+      "inercia": 50950.36826957311,
+      "ms_ronda": 0.442505,
+      "ms_fusion": 0.002042,
+      "ms_por_nodo": {
+        "69b61aa85c9a-1": 0.407341,
+        "86dd2b5bd773-1": 0.341264,
+        "8ffe08419d84-1": 0.249927
+      }
+    },
+    {
+      "iter": 42,
+      "inercia": 50950.367167216,
+      "ms_ronda": 0.4118,
+      "ms_fusion": 0.004075,
+      "ms_por_nodo": {
+        "69b61aa85c9a-1": 0.29871,
+        "86dd2b5bd773-1": 0.339416,
+        "8ffe08419d84-1": 0.302053
+      }
+    },
+    {
+      "iter": 43,
+      "inercia": 50950.36710185207,
+      "ms_ronda": 0.405112,
+      "ms_fusion": 0.00255,
+      "ms_por_nodo": {
+        "69b61aa85c9a-1": 0.337773,
+        "86dd2b5bd773-1": 0.310125,
+        "8ffe08419d84-1": 0.241783
+      }
+    },
+    {
+      "iter": 44,
+      "inercia": 50950.36689106274,
+      "ms_ronda": 0.439593,
+      "ms_fusion": 0.002089,
+      "ms_por_nodo": {
+        "69b61aa85c9a-1": 0.325043,
+        "86dd2b5bd773-1": 0.364353,
+        "8ffe08419d84-1": 0.27171
+      }
+    }
+  ]
+}
+
+$ curl -s -H "Authorization: Bearer $TOKEN" localhost:8080/api/entrenamientos
+[
+  {
+    "id": "e-20261120-1308-3",
+    "estado": "terminado",
+    "nodos": [
+      "69b61aa85c9a-1",
+      "86dd2b5bd773-1",
+      "8ffe08419d84-1"
+    ],
+    "replicas": 1,
+    "iteraciones": 44,
+    "paro": "tolerancia",
+    "dif_secuencial": 7.549516567451064e-15,
+    "ms_total": 76.374329,
+    "modelo_id": "entrenado-e-20261120-1308-3"
+  },
+  {
+    "id": "e-20261120-1308-2",
+    "estado": "terminado",
+    "nodos": [
+      "69b61aa85c9a-1",
+      "86dd2b5bd773-1",
+      "8ffe08419d84-1"
+    ],
+    "replicas": 300,
+    "iteraciones": 44,
+    "paro": "tolerancia",
+    "dif_secuencial": 1.0658141036401503e-14,
+    "ms_total": 2080.809472
+  },
+  {
+    "id": "e-20261120-1308",
+    "estado": "terminado",
+    "nodos": [
+      "69b61aa85c9a-1",
+      "86dd2b5bd773-1",
+      "8ffe08419d84-1"
+    ],
+    "replicas": 1,
+    "iteraciones": 44,
+    "paro": "tolerancia",
+    "dif_secuencial": 7.549516567451064e-15,
+    "ms_total": 56.277325,
+    "modelo_id": "entrenado-e-20261120-1308"
+  }
+]
+
+$ curl -s -H "Authorization: Bearer $TOKEN" localhost:8080/api/modelos/activo
+{
+  "id": "entrenado-e-20261120-1308-3",
+  "k": 3,
+  "features": [
+    "pm2_5",
+    "pm10"
+  ],
+  "iteraciones": 44,
+  "inercia": 50950.36689106274,
+  "centroides": [
+    [
+      9.037549677124646,
+      17.63909927119453
+    ],
+    [
+      65.12396484375,
+      186.66182291666672
+    ],
+    [
+      24.38191518298714,
+      58.228800692383786
+    ]
+  ],
+  "regimenes": [
+    {
+      "regimen": 0,
+      "pm2_5_medio": 9.037549677124652,
+      "pm10_medio": 17.63909927119451,
+      "excede_eca": false,
+      "tamano": 48161
+    },
+    {
+      "regimen": 1,
+      "pm2_5_medio": 65.12396484374996,
+      "pm10_medio": 186.6618229166667,
+      "excede_eca": true,
+      "tamano": 1536
+    },
+    {
+      "regimen": 2,
+      "pm2_5_medio": 24.381915182987196,
+      "pm10_medio": 58.22880069238359,
+      "excede_eca": false,
+      "tamano": 16176
+    }
+  ]
+}

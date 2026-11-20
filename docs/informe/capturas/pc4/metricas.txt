@@ -1,0 +1,106 @@
+$ curl -s -H "Authorization: Bearer $TOKEN" localhost:8080/api/metricas
+{
+  "endpoints": {
+    "GET /api/cluster/nodos": {
+      "pedidos": 13,
+      "p50_ms": 0.0349,
+      "p95_ms": 0.09452,
+      "p99_ms": 0.09452
+    },
+    "GET /api/entrenamientos": {
+      "pedidos": 4,
+      "p50_ms": 0.7241,
+      "p95_ms": 1.024,
+      "p99_ms": 1.024
+    },
+    "GET /api/entrenamientos/{id}": {
+      "pedidos": 14,
+      "p50_ms": 0.8992,
+      "p95_ms": 13.78,
+      "p99_ms": 13.78
+    },
+    "GET /api/estaciones": {
+      "pedidos": 1,
+      "p50_ms": 1.069,
+      "p95_ms": 1.069,
+      "p99_ms": 1.069
+    },
+    "GET /api/estaciones/{id}/regimen": {
+      "pedidos": 5,
+      "p50_ms": 0.2061,
+      "p95_ms": 0.256,
+      "p99_ms": 0.256
+    },
+    "GET /api/metricas": {
+      "pedidos": 4,
+      "p50_ms": 0.08667,
+      "p95_ms": 0.1337,
+      "p99_ms": 0.1337
+    },
+    "GET /api/modelos/activo": {
+      "pedidos": 3,
+      "p50_ms": 0.07288,
+      "p95_ms": 0.1031,
+      "p99_ms": 0.1031
+    },
+    "GET /api/salud": {
+      "pedidos": 17,
+      "p50_ms": 0.4695,
+      "p95_ms": 1.218,
+      "p99_ms": 1.218
+    },
+    "GET /docs": {
+      "pedidos": 1,
+      "p50_ms": 0.004177,
+      "p95_ms": 0.004177,
+      "p99_ms": 0.004177
+    },
+    "GET /openapi.yaml": {
+      "pedidos": 1,
+      "p50_ms": 0.09051,
+      "p95_ms": 0.09051,
+      "p99_ms": 0.09051
+    },
+    "POST /api/auth/token": {
+      "pedidos": 12,
+      "p50_ms": 0.05154,
+      "p95_ms": 0.09452,
+      "p99_ms": 0.09452
+    },
+    "POST /api/entrenamientos": {
+      "pedidos": 9,
+      "p50_ms": 0.064,
+      "p95_ms": 1.878,
+      "p99_ms": 1.878
+    },
+    "POST /api/predicciones": {
+      "pedidos": 80890,
+      "p50_ms": 0.02691,
+      "p95_ms": 0.07288,
+      "p99_ms": 0.2915
+    }
+  },
+  "nodos_en_pool": 3,
+  "ultimo_entrenamiento": "e-20261120-1308-3",
+  "escrituras_descartadas": 0,
+  "escrituras_fallidas": 0,
+  "escritura": {
+    "mongo": {
+      "escritas": 80879,
+      "descartadas": 0,
+      "fallidas": 0,
+      "lotes": 23807
+    },
+    "redis": {
+      "escritas": 80879,
+      "descartadas": 0,
+      "fallidas": 0,
+      "lotes": 32464
+    }
+  },
+  "puntos_de_control": {
+    "escritos": 132,
+    "fallidos": 0,
+    "omitidos": 0
+  }
+}
