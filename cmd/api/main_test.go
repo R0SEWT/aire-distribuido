@@ -194,4 +194,6 @@ func (s *bufferSeguro) Write(p []byte) (int, error) {
 	return s.b.Write(p)
 }
 
-func logMudo() *slog.Logger { return slog.New(slog.NewTextHandler(io.Discard, nil)) }
+func logMudo() *slog.Logger { return slogDe(io.Discard) }
+
+func slogDe(w io.Writer) *slog.Logger { return slog.New(slog.NewTextHandler(w, nil)) }

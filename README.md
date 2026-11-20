@@ -259,6 +259,23 @@ Para desarrollo, `go run ./cmd/api -demo` arranca sin `API_USUARIOS` con los usu
 demostración `demo`/`demo` (rol usuario) y `admin`/`admin` (rol admin), y lo avisa en el log.
 Solo en una máquina propia: con `-demo`, cualquiera que alcance el puerto entra como admin.
 
+La API es también el **coordinador del clúster**: escucha a los nodos por TCP en el 7070
+(`-nodos-addr`) y, con el gold a mano (`-gold`, por omisión `data/gold/oefa_features.csv`), un
+admin lanza un entrenamiento distribuido por HTTP y sigue las rondas por WebSocket (`/ws`). Cada
+nodo necesita el mismo gold:
+
+```bash
+go run ./cmd/nodo -coordinador localhost:7070 -nombre nodo-1 -gold data/gold/oefa_features.csv
+```
+
+```bash
+curl -s -X POST localhost:8080/api/entrenamientos -H "Authorization: Bearer $TOKEN" -d '{"nodos": 3, "replicas": 1, "semilla": 42}'
+```
+
+Con `replicas = 1` el modelo entrenado pasa a ser el activo; con un solo nodo es el de
+`reports/kmeans.json` bit a bit. La SPA del TB2 necesita `CORS_ORIGENES` (por ejemplo
+`http://localhost:5173`) para llamar a la API desde otro origen.
+
 **6. En Docker.** La imagen final es distroless y corre sin root, así que las carpetas montadas
 tienen que admitir escritura:
 

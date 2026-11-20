@@ -10,8 +10,9 @@ file**).
 ## Acceso
 
 Libres: token, salud, `/openapi.yaml` y `/docs`. Con rol `usuario` o `admin`: predicciones,
-estaciones, modelo activo y `/ws`. Solo `admin`: nodos del clúster, entrenamientos y métricas;
-un `usuario` recibe 403. `x-roles` deja el rol escrito en cada operación.
+estaciones y modelo activo. Solo `admin`: nodos del clúster, entrenamientos, métricas y `/ws` (sus
+dos eventos son de entrenamientos); un `usuario` recibe 403. `x-roles` deja el rol escrito en cada
+operación.
 
 ## Lo que el contrato fija y la spec no decía
 
@@ -34,4 +35,13 @@ un `usuario` recibe 403. `x-roles` deja el rol escrito en cada operación.
   estación, también cuando todavía no tiene predicciones), 503 cuando no hay modelo activo o no
   responde el almacén de la ruta.
 - **WebSocket**: cada trama es `{"evento": "entrenamiento.ronda" | "entrenamiento.fin", "datos":
-  {…}}`, con los datos de §6.4.
+  {…}}`, con los datos de §6.4. El JWT va en `?token=` (el navegador no deja poner encabezados) o
+  en `Authorization`. El `entrenamiento.fin` sale cuando el detalle ya tiene el estado final: quien
+  lo recibe puede pedir `GET /api/entrenamientos/{id}` en el acto.
+- **Clúster**: los nodos (`cmd/nodo -coordinador <IP>:7070`) llaman a la API por TCP en un puerto
+  aparte (`-nodos-addr`, por omisión `:7070`) y quedan en su pool. `latencia_ms` es la ida y vuelta
+  del último latido, que solo corre sobre los nodos libres; `ms_por_nodo` es lo que tardó el PARCIAL
+  de cada nodo, medido en la API. Para entrenar, la API necesita el mismo gold que los nodos
+  (`-gold`); sin él arranca igual y `POST /api/entrenamientos` responde 503.
+- **CORS**: los orígenes que pueden llamar desde un navegador se configuran con la variable de
+  entorno `CORS_ORIGENES` (separados por comas, o `*`); la API responde el preflight `OPTIONS`.
