@@ -2,6 +2,7 @@ package cluster
 
 import (
 	"fmt"
+	"math"
 
 	"github.com/R0SEWT/aire-distribuido/protocolo"
 )
@@ -35,4 +36,22 @@ func Repartir(n, k int) ([]protocolo.Rango, error) {
 		desde += tam
 	}
 	return rangos, nil
+}
+
+// MaxReplicas dice cuántas réplicas de un gold de n filas entran en nodos nodos
+// que cargan hasta tope filas cada uno. Repartir da rangos iguales (difieren a
+// lo sumo en una fila), así que entran si réplicas × n <= tope × nodos. La
+// tabla entera, además, no pasa de 2³¹ filas, y ahí se satura la cuenta. Lo
+// usan los dos coordinadores (cmd/distribuido y la API) para rechazar un
+// pedido antes de juntar a nadie: cada nodo rechaza un rango de más filas que
+// su tope, y la corrida moriría en el CARGAR.
+func MaxReplicas(n, nodos, tope int) int {
+	if n <= 0 || nodos <= 0 || tope <= 0 {
+		return 0
+	}
+	total := math.MaxInt32
+	if tope < math.MaxInt32 && nodos <= total/tope {
+		total = tope * nodos
+	}
+	return total / n
 }

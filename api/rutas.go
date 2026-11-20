@@ -79,9 +79,14 @@ func estado(ctx context.Context, p almacen.Pinger) string {
 	return "ok"
 }
 
-// nodosEnPool es 0 hasta que exista cluster.Pool (el coordinador del clúster
-// dentro de la API, spec §5.2).
-func (s *Servidor) nodosEnPool() int { return 0 }
+// nodosEnPool es cuántos nodos hay en el pool, libres y en una corrida; 0 si
+// la API no tiene clúster.
+func (s *Servidor) nodosEnPool() int {
+	if s.pool == nil {
+		return 0
+	}
+	return s.pool.Cantidad()
+}
 
 // Mensajes de 400 de POST /api/predicciones, por campo del esquema Lectura.
 const (
@@ -322,7 +327,7 @@ func (s *Servidor) consultarMetricas(w http.ResponseWriter, r *http.Request) {
 		NodosEnPool           int                    `json:"nodos_en_pool"`
 		UltimoEntrenamiento   *string                `json:"ultimo_entrenamiento"`
 		EscriturasDescartadas uint64                 `json:"escrituras_descartadas"`
-	}{s.metricas.Resumen(), s.nodosEnPool(), nil, s.escritor.descartes.Load()})
+	}{s.metricas.Resumen(), s.nodosEnPool(), s.coord.ultimoEntrenamiento(), s.escritor.descartes.Load()})
 }
 
 // GET /openapi.yaml: el contrato tal cual está en docs/api/openapi.yaml.

@@ -38,9 +38,9 @@ import (
 )
 
 func main() {
-	nombre, _ := os.Hostname()
+	nombre := nombrePorOmision()
 	coordinador := flag.String("coordinador", "", "dirección del coordinador, IP:puerto (obligatoria)")
-	flag.StringVar(&nombre, "nombre", nombre, "nombre con el que el nodo se presenta en el HOLA")
+	flag.StringVar(&nombre, "nombre", nombre, "nombre con el que el nodo se presenta en el HOLA; tiene que ser único en el clúster")
 	// GOMAXPROCS y no NumCPU: desde Go 1.25 respeta el límite de CPU de un
 	// contenedor, como workers = 0 en configs/kmeans.json.
 	workers := flag.Int("workers", runtime.GOMAXPROCS(0), "núcleos que el nodo declara en el HOLA y usa para calcular")
@@ -102,4 +102,18 @@ func goldJuntoAlEjecutable() string {
 		return archivo
 	}
 	return filepath.Join(filepath.Dir(exe), archivo)
+}
+
+// nombrePorOmision es el nombre del equipo y el PID del proceso (H45-022-4312).
+// Solo con el nombre del equipo, dos nodos lanzados en la misma máquina sin
+// -nombre se presentarían igual, y el coordinador, que identifica a los nodos
+// por su nombre, tomaría al segundo por una reconexión del primero: se
+// desalojarían uno al otro cada vez que el desplazado vuelve a llamar. El
+// protocolo no cambia: el nombre es un texto libre del HOLA.
+func nombrePorOmision() string {
+	equipo, err := os.Hostname()
+	if err != nil || equipo == "" {
+		equipo = "nodo"
+	}
+	return fmt.Sprintf("%s-%d", equipo, os.Getpid())
 }

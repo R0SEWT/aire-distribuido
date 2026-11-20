@@ -184,19 +184,8 @@ func leerJSON(ruta string, v any) error {
 
 func armar(rk reporteKmeans, rr reporteRegimenes, est *kmeans.Estandarizacion) (*Modelo, error) {
 	rec := rk.Receta
-	if err := rec.Validar(); err != nil {
-		return nil, err
-	}
-	for _, f := range rec.Features {
-		if !slices.Contains(derivables, f) {
-			return nil, fmt.Errorf("el modelo usa la feature %q, que no sale de una lectura de pm2_5 y pm10", f)
-		}
-	}
 	if !slices.Equal(rk.Features, rec.Features) || !slices.Equal(rr.Features, rec.Features) {
 		return nil, fmt.Errorf("features distintas: receta %v, kmeans.json %v, regimenes.json %v", rec.Features, rk.Features, rr.Features)
-	}
-	if err := est.Coincide(rec); err != nil {
-		return nil, err
 	}
 	if rr.Nivel != rec.Nivel {
 		return nil, fmt.Errorf("regimenes.json es de nivel %q y la receta, de %q", rr.Nivel, rec.Nivel)
@@ -213,35 +202,85 @@ func armar(rk reporteKmeans, rr reporteRegimenes, est *kmeans.Estandarizacion) (
 		return nil, fmt.Errorf("k no coincide: kmeans.json dice %d con %d centroides; regimenes.json, %d con %d regímenes",
 			rk.K, len(rk.Centroides), rr.K, len(rr.Regimenes))
 	}
-	m := &Modelo{
-		ID:          IDSembrado,
-		Receta:      rec,
-		Iteraciones: rk.Iteraciones,
-		Inercia:     rk.Inercia,
-		Regimenes:   make([]Regimen, k),
-		centroides:  make([]float64, 0, k*d),
-		est:         est,
-	}
+	centroides := make([]float64, 0, k*d)
 	for j, c := range rk.Centroides {
 		if len(c) != d {
 			return nil, fmt.Errorf("el centroide %d tiene %d valores y hay %d features", j, len(c), d)
 		}
-		for _, v := range c {
-			if math.IsNaN(v) || math.IsInf(v, 0) {
-				return nil, fmt.Errorf("el centroide %d no es finito: %v", j, c)
-			}
-		}
-		m.centroides = append(m.centroides, c...)
+		centroides = append(centroides, c...)
 	}
-	for j, r := range rr.Regimenes {
+	return Nuevo(Piezas{
+		ID: IDSembrado, Receta: rec, Estandarizacion: est, Centroides: centroides,
+		Iteraciones: rk.Iteraciones, Inercia: rk.Inercia, Regimenes: rr.Regimenes,
+	})
+}
+
+// Piezas es lo que hace falta para armar un modelo: lo que deja un
+// entrenamiento, venga de los reports (Sembrar) o del clúster (el coordinador
+// de la API).
+type Piezas struct {
+	ID              string
+	Receta          kmeans.Receta
+	Estandarizacion *kmeans.Estandarizacion // la del gold con que se entrenó
+	Centroides      []float64               // k*D, estandarizados, por filas
+	Iteraciones     int
+	Inercia         float64
+	// Regimenes es el perfil de cada centroide, en orden de índice: lo que
+	// devuelve kmeans.Perfilar con las asignaciones de esos centroides.
+	Regimenes []kmeans.Regimen
+}
+
+// Nuevo arma un modelo listo para predecir y comprueba que las piezas sean
+// coherentes entre sí: una receta válida cuyas features salen de una lectura
+// de pm2_5 y pm10, la estandarización de esa receta, k centroides finitos de D
+// valores y un régimen con su perfil por centroide. No copia Centroides: quien
+// llama no los vuelve a tocar.
+func Nuevo(p Piezas) (*Modelo, error) {
+	rec, est := p.Receta, p.Estandarizacion
+	if p.ID == "" {
+		return nil, fmt.Errorf("el modelo no tiene id")
+	}
+	if est == nil {
+		return nil, fmt.Errorf("el modelo no tiene estandarización")
+	}
+	if err := rec.Validar(); err != nil {
+		return nil, err
+	}
+	for _, f := range rec.Features {
+		if !slices.Contains(derivables, f) {
+			return nil, fmt.Errorf("el modelo usa la feature %q, que no sale de una lectura de pm2_5 y pm10", f)
+		}
+	}
+	if err := est.Coincide(rec); err != nil {
+		return nil, err
+	}
+	k, d := len(p.Regimenes), len(rec.Features)
+	if k == 0 || len(p.Centroides) != k*d {
+		return nil, fmt.Errorf("%d valores de centroides no son k×D con %d regímenes y %d features", len(p.Centroides), k, d)
+	}
+	for i, v := range p.Centroides {
+		if math.IsNaN(v) || math.IsInf(v, 0) {
+			return nil, fmt.Errorf("el centroide %d no es finito: %v", i/d, p.Centroides[i/d*d:(i/d+1)*d])
+		}
+	}
+	m := &Modelo{
+		ID:          p.ID,
+		Receta:      rec,
+		Iteraciones: p.Iteraciones,
+		Inercia:     p.Inercia,
+		Regimenes:   make([]Regimen, k),
+		centroides:  p.Centroides,
+		est:         est,
+	}
+	for j, r := range p.Regimenes {
 		if r.Regimen != j {
-			return nil, fmt.Errorf("regimenes.json: en la posición %d está el régimen %d", j, r.Regimen)
+			return nil, fmt.Errorf("regímenes: en la posición %d está el régimen %d", j, r.Regimen)
 		}
 		if r.PM25Medio == nil || r.PM10Medio == nil {
-			return nil, fmt.Errorf("regimenes.json: al régimen %d le falta pm2_5_medio o pm10_medio", j)
+			return nil, fmt.Errorf("regímenes: al régimen %d le falta pm2_5_medio o pm10_medio", j)
 		}
 		if r.ECA != kmeans.ECAExcede && r.ECA != kmeans.ECANoExcede && r.ECA != kmeans.ECANoEvaluable {
-			return nil, fmt.Errorf("regimenes.json: el régimen %d tiene la etiqueta ECA %q", j, r.ECA)
+			return nil, fmt.Errorf("regímenes: el régimen %d tiene la etiqueta ECA %q", j, r.ECA)
 		}
 		m.Regimenes[j] = Regimen{
 			Regimen:   j,

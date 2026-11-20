@@ -1,6 +1,7 @@
 package modelo
 
 import (
+	"encoding/json"
 	"errors"
 	"math"
 	"os"
@@ -9,6 +10,8 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+
+	"github.com/R0SEWT/aire-distribuido/kmeans"
 )
 
 var reportsDelRepo = Archivos{
@@ -272,6 +275,60 @@ func BenchmarkPredecir(b *testing.B) {
 	for b.Loop() {
 		if _, err := m.Predecir(l); err != nil {
 			b.Fatal(err)
+		}
+	}
+}
+
+// Nuevo arma desde las piezas de un entrenamiento el mismo modelo que Sembrar
+// arma desde los reports, y rechaza piezas que no cuadran.
+func TestNuevoArmaElMismoModeloQueSembrar(t *testing.T) {
+	sembrado := sembrarDelRepo(t)
+	est, err := kmeans.LeerEstandarizacion("../reports/estandarizacion.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var rr struct {
+		Regimenes []kmeans.Regimen `json:"regimenes"`
+	}
+	b, err := os.ReadFile("../reports/regimenes.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := json.Unmarshal(b, &rr); err != nil {
+		t.Fatal(err)
+	}
+	piezas := Piezas{ID: "entrenado-e-1", Receta: sembrado.Receta, Estandarizacion: est,
+		Centroides: sembrado.CentroidesEstandarizados(), Iteraciones: sembrado.Iteraciones, Inercia: sembrado.Inercia,
+		Regimenes: rr.Regimenes}
+	m, err := Nuevo(piezas)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if m.ID != "entrenado-e-1" || !slices.Equal(m.Regimenes, sembrado.Regimenes) ||
+		!slices.Equal(m.CentroidesEstandarizados(), sembrado.CentroidesEstandarizados()) || m.K() != sembrado.K() {
+		t.Fatalf("Nuevo armó otro modelo: %+v", m)
+	}
+	l := Lectura{Estacion: "CA-AYAS-01", PM25: 70.2, PM10: 190.5}
+	a, _ := m.Predecir(l)
+	c, _ := sembrado.Predecir(l)
+	if a != c {
+		t.Fatalf("predicen distinto: %+v y %+v", a, c)
+	}
+
+	casos := map[string]func(p *Piezas){
+		"sin id":                func(p *Piezas) { p.ID = "" },
+		"sin estandarización":   func(p *Piezas) { p.Estandarizacion = nil },
+		"centroides de más":     func(p *Piezas) { p.Centroides = append(slices.Clone(p.Centroides), 1) },
+		"centroide no finito":   func(p *Piezas) { p.Centroides = slices.Clone(p.Centroides); p.Centroides[1] = math.NaN() },
+		"menos regímenes":       func(p *Piezas) { p.Regimenes = p.Regimenes[:1] },
+		"sin regímenes":         func(p *Piezas) { p.Regimenes = nil },
+		"receta con otro log1p": func(p *Piezas) { p.Receta.Log1p = []string{"pm10"} },
+	}
+	for nombre, cambiar := range casos {
+		p := piezas
+		cambiar(&p)
+		if m, err := Nuevo(p); err == nil {
+			t.Errorf("%s: Nuevo aceptó las piezas: %+v", nombre, m)
 		}
 	}
 }

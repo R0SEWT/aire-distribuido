@@ -213,8 +213,24 @@ paths:
       operationId: iniciarEntrenamiento
       summary: Inicia un entrenamiento distribuido de forma asíncrona
       description: |
-        Rol admin. Solo se permite un entrenamiento a la vez. Si replicas es
-        mayor que 1, la corrida es una medición y no reemplaza el modelo activo.
+        Rol admin. Solo se permite un entrenamiento a la vez: un segundo pedido
+        mientras corre el primero recibe 409 con el id del que está en curso.
+        No hay clave de idempotencia: un pedido repetido después de que el
+        primero terminó lanza otro entrenamiento.
+
+        Si replicas es mayor que 1, la corrida es una medición y no reemplaza el
+        modelo activo. Con replicas = 1 y si termina bien, el modelo nuevo pasa
+        a ser el activo con el id entrenado-{id} (modelo_id), salvo que
+        dif_secuencial supere 1e-9: dentro de esa tolerancia la diferencia con
+        el K-Means secuencial es redondeo; fuera, los centroides son otros
+        (algún nodo devolvió parciales que no corresponden a sus filas). En ese
+        caso el entrenamiento queda terminado, pero no activa su modelo y lo
+        dice en aviso.
+
+        El id es e-AAAAMMDD-HHMM en la hora de Lima, con un sufijo (-2, -3…)
+        si en ese minuto ya hubo otro. Al terminar, los nodos vuelven a llamar
+        a la API después de su pausa entre intentos (unos 2 s): un pedido
+        inmediato puede recibir 422.
         Si cae un nodo, el entrenamiento queda abortado con el nombre del nodo en
         error y no activa ningún modelo.
       x-roles: [admin]
@@ -246,6 +262,12 @@ paths:
             application/json:
               schema: {$ref: '#/components/schemas/Error'}
               example: {error: hay 2 nodos libres en el pool y se pidieron 4}
+        '503':
+          description: La API arrancó sin el gold y no puede entrenar, se está apagando, o no responde MongoDB
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Error'}
+              example: {error: 'esta API no puede entrenar: arrancó sin el gold (-gold)'}
     get:
       tags: [Entrenamientos]
       operationId: listarEntrenamientos
@@ -382,12 +404,34 @@ paths:
       operationId: seguirEventos
       summary: Abre un WebSocket de eventos del entrenamiento
       description: |
-        Rol usuario o admin; el JWT va en la consulta token porque el navegador no
-        deja poner encabezados en el handshake. Solo el servidor envía. Cada trama
-        de texto es un objeto JSON con el nombre del evento y sus datos (esquema
-        EventoWS): {"evento": "entrenamiento.ronda", "datos": {...}}.
+        Rol usuario o admin. Solo el servidor envía. Cada trama de texto es un
+        objeto JSON con el nombre del evento y sus datos (esquema EventoWS):
+        {"evento": "entrenamiento.ronda", "datos": {...}}.
+
+        Qué eventos ve cada rol: entrenamiento.ronda y entrenamiento.fin llegan
+        solo a los clientes con rol admin (los entrenamientos son de admin). Un
+        cliente con rol usuario se conecta igual y hoy no recibe ningún evento:
+        el WebSocket queda abierto para los eventos que sí son de todos, como
+        las alertas que consumirá la SPA.
+
+        El JWT se acepta de tres maneras, en este orden:
+        - Authorization: Bearer, como en el resto de la API, para un cliente
+          que puede poner encabezados (Postman, curl, otro servicio).
+        - Sec-WebSocket-Protocol: el subprotocolo aire.jwt seguido del token.
+          Es lo recomendado para el navegador, que no deja poner Authorization:
+          new WebSocket(url, ["aire.jwt", token]). El token no queda en la URL
+          (historial, logs de un proxy). El 101 confirma aire.jwt.
+        - La consulta token (?token=…), para probar a mano. La API no escribe
+          la consulta en su log.
+
+        Si el pedido trae Origin, tiene que ser el mismo host de la API o un
+        origen permitido en el servidor (CORS_ORIGENES); si no, 403. El servidor
+        manda un ping cada 30 s y cierra con 1008 al cliente que no lee al ritmo
+        de los eventos o cuyo token venció, y con 1001 al apagarse.
       security:
+        - wsSubprotocolo: []
         - wsToken: []
+        - bearerAuth: []
       x-roles: [usuario, admin]
       x-websocket-events:
         entrenamiento.ronda:
@@ -409,6 +453,9 @@ paths:
         '101':
           description: Conexión actualizada a WebSocket; a partir de aquí se reciben tramas de texto
           headers:
+            Sec-WebSocket-Protocol:
+              description: aire.jwt, si el cliente lo ofreció. Nunca el token.
+              schema: {type: string, enum: [aire.jwt]}
             Upgrade:
               schema: {type: string, enum: [websocket]}
             Connection:
@@ -417,6 +464,18 @@ paths:
               schema: {type: string}
         '400': {$ref: '#/components/responses/PedidoInvalido'}
         '401': {$ref: '#/components/responses/NoAutenticado'}
+        '403':
+          description: El Origin del pedido no es el de la API ni uno permitido
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Error'}
+              example: {error: 'el origen http://otro.example no puede abrir este WebSocket'}
+        '503':
+          description: La API se está apagando
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Error'}
+              example: {error: la API se está apagando}
 components:
   securitySchemes:
     bearerAuth:
@@ -429,6 +488,13 @@ components:
       in: query
       name: token
       description: El mismo JWT HS256 en la consulta del handshake WebSocket. No registrar la consulta en logs.
+    wsSubprotocolo:
+      type: apiKey
+      in: header
+      name: Sec-WebSocket-Protocol
+      description: |
+        El mismo JWT HS256 como subprotocolo del handshake WebSocket: «aire.jwt, <token>». Es lo
+        recomendado para el navegador: new WebSocket(url, ["aire.jwt", token]).
   parameters:
     EstacionId:
       name: id
@@ -660,8 +726,9 @@ components:
       required: [id, estado, nodos, replicas]
       description: |
         Qué campos trae según el estado: en_curso, solo los de identificación;
-        terminado, además iteraciones, paro, dif_secuencial y ms_total;
-        abortado, además error.
+        terminado, además iteraciones, paro, dif_secuencial y ms_total, y
+        modelo_id si activó su modelo o aviso si tenía que activarlo y no lo
+        hizo; abortado, además error.
       properties:
         id: {type: string, minLength: 1}
         estado: {type: string, enum: [en_curso, terminado, abortado]}
@@ -673,6 +740,8 @@ components:
         paro: {$ref: '#/components/schemas/Paro'}
         dif_secuencial: {type: number, minimum: 0, description: Mayor diferencia con el K-Means secuencial}
         ms_total: {type: number, minimum: 0}
+        modelo_id: {type: string, minLength: 1, description: 'Modelo que este entrenamiento dejó activo; ausente si no activó ninguno'}
+        aviso: {type: string, minLength: 1, description: 'Por qué un entrenamiento terminado con replicas = 1 no activó su modelo'}
         error: {type: string, minLength: 1, description: 'Motivo del aborto, con el nodo que falló'}
     Entrenamiento:
       description: El resumen más las rondas completadas hasta el momento.
@@ -722,6 +791,8 @@ components:
         paro: {$ref: '#/components/schemas/Paro'}
         dif_secuencial: {type: number, minimum: 0}
         ms_total: {type: number, minimum: 0}
+        modelo_id: {type: string, minLength: 1, description: 'Como en EntrenamientoResumen'}
+        aviso: {type: string, minLength: 1, description: 'Como en EntrenamientoResumen'}
     EventoError:
       type: object
       required: [id, error]
