@@ -267,3 +267,63 @@ func TestLloydAbortaSiLaFusionNoEsFinita(t *testing.T) {
 		t.Fatalf("la ronda con +Inf no se publica: %d por el gancho, corrida %+v", rondas, c)
 	}
 }
+
+// El gancho recibe también los centroides con que cerró cada ronda: es lo que
+// el coordinador de la API guarda como punto de control. Son una copia propia
+// de cada ronda (cambian de una a otra y quien los recibe puede quedárselos o
+// pisarlos sin tocar la corrida) y los de la última ronda son los del modelo.
+func TestLloydCtxEntregaLosCentroidesDeCadaRonda(t *testing.T) {
+	const n, k = 900, 3
+	ruta, g := goldConRuido(t, n)
+	p := levantar(t, ruta, n, 3, 64)
+	cent0 := inicio(t, g.Datos, k, 7)
+
+	var porRonda [][]float64
+	c, err := LloydCtx(context.Background(), p.enlaces, cent0, opcionesLloyd(k),
+		OpcionesLloyd{Plazo: 2 * time.Second, Primera: 1, AlRonda: func(r Ronda) {
+			porRonda = append(porRonda, r.Centroides)
+		}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	p.terminar(t)
+	if len(porRonda) != c.Resultado.Iteraciones || len(porRonda) < 3 {
+		t.Fatalf("%d rondas con centroides para %d iteraciones (hacen falta al menos 3 para la prueba)", len(porRonda), c.Resultado.Iteraciones)
+	}
+	d := len(cent0) / k
+	for i, cent := range porRonda {
+		if len(cent) != k*d {
+			t.Fatalf("ronda %d: %d valores, se esperaban k×D = %d", i+1, len(cent), k*d)
+		}
+	}
+	// Cada ronda trae los suyos: los de la primera no son los iniciales ni los finales.
+	if mismosBits(porRonda[0], cent0) || mismosBits(porRonda[0], porRonda[len(porRonda)-1]) {
+		t.Fatal("los centroides de la primera ronda son los iniciales o los finales: el gancho no recibe una copia por ronda")
+	}
+	// Los de la última ronda son los del modelo, bit a bit.
+	if !mismosBits(porRonda[len(porRonda)-1], c.Resultado.Centroides) {
+		t.Fatal("los centroides de la última ronda no son los del modelo")
+	}
+	// Y el modelo es el de la fusión en orden de nodo: entregar los centroides no lo cambia.
+	rangos, _ := Repartir(n, 3)
+	want := lloydEnMemoria(g.Datos, rangos, cent0, opcionesLloyd(k), 64)
+	if !mismosBits(c.Resultado.Centroides, want.Centroides) {
+		t.Fatal("con el gancho los centroides ya no son los de la fusión en orden de nodo")
+	}
+
+	// Quien recibe los centroides puede pisarlos: la corrida no se entera.
+	p2 := levantar(t, ruta, n, 3, 64)
+	c2, err := LloydCtx(context.Background(), p2.enlaces, cent0, opcionesLloyd(k),
+		OpcionesLloyd{Plazo: 2 * time.Second, Primera: 1, AlRonda: func(r Ronda) {
+			for i := range r.Centroides {
+				r.Centroides[i] = 1e9
+			}
+		}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	p2.terminar(t)
+	if !mismosBits(c2.Resultado.Centroides, want.Centroides) || c2.Resultado.Iteraciones != want.Iteraciones {
+		t.Fatal("pisar los centroides que entrega el gancho cambió el resultado de la corrida")
+	}
+}

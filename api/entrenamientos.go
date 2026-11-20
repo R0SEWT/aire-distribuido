@@ -8,7 +8,6 @@ import (
 	"log/slog"
 	"math"
 	"net/http"
-	"slices"
 	"sync"
 	"time"
 
@@ -129,11 +128,12 @@ var errApagando = errors.New("la API se está apagando")
 // id y no la espera. Solo hay uno a la vez: sem es un semáforo de capacidad 1
 // (un canal con búfer de un lugar); quien no puede tomarlo responde 409.
 //
-// Cada ronda tiene DOS consumidores, y cada uno tiene su propio canal: el
+// Cada ronda tiene TRES consumidores, y cada uno tiene su propio canal: el
 // almacén (una goroutine por entrenamiento que escribe en Entrenamientos, con
 // un canal donde caben todas las rondas, así que nunca frena a Lloyd ni pierde
-// una) y el hub del WebSocket (su canal de difusión). No comparten un canal:
-// de un canal compartido cada ronda la recibiría uno solo de los dos.
+// una), el hub del WebSocket (su canal de difusión) y el punto de control en
+// Redis (un buzón de un lugar, porque solo importa el último: puntos.go). No
+// comparten un canal: de un canal compartido cada ronda la recibiría uno solo.
 type coordinador struct {
 	s              *Servidor
 	pool           *cluster.Pool
@@ -389,6 +389,7 @@ func (c *coordinador) correr(e almacen.Entrenamiento, miembros []*cluster.Miembr
 			c.conPlazo(func(ctx context.Context) error { return c.entrenamientos.AgregarRonda(ctx, e.ID, r) }, "guardar la ronda", e.ID)
 		}
 	}()
+	puntos := c.abrirPuntos(e.ID) // el punto de control de cada ronda (puntos.go)
 	alRonda := func(r cluster.Ronda) {
 		ronda := almacen.Ronda{Iter: r.Iter, Inercia: r.Inercia, MsRonda: ms(r.Barrera), MsFusion: ms(r.Fusion),
 			MsPorNodo: make(map[string]float64, len(enlaces))}
@@ -397,6 +398,7 @@ func (c *coordinador) correr(e almacen.Entrenamiento, miembros []*cluster.Miembr
 		}
 		paraAlmacen <- ronda                                                 // al almacén, por su canal
 		c.difundir(eventoRonda, eventoDeRonda{ID: e.ID, Ronda: ronda}, e.ID) // al hub, por el suyo
+		puntos.dejar(puntoDe(r.Iter, op.K, r.Centroides))                    // a Redis, por su buzón
 	}
 
 	// La corrida: CARGAR a todos, Lloyd y FIN. ms_total va del primer CARGAR
@@ -412,6 +414,9 @@ func (c *coordinador) correr(e almacen.Entrenamiento, miembros []*cluster.Miembr
 	}
 	close(paraAlmacen)
 	<-guardadas // las rondas ya están en el almacén antes de escribir el estado final
+	// Y el punto de la última ronda completa, en Redis: también si la corrida
+	// se abortó, que es cuando dice hasta dónde llegó.
+	puntos.cerrar()
 
 	cierre := almacen.CierreEntrenamiento{Estado: almacen.EstadoTerminado}
 	if err != nil {
@@ -429,7 +434,6 @@ func (c *coordinador) correr(e almacen.Entrenamiento, miembros []*cluster.Miembr
 		}
 		r := corrida.Resultado
 		cierre.Iteraciones, cierre.Paro, cierre.MsTotal = r.Iteraciones, r.Paro, ms(time.Since(t0))
-		c.guardarPunto(e.ID, r)
 		cierre.DifSecuencial, cierre.ModeloID, cierre.Aviso = c.cerrarConModelo(e, corrida, inicio, op)
 	}
 	cierre.Fin = enLima(c.s.ahora()).Truncate(time.Millisecond)
@@ -532,25 +536,6 @@ func (c *coordinador) cerrarConModelo(e almacen.Entrenamiento, corrida *cluster.
 	}
 	c.s.ActivarModelo(m)
 	return dif, m.ID, ""
-}
-
-// guardarPunto deja en Redis el punto de control de una corrida que terminó
-// (spec §5.2 y §7.2): los centroides estandarizados de su última ronda
-// completa. Es un registro; no se reanuda desde él.
-//
-// Se escribe una vez, al terminar, y no en cada ronda como pide la spec: el
-// gancho por ronda de cluster.LloydCtx (cluster.Ronda) informa la inercia y los
-// tiempos, pero no los centroides, que hasta el final solo existen dentro de
-// LloydCtx. Con una corrida abortada no hay centroides que publicar.
-func (c *coordinador) guardarPunto(id string, r *kmeans.Resultado) {
-	if c.s.puntos == nil || r == nil || r.D <= 0 || len(r.Centroides) != r.K*r.D {
-		return
-	}
-	p := almacen.PuntoControl{Iter: r.Iteraciones, Centroides: make([][]float64, r.K)}
-	for j := range p.Centroides {
-		p.Centroides[j] = slices.Clone(r.Centroides[j*r.D : (j+1)*r.D])
-	}
-	c.conPlazo(func(ctx context.Context) error { return c.s.puntos.GuardarPunto(ctx, id, p) }, "guardar el punto de control", id)
 }
 
 // difundir manda un evento al hub. Si el hub lo descarta, queda en el log: el

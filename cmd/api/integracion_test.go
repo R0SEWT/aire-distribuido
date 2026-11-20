@@ -21,6 +21,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/R0SEWT/aire-distribuido/almacen"
 	"github.com/R0SEWT/aire-distribuido/almacen/mongo"
 	"github.com/R0SEWT/aire-distribuido/almacen/redis"
 )
@@ -146,6 +147,16 @@ func TestLaAPIGuardaEnMongoDBYRedisReales(t *testing.T) {
 		t.Fatalf("modelo:activo = %q (%v), modelos activo = %q (%v)", enRedis.ID, err1, enMongo.ID, err2)
 	}
 
+	// La API anterior «murió» con un entrenamiento en curso: queda en MongoDB.
+	huerfano := almacen.Entrenamiento{ID: "e-20261120-0520", Inicio: time.Date(2026, 11, 20, 10, 20, 0, 0, time.UTC),
+		Estado: almacen.EstadoEnCurso, Parametros: almacen.ParametrosEntrenamiento{Nodos: 3, Replicas: 1, Semilla: 42}}
+	if err := m.Entrenamientos().Crear(ctx, huerfano); err != nil {
+		t.Fatal(err)
+	}
+	if err := m.Entrenamientos().AgregarRonda(ctx, huerfano.ID, almacen.Ronda{Iter: 1, Inercia: 73075.5}); err != nil {
+		t.Fatal(err)
+	}
+
 	// Segundo arranque, con un modelo entrenado en Redis: arranca con ese.
 	enRedis.ID, enRedis.Origen = "m-e-20261119-1530", "e-20261119-1530"
 	if err := r.GuardarModeloActivo(ctx, enRedis); err != nil {
@@ -159,6 +170,19 @@ func TestLaAPIGuardaEnMongoDBYRedisReales(t *testing.T) {
 	// El régimen de la estación sobrevivió al reinicio: está en Redis, no en la memoria de la API.
 	if reg := pedir(t, "GET", base+"/api/estaciones/CA-AYAS-01/regimen", tok, ""); reg["regimen"] != 1.0 || reg["fecha_hora"] != "2026-11-13T10:00:00-05:00" {
 		t.Fatalf("régimen después de reiniciar = %v", reg)
+	}
+	// Al arrancar recuperó de MongoDB el último entrenamiento y cerró el que
+	// había quedado en curso, sin tocar su ronda.
+	admin := pedir(t, "POST", base+"/api/auth/token", "", `{"usuario": "admin", "clave": "admin"}`)["token"].(string)
+	if mt := pedir(t, "GET", base+"/api/metricas", admin, ""); mt["ultimo_entrenamiento"] != huerfano.ID {
+		t.Fatalf("ultimo_entrenamiento después de reiniciar = %v, se esperaba %s", mt["ultimo_entrenamiento"], huerfano.ID)
+	}
+	det := pedir(t, "GET", base+"/api/entrenamientos/"+huerfano.ID, admin, "")
+	if errTexto, _ := det["error"].(string); det["estado"] != "abortado" || !strings.Contains(errTexto, "se reinició") || len(det["rondas"].([]any)) != 1 {
+		t.Fatalf("el entrenamiento que quedó en curso = %v", det)
+	}
+	if doc, err := m.Entrenamientos().Obtener(ctx, huerfano.ID); err != nil || doc.Estado != almacen.EstadoAbortado || doc.Fin.IsZero() {
+		t.Fatalf("documento del huérfano = %+v, %v", doc, err)
 	}
 	if err := apagar(); err != nil {
 		t.Fatal(err)

@@ -38,6 +38,9 @@ un entrenamiento llegan solo a los `admin`; un `usuario` conectado hoy no recibe
   goroutine por almacén la escribe por lotes. `/api/metricas` cuenta lo que no llegó:
   `escrituras_descartadas` (una cola llena) y `escrituras_fallidas` (el almacén rechazó el lote), y
   en `escritura` el detalle de cada almacén. `/api/salud` informa si cada base responde.
+- **Reinicios**: `ultimo_entrenamiento` se recupera del almacén al arrancar, y un entrenamiento que
+  estaba `en_curso` cuando la API murió queda `abortado` con `error` «la API se reinició mientras el
+  entrenamiento estaba en curso». `puntos_de_control` cuenta los puntos de control por ronda.
 - **WebSocket**: cada trama es `{"evento": "entrenamiento.ronda" | "entrenamiento.fin", "datos":
   {…}}`, con los datos de §6.4. El JWT va en `Authorization`, en `Sec-WebSocket-Protocol`
   (`aire.jwt` seguido del token: lo recomendado para el navegador, que no deja poner encabezados,

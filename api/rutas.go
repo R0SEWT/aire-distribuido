@@ -329,7 +329,9 @@ func (s *Servidor) consultarMetricas(w http.ResponseWriter, r *http.Request) {
 		EscriturasDescartadas uint64                     `json:"escrituras_descartadas"`
 		EscriturasFallidas    uint64                     `json:"escrituras_fallidas"`
 		Escritura             map[string]estadoEscritura `json:"escritura"`
-	}{s.metricas.Resumen(), s.nodosEnPool(), s.coord.ultimoEntrenamiento(), s.escritor.descartadas(), s.escritor.fallidas(), s.escritor.estado()})
+		PuntosDeControl       estadoPuntos               `json:"puntos_de_control"`
+	}{s.metricas.Resumen(), s.nodosEnPool(), s.coord.ultimoEntrenamiento(), s.escritor.descartadas(), s.escritor.fallidas(),
+		s.escritor.estado(), s.cuentaPuntos.estado()})
 }
 
 // GET /openapi.yaml: el contrato tal cual está en docs/api/openapi.yaml.

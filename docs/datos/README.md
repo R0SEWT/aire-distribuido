@@ -84,9 +84,14 @@ Decisiones de diseño:
   base queda al día. El modelo sembrado siempre se vuelve a leer de `reports/`, para que un
   entrenamiento nuevo con `cmd/entrenar` no quede tapado por una copia vieja.
 - **El punto de control.** `entrenamiento:{id}:punto` guarda la iteración y los centroides
-  estandarizados de la última ronda completa de una corrida que terminó. Se escribe una vez, al
-  terminar: el gancho por ronda del clúster informa la inercia y los tiempos de cada ronda, pero no sus
-  centroides. Es un registro; no se reanuda desde él. Una corrida abortada no lo deja.
+  estandarizados de la última ronda completa. Se escribe en cada ronda, sin frenar la corrida: si Redis
+  no llega a guardar un punto antes de la ronda siguiente, ese punto se omite, porque solo importa el
+  último (`puntos_de_control` en `/api/metricas` cuenta escritos, fallidos y omitidos). Si la corrida
+  se aborta queda el punto de la última ronda que sí terminó. Es un registro; no se reanuda desde él.
+- **Lo que sobrevive a un reinicio.** Al arrancar, la API lee de MongoDB cuál fue el último
+  entrenamiento (`ultimo_entrenamiento` en `/api/metricas`) y cierra como `abortado`, con el error que
+  lo dice, los que quedaron `en_curso` cuando la API anterior murió. La media de 24 h de cada estación
+  sí vive solo en memoria: después de un reinicio vuelve a empezar con las lecturas que lleguen.
 - **La predicción no espera a las bases.** Se encola y una goroutine por almacén la escribe por lotes;
   si una base se cae, la API sigue prediciendo, `/api/salud` lo informa y `/api/metricas` cuenta lo que
   no se pudo escribir.

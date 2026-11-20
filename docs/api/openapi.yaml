@@ -376,6 +376,7 @@ paths:
                 escritura:
                   mongo: {escritas: 12000, descartadas: 0, fallidas: 0, lotes: 3120}
                   redis: {escritas: 12000, descartadas: 0, fallidas: 0, lotes: 3050}
+                puntos_de_control: {escritos: 44, fallidos: 0, omitidos: 0}
         '401': {$ref: '#/components/responses/NoAutenticado'}
         '403': {$ref: '#/components/responses/SinPermiso'}
   /openapi.yaml:
@@ -783,7 +784,7 @@ components:
         lotes: {type: integer, minimum: 0, description: Idas y vueltas al almacén}
     Metricas:
       type: object
-      required: [endpoints, nodos_en_pool, ultimo_entrenamiento, escrituras_descartadas, escrituras_fallidas, escritura]
+      required: [endpoints, nodos_en_pool, ultimo_entrenamiento, escrituras_descartadas, escrituras_fallidas, escritura, puntos_de_control]
       properties:
         endpoints:
           type: object
@@ -799,6 +800,18 @@ components:
           properties:
             mongo: {$ref: '#/components/schemas/EscrituraAlmacen'}
             redis: {$ref: '#/components/schemas/EscrituraAlmacen'}
+        puntos_de_control:
+          type: object
+          required: [escritos, fallidos, omitidos]
+          description: |
+            Los puntos de control de los entrenamientos (la clave entrenamiento:{id}:punto de
+            Redis, con la iteración y los centroides de la última ronda completa) desde que
+            arrancó la API. Se escribe uno por ronda sin frenar la corrida: si Redis no llega a
+            guardar uno antes de la ronda siguiente, se omite, porque solo importa el último.
+          properties:
+            escritos: {type: integer, minimum: 0, description: Puntos que Redis guardó}
+            fallidos: {type: integer, minimum: 0, description: Escrituras que Redis rechazó o no respondió a tiempo}
+            omitidos: {type: integer, minimum: 0, description: Puntos reemplazados por el de una ronda posterior antes de escribirse}
     EventoRonda:
       allOf:
         - $ref: '#/components/schemas/Ronda'

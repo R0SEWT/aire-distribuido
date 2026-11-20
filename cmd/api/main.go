@@ -238,6 +238,9 @@ func armar(op opciones, getenv func(string) string, log *slog.Logger, nodos net.
 		alm.cerrar()
 		return nil, nil, err
 	}
+	// Lo que el coordinador lleva en memoria y está en el almacén: el último
+	// entrenamiento y los que quedaron en curso cuando la API anterior murió.
+	srv.RecuperarEntrenamientos(plazoArranque)
 	if len(origenes) > 0 {
 		log.Info("CORS", "origenes", origenes)
 	}

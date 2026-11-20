@@ -54,8 +54,8 @@ type Config struct {
 	// modelo se activa igual, solo en memoria.
 	Modelos     almacen.Modelos
 	CacheModelo almacen.CacheModelo
-	// Puntos es donde el coordinador deja el punto de control de cada
-	// entrenamiento (las claves entrenamiento:{id}:punto). Puede ser nil.
+	// Puntos es donde el coordinador deja, en cada ronda, el punto de control
+	// del entrenamiento (las claves entrenamiento:{id}:punto). Puede ser nil.
 	Puntos       almacen.PuntosControl
 	Mongo, Redis almacen.Pinger // lo que /api/salud informa como mongo y redis
 	OpenAPI      []byte         // docs/api/openapi.yaml, que se sirve tal cual
@@ -93,6 +93,7 @@ type Servidor struct {
 	cache        almacen.Cache
 	modelos      almacenesDeModelo
 	puntos       almacen.PuntosControl
+	cuentaPuntos cuentaPuntos
 	mongo, redis almacen.Pinger
 	openapi      []byte
 	log          *slog.Logger
