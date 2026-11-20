@@ -17,7 +17,10 @@ derivaciones que van a Redis y la correspondencia por nombre entre un evento del
 de un entrenamiento. La franja inferior de MongoDB lista los índices. El detalle de cada campo está
 en las tablas que siguen.
 
-![Modelo de datos: entidades de MongoDB y de Redis y sus relaciones](../diagramas/entidades.png){#fig-entidades width=16cm}
+<!-- La figura es la copia girada que arma render.sh en generado/local/ desde ../diagramas/entidades.png
+(apaisado: a lo ancho de la página no se lee). El aviso si-falta mira el PNG original. -->
+
+![Modelo de datos: entidades de MongoDB y de Redis y sus relaciones. El diagrama es apaisado y va girado: su parte superior queda a la izquierda de la página](generado/local/entidades-girado.png){#fig-entidades width=13.5cm}
 
 :::: {si-falta="../diagramas/entidades.png"}
 ::: {.callout-warning title="PENDIENTE"}

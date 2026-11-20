@@ -42,7 +42,9 @@ tablero el día de la entrega). Cada una tiene en el informe su aviso `si-falta`
 llega el PNG. Las evidencias del experimento de las 20 GPU están en `capturas/mapa/`.
 
 **Diagramas.** `../diagramas/entidades.png` (el modelo de datos, hecho en draw.io) y `despliegue.png`, con
-su `.drawio`; las posiciones del de despliegue salen de `../diagramas/generar-despliegue.py`.
+su `.drawio`; las posiciones del de despliegue salen de `../diagramas/generar-despliegue.py`. El de entidades
+es apaisado y en el informe va girado a página completa: `render.sh` arma la copia girada en
+`generado/local/entidades-girado.png` con ImageMagick, sin tocar el original.
 
 **Participación y uso de IA.** `_participacion-pc4.md` es la plantilla del Anexo D (la llenada va en
 `participacion-pc4.local.md`, no versionada; para el `.docx` suelto en el formato del curso,

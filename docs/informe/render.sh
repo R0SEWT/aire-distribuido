@@ -14,7 +14,8 @@
 #   1. tablas.py: generado/*.json → generado/tablas/*.md y generado/cifras.yml
 #   2. generado/local/ (no versionado): equipo.yml (de equipo.local.yml o, si no existe, de
 #      equipo.ejemplo.yml), _participacion.md (de participacion.local.md o de la plantilla
-#      _participacion.md) e historial.md (generar-historial.sh o, si falla, el de ejemplo)
+#      _participacion.md), entidades-girado.png (el diagrama de entidades girado, para la PC4) e
+#      historial.md (generar-historial.sh o, si falla, el de ejemplo)
 #   3. quarto render informe.qmd (o informe-pc4.qmd) -M codigo:<código> por cada integrante de `equipo`
 #   4. quarto render participacion.qmd (o participacion-pc4.qmd)
 #   5. w:updateFields en cada .docx: Word pregunta al abrir si actualiza los campos (el índice)
@@ -57,6 +58,20 @@ for p in participacion participacion-pc4; do
     cp "_$p.md" "generado/local/_$p.md"
   fi
 done
+# El diagrama de entidades es apaisado (3500 × 2200): a lo ancho de la página sus campos no se leen. Se
+# pone girado, a página completa; la copia girada se arma aquí desde el PNG de docs/diagramas/, que no se
+# toca. Sin ImageMagick va sin girar, con un aviso.
+entidades=../diagramas/entidades.png
+if [ -f "$entidades" ]; then
+  if command -v magick >/dev/null 2>&1; then
+    magick "$entidades" -rotate -90 generado/local/entidades-girado.png
+  elif command -v convert >/dev/null 2>&1; then
+    convert "$entidades" -rotate -90 generado/local/entidades-girado.png
+  else
+    echo "aviso: sin ImageMagick (magick o convert): el diagrama de entidades va sin girar y se lee peor" >&2
+    cp "$entidades" generado/local/entidades-girado.png
+  fi
+fi
 if ! ./generar-historial.sh; then
   echo "aviso: no se pudo generar el historial; se usa generado/historial.ejemplo.md" >&2
   cp generado/historial.ejemplo.md generado/local/historial.md
