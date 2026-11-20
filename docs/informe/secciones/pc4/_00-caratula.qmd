@@ -1,0 +1,65 @@
+<!-- a) Carátula de la PC4. Mismos estilos y mismo filtro que la de la PC3 (secciones/_00-caratula.qmd). -->
+
+::: {custom-style="Caratula Logo"}
+![](recursos/upc-logo.png){width=3cm}
+:::
+
+::: {custom-style="Caratula Institucion"}
+UNIVERSIDAD PERUANA DE CIENCIAS APLICADAS
+:::
+
+::: {custom-style="Caratula"}
+Facultad de Ingeniería
+
+Carrera de Ciencias de la Computación
+:::
+
+::: {custom-style="Caratula Curso"}
+1ACC0065 (CC65) Programación Concurrente y Distribuida
+:::
+
+::: {custom-style="Caratula"}
+Sección NRC 8809 · Ciclo 2026-20
+:::
+
+::: {custom-style="Caratula Entrega"}
+Trabajo Final · Entregable 2 (PC4)
+:::
+
+::: {custom-style="Caratula Titulo"}
+Regímenes de calidad del aire con K-Means distribuido en Go
+:::
+
+::: {custom-style="Caratula Subtitulo"}
+Caso 10, Monitoreo de Calidad del Aire y Sensores Ambientales: clúster de nodos por TCP, API
+coordinadora con predicción en menos de 100 ms, MongoDB y Redis
+:::
+
+::: {custom-style="Caratula Etiqueta"}
+Integrantes
+:::
+
+::: {.caratula-integrantes custom-style="Caratula"}
+:::
+
+::: {custom-style="Caratula Etiqueta"}
+Docente
+:::
+
+::: {custom-style="Caratula"}
+Carlos Alberto Jara Garcia
+:::
+
+::: {custom-style="Caratula Etiqueta"}
+Ejemplar entregado por
+:::
+
+::: {custom-style="Caratula"}
+[nombre]{.alumno-nombre} ([código]{.alumno-codigo})
+:::
+
+::: {custom-style="Caratula Pie"}
+Repositorio: <https://github.com/R0SEWT/aire-distribuido>
+
+Lima, 21 de noviembre de 2026
+:::

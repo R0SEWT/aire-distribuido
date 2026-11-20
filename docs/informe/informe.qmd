@@ -65,7 +65,11 @@ Dónde está cada punto del enunciado
 
 {{< include secciones/_08-evidencias.qmd >}}
 
+# Conclusiones
+
 {{< include secciones/_09-conclusiones.qmd >}}
+
+# Recomendaciones
 
 {{< include secciones/_10-recomendaciones.qmd >}}
 
