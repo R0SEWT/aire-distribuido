@@ -142,6 +142,7 @@ func armar(op opciones, getenv func(string) string, log *slog.Logger) (*api.Serv
 		Modelo:       m,
 		Firmador:     firmador,
 		Usuarios:     usuarios,
+		Catalogo:     ficha,
 		Estaciones:   estaciones,
 		Predicciones: memoria.NuevasPredicciones(),
 		Cache:        cache,

@@ -71,8 +71,10 @@ func (e *escritor) escribir(p almacen.Prediccion) {
 		e.fallos.Add(1)
 		e.log.Error("no se guardó la predicción", "estacion", p.Estacion, "err", err)
 	}
+	// La caché no reemplaza el régimen de una hora posterior (almacen.Cache).
 	r := almacen.RegimenEstacion{
-		Regimen: p.Regimen, ExcedeECA: p.ExcedeECA, Media24h: p.Media24h, Alerta: p.Alerta, INCA: p.INCA, TS: p.TS,
+		FechaHora: p.FechaHora, Regimen: p.Regimen, ExcedeECA: p.ExcedeECA,
+		Media24h: p.Media24h, Alerta: p.Alerta, INCA: p.INCA, TS: p.TS,
 	}
 	if err := e.cache.GuardarRegimen(ctx, p.Estacion, r); err != nil {
 		e.fallos.Add(1)

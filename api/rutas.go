@@ -9,6 +9,7 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"unicode/utf8"
 
 	"github.com/R0SEWT/aire-distribuido/almacen"
 	"github.com/R0SEWT/aire-distribuido/modelo"
@@ -41,7 +42,7 @@ func (s *Servidor) crearToken(w http.ResponseWriter, r *http.Request) {
 		escribirError(w, http.StatusInternalServerError, "no se pudo emitir el token")
 		return
 	}
-	escribirJSON(w, http.StatusOK, struct {
+	s.responder(w, r, http.StatusOK, struct {
 		Token  string `json:"token"`
 		Rol    string `json:"rol"`
 		Expira string `json:"expira"`
@@ -60,7 +61,7 @@ func (s *Servidor) salud(w http.ResponseWriter, r *http.Request) {
 	if m := s.modelo.Load(); m != nil {
 		activo = &m.ID
 	}
-	escribirJSON(w, http.StatusOK, struct {
+	s.responder(w, r, http.StatusOK, struct {
 		API          string  `json:"api"`
 		Mongo        string  `json:"mongo"`
 		Redis        string  `json:"redis"`
@@ -82,14 +83,35 @@ func estado(ctx context.Context, p almacen.Pinger) string {
 // dentro de la API, spec §5.2).
 func (s *Servidor) nodosEnPool() int { return 0 }
 
-// Mensajes de 400 de POST /api/predicciones, uno por campo del esquema Lectura.
+// Mensajes de 400 de POST /api/predicciones, por campo del esquema Lectura.
 const (
 	msgCuerpoLectura = "el cuerpo tiene que ser un objeto JSON con estacion, fecha_hora, pm2_5 y pm10"
 	msgEstacion      = "estacion tiene que ser un texto no vacío"
 	msgFechaHora     = "fecha_hora tiene que ser una fecha RFC3339 con zona, como 2026-11-14T15:00:00-05:00"
-	msgPM25          = "pm2_5 tiene que ser un número no negativo"
-	msgPM10          = "pm10 tiene que ser un número no negativo"
 )
+
+// Topes del esquema Lectura: el código de una estación del catálogo y una
+// concentración que un monitor de PM puede medir.
+const (
+	maxEstacion = 64
+	maxPM       = 10000.0
+)
+
+var msgEstacionLarga = fmt.Sprintf("estacion no puede superar %d caracteres", maxEstacion)
+
+// recortar deja un texto que mandó el cliente en a lo sumo n caracteres antes
+// de repetirlo en un mensaje de error.
+func recortar(s string, n int) string {
+	if utf8.RuneCountInString(s) <= n {
+		return s
+	}
+	return string([]rune(s)[:n]) + "…"
+}
+
+func msgPMNegativo(campo string) string { return campo + " tiene que ser un número no negativo" }
+func msgPMTope(campo string) string {
+	return fmt.Sprintf("%s no puede superar %.0f µg/m³", campo, maxPM)
+}
 
 type lectura struct {
 	estacion  string
@@ -99,8 +121,9 @@ type lectura struct {
 }
 
 // leerLectura valida el cuerpo de una predicción campo por campo, en el orden
-// del esquema, y devuelve el mensaje del primer campo inválido.
-func leerLectura(w http.ResponseWriter, r *http.Request) (lectura, string) {
+// del esquema, y devuelve el mensaje del primer campo inválido. La estación se
+// compara sin los espacios de los bordes contra el catálogo en memoria.
+func (s *Servidor) leerLectura(w http.ResponseWriter, r *http.Request) (lectura, string) {
 	var c struct {
 		Estacion  *string  `json:"estacion"`
 		FechaHora *string  `json:"fecha_hora"`
@@ -108,6 +131,9 @@ func leerLectura(w http.ResponseWriter, r *http.Request) (lectura, string) {
 		PM10      *float64 `json:"pm10"`
 	}
 	if err := leerJSON(w, r, &c); err != nil {
+		if errors.Is(err, errCuerpoGrande) {
+			return lectura{}, msgCuerpoGrande
+		}
 		var te *json.UnmarshalTypeError
 		if errors.As(err, &te) {
 			switch te.Field {
@@ -115,16 +141,27 @@ func leerLectura(w http.ResponseWriter, r *http.Request) (lectura, string) {
 				return lectura{}, msgEstacion
 			case "fecha_hora":
 				return lectura{}, msgFechaHora
-			case "pm2_5":
-				return lectura{}, msgPM25
-			case "pm10":
-				return lectura{}, msgPM10
+			case "pm2_5", "pm10":
+				// Un número que no cabe en float64 (1e999) es «number 1e999».
+				if strings.HasPrefix(te.Value, "number ") && !strings.HasPrefix(te.Value, "number -") {
+					return lectura{}, msgPMTope(te.Field)
+				}
+				return lectura{}, msgPMNegativo(te.Field)
 			}
 		}
 		return lectura{}, msgCuerpoLectura
 	}
-	if c.Estacion == nil || strings.TrimSpace(*c.Estacion) == "" {
+	if c.Estacion == nil {
 		return lectura{}, msgEstacion
+	}
+	estacion := strings.TrimSpace(*c.Estacion)
+	switch {
+	case estacion == "":
+		return lectura{}, msgEstacion
+	case utf8.RuneCountInString(estacion) > maxEstacion:
+		return lectura{}, msgEstacionLarga
+	case !s.catalogo[estacion]:
+		return lectura{}, "estación desconocida: " + estacion
 	}
 	if c.FechaHora == nil {
 		return lectura{}, msgFechaHora
@@ -133,13 +170,18 @@ func leerLectura(w http.ResponseWriter, r *http.Request) (lectura, string) {
 	if err != nil {
 		return lectura{}, msgFechaHora
 	}
-	if c.PM25 == nil || *c.PM25 < 0 {
-		return lectura{}, msgPM25
+	for _, pm := range []struct {
+		campo string
+		v     *float64
+	}{{"pm2_5", c.PM25}, {"pm10", c.PM10}} {
+		switch {
+		case pm.v == nil || *pm.v < 0:
+			return lectura{}, msgPMNegativo(pm.campo)
+		case *pm.v > maxPM:
+			return lectura{}, msgPMTope(pm.campo)
+		}
 	}
-	if c.PM10 == nil || *c.PM10 < 0 {
-		return lectura{}, msgPM10
-	}
-	return lectura{estacion: *c.Estacion, fechaHora: fecha, pm25: *c.PM25, pm10: *c.PM10}, ""
+	return lectura{estacion: estacion, fechaHora: fecha, pm25: *c.PM25, pm10: *c.PM10}, ""
 }
 
 // POST /api/predicciones
@@ -159,7 +201,7 @@ func (s *Servidor) predecir(w http.ResponseWriter, r *http.Request) {
 		escribirError(w, http.StatusServiceUnavailable, "no hay modelo activo")
 		return
 	}
-	l, msg := leerLectura(w, r)
+	l, msg := s.leerLectura(w, r)
 	if msg != "" {
 		escribirError(w, http.StatusBadRequest, msg)
 		return
@@ -181,7 +223,7 @@ func (s *Servidor) predecir(w http.ResponseWriter, r *http.Request) {
 	s.escritor.encolar(almacen.Prediccion{
 		TS:        enLima(s.ahora()).Truncate(time.Millisecond),
 		Estacion:  l.estacion,
-		FechaHora: enLima(l.fechaHora),
+		FechaHora: enLima(ventana.Hora(l.fechaHora)), // una lectura por estación y hora
 		PM25:      l.pm25,
 		PM10:      l.pm10,
 		Regimen:   reg.Regimen,
@@ -192,7 +234,7 @@ func (s *Servidor) predecir(w http.ResponseWriter, r *http.Request) {
 		ModeloID:  m.ID,
 		Ms:        ms,
 	})
-	escribirJSON(w, http.StatusOK, struct {
+	s.responder(w, r, http.StatusOK, struct {
 		Estacion  string           `json:"estacion"`
 		Regimen   int              `json:"regimen"`
 		ExcedeECA bool             `json:"excede_eca"`
@@ -217,19 +259,17 @@ func (s *Servidor) listarEstaciones(w http.ResponseWriter, r *http.Request) {
 	if es == nil {
 		es = []almacen.Estacion{}
 	}
-	escribirJSON(w, http.StatusOK, es)
+	s.responder(w, r, http.StatusOK, es)
 }
 
 // GET /api/estaciones/{id}/regimen
+//
+// Si la estación existe se decide con el catálogo en memoria, como en la
+// predicción; el régimen sale de la caché.
 func (s *Servidor) regimenEstacion(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
-	if _, err := s.estaciones.Obtener(r.Context(), id); err != nil {
-		if errors.Is(err, almacen.ErrNoEncontrado) {
-			escribirError(w, http.StatusNotFound, "estación desconocida: "+id)
-			return
-		}
-		s.log.Error("obtener estación", "id", id, "err", err)
-		escribirError(w, http.StatusServiceUnavailable, "MongoDB no disponible")
+	if !s.catalogo[id] {
+		escribirError(w, http.StatusNotFound, "estación desconocida: "+recortar(id, maxEstacion))
 		return
 	}
 	reg, err := s.cache.Regimen(r.Context(), id)
@@ -242,8 +282,8 @@ func (s *Servidor) regimenEstacion(w http.ResponseWriter, r *http.Request) {
 		escribirError(w, http.StatusServiceUnavailable, "Redis no disponible")
 		return
 	}
-	reg.TS = enLima(reg.TS)
-	escribirJSON(w, http.StatusOK, reg)
+	reg.FechaHora, reg.TS = enLima(reg.FechaHora), enLima(reg.TS)
+	s.responder(w, r, http.StatusOK, reg)
 }
 
 // GET /api/modelos/activo
@@ -253,7 +293,7 @@ func (s *Servidor) modeloActivo(w http.ResponseWriter, r *http.Request) {
 		escribirError(w, http.StatusServiceUnavailable, "no hay modelo activo")
 		return
 	}
-	escribirJSON(w, http.StatusOK, struct {
+	s.responder(w, r, http.StatusOK, struct {
 		ID          string           `json:"id"`
 		K           int              `json:"k"`
 		Features    []string         `json:"features"`
@@ -266,7 +306,7 @@ func (s *Servidor) modeloActivo(w http.ResponseWriter, r *http.Request) {
 
 // GET /api/metricas
 func (s *Servidor) consultarMetricas(w http.ResponseWriter, r *http.Request) {
-	escribirJSON(w, http.StatusOK, struct {
+	s.responder(w, r, http.StatusOK, struct {
 		Endpoints             map[string]resumenRuta `json:"endpoints"`
 		NodosEnPool           int                    `json:"nodos_en_pool"`
 		UltimoEntrenamiento   *string                `json:"ultimo_entrenamiento"`

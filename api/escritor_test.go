@@ -43,6 +43,26 @@ func TestEscritorGuardaYActualizaElRegimen(t *testing.T) {
 	}
 }
 
+// Al salir, el escritor vacía la cola: con 100 predicciones encoladas y el
+// contexto ya cancelado, se guardan las 100. Si correr volviera apenas se
+// cancela el contexto, el select elegiría al azar entre la cola y ctx.Done() y
+// esta prueba fallaría (guardar las 100 por azar tiene probabilidad 2^-100).
+func TestEscritorVaciaLaColaAlSalir(t *testing.T) {
+	pred := memoria.NuevasPredicciones()
+	e := nuevoEscritor(100, pred, memoria.NuevaCache(), logMudo)
+	for i := range 100 {
+		if !e.encolar(almacen.Prediccion{Estacion: "CA-A", Regimen: i}) {
+			t.Fatal("la cola se llenó antes de tiempo")
+		}
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	e.correr(ctx)
+	if n := len(pred.Todas()); n != 100 {
+		t.Fatalf("se guardaron %d de 100 predicciones al salir", n)
+	}
+}
+
 // Con la cola llena, encolar no espera: descarta y lo cuenta.
 func TestEscritorDescartaSinBloquearConLaColaLlena(t *testing.T) {
 	bloqueo := &prediccionesBloqueadas{entro: make(chan struct{}, 1), soltar: make(chan struct{})}

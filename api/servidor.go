@@ -11,12 +11,14 @@
 package api
 
 import (
+	"bytes"
 	"context"
 	"crypto/sha256"
 	"crypto/subtle"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"log/slog"
 	"net/http"
 	"slices"
@@ -33,9 +35,13 @@ import (
 // Config es lo que necesita el servidor. Modelo puede ser nil: la API arranca
 // igual y responde 503 a las predicciones hasta que se active uno.
 type Config struct {
-	Modelo       *modelo.Modelo
-	Firmador     *Firmador
-	Usuarios     map[string]Usuario
+	Modelo   *modelo.Modelo
+	Firmador *Firmador
+	Usuarios map[string]Usuario
+	// Catalogo son las estaciones que la API acepta: la ficha
+	// (reports/estaciones_ficha.csv), que es la única fuente del catálogo. Se
+	// guarda en memoria para validar una lectura sin consultar ninguna base.
+	Catalogo     []almacen.Estacion
 	Estaciones   almacen.Estaciones
 	Predicciones almacen.Predicciones
 	Cache        almacen.Cache
@@ -50,6 +56,7 @@ type Servidor struct {
 	modelo       atomic.Pointer[modelo.Modelo]
 	firmador     *Firmador
 	usuarios     map[string]Usuario
+	catalogo     map[string]bool
 	estaciones   almacen.Estaciones
 	cache        almacen.Cache
 	mongo, redis almacen.Pinger
@@ -70,6 +77,8 @@ func Nuevo(cfg Config) (*Servidor, error) {
 		return nil, errors.New("api: falta el firmador del JWT")
 	case len(cfg.Usuarios) == 0:
 		return nil, errors.New("api: no hay usuarios")
+	case len(cfg.Catalogo) == 0:
+		return nil, errors.New("api: el catálogo de estaciones está vacío")
 	case cfg.Estaciones == nil || cfg.Predicciones == nil || cfg.Cache == nil || cfg.Mongo == nil || cfg.Redis == nil:
 		return nil, errors.New("api: falta un almacén")
 	case len(cfg.OpenAPI) == 0:
@@ -81,9 +90,14 @@ func Nuevo(cfg Config) (*Servidor, error) {
 	if log == nil {
 		log = slog.Default()
 	}
+	catalogo := make(map[string]bool, len(cfg.Catalogo))
+	for _, e := range cfg.Catalogo {
+		catalogo[e.ID] = true
+	}
 	s := &Servidor{
 		firmador:   cfg.Firmador,
 		usuarios:   cfg.Usuarios,
+		catalogo:   catalogo,
 		estaciones: cfg.Estaciones,
 		cache:      cfg.Cache,
 		mongo:      cfg.Mongo,
@@ -111,7 +125,42 @@ func Nuevo(cfg Config) (*Servidor, error) {
 	return s, nil
 }
 
-func (s *Servidor) ServeHTTP(w http.ResponseWriter, r *http.Request) { s.mux.ServeHTTP(w, r) }
+// ServeHTTP atiende con el mux. Si ninguna ruta coincide, el mux decide si es
+// 404 o 405 (con Allow); la respuesta sale con el esquema Error en JSON, como
+// todas las de la API. Las redirecciones del mux (a la ruta limpia) pasan tal cual.
+func (s *Servidor) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	h, patron := s.mux.Handler(r)
+	if patron != "" {
+		s.mux.ServeHTTP(w, r) // el mux, no h, para que llene r.PathValue
+		return
+	}
+	c := &capturado{cabecera: http.Header{}, codigo: http.StatusOK}
+	h.ServeHTTP(c, r)
+	switch c.codigo {
+	case http.StatusNotFound:
+		escribirError(w, http.StatusNotFound, "no existe la ruta "+r.Method+" "+r.URL.Path)
+	case http.StatusMethodNotAllowed:
+		w.Header().Set("Allow", c.cabecera.Get("Allow"))
+		escribirError(w, http.StatusMethodNotAllowed, "la ruta "+r.URL.Path+" no admite "+r.Method)
+	default:
+		for k, v := range c.cabecera {
+			w.Header()[k] = v
+		}
+		w.WriteHeader(c.codigo)
+		_, _ = w.Write(c.cuerpo.Bytes())
+	}
+}
+
+// capturado guarda la respuesta del handler de respaldo del mux.
+type capturado struct {
+	cabecera http.Header
+	codigo   int
+	cuerpo   bytes.Buffer
+}
+
+func (c *capturado) Header() http.Header         { return c.cabecera }
+func (c *capturado) WriteHeader(codigo int)      { c.codigo = codigo }
+func (c *capturado) Write(b []byte) (int, error) { return c.cuerpo.Write(b) }
 
 // Escribir corre la goroutine que guarda las predicciones hasta que ctx se
 // cancela; antes de volver escribe lo que quedó en la cola.
@@ -169,32 +218,74 @@ func noAutenticado(w http.ResponseWriter) {
 	escribirError(w, http.StatusUnauthorized, msgNoAutenticado)
 }
 
-// escribirJSON responde con v en JSON. Sin escapar <, > y &: es una API, no HTML.
-func escribirJSON(w http.ResponseWriter, codigo int, v any) {
-	w.Header().Set("Content-Type", "application/json; charset=utf-8")
-	w.WriteHeader(codigo)
-	enc := json.NewEncoder(w)
-	enc.SetEscapeHTML(false)
-	_ = enc.Encode(v)
+const msgNoCodificable = "no se pudo codificar la respuesta"
+
+// responder responde v en JSON. Codifica a un búfer antes de escribir el
+// encabezado: si v no se puede codificar (un +Inf, un NaN), responde 500 con el
+// esquema Error y lo deja en el log, en vez de un 200 con el cuerpo vacío.
+func (s *Servidor) responder(w http.ResponseWriter, r *http.Request, codigo int, v any) {
+	cuerpo, err := codificar(v)
+	if err != nil {
+		s.log.Error(msgNoCodificable, "metodo", r.Method, "ruta", r.URL.Path, "err", err)
+		escribirError(w, http.StatusInternalServerError, msgNoCodificable)
+		return
+	}
+	escribirCuerpo(w, codigo, cuerpo)
 }
 
+// escribirError responde con el esquema Error. Un objeto de un solo texto
+// siempre se puede codificar.
 func escribirError(w http.ResponseWriter, codigo int, mensaje string) {
-	escribirJSON(w, codigo, map[string]string{"error": mensaje})
+	cuerpo, _ := codificar(map[string]string{"error": mensaje})
+	escribirCuerpo(w, codigo, cuerpo)
+}
+
+// codificar es JSON sin escapar <, > y &: es una API, no HTML.
+func codificar(v any) ([]byte, error) {
+	var buf bytes.Buffer
+	enc := json.NewEncoder(&buf)
+	enc.SetEscapeHTML(false)
+	if err := enc.Encode(v); err != nil {
+		return nil, err
+	}
+	return buf.Bytes(), nil
+}
+
+func escribirCuerpo(w http.ResponseWriter, codigo int, cuerpo []byte) {
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	w.WriteHeader(codigo)
+	_, _ = w.Write(cuerpo)
 }
 
 // limiteCuerpo: un pedido de la API es un objeto chico; más que esto es un error.
 const limiteCuerpo = 64 << 10
 
-// leerJSON decodifica el cuerpo en v: un solo valor JSON, sin nada después.
+var (
+	errCuerpoGrande = fmt.Errorf("el cuerpo no puede superar %d KiB", limiteCuerpo>>10)
+	errDatosDespues = errors.New("hay datos después del objeto JSON")
+	msgCuerpoGrande = errCuerpoGrande.Error()
+)
+
+// leerJSON decodifica el cuerpo en v: un solo valor JSON y nada después, salvo
+// espacios. Un cuerpo de más de limiteCuerpo devuelve errCuerpoGrande.
 func leerJSON(w http.ResponseWriter, r *http.Request, v any) error {
 	dec := json.NewDecoder(http.MaxBytesReader(w, r.Body, limiteCuerpo))
-	if err := dec.Decode(v); err != nil {
-		return err
+	err := dec.Decode(v)
+	if err == nil {
+		// Un segundo valor, o un «]» o «}» suelto, no es io.EOF.
+		var resto json.RawMessage
+		if err = dec.Decode(&resto); errors.Is(err, io.EOF) {
+			return nil
+		}
+		if err == nil {
+			err = errDatosDespues
+		}
 	}
-	if dec.More() {
-		return errors.New("hay datos después del objeto JSON")
+	var grande *http.MaxBytesError
+	if errors.As(err, &grande) {
+		return errCuerpoGrande
 	}
-	return nil
+	return err
 }
 
 // enLima expresa un instante en la hora de Lima (UTC-5), como los ejemplos del contrato.

@@ -5,6 +5,8 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"log/slog"
+	"math"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -71,7 +73,7 @@ func nuevoEntorno(t *testing.T, cambiar ...func(*Config)) *entorno {
 	e := &entorno{pred: memoria.NuevasPredicciones(), cache: memoria.NuevaCache()}
 	cfg := Config{
 		Modelo: m, Firmador: firmador, Usuarios: usuarios,
-		Estaciones: est, Predicciones: e.pred, Cache: e.cache, Mongo: est, Redis: e.cache,
+		Catalogo: ficha, Estaciones: est, Predicciones: e.pred, Cache: e.cache, Mongo: est, Redis: e.cache,
 		OpenAPI: contrato, TamCola: 64, Log: logMudo,
 	}
 	for _, c := range cambiar {
@@ -262,6 +264,8 @@ func TestPrediccionRechazaLecturasInvalidas(t *testing.T) {
 		msgFecha  = "fecha_hora tiene que ser una fecha RFC3339 con zona, como 2026-11-14T15:00:00-05:00"
 		msgPM25   = "pm2_5 tiene que ser un número no negativo"
 		msgPM10   = "pm10 tiene que ser un número no negativo"
+		maxPM25   = "pm2_5 no puede superar 10000 µg/m³"
+		maxPM10   = "pm10 no puede superar 10000 µg/m³"
 		fechaBien = `"fecha_hora": "2026-11-14T15:00:00-05:00"`
 	)
 	casos := map[string][2]string{
@@ -269,18 +273,26 @@ func TestPrediccionRechazaLecturasInvalidas(t *testing.T) {
 		"es un arreglo":         {`[1, 2]`, msgJSON},
 		"JSON cortado":          {`{"estacion": "CA-AYAS-01"`, msgJSON},
 		"basura después":        {lecturaEjemplo + ` {}`, msgJSON},
+		"corchete después":      {lecturaEjemplo + `]`, msgJSON},
+		"llave después":         {lecturaEjemplo + `}`, msgJSON},
+		"estación desconocida":  {`{"estacion": "CA-XX-99", ` + fechaBien + `, "pm2_5": 1, "pm10": 2}`, "estación desconocida: CA-XX-99"},
+		"estación muy larga":    {`{"estacion": "` + strings.Repeat("A", 65) + `", ` + fechaBien + `, "pm2_5": 1, "pm10": 2}`, "estacion no puede superar 64 caracteres"},
+		"pm2_5 enorme":          {`{"estacion": "CA-AYAS-01", ` + fechaBien + `, "pm2_5": 1e308, "pm10": 2}`, maxPM25},
+		"pm10 sobre el tope":    {`{"estacion": "CA-AYAS-01", ` + fechaBien + `, "pm2_5": 1, "pm10": 10000.01}`, maxPM10},
+		"pm2_5 fuera de float":  {`{"estacion": "CA-AYAS-01", ` + fechaBien + `, "pm2_5": 1e999, "pm10": 2}`, maxPM25},
+		"pm10 muy negativo":     {`{"estacion": "CA-AYAS-01", ` + fechaBien + `, "pm2_5": 1, "pm10": -1e999}`, msgPM10},
 		"sin estación":          {`{` + fechaBien + `, "pm2_5": 1, "pm10": 2}`, msgEst},
 		"estación vacía":        {`{"estacion": "  ", ` + fechaBien + `, "pm2_5": 1, "pm10": 2}`, msgEst},
 		"estación numérica":     {`{"estacion": 7, ` + fechaBien + `, "pm2_5": 1, "pm10": 2}`, msgEst},
-		"sin fecha":             {`{"estacion": "CA-1", "pm2_5": 1, "pm10": 2}`, msgFecha},
-		"fecha sin zona":        {`{"estacion": "CA-1", "fecha_hora": "2026-11-14T15:00:00", "pm2_5": 1, "pm10": 2}`, msgFecha},
-		"fecha con espacio":     {`{"estacion": "CA-1", "fecha_hora": "2026-11-14 15:00:00-05:00", "pm2_5": 1, "pm10": 2}`, msgFecha},
-		"pm2_5 negativo":        {`{"estacion": "CA-1", ` + fechaBien + `, "pm2_5": -0.1, "pm10": 2}`, msgPM25},
-		"pm2_5 texto":           {`{"estacion": "CA-1", ` + fechaBien + `, "pm2_5": "70.2", "pm10": 2}`, msgPM25},
-		"pm2_5 null":            {`{"estacion": "CA-1", ` + fechaBien + `, "pm2_5": null, "pm10": 2}`, msgPM25},
-		"sin pm2_5":             {`{"estacion": "CA-1", ` + fechaBien + `, "pm10": 2}`, msgPM25},
-		"pm10 negativo":         {`{"estacion": "CA-1", ` + fechaBien + `, "pm2_5": 1, "pm10": -2}`, msgPM10},
-		"pm10 fuera de float64": {`{"estacion": "CA-1", ` + fechaBien + `, "pm2_5": 1, "pm10": 1e999}`, msgPM10},
+		"sin fecha":             {`{"estacion": "CA-AYAS-01", "pm2_5": 1, "pm10": 2}`, msgFecha},
+		"fecha sin zona":        {`{"estacion": "CA-AYAS-01", "fecha_hora": "2026-11-14T15:00:00", "pm2_5": 1, "pm10": 2}`, msgFecha},
+		"fecha con espacio":     {`{"estacion": "CA-AYAS-01", "fecha_hora": "2026-11-14 15:00:00-05:00", "pm2_5": 1, "pm10": 2}`, msgFecha},
+		"pm2_5 negativo":        {`{"estacion": "CA-AYAS-01", ` + fechaBien + `, "pm2_5": -0.1, "pm10": 2}`, msgPM25},
+		"pm2_5 texto":           {`{"estacion": "CA-AYAS-01", ` + fechaBien + `, "pm2_5": "70.2", "pm10": 2}`, msgPM25},
+		"pm2_5 null":            {`{"estacion": "CA-AYAS-01", ` + fechaBien + `, "pm2_5": null, "pm10": 2}`, msgPM25},
+		"sin pm2_5":             {`{"estacion": "CA-AYAS-01", ` + fechaBien + `, "pm10": 2}`, msgPM25},
+		"pm10 negativo":         {`{"estacion": "CA-AYAS-01", ` + fechaBien + `, "pm2_5": 1, "pm10": -2}`, msgPM10},
+		"pm10 fuera de float64": {`{"estacion": "CA-AYAS-01", ` + fechaBien + `, "pm2_5": 1, "pm10": 1e999}`, maxPM10},
 	}
 	for nombre, c := range casos {
 		t.Run(nombre, func(t *testing.T) {
@@ -349,6 +361,9 @@ func TestRegimenDeUnaEstacion(t *testing.T) {
 	e := nuevoEntorno(t)
 	tok := e.token(t, "demo", "demo")
 	mensajeDeError(t, e.pedir(t, "GET", "/api/estaciones/CA-XX-99/regimen", tok, ""), 404, "estación desconocida: CA-XX-99")
+	// Un código enorme no se repite entero en el mensaje.
+	mensajeDeError(t, e.pedir(t, "GET", "/api/estaciones/"+strings.Repeat("A", 5000)+"/regimen", tok, ""), 404,
+		"estación desconocida: "+strings.Repeat("A", 64)+"…")
 	mensajeDeError(t, e.pedir(t, "GET", "/api/estaciones/CA-AYAS-01/regimen", tok, ""), 404,
 		"la estación CA-AYAS-01 todavía no tiene un régimen registrado")
 
@@ -432,6 +447,107 @@ func TestAlertaEINCASalenDeLaMediaDe24h(t *testing.T) {
 	reg := objeto(t, w, 200, camposRegimenEstacion...)
 	if reg["regimen"] != 0.0 || reg["alerta"] != true || reg["inca"] != "mala" || !cerca(reg["media_24h"].(map[string]any)["pm10"], pm10) {
 		t.Fatalf("régimen de CA-CP-01: %s", w.Body)
+	}
+}
+
+// El código de la estación se compara sin los espacios de los bordes y se
+// responde limpio; el tope de PM incluye 10 000.
+func TestEstacionConEspaciosYTopeDePM(t *testing.T) {
+	e := nuevoEntorno(t)
+	tok := e.token(t, "demo", "demo")
+	obj := objeto(t, e.pedir(t, "POST", "/api/predicciones", tok,
+		`{"estacion": "  CA-HUA-01 ", "fecha_hora": "2026-11-14T15:00:00-05:00", "pm2_5": 10000, "pm10": 10000}`), 200, camposPrediccion...)
+	if obj["estacion"] != "CA-HUA-01" {
+		t.Fatalf("estacion = %q, se esperaba el código sin espacios", obj["estacion"])
+	}
+}
+
+// Quitar el límite del cuerpo hace fallar esta prueba: el cuerpo es una
+// lectura válida con un campo de relleno de 100 KiB.
+func TestCuerpoMasGrandeQueElLimite(t *testing.T) {
+	e := nuevoEntorno(t)
+	cuerpo := `{"relleno": "` + strings.Repeat("x", 100<<10) + `", ` + lecturaEjemplo[1:]
+	mensajeDeError(t, e.pedir(t, "POST", "/api/predicciones", e.token(t, "demo", "demo"), cuerpo), 400,
+		"el cuerpo no puede superar 64 KiB")
+}
+
+func TestRutaInexistenteYMetodoNoPermitidoEnJSON(t *testing.T) {
+	e := nuevoEntorno(t)
+	mensajeDeError(t, e.pedir(t, "GET", "/api/no-existe", "", ""), 404, "no existe la ruta GET /api/no-existe")
+	w := e.pedir(t, "GET", "/api/predicciones", "", "")
+	mensajeDeError(t, w, 405, "la ruta /api/predicciones no admite GET")
+	if allow := w.Header().Get("Allow"); allow != "POST" {
+		t.Fatalf("Allow = %q, se esperaba POST", allow)
+	}
+	// Una ruta registrada con un parámetro sigue funcionando por el envoltorio.
+	if w := e.pedir(t, "GET", "/api/estaciones/CA-XX-99/regimen", e.token(t, "demo", "demo"), ""); w.Code != 404 {
+		t.Fatalf("GET /api/estaciones/CA-XX-99/regimen = %d", w.Code)
+	}
+	// La redirección del mux a la ruta limpia no se toca.
+	if w := e.pedir(t, "GET", "/api//salud", "", ""); w.Code/100 != 3 || w.Header().Get("Location") != "/api/salud" {
+		t.Fatalf("GET /api//salud = %d, Location %q", w.Code, w.Header().Get("Location"))
+	}
+}
+
+// Si una respuesta no se puede codificar (un +Inf), se responde 500 con el
+// esquema Error y queda en el log, en vez de un 200 con el cuerpo vacío.
+func TestRespuestaQueNoSeCodificaEs500(t *testing.T) {
+	var log strings.Builder
+	e := nuevoEntorno(t, func(c *Config) { c.Log = slog.New(slog.NewTextHandler(&escritorSeguro{b: &log}, nil)) })
+	w := httptest.NewRecorder()
+	e.srv.responder(w, httptest.NewRequest("GET", "/x", nil), http.StatusOK, map[string]float64{"x": math.Inf(1)})
+	mensajeDeError(t, w, 500, "no se pudo codificar la respuesta")
+	if !strings.Contains(log.String(), "no se pudo codificar la respuesta") {
+		t.Fatalf("el error no quedó en el log: %q", log.String())
+	}
+}
+
+// El régimen de la estación es el de su lectura más reciente por fecha_hora:
+// una lectura de cinco días antes no lo reemplaza. Lleva la hora de su lectura.
+func TestRegimenNoRetrocedeConUnaLecturaMasAntigua(t *testing.T) {
+	e := nuevoEntorno(t)
+	tok := e.token(t, "demo", "demo")
+	for h := 1; h <= 24; h++ {
+		objeto(t, e.pedir(t, "POST", "/api/predicciones", tok, lecturaJSON("CA-MAC-01", h, 80, 150)), 200)
+	}
+	vieja := objeto(t, e.pedir(t, "POST", "/api/predicciones", tok, lecturaJSON("CA-MAC-01", 24-5*24, 5, 5)), 200, camposPrediccion...)
+	if vieja["alerta"] != false || vieja["media_24h"].(map[string]any)["lecturas"] != 1.0 {
+		t.Fatalf("la lectura de cinco días antes se mide con su propia ventana: %v", vieja)
+	}
+	// Se espera a que el escritor procese las 25 predicciones.
+	for limite := time.Now().Add(2 * time.Second); len(e.pred.Todas()) < 25 && time.Now().Before(limite); {
+		time.Sleep(5 * time.Millisecond)
+	}
+	w := e.pedir(t, "GET", "/api/estaciones/CA-MAC-01/regimen", tok, "")
+	reg := objeto(t, w, 200, camposRegimenEstacion...)
+	if reg["fecha_hora"] != "2026-11-14T00:00:00-05:00" || reg["alerta"] != true ||
+		reg["media_24h"].(map[string]any)["lecturas"] != 24.0 {
+		t.Fatalf("régimen de CA-MAC-01 tras una lectura vieja: %s", w.Body)
+	}
+}
+
+// Una fecha futura no borra la ventana de la estación, y lecturas a menos de
+// una hora una de otra son la misma lectura (el contrato dice a lo sumo 24).
+func TestFechaFuturaYSubHoraria(t *testing.T) {
+	e := nuevoEntorno(t)
+	tok := e.token(t, "demo", "demo")
+	predecir := func(cuerpo string) map[string]any {
+		t.Helper()
+		return objeto(t, e.pedir(t, "POST", "/api/predicciones", tok, cuerpo), 200, camposPrediccion...)
+	}
+	for h := 1; h <= 24; h++ {
+		predecir(lecturaJSON("CA-ROM-01", h, 80, 150))
+	}
+	predecir(`{"estacion": "CA-ROM-01", "fecha_hora": "2099-01-01T00:00:00-05:00", "pm2_5": 5, "pm10": 5}`)
+	if obj := predecir(lecturaJSON("CA-ROM-01", 25, 80, 150)); obj["alerta"] != true || obj["media_24h"].(map[string]any)["lecturas"] != 24.0 {
+		t.Fatalf("la hora siguiente a una lectura de 2099: %v", obj)
+	}
+	for seg := range 30 {
+		fecha := time.Date(2026, 11, 20, 10, 0, seg, 0, kmeans.ZonaPeru).Format(time.RFC3339)
+		obj := predecir(`{"estacion": "CA-JUPR-01", "fecha_hora": "` + fecha + `", "pm2_5": 1, "pm10": 1}`)
+		if obj["media_24h"].(map[string]any)["lecturas"] != 1.0 {
+			t.Fatalf("lectura %d en el mismo minuto: %v; se esperaba una sola lectura en la ventana", seg, obj)
+		}
 	}
 }
 
@@ -572,21 +688,28 @@ func TestColaLlenaNoFrenaLaPrediccion(t *testing.T) {
 
 func TestNuevoExigeLoNecesario(t *testing.T) {
 	e := nuevoEntorno(t)
-	_ = e
+	base := func() Config {
+		return Config{
+			Firmador: &Firmador{}, Usuarios: map[string]Usuario{"a": {"b", RolUsuario}},
+			Catalogo:   []almacen.Estacion{{ID: "CA-A"}},
+			Estaciones: e.srv.estaciones, Predicciones: e.pred, Cache: e.cache, Mongo: e.cache, Redis: e.cache,
+			OpenAPI: []byte("x"), TamCola: 1,
+		}
+	}
+	if _, err := Nuevo(base()); err != nil {
+		t.Fatalf("la configuración base tiene que valer: %v", err)
+	}
 	for nombre, cambiar := range map[string]func(*Config){
 		"sin firmador":     func(c *Config) { c.Firmador = nil },
 		"sin usuarios":     func(c *Config) { c.Usuarios = nil },
+		"sin catálogo":     func(c *Config) { c.Catalogo = nil },
 		"sin estaciones":   func(c *Config) { c.Estaciones = nil },
 		"sin predicciones": func(c *Config) { c.Predicciones = nil },
 		"sin caché":        func(c *Config) { c.Cache = nil },
 		"sin contrato":     func(c *Config) { c.OpenAPI = nil },
 		"cola de 0":        func(c *Config) { c.TamCola = 0 },
 	} {
-		cfg := Config{
-			Firmador: &Firmador{}, Usuarios: map[string]Usuario{"a": {"b", RolUsuario}},
-			Estaciones: e.srv.estaciones, Predicciones: e.pred, Cache: e.cache, Mongo: e.cache, Redis: e.cache,
-			OpenAPI: []byte("x"), TamCola: 1,
-		}
+		cfg := base()
 		cambiar(&cfg)
 		if _, err := Nuevo(cfg); err == nil {
 			t.Errorf("%s: Nuevo no falló", nombre)
@@ -597,3 +720,15 @@ func TestNuevoExigeLoNecesario(t *testing.T) {
 type pingRoto struct{}
 
 func (pingRoto) Ping(context.Context) error { return errors.New("sin conexión") }
+
+// escritorSeguro deja que el log del servidor y la prueba compartan el texto.
+type escritorSeguro struct {
+	mu sync.Mutex
+	b  *strings.Builder
+}
+
+func (e *escritorSeguro) Write(p []byte) (int, error) {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	return e.b.Write(p)
+}
