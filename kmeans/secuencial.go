@@ -71,7 +71,7 @@ func Secuencial(d *Datos, centroidesIniciales []float64, op Opciones) (*Resultad
 
 	for it := 1; it <= op.MaxIter; it++ {
 		// Asignación: los centroides son de solo lectura.
-		if cerrarIteracion(r, cent, Parciales(d, cent, 0, d.N), it, op) {
+		if CerrarIteracion(r, cent, Parciales(d, cent, 0, d.N), it, op) {
 			break
 		}
 	}
@@ -84,14 +84,16 @@ func Secuencial(d *Datos, centroidesIniciales []float64, op Opciones) (*Resultad
 	return r, nil
 }
 
-// cerrarIteracion es lo que el coordinador hace al final de cada iteración,
-// igual en la versión secuencial y en la concurrente: actualiza los centroides
-// con el parcial ya fusionado, registra la inercia y aplica el criterio de
-// parada. Devuelve true si convergió.
+// CerrarIteracion es lo que el coordinador hace al final de cada iteración,
+// igual en la versión secuencial, en la concurrente y en la distribuida de la
+// PC4 (cluster.Lloyd): actualiza los centroides con el parcial ya fusionado,
+// registra la inercia y aplica el criterio de parada. Devuelve true si
+// convergió. Se exporta para que el coordinador del clúster corra este mismo
+// código y no una copia: así el criterio de parada no puede divergir.
 //
 // El umbral se calcula con los centroides ANTES de actualizarlos, como en el TP:
 // max_j ||mu_j(t) - mu_j(t-1)||inf <= TolAbs + TolRel * max_j ||mu_j(t-1)||inf.
-func cerrarIteracion(r *Resultado, cent []float64, p Parcial, it int, op Opciones) bool {
+func CerrarIteracion(r *Resultado, cent []float64, p Parcial, it int, op Opciones) bool {
 	umbral := op.TolAbs + float64(op.TolRel*maxAbs(cent))
 	mov := Actualizar(cent, p)
 	r.Vacios = p.Vacios()
