@@ -35,17 +35,39 @@ func TestConMenosDe18LecturasNoHayMedia(t *testing.T) {
 }
 
 // La ventana es (t − 24 h, t]: la lectura de hace exactamente 24 h ya no
-// entra, la de un segundo después sí.
+// entra.
 func TestLaVentanaEsDe24HorasAbiertaAtras(t *testing.T) {
 	v := Nuevas()
-	v.Agregar("CA-A", t0, 1000, 1000)
-	v.Agregar("CA-A", t0.Add(time.Second), 10, 10)
-	for h := 2; h <= 24; h++ {
-		v.Agregar("CA-A", hora(h), 10, 10)
+	v.Agregar("CA-A", hora(0), 1000, 1000)
+	var m almacen.Media24h
+	for h := 1; h <= 24; h++ {
+		m = v.Agregar("CA-A", hora(h), 10, 10)
 	}
-	m := v.Agregar("CA-A", hora(24), 10, 10) // repetida: reemplaza, no suma
 	if m.Lecturas != 24 || *m.PM25 != 10 {
-		t.Fatalf("en (t0, t0 + 24 h] hay 24 lecturas de 10: %+v", describir(m))
+		t.Fatalf("en (hora 0, hora 24] hay 24 lecturas de 10: %+v", describir(m))
+	}
+}
+
+// fecha_hora se trunca a la hora: hay una lectura por estación y hora, y una
+// segunda lectura de la misma hora reemplaza a la primera. 30 lecturas
+// separadas por un segundo son una sola.
+func TestFechaSubHorariaEsLaMismaHora(t *testing.T) {
+	v := Nuevas()
+	var m almacen.Media24h
+	for s := range 30 {
+		m = v.Agregar("CA-A", hora(5).Add(time.Duration(s)*time.Second), float64(s), 1)
+	}
+	if m.Lecturas != 1 || v.lecturasGuardadas("CA-A") != 1 {
+		t.Fatalf("30 lecturas en el mismo minuto: %+v, %d guardadas; se esperaba una sola", describir(m), v.lecturasGuardadas("CA-A"))
+	}
+	if !Hora(hora(5).Add(59*time.Minute + 59*time.Second)).Equal(hora(5)) {
+		t.Fatal("Hora tiene que truncar a la hora")
+	}
+	for h := 1; h <= 4; h++ {
+		v.Agregar("CA-A", hora(h).Add(30*time.Minute), 1, 1)
+	}
+	if m = v.Agregar("CA-A", hora(5).Add(45*time.Minute), 1, 1); m.Lecturas != 5 {
+		t.Fatalf("las horas 1 a 5 a distintos minutos: %+v, se esperaban 5", describir(m))
 	}
 }
 
@@ -85,25 +107,101 @@ func TestLecturasDesordenadas(t *testing.T) {
 	}
 }
 
-// Lo que queda fuera de la ventana de la lectura más reciente se descarta: una
-// lectura más vieja que eso no se guarda y no cambia las ventanas siguientes.
-func TestLoViejoSeDescarta(t *testing.T) {
+// Casos de la revisión de la PR #57: la ventana se mide respecto de la lectura
+// que llega, no de la fecha más alta vista, así que una fecha lejana (pasada o
+// futura) no borra las demás.
+func TestUnaFechaLejanaNoBorraLaVentana(t *testing.T) {
+	// (a) Una lectura de 2026 y después 24 horas de 2021: la hora 24 tiene su ventana completa.
+	v := Nuevas()
+	v.Agregar("CA-A", hora(0), 10, 10)
+	h2021 := time.Date(2021, 12, 10, 0, 0, 0, 0, t0.Location())
+	var m almacen.Media24h
+	for h := 1; h <= 24; h++ {
+		m = v.Agregar("CA-A", h2021.Add(time.Duration(h)*time.Hour), 80, 150)
+	}
+	if m.Lecturas != 24 || !Alerta(m) {
+		t.Fatalf("(a) 24 horas de 2021 después de una de 2026: %+v, alerta %v; se esperaban 24 y alerta", describir(m), Alerta(m))
+	}
+
+	// (b) Estación en alerta; llega una lectura de 2099 y después la hora siguiente.
+	v = Nuevas()
+	for h := 1; h <= 24; h++ {
+		v.Agregar("CA-A", hora(h), 80, 150)
+	}
+	if m = v.Agregar("CA-A", time.Date(2099, 1, 1, 0, 0, 0, 0, time.UTC), 5, 5); m.Lecturas != 1 {
+		t.Fatalf("(b) la de 2099 está sola en su ventana: %+v", describir(m))
+	}
+	if m = v.Agregar("CA-A", hora(25), 80, 150); m.Lecturas != 24 || !Alerta(m) {
+		t.Fatalf("(b) la hora siguiente a la de 2099: %+v, alerta %v; se esperaban 24 y alerta", describir(m), Alerta(m))
+	}
+
+	// (c) Horas 1 a 30 y después la hora 20, nueva o repetida: (t − 24 h, t] son las horas 1 a 20.
+	for _, repetida := range []bool{false, true} {
+		v = Nuevas()
+		for h := 1; h <= 30; h++ {
+			if h != 20 || repetida {
+				v.Agregar("CA-A", hora(h), float64(h), float64(h))
+			}
+		}
+		if m = v.Agregar("CA-A", hora(20), 20, 20); m.Lecturas != 20 || *m.PM25 != 10.5 {
+			t.Fatalf("(c) hora 20 (repetida: %v) después de la 30: %+v, se esperaban 20 lecturas de media 10.5", repetida, describir(m))
+		}
+	}
+}
+
+// Una lectura desordenada de más de 24 h atrás se mide con su propia ventana y
+// queda guardada; no cambia la ventana de las lecturas recientes.
+func TestLecturaDesordenadaFueraDeLas24Horas(t *testing.T) {
 	v := Nuevas()
 	for h := 100; h < 124; h++ {
 		v.Agregar("CA-A", hora(h), 10, 10)
 	}
 	if m := v.Agregar("CA-A", hora(10), 500, 500); m.Lecturas != 1 || m.PM25 != nil {
-		t.Fatalf("una lectura de hace cuatro días: %+v, su ventana es solo ella", describir(m))
+		t.Fatalf("una lectura de cuatro días antes: %+v, su ventana es solo ella", describir(m))
 	}
-	if m := v.Agregar("CA-A", hora(123), 10, 10); m.Lecturas != 24 || *m.PM25 != 10 {
-		t.Fatalf("la lectura vieja no se guardó: %+v", describir(m))
+	if m := v.Agregar("CA-A", hora(124), 10, 10); m.Lecturas != 24 || *m.PM25 != 10 {
+		t.Fatalf("la hora 124: %+v, la lectura vieja no entra en su ventana", describir(m))
 	}
-	// Al avanzar 30 horas, la ventana se vacía hasta la nueva lectura.
-	if m := v.Agregar("CA-A", hora(153), 10, 10); m.Lecturas != 1 {
-		t.Fatalf("30 horas después: %+v", describir(m))
+	if n := v.lecturasGuardadas("CA-A"); n != 26 {
+		t.Fatalf("%d lecturas guardadas, se esperaban 26 (24 + la vieja + la 124)", n)
 	}
-	if n := v.lecturasGuardadas("CA-A"); n != 1 {
-		t.Fatalf("quedaron %d lecturas guardadas, se esperaba 1", n)
+}
+
+// Por estación se guardan a lo sumo 72 lecturas horarias, las más cercanas a
+// la última recibida: al pasar de 72 se descarta la más lejana a esa (a igual
+// distancia, la más vieja).
+func TestSeGuardanLas72MasCercanasALaUltima(t *testing.T) {
+	v := Nuevas()
+	for h := 1; h <= 100; h++ {
+		v.Agregar("CA-A", hora(h), float64(h), 1)
+	}
+	if n := v.lecturasGuardadas("CA-A"); n != Guardadas {
+		t.Fatalf("%d lecturas guardadas, se esperaban %d", n, Guardadas)
+	}
+	if desde, hasta := v.extremos("CA-A"); !desde.Equal(hora(29)) || !hasta.Equal(hora(100)) {
+		t.Fatalf("se guardaron de %v a %v, se esperaban las horas 29 a 100", desde, hasta)
+	}
+	// Una lectura vieja (hora 1) desplaza a la más lejana de ella: la 100.
+	v.Agregar("CA-A", hora(1), 1, 1)
+	if desde, hasta := v.extremos("CA-A"); !desde.Equal(hora(1)) || !hasta.Equal(hora(99)) {
+		t.Fatalf("tras la hora 1 quedaron de %v a %v, se esperaban 1 y 29 a 99", desde, hasta)
+	}
+	// A igual distancia se descarta la más vieja. Guardadas: 2 a 37 y 39 a 74 (72 lecturas);
+	// llega la 38: la 2 y la 74 están a 36 horas; sale la 2.
+	v = Nuevas()
+	for h := 2; h <= 74; h++ {
+		if h != 38 {
+			v.Agregar("CA-A", hora(h), 1, 1)
+		}
+	}
+	v.Agregar("CA-A", hora(1), 1, 1) // 73 → sale la 74, la más lejana de la 1
+	v.Agregar("CA-A", hora(74), 1, 1)
+	if desde, _ := v.extremos("CA-A"); !desde.Equal(hora(2)) {
+		t.Fatalf("tras volver la 74 debió salir la 1 (la más lejana): empieza en %v", desde)
+	}
+	v.Agregar("CA-A", hora(38), 1, 1)
+	if desde, hasta := v.extremos("CA-A"); !desde.Equal(hora(3)) || !hasta.Equal(hora(74)) || v.lecturasGuardadas("CA-A") != Guardadas {
+		t.Fatalf("empate entre la 2 y la 74: quedaron de %v a %v; se esperaba que saliera la 2", desde, hasta)
 	}
 }
 

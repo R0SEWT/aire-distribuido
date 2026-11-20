@@ -1,18 +1,20 @@
-// Package ventana lleva, por estación y en memoria, las lecturas de las
-// últimas 24 horas, y con su media decide la alerta frente al ECA y la banda
+// Package ventana lleva, por estación y en memoria, las lecturas horarias
+// recientes, y con la media de 24 h decide la alerta frente al ECA y la banda
 // del INCA. Las dos normas son de 24 horas; el régimen del K-Means describe el
 // tipo de aire de una lectura y no entra aquí.
 //
-// La regla (decisión del equipo, contrato docs/api/openapi.yaml, esquemas
-// Media24h, Alerta y BandaINCA):
+// La regla (decisión del equipo; contrato docs/api/openapi.yaml, esquemas
+// Lectura, Media24h, Alerta y BandaINCA):
 //
-//   - La ventana de una lectura son las lecturas de su estación con fecha_hora
-//     en (t − 24 h, t], donde t es la fecha_hora de esa lectura, no la hora del
-//     servidor. Las lecturas pueden llegar desordenadas: cada una se mide con
-//     su propia ventana.
-//   - Una lectura con la misma estación y fecha_hora que otra la reemplaza.
-//   - Lo que queda fuera de la ventana de la lectura más reciente de la
-//     estación se descarta; una lectura más vieja que eso no se guarda.
+//   - fecha_hora se trunca a la hora: hay una lectura por estación y hora, y
+//     repetirla la reemplaza.
+//   - La ventana de una lectura son las de su estación con fecha_hora en
+//     (t − 24 h, t], donde t es la hora de esa lectura, no la del servidor ni la
+//     más alta vista. Sirven los datos históricos y las lecturas desordenadas.
+//   - Por estación se guardan las 72 lecturas horarias más cercanas a la última
+//     recibida: al pasar de 72 se descarta la más lejana a esa (a igual
+//     distancia, la más vieja). Una fecha lejana, pasada o futura, desplaza a lo
+//     sumo una lectura y no borra las demás. La memoria queda acotada.
 //   - Con menos de 18 lecturas en la ventana no hay media (pm2_5 y pm10 null),
 //     la alerta es false y el INCA es null.
 //
@@ -37,6 +39,9 @@ const (
 	// MinimoLecturas es lo que hace falta en la ventana para calcular la
 	// media: 18 de 24 horas, el 75 %.
 	MinimoLecturas = 18
+	// Guardadas es cuántas lecturas horarias se conservan por estación: tres
+	// ventanas.
+	Guardadas = 72
 )
 
 // Bandas del INCA (RM 181-2016-MINAM, tabla 3), de la mejor a la peor.
@@ -82,9 +87,13 @@ func banda(x float64, cortes [3]float64) int {
 	return len(cortes)
 }
 
+// Hora trunca una fecha_hora a la hora en punto: la clave de una lectura.
+func Hora(t time.Time) time.Time { return t.Truncate(time.Hour) }
+
 // Ventanas son las ventanas de todas las estaciones. Es seguro usarlo desde
 // varias goroutines: cada estación tiene su propio mutex, así que dos
-// estaciones no se esperan entre sí.
+// estaciones no se esperan entre sí. Quien llama decide qué estaciones entran
+// (la API solo deja pasar las del catálogo).
 type Ventanas struct {
 	mu          sync.RWMutex
 	porEstacion map[string]*ventana
@@ -92,25 +101,27 @@ type Ventanas struct {
 
 func Nuevas() *Ventanas { return &Ventanas{porEstacion: map[string]*ventana{}} }
 
-// ventana son las lecturas guardadas de una estación, ordenadas por
-// fecha_hora, todas dentro de (ultima − 24 h, ultima].
+// ventana son las lecturas guardadas de una estación, ordenadas por hora, a
+// lo sumo Guardadas.
 type ventana struct {
 	mu     sync.Mutex
 	puntos []punto
-	ultima int64 // fecha_hora más reciente, en ns Unix
 }
 
 type punto struct {
-	t          int64 // fecha_hora en ns Unix: la misma hora en otra zona es la misma lectura
+	h          int64 // horas desde la época Unix: la misma hora en otra zona es la misma lectura
 	pm25, pm10 float64
 }
 
-// Agregar guarda una lectura y devuelve la media de su ventana (t − 24 h, t].
+const horasVentana = int64(Duracion / time.Hour)
+
+// Agregar guarda una lectura (o reemplaza la de la misma hora) y devuelve la
+// media de su ventana (t − 24 h, t].
 func (v *Ventanas) Agregar(estacion string, fechaHora time.Time, pm25, pm10 float64) almacen.Media24h {
 	w := v.de(estacion)
 	w.mu.Lock()
 	defer w.mu.Unlock()
-	return w.agregar(punto{t: fechaHora.UnixNano(), pm25: pm25, pm10: pm10})
+	return w.agregar(punto{h: Hora(fechaHora).Unix() / 3600, pm25: pm25, pm10: pm10})
 }
 
 func (v *Ventanas) de(estacion string) *ventana {
@@ -129,35 +140,32 @@ func (v *Ventanas) de(estacion string) *ventana {
 	return w
 }
 
-const duracion = int64(Duracion)
-
 func (w *ventana) agregar(p punto) almacen.Media24h {
-	if len(w.puntos) > 0 && p.t <= w.ultima-duracion {
-		// Más vieja que la ventana de la lectura más reciente: no se guarda, y
-		// en su propia ventana no hay ninguna lectura guardada.
-		return calcular([]punto{p})
-	}
-	i, existe := slices.BinarySearchFunc(w.puntos, p.t, compararT)
+	i, existe := slices.BinarySearchFunc(w.puntos, p.h, compararH)
 	if existe {
 		w.puntos[i] = p
 	} else {
 		w.puntos = slices.Insert(w.puntos, i, p)
+		if len(w.puntos) > Guardadas {
+			// Sale la más lejana a la que acaba de llegar, que está en un extremo
+			// porque están ordenadas; a igual distancia, la más vieja.
+			primera, ultima := w.puntos[0].h, w.puntos[len(w.puntos)-1].h
+			if p.h-primera >= ultima-p.h {
+				w.puntos = slices.Delete(w.puntos, 0, 1)
+			} else {
+				w.puntos = w.puntos[:len(w.puntos)-1]
+			}
+		}
 	}
-	if len(w.puntos) == 1 || p.t > w.ultima {
-		w.ultima = p.t
-		// Se descarta lo que quedó fuera de (ultima − 24 h, ultima].
-		corte, _ := slices.BinarySearchFunc(w.puntos, w.ultima-duracion+1, compararT)
-		w.puntos = slices.Delete(w.puntos, 0, corte)
-	}
-	desde, _ := slices.BinarySearchFunc(w.puntos, p.t-duracion+1, compararT)
-	hasta, _ := slices.BinarySearchFunc(w.puntos, p.t+1, compararT)
+	desde, _ := slices.BinarySearchFunc(w.puntos, p.h-horasVentana+1, compararH)
+	hasta, _ := slices.BinarySearchFunc(w.puntos, p.h+1, compararH)
 	return calcular(w.puntos[desde:hasta])
 }
 
-func compararT(q punto, t int64) int { return cmp.Compare(q.t, t) }
+func compararH(q punto, h int64) int { return cmp.Compare(q.h, h) }
 
-// calcular es la media aritmética de las lecturas, en orden de fecha_hora, así
-// que no depende del orden en que llegaron.
+// calcular es la media aritmética de las lecturas, en orden de hora, así que
+// no depende del orden en que llegaron.
 func calcular(ps []punto) almacen.Media24h {
 	m := almacen.Media24h{Lecturas: len(ps)}
 	if len(ps) < MinimoLecturas {
@@ -173,10 +181,17 @@ func calcular(ps []punto) almacen.Media24h {
 	return m
 }
 
-// lecturasGuardadas es para las pruebas.
+// lecturasGuardadas y extremos son para las pruebas.
 func (v *Ventanas) lecturasGuardadas(estacion string) int {
 	w := v.de(estacion)
 	w.mu.Lock()
 	defer w.mu.Unlock()
 	return len(w.puntos)
+}
+
+func (v *Ventanas) extremos(estacion string) (time.Time, time.Time) {
+	w := v.de(estacion)
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	return time.Unix(w.puntos[0].h*3600, 0), time.Unix(w.puntos[len(w.puntos)-1].h*3600, 0)
 }
