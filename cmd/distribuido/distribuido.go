@@ -40,6 +40,7 @@ type opciones struct {
 	escuchar   string
 	nodos      int
 	replicas   int
+	maxFilas   int // tope de filas por nodo, el -max-filas de los nodos; 0 = cluster.MaxFilasPorOmision
 	semilla    int64
 	conSemilla bool // -semilla se pasó: si no, la de la receta
 
@@ -90,8 +91,12 @@ type referencia struct {
 
 func preparar(op opciones) (*preparacion, error) {
 	switch {
+	case op.nodos < 1:
+		return nil, fmt.Errorf("-nodos tiene que ser al menos 1, es %d", op.nodos)
 	case op.replicas < 1:
 		return nil, fmt.Errorf("-replicas tiene que ser al menos 1, es %d", op.replicas)
+	case op.maxFilas < 0:
+		return nil, fmt.Errorf("-max-filas no puede ser negativo, es %d", op.maxFilas)
 	case op.plazo <= 0 || op.plazoHola <= 0 || op.plazoCarga <= 0 || op.plazoRonda <= 0:
 		return nil, errors.New("los plazos tienen que ser positivos")
 	case op.tolerancia < 0 || math.IsNaN(op.tolerancia):
@@ -116,8 +121,10 @@ func preparar(op opciones) (*preparacion, error) {
 	if est.N != n {
 		return nil, fmt.Errorf("%s dice n = %d y %s tiene %d filas: no es su estandarización", op.estandarizacion, est.N, op.gold, n)
 	}
-	if op.replicas > math.MaxInt32/n {
-		return nil, fmt.Errorf("-replicas %d con %d filas es una tabla demasiado grande", op.replicas, n)
+	// Antes de juntar a nadie: cada nodo rechaza un rango de más filas que su
+	// tope, y con un -replicas mal escrito la corrida moriría en el CARGAR.
+	if err := comprobarReplicas(op.replicas, n, op.nodos, op.topeFilas()); err != nil {
+		return nil, err
 	}
 	sha, err := kmeans.Sha256Archivo(op.gold)
 	if err != nil {
@@ -152,6 +159,49 @@ func preparar(op opciones) (*preparacion, error) {
 		}
 	}
 	return p, nil
+}
+
+// topeFilas es el tope de filas por nodo con el que se valida -replicas.
+func (op opciones) topeFilas() int {
+	if op.maxFilas <= 0 {
+		return cluster.MaxFilasPorOmision
+	}
+	return op.maxFilas
+}
+
+// maxReplicas dice cuántas réplicas de un gold de n filas entran en nodos nodos
+// que cargan hasta tope filas cada uno. Repartir da rangos iguales (difieren a
+// lo sumo en una fila), así que entran si réplicas × n <= tope × nodos. La
+// tabla entera, además, no pasa de 2³¹ filas, y ahí se satura la cuenta.
+func maxReplicas(n, nodos, tope int) int {
+	total := math.MaxInt32
+	if tope < math.MaxInt32 && nodos <= total/tope {
+		total = tope * nodos
+	}
+	return total / n
+}
+
+// comprobarReplicas rechaza un -replicas que a algún nodo le dejaría un rango
+// de más filas que su tope, y dice cuál es el máximo.
+func comprobarReplicas(replicas, n, nodos, tope int) error {
+	maximo := maxReplicas(n, nodos, tope)
+	switch {
+	case replicas <= maximo:
+		return nil
+	case maximo < 1:
+		return fmt.Errorf("el gold tiene %d filas y %d nodos que cargan hasta %d filas cada uno (-max-filas) "+
+			"no alcanzan ni para una copia: hacen falta más nodos o un -max-filas más alto en los nodos y aquí", n, nodos, tope)
+	}
+	return fmt.Errorf("-replicas %d es demasiado: son %d filas por nodo y cada uno carga hasta %d (-max-filas); "+
+		"con %d nodos y un gold de %d filas el máximo es -replicas %d",
+		replicas, filasPorNodo(replicas, n, nodos), tope, nodos, n, maximo)
+}
+
+// filasPorNodo es el rango más grande de Repartir: réplicas × n filas entre
+// nodos, redondeado hacia arriba. En float64 porque solo va a un mensaje y
+// réplicas × n puede no caber en un int.
+func filasPorNodo(replicas, n, nodos int) int64 {
+	return int64(math.Ceil(float64(replicas) * float64(n) / float64(nodos)))
 }
 
 // correr es el comando entero salvo los flags y el listener: prepara, espera
@@ -229,6 +279,11 @@ func distribuir(miembros []*cluster.Miembro, p *preparacion, op opciones, lg *lo
 	abortar := func(err error) error {
 		cluster.Abortar(enlaces, err.Error(), 2*time.Second)
 		return err
+	}
+	// Otra vez, con los nodos que hay: con Ctrl+C pueden ser menos que -nodos y
+	// a cada uno le tocan más filas.
+	if err := comprobarReplicas(p.gold.Replicas, p.gold.N, len(enlaces), op.topeFilas()); err != nil {
+		return nil, abortar(err)
 	}
 	rangos, err := cluster.Repartir(p.gold.FilasTabla, len(enlaces))
 	if err != nil {

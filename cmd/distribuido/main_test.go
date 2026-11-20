@@ -366,3 +366,94 @@ func TestCompararConOtraSemillaOOtroGold(t *testing.T) {
 		t.Fatalf("una semilla que no está: %+v", c)
 	}
 }
+
+func TestReplicasQuePasanElTopeDeLosNodosSeRechazanSinEsperar(t *testing.T) {
+	op, _ := archivos(t)
+	p, err := preparar(op)
+	if err != nil {
+		t.Fatal(err)
+	}
+	n := p.gold.N
+	// Con 4 nodos y el tope por omisión de cada uno, la tabla más grande tiene
+	// 4 × MaxFilasPorOmision filas.
+	op.nodos = 4
+	maximo := 4 * cluster.MaxFilasPorOmision / n
+	op.replicas = maximo + 1
+	op.plazo = 30 * time.Second
+
+	inicio := time.Now()
+	err = correr(context.Background(), op, escuchar(t), silencio, io.Discard, nil)
+	if err == nil || !strings.Contains(err.Error(), fmt.Sprintf("-replicas %d", maximo)) ||
+		!strings.Contains(err.Error(), "-max-filas") {
+		t.Fatalf("se esperaba un error que diga el máximo (-replicas %d) y de dónde sale (-max-filas); llegó %v", maximo, err)
+	}
+	if d := time.Since(inicio); d > 5*time.Second {
+		t.Fatalf("el error tardó %v: tiene que salir antes de esperar a los nodos", d)
+	}
+	op.replicas = maximo
+	if _, err := preparar(op); err != nil {
+		t.Fatalf("-replicas %d entra justo en el tope: %v", maximo, err)
+	}
+}
+
+func TestElTopeDeFilasPorNodoEsConfigurable(t *testing.T) {
+	op, _ := archivos(t)
+	p, err := preparar(op)
+	if err != nil {
+		t.Fatal(err)
+	}
+	n := p.gold.N
+	// Nodos que cargan hasta n filas: con 4 entran 4 réplicas y ni una más.
+	op.nodos, op.maxFilas = 4, n
+	op.replicas = 4
+	if _, err := preparar(op); err != nil {
+		t.Fatalf("4 réplicas entre 4 nodos de %d filas entran justo: %v", n, err)
+	}
+	op.replicas = 5
+	if _, err := preparar(op); err == nil || !strings.Contains(err.Error(), "-replicas 4") ||
+		!strings.Contains(err.Error(), fmt.Sprint(n)) {
+		t.Fatalf("se esperaba un error con el máximo (-replicas 4) y el tope (%d); llegó %v", n, err)
+	}
+	// Un -replicas que desbordaría réplicas × n también se rechaza con el máximo.
+	op.replicas = 1 << 62
+	if _, err := preparar(op); err == nil || !strings.Contains(err.Error(), "-replicas 4") {
+		t.Fatalf("se esperaba un error con el máximo (-replicas 4); llegó %v", err)
+	}
+	// Ni una copia: el error no propone -replicas 0.
+	op.replicas, op.maxFilas = 1, n/4-1
+	if _, err := preparar(op); err == nil || strings.Contains(err.Error(), "-replicas 0") ||
+		!strings.Contains(err.Error(), "más nodos") {
+		t.Fatalf("se esperaba un error que pida más nodos; llegó %v", err)
+	}
+}
+
+func TestConCtrlCYMenosNodosElTopeSeCompruebaOtraVez(t *testing.T) {
+	// Se pidieron 3 nodos y 3 réplicas: n filas por nodo, justo el tope. Con
+	// Ctrl+C llegan 2 y a cada uno le tocarían 1,5 n: no se manda ningún CARGAR.
+	op, _ := archivos(t)
+	p, err := preparar(op)
+	if err != nil {
+		t.Fatal(err)
+	}
+	op.nodos, op.replicas, op.maxFilas = 3, 3, p.gold.N
+	ln := escuchar(t)
+	errs := lanzarNodos(t, ln, op.gold, 2)
+	ctx, cancel := context.WithCancel(context.Background())
+	go func() {
+		time.Sleep(300 * time.Millisecond) // Ctrl+C cuando ya llegaron los dos
+		cancel()
+	}()
+
+	err = correr(ctx, op, ln, silencio, io.Discard, nil)
+	if err == nil || !strings.Contains(err.Error(), "con 2 nodos") || !strings.Contains(err.Error(), "-replicas 2") {
+		t.Fatalf("se esperaba un error con el máximo para los 2 nodos que llegaron (-replicas 2); llegó %v", err)
+	}
+	if _, err := os.Stat(op.salida); !os.IsNotExist(err) {
+		t.Fatalf("sin corrida no puede haber %s (%v)", op.salida, err)
+	}
+	for range 2 {
+		if err := <-errs; !errors.Is(err, cluster.ErrCoordinador) || !strings.Contains(err.Error(), "-replicas 2") {
+			t.Fatalf("cada nodo tenía que recibir el ERROR con el motivo; terminó con %v", err)
+		}
+	}
+}

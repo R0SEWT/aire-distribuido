@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io/fs"
 	"log"
+	"math"
 	"net"
 	"os"
 	"strings"
@@ -22,6 +23,16 @@ import (
 // no lo transmite, así que es un flag del nodo (-chunk).
 const ChunkPorOmision = 1000
 
+// MaxFilasPorOmision es el tope de filas de un CARGAR si al nodo no se le dice
+// otra cosa (-max-filas). El protocolo solo exige 0 <= desde < hasta, así que
+// sin un tope un rango absurdo, o un -replicas mal escrito en el coordinador,
+// le haría reservar memoria que el equipo no tiene. Una fila en memoria son
+// 8·D bytes: con las 2 features de la receta, 25 millones de filas son 400 MB,
+// y con 10 features serían 2 GB, que todavía entran en un PC de laboratorio de
+// 8 GB. Alcanza para el experimento más grande de la spec en un solo nodo
+// (×300 réplicas de las 65 873 filas del gold: 19 761 900 filas).
+const MaxFilasPorOmision = 25_000_000
+
 // ErrCoordinador: el coordinador mandó un ERROR (otra versión del protocolo,
 // una corrida abortada). Con -una el nodo termina; si no, vuelve a llamar.
 var ErrCoordinador = errors.New("el coordinador informó un error")
@@ -32,8 +43,11 @@ type Nodo struct {
 	Nombre  string // el del HOLA
 	Workers int    // núcleos que declara en el HOLA y goroutines de su pool
 	Chunk   int    // filas por chunk del pool; 0 = ChunkPorOmision
-	Gold    string // ruta del gold local, del que lee su rango
-	Log     *log.Logger
+	// MaxFilas es el tope de filas de un CARGAR; 0 = MaxFilasPorOmision. Un
+	// rango más grande se responde con ERROR, sin tocar la memoria.
+	MaxFilas int
+	Gold     string // ruta del gold local, del que lee su rango
+	Log      *log.Logger
 }
 
 // particion es el rango del gold que el nodo tiene en memoria entre CARGAR y FIN.
@@ -181,6 +195,12 @@ func (n *Nodo) error(formato string, args ...any) protocolo.Mensaje {
 // rango sumaría otras filas y nadie lo notaría (docs/diseno.md, §4.3).
 func (n *Nodo) cargar(r protocolo.Rango, huella string) (*particion, error) {
 	inicio := time.Now()
+	// Antes que nada, y sin abrir el gold: el tamaño del rango lo decide quien
+	// manda el CARGAR, y de él sale cuánta memoria se reserva.
+	if tope := n.maxFilas(); r.Len() > tope {
+		return nil, fmt.Errorf("el rango tiene %d filas y este nodo carga hasta %d (-max-filas): "+
+			"reparte la tabla entre más nodos o baja -replicas", r.Len(), tope)
+	}
 	if n.Gold == "" {
 		return nil, errors.New("el nodo no tiene gold: pásalo con -gold")
 	}
@@ -203,6 +223,11 @@ func (n *Nodo) cargar(r protocolo.Rango, huella string) (*particion, error) {
 	if err != nil {
 		return nil, err
 	}
+	// Con un -max-filas enorme, filas × D × 8 bytes puede no caber en un int.
+	if r.Len() > math.MaxInt/(8*g.Datos.D) {
+		return nil, fmt.Errorf("el rango tiene %d filas de %d features: no caben en la memoria de ningún equipo; "+
+			"baja -max-filas a lo que este tiene", r.Len(), g.Datos.D)
+	}
 	// Se copia el rango y el resto del gold queda para el recolector: el nodo
 	// guarda en memoria solo sus filas.
 	datos := FilasVirtuales(g.Datos, r)
@@ -220,7 +245,8 @@ func (n *Nodo) cargar(r protocolo.Rango, huella string) (*particion, error) {
 // la fila i mod N de g. Con r dentro de [0, N) son las filas tal cual; más
 // allá del final, el gold se repite (réplicas virtuales, docs/diseno.md, §4.3:
 // medir con r × N filas sin escribir un CSV r veces más grande). Las filas se
-// copian de verdad, así que el cómputo por ronda es el de r × N filas.
+// copian de verdad, así que el cómputo por ronda es el de r × N filas. Reserva
+// r.Len() × D float64 de una vez: quien llama acota el rango (Nodo.MaxFilas).
 func FilasVirtuales(g *kmeans.Datos, r protocolo.Rango) *kmeans.Datos {
 	d := g.D
 	x := make([]float64, 0, r.Len()*d)
@@ -270,6 +296,13 @@ func (n *Nodo) iterar(p *particion, m protocolo.Mensaje) protocolo.Mensaje {
 	p.calculo += time.Since(inicio)
 	p.rondas++
 	return protocolo.Mensaje{Tipo: protocolo.Parcial, Iter: m.Iter, Sumas: parcial.Sumas, Conteos: parcial.Conteos, Inercia: parcial.Inercia}
+}
+
+func (n *Nodo) maxFilas() int {
+	if n.MaxFilas <= 0 {
+		return MaxFilasPorOmision
+	}
+	return n.MaxFilas
 }
 
 func (n *Nodo) chunk() int {

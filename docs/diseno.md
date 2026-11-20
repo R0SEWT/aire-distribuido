@@ -344,6 +344,10 @@ memoria y responde `LISTO {n, huella}`.
   que sumas y conteos se multiplican por $r$: los centroides y las iteraciones son los de $r = 1$ salvo
   redondeo, la inercia es $r$ veces y cada cluster tiene $r$ veces sus filas (lo comprueba
   `TestReplicasVirtualesDanLosMismosCentroides`). Lo que cambia es el costo, que es lo que se quiere medir.
+  Como el nodo copia sus filas, cada uno tiene un **tope de filas** por `CARGAR` (`-max-filas`, 25 millones
+  por omisión: 400 MB con dos features, y ×300 réplicas del gold entran en un solo nodo). Un rango más
+  grande se responde con `ERROR` sin reservar memoria, y el coordinador rechaza antes de esperar a los nodos
+  un `-replicas` que pasaría ese tope, con el máximo en el error.
 
 ### 4.4 Una iteración
 
@@ -415,7 +419,7 @@ aplican a ese tipo. Implementado en [`protocolo/`](../protocolo/).
 | Tipo | Sentido | Campos | Cuándo | Qué comprueba quien lo recibe |
 |---|---|---|---|---|
 | `HOLA` | nodo → coord. | `version`, `nodo`, `workers` | al conectarse | versión igual a `protocolo.Version`; si no, responde `ERROR` y lo rechaza |
-| `CARGAR` | coord. → nodo | `rango {desde, hasta}`, `huella` | una vez por corrida | el nodo verifica que su gold tenga esa huella; las filas desde $N$ en adelante las toma con módulo (réplicas virtuales, §4.3) |
+| `CARGAR` | coord. → nodo | `rango {desde, hasta}`, `huella` | una vez por corrida | el nodo verifica que su gold tenga esa huella; las filas desde $N$ en adelante las toma con módulo (réplicas virtuales, §4.3); un rango de más filas que su tope lo rechaza con `ERROR` |
 | `LISTO` | nodo → coord. | `n`, `huella` | con el rango en memoria | `n = hasta − desde` y la misma huella |
 | `ITERAR` | coord. → nodo | `iter`, `centroides` (k·D) | cada ronda | `iter` positivo, centroides finitos |
 | `PARCIAL` | nodo → coord. | `iter`, `sumas` (k·D), `conteos` (k), `inercia` | respuesta a `ITERAR` | ronda en curso; forma; conteos que suman el rango |

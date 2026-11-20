@@ -10,8 +10,9 @@
 // la huella pedida y responde LISTO; cada ITERAR calcula el parcial de su rango
 // con su propio pool de workers (kmeans.ParcialesPorChunks) y responde PARCIAL;
 // FIN cierra la corrida y libera la partición; PING se responde siempre. Si algo
-// falla (no está el gold, otra huella, un rango que se sale) responde ERROR con
-// un texto legible y sigue atendiendo: decide el coordinador.
+// falla (no está el gold, otra huella, un rango de más filas que su tope,
+// Nodo.MaxFilas) responde ERROR con un texto legible y sigue atendiendo: decide
+// el coordinador.
 //
 // # Lado del coordinador
 //

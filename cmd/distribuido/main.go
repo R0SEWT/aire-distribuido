@@ -11,6 +11,9 @@
 //  3. Reparte la tabla en rangos contiguos iguales, en orden de nodo (por
 //     nombre), y se los manda a todos a la vez (CARGAR → LISTO). Con -replicas
 //     r la tabla es virtual: r × N filas, la fila i es la i mod N del gold.
+//     Un -replicas que le dejaría a algún nodo más filas que su tope
+//     (-max-filas, el mismo de cmd/nodo) se rechaza antes de esperar, con un
+//     error que dice el máximo.
 //  4. Corre Lloyd: cada iteración es una ronda ITERAR → PARCIAL con plazo
 //     -plazo-ronda, la fusión en orden de nodo y kmeans.CerrarIteracion, hasta
 //     la tolerancia o max_iter de la receta; luego una pasada final.
@@ -58,6 +61,8 @@ func main() {
 	flag.StringVar(&op.escuchar, "escuchar", ":7070", "dirección y puerto donde escucha el coordinador")
 	flag.IntVar(&op.nodos, "nodos", 0, "cuántos nodos esperar (obligatorio)")
 	flag.IntVar(&op.replicas, "replicas", 1, "réplicas virtuales del gold: la tabla tiene replicas × N filas")
+	flag.IntVar(&op.maxFilas, "max-filas", cluster.MaxFilasPorOmision,
+		"tope de filas por nodo, el -max-filas con que se lanzaron los nodos: un -replicas que lo pasa no se reparte")
 	flag.Int64Var(&op.semilla, "semilla", 0, "semilla cuyos centroides iniciales se usan; sin el flag, la de la receta")
 	flag.DurationVar(&op.plazo, "plazo", 10*time.Minute, "cuánto esperar a que lleguen los nodos")
 	flag.DurationVar(&op.plazoHola, "plazo-hola", 10*time.Second, "plazo de cada conexión para mandar su HOLA")
@@ -68,8 +73,8 @@ func main() {
 	flag.Parse()
 	flag.Visit(func(f *flag.Flag) { op.conSemilla = op.conSemilla || f.Name == "semilla" })
 
-	if op.nodos <= 0 {
-		fmt.Fprintln(os.Stderr, "uso: distribuido -nodos N [-replicas R] [-semilla S] [-escuchar :7070] [-salida reports/kmeans_distribuido.json]")
+	if op.nodos <= 0 || op.maxFilas <= 0 {
+		fmt.Fprintln(os.Stderr, "uso: distribuido -nodos N [-replicas R] [-max-filas F] [-semilla S] [-escuchar :7070] [-salida reports/kmeans_distribuido.json]")
 		os.Exit(2)
 	}
 	lg := log.New(os.Stdout, "", log.Ltime)

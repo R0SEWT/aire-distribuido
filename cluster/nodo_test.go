@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"math"
 	"net"
 	"os"
 	"path/filepath"
@@ -194,6 +195,86 @@ func TestCargarSinGoldRespondeUnErrorLegible(t *testing.T) {
 			return errors.New("el ERROR no dice qué archivo falta ni cómo indicarlo: " + m.Mensaje)
 		}
 		return cod.Escribir(fin)
+	})
+}
+
+func TestCargarConUnRangoSinTopeRespondeErrorYElNodoSigueVivo(t *testing.T) {
+	// Validar solo exige 0 <= desde < hasta: un CARGAR [0, 2^62) con la huella
+	// buena es un mensaje válido. El nodo no puede intentar reservar esa
+	// memoria: responde ERROR y sigue atendiendo.
+	ruta, _ := goldDePrueba(t, 30)
+	huella := huellaDe(t, ruta)
+	atenderCon(t, nodoDePrueba(ruta), func(cod *protocolo.Codificador, dec *protocolo.Decodificador) error {
+		m, err := pedir(cod, dec, cargar(0, 1<<62, huella), protocolo.Error)
+		if err != nil {
+			return err
+		}
+		if !strings.Contains(m.Mensaje, "filas") || !strings.Contains(m.Mensaje, "-max-filas") {
+			return errors.New("el ERROR no dice que el rango pasa el tope de filas ni cómo cambiarlo: " + m.Mensaje)
+		}
+		// El nodo sigue vivo: responde PING y carga un rango normal.
+		if _, err := pedir(cod, dec, protocolo.Mensaje{Tipo: protocolo.Ping}, protocolo.Pong); err != nil {
+			return err
+		}
+		if m, err = pedir(cod, dec, cargar(0, 30, huella), protocolo.Listo); err != nil {
+			return err
+		}
+		if m.N != 30 {
+			return fmt.Errorf("LISTO con %d filas, se pidieron 30", m.N)
+		}
+		return cod.Escribir(fin)
+	})
+}
+
+func TestCargarRespetaElTopeDeFilasDelNodo(t *testing.T) {
+	ruta, _ := goldDePrueba(t, 30)
+	huella := huellaDe(t, ruta)
+	// rechaza pide [0, filas) y espera un ERROR que diga cuántas filas eran.
+	rechaza := func(cod *protocolo.Codificador, dec *protocolo.Decodificador, filas int, pista string) error {
+		m, err := pedir(cod, dec, cargar(0, filas, huella), protocolo.Error)
+		if err != nil {
+			return err
+		}
+		if !strings.Contains(m.Mensaje, fmt.Sprint(filas)) || !strings.Contains(m.Mensaje, pista) {
+			return fmt.Errorf("el ERROR de un rango de %d filas no las nombra o no dice %q: %s", filas, pista, m.Mensaje)
+		}
+		return nil
+	}
+
+	t.Run("el tope del nodo", func(t *testing.T) {
+		n := nodoDePrueba(ruta)
+		n.MaxFilas = 40
+		atenderCon(t, n, func(cod *protocolo.Codificador, dec *protocolo.Decodificador) error {
+			if err := rechaza(cod, dec, 41, "hasta 40"); err != nil {
+				return err
+			}
+			// Justo el tope sí se carga (40 filas virtuales de un gold de 30).
+			if _, err := pedir(cod, dec, cargar(0, 40, huella), protocolo.Listo); err != nil {
+				return err
+			}
+			return cod.Escribir(fin)
+		})
+	})
+	t.Run("el tope por omisión", func(t *testing.T) {
+		atenderCon(t, nodoDePrueba(ruta), func(cod *protocolo.Codificador, dec *protocolo.Decodificador) error {
+			if err := rechaza(cod, dec, MaxFilasPorOmision+1, fmt.Sprintf("hasta %d", MaxFilasPorOmision)); err != nil {
+				return err
+			}
+			return cod.Escribir(fin)
+		})
+	})
+	t.Run("un tope tan alto que filas × D desborda", func(t *testing.T) {
+		n := nodoDePrueba(ruta)
+		n.MaxFilas = math.MaxInt
+		atenderCon(t, n, func(cod *protocolo.Codificador, dec *protocolo.Decodificador) error {
+			if err := rechaza(cod, dec, 1<<62, "memoria"); err != nil {
+				return err
+			}
+			if _, err := pedir(cod, dec, protocolo.Mensaje{Tipo: protocolo.Ping}, protocolo.Pong); err != nil {
+				return err
+			}
+			return cod.Escribir(fin)
+		})
 	})
 }
 

@@ -3,8 +3,8 @@
 // (docs/diseno.md, sección 4.2: el nodo llama, el coordinador nunca):
 //
 //   - CARGAR {rango, huella}: comprueba que el sha256 de su gold es la huella,
-//     lee las filas [desde, hasta) y responde LISTO; si falta el gold o es
-//     otro, responde un ERROR legible;
+//     lee las filas [desde, hasta) y responde LISTO; si falta el gold, es otro
+//     o el rango tiene más de -max-filas filas, responde un ERROR legible;
 //   - ITERAR {iter, centroides}: calcula sumas, conteos e inercia de su rango
 //     con -workers goroutines en chunks de -chunk filas y responde PARCIAL;
 //   - FIN: termina la corrida y libera la partición;
@@ -46,13 +46,15 @@ func main() {
 	workers := flag.Int("workers", runtime.GOMAXPROCS(0), "núcleos que el nodo declara en el HOLA y usa para calcular")
 	chunk := flag.Int("chunk", cluster.ChunkPorOmision,
 		"filas por chunk; con el chunk de configs/kmeans.json, un solo nodo da el modelo de cmd/entrenar bit a bit")
+	maxFilas := flag.Int("max-filas", cluster.MaxFilasPorOmision,
+		"tope de filas de un CARGAR (8 bytes por fila y feature en memoria); un rango más grande se responde con ERROR")
 	gold := flag.String("gold", goldJuntoAlEjecutable(), "gold del que el nodo lee su rango")
 	espera := flag.Duration("espera", 2*time.Second, "pausa entre intentos de conexión")
 	una := flag.Bool("una", false, "terminar después de la primera corrida en vez de volver a llamar")
 	flag.Parse()
 
-	if *coordinador == "" || nombre == "" || *workers <= 0 || *chunk <= 0 {
-		fmt.Fprintln(os.Stderr, "uso: nodo -coordinador IP:puerto [-nombre N] [-workers W] [-chunk C] [-gold oefa_features.csv] [-una]")
+	if *coordinador == "" || nombre == "" || *workers <= 0 || *chunk <= 0 || *maxFilas <= 0 {
+		fmt.Fprintln(os.Stderr, "uso: nodo -coordinador IP:puerto [-nombre N] [-workers W] [-chunk C] [-max-filas F] [-gold oefa_features.csv] [-una]")
 		os.Exit(2)
 	}
 
@@ -60,19 +62,20 @@ func main() {
 	defer stop()
 
 	n := &cluster.Nodo{
-		Nombre:  nombre,
-		Workers: *workers,
-		Chunk:   *chunk,
-		Gold:    *gold,
-		Log:     log.New(os.Stdout, "["+nombre+"] ", log.Ltime),
+		Nombre:   nombre,
+		Workers:  *workers,
+		Chunk:    *chunk,
+		MaxFilas: *maxFilas,
+		Gold:     *gold,
+		Log:      log.New(os.Stdout, "["+nombre+"] ", log.Ltime),
 	}
 	marcador := &net.Dialer{Timeout: 3 * time.Second}
 	llamar := func(ctx context.Context) (net.Conn, error) {
 		return marcador.DialContext(ctx, "tcp", *coordinador)
 	}
 
-	n.Log.Printf("nodo %s (%s/%s, %d workers, chunk %d) llamando a %s; Ctrl+C para salir",
-		nombre, runtime.GOOS, runtime.GOARCH, *workers, *chunk, *coordinador)
+	n.Log.Printf("nodo %s (%s/%s, %d workers, chunk %d, hasta %d filas) llamando a %s; Ctrl+C para salir",
+		nombre, runtime.GOOS, runtime.GOARCH, *workers, *chunk, *maxFilas, *coordinador)
 	// La huella al arrancar sirve para comparar a ojo con la que imprime el
 	// coordinador; si el gold falta, el smoke test igual funciona.
 	if h, err := cluster.Huella(*gold); err != nil {
