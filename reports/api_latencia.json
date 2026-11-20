@@ -1,0 +1,99 @@
+{
+  "metadatos": {
+    "momento": "2026-11-20T13:04:37.229482448-05:00",
+    "maquina": "A019803",
+    "version_go": "go1.27.4",
+    "gomaxprocs": 14,
+    "cpus_logicas": 14,
+    "commit": "0b59ce9b82a3119503d2539fedbdc629a147a1d8",
+    "arbol_sucio": false
+  },
+  "parametros": {
+    "url": "http://localhost:8080",
+    "ruta": "POST /api/predicciones",
+    "lecturas": "docs/postman/lecturas_prueba.csv",
+    "lecturas_sha256": "67e78001d098d10f5932fc3af04384f7bffecb21a1922d4af06f53c6dfc5e85c",
+    "filas": 78,
+    "clientes": [
+      1,
+      4,
+      16,
+      64
+    ],
+    "pedidos_por_nivel": 5000,
+    "calentamiento": 200,
+    "limite_ms": 100,
+    "plazo_pedido": "5s"
+  },
+  "servidor": {
+    "api": "ok",
+    "mongo": "ok",
+    "redis": "ok",
+    "nodos_en_pool": 3,
+    "modelo_activo": "sembrado-kmeans-json"
+  },
+  "medicion": "Latencia del lado del cliente: desde antes de enviar el pedido hasta leer el cuerpo completo de la respuesta, con un JWT y sobre conexiones keep-alive ya abiertas por el calentamiento. Cada nivel tiene siempre `clientes` pedidos en vuelo. Percentiles por rango más cercano sobre los pedidos que respondieron 200; pedidos_por_segundo son esos pedidos sobre duracion_s. respuestas_distintas: respondieron 200 con un régimen que no es el regimen_esperado del archivo. cumple: sin errores, sin respuestas distintas y p99_ms \u003c limite_ms.",
+  "niveles": [
+    {
+      "clientes": 1,
+      "pedidos": 5000,
+      "errores": 0,
+      "respuestas_distintas": 0,
+      "duracion_s": 0.734820487,
+      "pedidos_por_segundo": 6804.382959453334,
+      "p50_ms": 0.135943,
+      "p95_ms": 0.175497,
+      "p99_ms": 0.23895,
+      "max_ms": 2.973881,
+      "media_ms": 0.14021209060000034,
+      "sobre_el_limite": 0,
+      "cumple": true
+    },
+    {
+      "clientes": 4,
+      "pedidos": 5000,
+      "errores": 0,
+      "respuestas_distintas": 0,
+      "duracion_s": 0.182418006,
+      "pedidos_por_segundo": 27409.57490786299,
+      "p50_ms": 0.125911,
+      "p95_ms": 0.198488,
+      "p99_ms": 0.337093,
+      "max_ms": 0.886735,
+      "media_ms": 0.13540805840000034,
+      "sobre_el_limite": 0,
+      "cumple": true
+    },
+    {
+      "clientes": 16,
+      "pedidos": 5000,
+      "errores": 0,
+      "respuestas_distintas": 0,
+      "duracion_s": 0.133789702,
+      "pedidos_por_segundo": 37372.08413843391,
+      "p50_ms": 0.342128,
+      "p95_ms": 0.84839,
+      "p99_ms": 1.194411,
+      "max_ms": 3.043712,
+      "media_ms": 0.4002602220000003,
+      "sobre_el_limite": 0,
+      "cumple": true
+    },
+    {
+      "clientes": 64,
+      "pedidos": 5000,
+      "errores": 0,
+      "respuestas_distintas": 0,
+      "duracion_s": 0.110685681,
+      "pedidos_por_segundo": 45172.961442049585,
+      "p50_ms": 1.103724,
+      "p95_ms": 2.91995,
+      "p99_ms": 3.733888,
+      "max_ms": 7.185342,
+      "media_ms": 1.3053108705999996,
+      "sobre_el_limite": 0,
+      "cumple": true
+    }
+  ],
+  "cumple": true
+}
