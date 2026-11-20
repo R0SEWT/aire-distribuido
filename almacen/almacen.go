@@ -68,10 +68,12 @@ type Prediccion struct {
 	Ms        float64
 }
 
-// RegimenEstacion es el valor de la clave estacion:{id}:regimen: lo último
-// que se predijo para la estación (el régimen, la media de 24 h, la alerta y
-// la banda INCA) y cuándo se predijo.
+// RegimenEstacion es el valor de la clave estacion:{id}:regimen: el estado de
+// la estación en su lectura más reciente por fecha_hora (el régimen, la media
+// de 24 h, la alerta y la banda INCA). FechaHora es la hora de esa lectura y
+// TS, cuándo se predijo.
 type RegimenEstacion struct {
+	FechaHora time.Time `json:"fecha_hora"`
 	Regimen   int       `json:"regimen"`
 	ExcedeECA bool      `json:"excede_eca"`
 	Media24h  Media24h  `json:"media_24h"`
@@ -96,7 +98,10 @@ type Predicciones interface {
 
 // Cache es la caché de Redis.
 type Cache interface {
-	// GuardarRegimen reemplaza el último régimen de una estación.
+	// GuardarRegimen guarda el régimen de una estación, salvo que el guardado
+	// sea de una fecha_hora posterior a la de r: una lectura más antigua no lo
+	// reemplaza (una de la misma hora, sí). La comparación y la escritura son
+	// una sola operación.
 	GuardarRegimen(ctx context.Context, estacion string, r RegimenEstacion) error
 	// Regimen devuelve el último régimen de una estación o ErrNoEncontrado.
 	Regimen(ctx context.Context, estacion string) (RegimenEstacion, error)

@@ -87,9 +87,14 @@ var _ almacen.Cache = (*Cache)(nil)
 
 func NuevaCache() *Cache { return &Cache{regimenes: map[string]almacen.RegimenEstacion{}} }
 
+// GuardarRegimen no reemplaza un régimen de una fecha_hora posterior: compara
+// y escribe con el mismo lock.
 func (c *Cache) GuardarRegimen(_ context.Context, estacion string, r almacen.RegimenEstacion) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
+	if guardado, ok := c.regimenes[estacion]; ok && guardado.FechaHora.After(r.FechaHora) {
+		return nil
+	}
 	c.regimenes[estacion] = r
 	return nil
 }

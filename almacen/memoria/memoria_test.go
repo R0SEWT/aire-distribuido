@@ -48,20 +48,40 @@ func TestEstacionesVaciasYRepetidas(t *testing.T) {
 	}
 }
 
-func TestCacheGuardaElUltimoRegimen(t *testing.T) {
+func TestCacheGuardaElRegimenMasReciente(t *testing.T) {
 	c := NuevaCache()
 	if _, err := c.Regimen(ctx, "CA-A"); !errors.Is(err, almacen.ErrNoEncontrado) {
 		t.Fatalf("Regimen sin datos = %v, se esperaba ErrNoEncontrado", err)
 	}
 	t0 := time.Date(2026, 11, 14, 15, 0, 0, 0, time.UTC)
-	for i, r := range []almacen.RegimenEstacion{{Regimen: 0, TS: t0}, {Regimen: 1, ExcedeECA: true, Alerta: true, TS: t0.Add(time.Hour)}} {
+	guardar := func(r almacen.RegimenEstacion) {
+		t.Helper()
 		if err := c.GuardarRegimen(ctx, "CA-A", r); err != nil {
-			t.Fatalf("GuardarRegimen %d: %v", i, err)
+			t.Fatal(err)
 		}
 	}
-	r, err := c.Regimen(ctx, "CA-A")
-	if err != nil || r.Regimen != 1 || !r.ExcedeECA || !r.Alerta || !r.TS.Equal(t0.Add(time.Hour)) {
-		t.Fatalf("Regimen = %+v, %v; se esperaba el último guardado", r, err)
+	leer := func() almacen.RegimenEstacion {
+		t.Helper()
+		r, err := c.Regimen(ctx, "CA-A")
+		if err != nil {
+			t.Fatal(err)
+		}
+		return r
+	}
+	guardar(almacen.RegimenEstacion{FechaHora: t0, Regimen: 0})
+	guardar(almacen.RegimenEstacion{FechaHora: t0.Add(time.Hour), Regimen: 1, ExcedeECA: true, Alerta: true})
+	if r := leer(); r.Regimen != 1 || !r.Alerta || !r.FechaHora.Equal(t0.Add(time.Hour)) {
+		t.Fatalf("Regimen = %+v; se esperaba el de la hora más reciente", r)
+	}
+	// Una lectura de cinco días antes no lo reemplaza.
+	guardar(almacen.RegimenEstacion{FechaHora: t0.Add(-5 * 24 * time.Hour), Regimen: 2})
+	if r := leer(); r.Regimen != 1 || !r.Alerta {
+		t.Fatalf("una lectura más antigua reemplazó el régimen: %+v", r)
+	}
+	// Una de la misma hora sí (se reenvió corregida).
+	guardar(almacen.RegimenEstacion{FechaHora: t0.Add(time.Hour), Regimen: 0})
+	if r := leer(); r.Regimen != 0 || r.Alerta {
+		t.Fatalf("la misma hora tiene que reemplazar: %+v", r)
 	}
 }
 
@@ -89,7 +109,7 @@ func TestDobleConcurrente(t *testing.T) {
 		go func() {
 			defer wg.Done()
 			for i := range 200 {
-				_ = c.GuardarRegimen(ctx, "CA-A", almacen.RegimenEstacion{Regimen: g + i})
+				_ = c.GuardarRegimen(ctx, "CA-A", almacen.RegimenEstacion{FechaHora: time.Unix(int64(i)*3600, 0), Regimen: g + i})
 				_, _ = c.Regimen(ctx, "CA-A")
 				_ = p.Guardar(ctx, almacen.Prediccion{Regimen: i})
 				_, _ = es.Listar(ctx)
