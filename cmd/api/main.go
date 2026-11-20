@@ -9,14 +9,18 @@
 // Se corre desde la raíz del repo:
 //
 //	export JWT_SECRETO=$(openssl rand -hex 32)
+//	export API_USUARIOS='ana:una-clave-larga:admin,demo:otra-clave:usuario'
 //	go run ./cmd/api                     # http://localhost:8080/docs
 //
-// Variables de entorno:
+// Variables de entorno, las dos obligatorias:
 //
-//   - JWT_SECRETO (obligatoria): la clave HS256, de al menos 32 bytes.
+//   - JWT_SECRETO: la clave HS256, de al menos 32 bytes.
 //   - API_USUARIOS: «usuario:clave:rol» separados por comas, con rol usuario o
-//     admin. Sin ella, los usuarios de demostración demo/demo (usuario) y
-//     admin/admin (admin).
+//     admin.
+//
+// Para desarrollo, -demo arranca sin API_USUARIOS con los usuarios de
+// demostración demo/demo (usuario) y admin/admin (admin), con un aviso en el
+// log. No es para una API que se pueda alcanzar desde otra máquina.
 //
 // Con -salud no levanta la API: pide /api/salud a la que ya corre en -addr y
 // sale con 0 si responde. Es el healthcheck de Docker (spec §8), porque la
@@ -52,7 +56,7 @@ type opciones struct {
 	estaciones, openapi                string
 	duracionJWT                        time.Duration
 	cola                               int
-	salud                              bool
+	salud, demo                        bool
 }
 
 func main() {
@@ -87,6 +91,7 @@ func leerOpciones(args []string) (opciones, error) {
 	fs.DurationVar(&op.duracionJWT, "jwt-duracion", time.Hour, "validez de un token")
 	fs.IntVar(&op.cola, "cola", 1024, "búfer de la cola de escritura de predicciones")
 	fs.BoolVar(&op.salud, "salud", false, "consultar /api/salud de la API en -addr y salir con 0 o 1")
+	fs.BoolVar(&op.demo, "demo", false, "sin API_USUARIOS, usar los usuarios de demostración demo/demo y admin/admin (solo desarrollo)")
 	if err := fs.Parse(args); err != nil {
 		return opciones{}, err
 	}
@@ -108,9 +113,15 @@ func armar(op opciones, getenv func(string) string, log *slog.Logger) (*api.Serv
 		return nil, err
 	}
 	listaUsuarios := getenv("API_USUARIOS")
-	if listaUsuarios == "" {
-		log.Warn("API_USUARIOS no está definida: se usan los usuarios de demostración demo (usuario) y admin (admin)")
+	switch {
+	case listaUsuarios != "" && op.demo:
+		log.Warn("-demo no tiene efecto: API_USUARIOS está definida")
+	case listaUsuarios == "" && op.demo:
+		log.Warn("-demo: usuarios de demostración demo/demo (usuario) y admin/admin (admin); solo para desarrollo")
 		listaUsuarios = usuariosDemo
+	case listaUsuarios == "":
+		return nil, errors.New("falta la variable de entorno API_USUARIOS (usuario:clave:rol separados por comas; " +
+			"para desarrollo, -demo usa los usuarios de demostración)")
 	}
 	usuarios, err := api.LeerUsuarios(listaUsuarios)
 	if err != nil {

@@ -245,14 +245,19 @@ go run ./cmd/benchmark -workers 1,2,4,8,12
 
 **5. La API de la PC4.** Siembra el modelo desde `reports/` y sirve Swagger UI en
 <http://localhost:8080/docs>. Una predicción trae el régimen de la lectura y, aparte, la media de
-24 h de su estación con la alerta frente al ECA y la banda INCA. El secreto del JWT va por variable de entorno; sin `API_USUARIOS`, los
-usuarios de demostración son `demo`/`demo` (rol usuario) y `admin`/`admin` (rol admin). Por ahora
-el almacén es un doble en memoria; MongoDB y Redis llegan con Docker Compose:
+24 h de su estación con la alerta frente al ECA y la banda INCA. No arranca sin el secreto del JWT
+ni sin usuarios (`usuario:clave:rol`, con rol `usuario` o `admin`). Por ahora el almacén es un
+doble en memoria; MongoDB y Redis llegan con Docker Compose:
 
 ```bash
 export JWT_SECRETO=$(openssl rand -hex 32)
+export API_USUARIOS='ana:una-clave-larga:admin,demo:otra-clave:usuario'
 go run ./cmd/api
 ```
+
+Para desarrollo, `go run ./cmd/api -demo` arranca sin `API_USUARIOS` con los usuarios de
+demostración `demo`/`demo` (rol usuario) y `admin`/`admin` (rol admin), y lo avisa en el log.
+Solo en una máquina propia: con `-demo`, cualquiera que alcance el puerto entra como admin.
 
 **6. En Docker.** La imagen final es distroless y corre sin root, así que las carpetas montadas
 tienen que admitir escritura:

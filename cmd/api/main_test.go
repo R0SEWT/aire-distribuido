@@ -7,13 +7,17 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
+	"net/http/httptest"
 	"strings"
 	"sync"
 	"testing"
 	"time"
 )
 
-const secreto = "0123456789abcdef0123456789abcdef"
+const (
+	secreto        = "0123456789abcdef0123456789abcdef"
+	usuariosPrueba = "ana:una-clave-larga:admin"
+)
 
 // Las rutas por omisión son relativas a la raíz del repo; las pruebas corren
 // en cmd/api.
@@ -33,7 +37,7 @@ func TestArrancaContestaYSeApagaEnOrden(t *testing.T) {
 	dir := make(chan string, 1)
 	fin := make(chan error, 1)
 	go func() {
-		fin <- correr(ctx, append([]string{"-addr", "127.0.0.1:0"}, argsDelRepo...),
+		fin <- correr(ctx, append([]string{"-addr", "127.0.0.1:0", "-demo"}, argsDelRepo...),
 			entornoCon(map[string]string{"JWT_SECRETO": secreto}), &bufferSeguro{b: &log}, func(d string) { dir <- d })
 	}()
 	var base string
@@ -70,8 +74,32 @@ func TestArrancaContestaYSeApagaEnOrden(t *testing.T) {
 	case <-time.After(10 * time.Second):
 		t.Fatal("la API no se apagó")
 	}
-	if !strings.Contains(log.String(), "usuarios de demostración") {
-		t.Errorf("sin API_USUARIOS debería avisar que usa los usuarios de demostración:\n%s", log.String())
+	if !strings.Contains(log.String(), "level=WARN") || !strings.Contains(log.String(), "usuarios de demostración") {
+		t.Errorf("con -demo tiene que avisar que usa los usuarios de demostración:\n%s", log.String())
+	}
+}
+
+// Sin API_USUARIOS la API no arranca, salvo con -demo; con API_USUARIOS, los
+// usuarios de demostración no existen.
+func TestUsuariosObligatorios(t *testing.T) {
+	op, err := leerOpciones(argsDelRepo)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = armar(op, entornoCon(map[string]string{"JWT_SECRETO": secreto}), logMudo())
+	if err == nil || !strings.Contains(err.Error(), "API_USUARIOS") || !strings.Contains(err.Error(), "-demo") {
+		t.Fatalf("sin API_USUARIOS ni -demo: %v; tiene que negarse a arrancar y nombrar las dos salidas", err)
+	}
+	srv, err := armar(op, entornoCon(map[string]string{"JWT_SECRETO": secreto, "API_USUARIOS": "ana:una-clave-larga:admin"}), logMudo())
+	if err != nil {
+		t.Fatal(err)
+	}
+	for usuario, clave := range map[string]string{"admin": "admin", "demo": "demo"} {
+		w := httptest.NewRecorder()
+		srv.ServeHTTP(w, httptest.NewRequest("POST", "/api/auth/token", strings.NewReader(`{"usuario": "`+usuario+`", "clave": "`+clave+`"}`)))
+		if w.Code != http.StatusUnauthorized {
+			t.Fatalf("%s/%s con API_USUARIOS definida: %d, se esperaba 401", usuario, clave, w.Code)
+		}
 	}
 }
 
@@ -88,10 +116,10 @@ func TestArmarFallaConUnaConfiguracionMala(t *testing.T) {
 		"sin secreto":      {map[string]string{}, nil, "JWT_SECRETO"},
 		"secreto corto":    {map[string]string{"JWT_SECRETO": "corto"}, nil, "32"},
 		"usuarios malos":   {map[string]string{"JWT_SECRETO": secreto, "API_USUARIOS": "demo:demo"}, nil, "usuario:clave:rol"},
-		"sin reports":      {map[string]string{"JWT_SECRETO": secreto}, func(o *opciones) { o.kmeans = "no-existe.json" }, "no-existe.json"},
-		"sin ficha":        {map[string]string{"JWT_SECRETO": secreto}, func(o *opciones) { o.estaciones = "no-existe.csv" }, "no-existe.csv"},
-		"sin contrato":     {map[string]string{"JWT_SECRETO": secreto}, func(o *opciones) { o.openapi = "no-existe.yaml" }, "no-existe.yaml"},
-		"cola sin búfer":   {map[string]string{"JWT_SECRETO": secreto}, func(o *opciones) { o.cola = 0 }, "cola"},
+		"sin reports":      {map[string]string{"JWT_SECRETO": secreto, "API_USUARIOS": usuariosPrueba}, func(o *opciones) { o.kmeans = "no-existe.json" }, "no-existe.json"},
+		"sin ficha":        {map[string]string{"JWT_SECRETO": secreto, "API_USUARIOS": usuariosPrueba}, func(o *opciones) { o.estaciones = "no-existe.csv" }, "no-existe.csv"},
+		"sin contrato":     {map[string]string{"JWT_SECRETO": secreto, "API_USUARIOS": usuariosPrueba}, func(o *opciones) { o.openapi = "no-existe.yaml" }, "no-existe.yaml"},
+		"cola sin búfer":   {map[string]string{"JWT_SECRETO": secreto, "API_USUARIOS": usuariosPrueba}, func(o *opciones) { o.cola = 0 }, "cola"},
 		"duración del JWT": {map[string]string{"JWT_SECRETO": secreto}, func(o *opciones) { o.duracionJWT = 0 }, "duración"},
 	}
 	for nombre, c := range casos {
