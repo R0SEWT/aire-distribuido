@@ -400,10 +400,15 @@ func (h *Hub) escribir(c *clienteWS, saludo []byte) {
 }
 
 // Quién puede abrir el WebSocket y quién recibe los eventos de un
-// entrenamiento. Ver seguirEventos.
+// entrenamiento. Hoy los dos eventos que existen son de entrenamientos, que
+// son cosa de admin (las rutas de /api/entrenamientos lo son), así que el
+// WebSocket también: un usuario común no tiene nada que escuchar. El hub ya
+// reparte por rol (Difundir): cuando haya eventos para todos, como las alertas
+// de la SPA, alcanza con sumar RolUsuario a rolesWS y los de entrenamientos
+// siguen llegando solo a los admin.
 var (
-	rolesWS                   = []string{RolUsuario, RolAdmin}
-	rolesEventosEntrenamiento []string // nil: todos los conectados
+	rolesWS                   = []string{RolAdmin}
+	rolesEventosEntrenamiento = []string{RolAdmin}
 )
 
 // tokenWS saca el JWT del apretón de manos. El navegador no deja poner
