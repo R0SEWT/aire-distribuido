@@ -423,7 +423,7 @@ aplican a ese tipo. Implementado en [`protocolo/`](../protocolo/).
 | `LISTO` | nodo → coord. | `n`, `huella` | con el rango en memoria | `n = hasta − desde` y la misma huella |
 | `ITERAR` | coord. → nodo | `iter`, `centroides` (k·D) | cada ronda | `iter` positivo, centroides finitos |
 | `PARCIAL` | nodo → coord. | `iter`, `sumas` (k·D), `conteos` (k), `inercia` | respuesta a `ITERAR` | ronda en curso; forma; conteos que suman el rango |
-| `FIN` | coord. → nodo | — | fin de la corrida | el nodo libera el rango y espera otro `CARGAR` |
+| `FIN` | coord. → nodo | — | fin de la corrida | el nodo libera el rango y termina la sesión: la conexión se cierra y el nodo vuelve a llamar (otro `HOLA`) |
 | `PING` / `PONG` | coord. ↔ nodo | — | fuera de las rondas | latencia (`Latido`) y que el nodo sigue vivo |
 | `ERROR` | ambos | `mensaje` | cuando algo falla | aborta lo que se estaba haciendo |
 
@@ -443,12 +443,20 @@ Estados del nodo:
 ```
              HOLA                  CARGAR / LISTO
  conectado ───────▶  libre  ───────────────────────▶  cargado  ◀──┐
-                       ▲                                 │  │      │
-                       └──────────────── FIN ────────────┘  └──────┘
-                                                  ITERAR / PARCIAL, una vez por ronda
+                      │ ▲                             │  │  │     │
+                      │ └─ CARGAR que falla / ERROR ──┘  │  └─────┘
+                      │                                  │    ITERAR / PARCIAL, una vez por ronda
+                      └────────────── FIN ───────────────┤    (o un CARGAR nuevo que sale bien)
+                                                         ▼
+                              fin de la sesión: se cierra la conexión y el nodo
+                              vuelve a llamar y se presenta con otro HOLA
 
- En cualquier estado: PING → PONG.  ERROR o cierre de la conexión: fin de la sesión.
+ En cualquier estado: PING → PONG.  ERROR del coordinador o cierre de la conexión: fin de la sesión.
 ```
+
+`FIN` no devuelve al nodo al estado libre de la misma conexión: `cluster.Terminar` manda el `FIN` y cierra,
+y `Nodo.Correr` vuelve a llamar. Varias corridas seguidas sobre las mismas conexiones (otra semilla) son
+varios Lloyd antes del `FIN`, con o sin un `CARGAR` nuevo entre ellos.
 
 Reglas:
 
@@ -497,6 +505,7 @@ ronda 1 abortada: nodo "mudo": no envió su PARCIAL dentro del plazo (100ms): le
 
 | Falla | Qué ve el coordinador | Qué pasa |
 |---|---|---|
+| Nodo que se apaga después de su `HOLA`, mientras se espera a los demás | no responde el `PING` con que se cierra la espera de nodos | se suelta y la espera sigue con otro nodo hasta el plazo |
 | Nodo caído, sesión de Colab muerta | fin de la conexión o plazo vencido | la ronda se aborta; el error nombra al nodo |
 | Nodo lento | plazo vencido; su `PARCIAL` llega después | la ronda se aborta; el rezagado se descarta por su `iter` |
 | Red partida | plazo vencido | igual que un nodo caído |

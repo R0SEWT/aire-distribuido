@@ -27,10 +27,12 @@
 // aceptan conexiones entrantes. El coordinador le asigna un rango de filas
 // (CARGAR) y el nodo responde LISTO cuando lo tiene en memoria. Después, cada
 // iteración es una ronda ITERAR → PARCIAL con todos los nodos (Ronda), que
-// termina cuando todos respondieron o vence el plazo. FIN cierra la
-// corrida y el nodo vuelve a esperar un CARGAR. PING/PONG mide la latencia y
-// comprueba que el nodo sigue vivo entre corridas. ERROR, en cualquier sentido,
-// aborta lo que se estaba haciendo con un texto legible.
+// termina cuando todos respondieron o vence el plazo. FIN cierra la corrida y
+// la sesión: el nodo libera su rango, la conexión se cierra y, para la corrida
+// siguiente, el nodo vuelve a llamar y se presenta con otro HOLA. PING/PONG
+// mide la latencia y comprueba que el nodo sigue vivo fuera de las rondas.
+// ERROR, en cualquier sentido, aborta lo que se estaba haciendo con un texto
+// legible; el del coordinador termina además la sesión.
 //
 // # La huella y el rango de CARGAR
 //
