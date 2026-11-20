@@ -157,8 +157,19 @@ fallaron y {{< meta cifras.api_latencia.sobre_el_limite >}} llegaron a los
 {{< meta cifras.api_latencia.limite_ms >}} ms. La API llegó a atender
 {{< meta cifras.api_latencia.pedidos_por_s_max >}} predicciones por segundo. Es una medición con el
 cliente y la API en la misma máquina, sin una red de por medio: dice cuánto tarda el servicio, no
-cuánto tardaría un enlace lento. Mientras tanto la API escribía cada predicción en MongoDB y en
-Redis.
+cuánto tardaría un enlace lento.
+
+Esa velocidad no se compró perdiendo registros. La predicción responde antes de escribir, así que la
+latencia sola no dice si lo predicho llegó a las bases: por eso la prueba consulta además lo que la
+API escribió. Durante la corrida la API aceptó {{< meta cifras.api_latencia.escrituras_aceptadas >}}
+predicciones, contando las de calentamiento, y las dos bases las escribieron todas:
+{{< meta cifras.api_latencia.escritas_mongo >}} en MongoDB y
+{{< meta cifras.api_latencia.escritas_redis >}} en Redis, con
+{{< meta cifras.api_latencia.escrituras_descartadas >}} descartadas y
+{{< meta cifras.api_latencia.escrituras_fallidas >}} fallidas. MongoDB las recibió en
+{{< meta cifras.api_latencia.lotes_mongo >}} idas y vueltas, unas
+{{< meta cifras.api_latencia.por_lote_mongo >}} predicciones por lote: es el escritor de la
+@sec-escritor adaptándose a la carga.
 
 ![Una predicción en Postman: 200 con el régimen, la media de 24 h, la alerta, la banda INCA y el tiempo en milisegundos](capturas/pc4/postman-prediccion.png){#fig-postman-prediccion width=16cm}
 

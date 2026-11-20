@@ -11,8 +11,13 @@ Compose que la API (@sec-despliegue).
 
 La @fig-entidades es el diagrama de entidades: las {{< meta cifras.datos.colecciones >}} colecciones
 de MongoDB, las {{< meta cifras.datos.claves >}} familias de claves de Redis y cómo se relacionan.
+En cada entidad, PK marca el identificador y FK, una referencia lógica a otra colección; las líneas
+continuas son las relaciones entre colecciones, con su cardinalidad, y las punteadas, las copias o
+derivaciones que van a Redis y la correspondencia por nombre entre un evento del clúster y los nodos
+de un entrenamiento. La franja inferior de MongoDB lista los índices. El detalle de cada campo está
+en las tablas que siguen.
 
-![Entidades de MongoDB y de Redis y sus relaciones](../diagramas/entidades.png){#fig-entidades width=16cm}
+![Modelo de datos: entidades de MongoDB y de Redis y sus relaciones](../diagramas/entidades.png){#fig-entidades width=16cm}
 
 :::: {si-falta="../diagramas/entidades.png"}
 ::: {.callout-warning title="PENDIENTE"}

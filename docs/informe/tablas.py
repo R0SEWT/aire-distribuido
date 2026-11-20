@@ -2074,7 +2074,7 @@ class Informe:
         ("salida_entrenamiento", "lst-salida-entrenamiento", "entrenamiento.txt",
          [("orden", r"-X POST localhost:8080/api/entrenamientos", 4), ("orden", r"api/entrenamientos/e-", 28)],
          "Un entrenamiento distribuido por la API: el 202 con el id y el detalle al terminar (primeras líneas)"),
-        ("salida_carga", "lst-salida-carga", "carga.txt", [("cola", 14, "tabla")],
+        ("salida_carga", "lst-salida-carga", "carga.txt", [("cola", 22, "tabla")],
          "`cmd/carga`: latencia de la predicción con 1, 4, 16 y 64 clientes a la vez"),
         ("salida_newman", "lst-salida-newman", "newman-coleccion.txt", [("cola", 20)],
          "`newman` sobre las carpetas 1 a 3 de la colección de Postman: resumen de la corrida"),
@@ -2211,7 +2211,8 @@ class Informe:
         titulo = "Latencia de `POST /api/predicciones` medida del lado del cliente, por nivel de concurrencia"
         claves = ["clientes_lista", "clientes_max", "pedidos_por_nivel", "pedidos_total", "limite_ms", "p50_1", "p99_1", "p50_max",
                   "p95_max", "p99_max", "p99_peor", "max_peor", "clientes_peor", "errores", "sobre_el_limite", "pedidos_por_s_max",
-                  "lecturas", "cumple", "fecha"]
+                  "lecturas", "cumple", "fecha", "escrituras_aceptadas", "escrituras_descartadas", "escrituras_fallidas",
+                  "escritas_mongo", "escritas_redis", "lotes_mongo", "lotes_redis", "por_lote_mongo"]
         d = self.leer_reports("api_latencia.json")
         if d is None:
             self.tabla("api_latencia.md", o, None, "tbl-api-latencia", titulo)
@@ -2233,6 +2234,18 @@ class Informe:
         self.comprobar(o, bool(d.get("cumple")) == all(n.get("cumple") for n in niveles), "«cumple» no es el de todos los niveles")
         if par.get("ruta"):
             self.comprobar(o, "/api/predicciones" in str(par["ruta"]), "no midió POST /api/predicciones")
+        # Lo que la API escribió en cada almacén durante la corrida (GET /api/metricas antes y después): la
+        # predicción responde antes de escribir, así que la latencia sola no dice si los registros llegaron.
+        esc = d.get("escrituras") or {}
+        almacenes = {a: esc.get(a) or {} for a in ("mongo", "redis")}
+        self.comprobar(o, bool(esc.get("medido")), "no trae el bloque de escrituras (lo escrito en cada almacén durante la corrida)")
+        if esc.get("medido"):
+            aceptadas = esc.get("predicciones_aceptadas", 0)
+            self.comprobar(o, aceptadas == sum(n["pedidos"] for n in niveles) + par.get("calentamiento", 0) * len(niveles),
+                           "las predicciones aceptadas no son los pedidos medidos más los de calentamiento")
+            for a, x in almacenes.items():
+                self.comprobar(o, x.get("escritas", 0) + x.get("descartadas", 0) + x.get("fallidas", 0) == aceptadas,
+                               f"en {a}, escritas + descartadas + fallidas no suman las predicciones aceptadas")
         t = pd.DataFrame([(
             entero(n["clientes"]), entero(n["pedidos"]), entero(n.get("errores", 0)), tiempo(n["p50_ms"]), tiempo(n["p95_ms"]),
             tiempo(n["p99_ms"]), tiempo(n["max_ms"]), entero(n.get("pedidos_por_segundo")), entero(n.get("sobre_el_limite", 0)),
@@ -2245,7 +2258,13 @@ class Informe:
                    nota=f"Contra `{par.get('url', '¿?')}`, con las {entero(par.get('filas'))} lecturas de `{par.get('lecturas', '¿?')}` "
                         f"en ronda y {entero(par.get('calentamiento'))} pedidos de calentamiento por nivel, que no se miden. "
                         "La latencia de un pedido va desde antes de enviarlo hasta tener el cuerpo de la respuesta: incluye la red, el "
-                        f"JWT y el JSON. {str(d.get('medicion') or '').strip()}".strip())
+                        "JWT y el JSON. Percentiles por rango más cercano sobre los pedidos que respondieron 200. "
+                        + (f"Durante la corrida la API aceptó {entero(esc.get('predicciones_aceptadas'))} predicciones (con el "
+                           f"calentamiento): MongoDB escribió {entero(almacenes['mongo'].get('escritas'))} "
+                           f"({entero(almacenes['mongo'].get('descartadas'))} descartadas, {entero(almacenes['mongo'].get('fallidas'))} fallidas) "
+                           f"y Redis, {entero(almacenes['redis'].get('escritas'))} ({entero(almacenes['redis'].get('descartadas'))} descartadas, "
+                           f"{entero(almacenes['redis'].get('fallidas'))} fallidas), según `GET /api/metricas` antes y después."
+                           if esc.get("medido") else "El archivo no registra lo escrito en cada almacén durante la corrida."))
         primero, ultimo = niveles[0], niveles[-1]
         peor = max(niveles, key=lambda n: n["p99_ms"])
         self.cifras["api_latencia"] = {
@@ -2259,6 +2278,13 @@ class Informe:
             "sobre_el_limite": entero(sum(n.get("sobre_el_limite", 0) for n in niveles)),
             "pedidos_por_s_max": entero(max(n.get("pedidos_por_segundo", 0) for n in niveles)),
             "lecturas": entero(par.get("filas")), "cumple": "sí" if d.get("cumple") else "no", "fecha": fecha(m.get("momento")),
+            "escrituras_aceptadas": entero(esc.get("predicciones_aceptadas")),
+            "escrituras_descartadas": entero(sum(x.get("descartadas", 0) for x in almacenes.values())) if esc.get("medido") else "—",
+            "escrituras_fallidas": entero(sum(x.get("fallidas", 0) for x in almacenes.values())) if esc.get("medido") else "—",
+            "escritas_mongo": entero(almacenes["mongo"].get("escritas")), "escritas_redis": entero(almacenes["redis"].get("escritas")),
+            "lotes_mongo": entero(almacenes["mongo"].get("lotes")), "lotes_redis": entero(almacenes["redis"].get("lotes")),
+            "por_lote_mongo": decimal(almacenes["mongo"]["escritas"] / almacenes["mongo"]["lotes"], 1)
+            if almacenes["mongo"].get("lotes") else "—",
         }
 
     def api_rutas(self) -> None:

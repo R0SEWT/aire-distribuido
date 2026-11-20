@@ -41,8 +41,8 @@ listado, con un aviso PENDIENTE. `empaquetar-pc4.sh` no arma la entrega final mi
 tablero el día de la entrega). Cada una tiene en el informe su aviso `si-falta`, que desaparece cuando
 llega el PNG. Las evidencias del experimento de las 20 GPU están en `capturas/mapa/`.
 
-**Diagramas.** `../diagramas/entidades.png` y `despliegue.png`, con su `.drawio`; las posiciones salen de
-`../diagramas/generar-entidades-despliegue.py`.
+**Diagramas.** `../diagramas/entidades.png` (el modelo de datos, hecho en draw.io) y `despliegue.png`, con
+su `.drawio`; las posiciones del de despliegue salen de `../diagramas/generar-despliegue.py`.
 
 **Participación y uso de IA.** `_participacion-pc4.md` es la plantilla del Anexo D (la llenada va en
 `participacion-pc4.local.md`, no versionada; para el `.docx` suelto en el formato del curso,
