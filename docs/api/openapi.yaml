@@ -75,8 +75,9 @@ paths:
       description: |
         Rol usuario o admin. La lectura llega en µg/m³, sin estandarizar.
         El servidor aplica la receta y la estandarización del modelo activo.
-        La estación no se valida contra MongoDB: el camino del pedido no consulta
-        ninguna base (spec §6.2).
+        La estación tiene que estar en el catálogo, que la API tiene en memoria: el
+        camino del pedido no consulta ninguna base (spec §6.2). La fecha_hora se
+        trunca a la hora: hay una lectura por estación y hora, y repetirla la reemplaza.
       x-roles: [usuario, admin]
       requestBody:
         required: true
@@ -106,7 +107,10 @@ paths:
           content:
             application/json:
               schema: {$ref: '#/components/schemas/Error'}
-              example: {error: pm2_5 tiene que ser un número no negativo}
+              examples:
+                negativo: {value: {error: pm2_5 tiene que ser un número no negativo}}
+                fuera_de_rango: {value: {error: 'pm10 no puede superar 10000 µg/m³'}}
+                estacion: {value: {error: 'estación desconocida: CA-XX-99'}}
         '401': {$ref: '#/components/responses/NoAutenticado'}
         '503':
           description: No hay modelo activo
@@ -147,8 +151,9 @@ paths:
           content:
             application/json:
               schema: {$ref: '#/components/schemas/RegimenEstacion'}
-              example: {regimen: 1, excede_eca: true, media_24h: {pm2_5: 58.3, pm10: 121.4, lecturas: 24},
-                        alerta: true, inca: mala, ts: '2026-11-14T15:00:00-05:00'}
+              example: {fecha_hora: '2026-11-14T15:00:00-05:00', regimen: 1, excede_eca: true,
+                        media_24h: {pm2_5: 58.3, pm10: 121.4, lecturas: 24},
+                        alerta: true, inca: mala, ts: '2026-11-14T15:00:02-05:00'}
         '401': {$ref: '#/components/responses/NoAutenticado'}
         '404':
           description: La estación no existe, o existe pero todavía no tiene una predicción registrada
@@ -501,13 +506,15 @@ components:
       type: object
       required: [estacion, fecha_hora, pm2_5, pm10]
       properties:
-        estacion: {type: string, minLength: 1}
+        estacion: {type: string, minLength: 1, maxLength: 64, description: Código de una estación del catálogo}
         fecha_hora:
           type: string
           format: date-time
-          description: Fecha RFC3339 con zona explícita; los ejemplos usan America/Lima (UTC-5).
-        pm2_5: {type: number, format: double, minimum: 0, description: Concentración de PM2.5 en µg/m³}
-        pm10: {type: number, format: double, minimum: 0, description: Concentración de PM10 en µg/m³}
+          description: |
+            Fecha RFC3339 con zona explícita; los ejemplos usan America/Lima (UTC-5).
+            Se trunca a la hora. Se aceptan fechas históricas y lecturas desordenadas.
+        pm2_5: {type: number, format: double, minimum: 0, maximum: 10000, description: Concentración de PM2.5 en µg/m³}
+        pm10: {type: number, format: double, minimum: 0, maximum: 10000, description: Concentración de PM10 en µg/m³}
     Prediccion:
       type: object
       required: [estacion, regimen, excede_eca, media_24h, alerta, inca, pm2_5_medio_regimen, pm10_medio_regimen, modelo_id, ms]
@@ -540,8 +547,12 @@ components:
         lon: {type: number, minimum: -180, maximum: 180}
     RegimenEstacion:
       type: object
-      required: [regimen, excede_eca, media_24h, alerta, inca, ts]
+      required: [fecha_hora, regimen, excede_eca, media_24h, alerta, inca, ts]
+      description: |
+        El estado de la estación en su lectura más reciente por fecha_hora. Una
+        lectura más antigua que la guardada no lo reemplaza.
       properties:
+        fecha_hora: {type: string, format: date-time, description: La hora de la lectura a la que corresponde}
         regimen: {type: integer, minimum: 0}
         excede_eca: {type: boolean}
         media_24h: {$ref: '#/components/schemas/Media24h'}
@@ -553,8 +564,9 @@ components:
       required: [pm2_5, pm10, lecturas]
       description: |
         Media de las lecturas de la estación con fecha_hora en (t − 24 h, t], donde t es la
-        fecha_hora de la lectura. La API la lleva en memoria por estación. Con menos de 18
-        lecturas en la ventana, pm2_5 y pm10 son null.
+        fecha_hora de la lectura, truncada a la hora. La API lleva en memoria, por estación,
+        las 72 lecturas horarias más cercanas a la última recibida: una fecha lejana no
+        borra las demás. Con menos de 18 lecturas en la ventana, pm2_5 y pm10 son null.
       properties:
         pm2_5: {type: number, minimum: 0, nullable: true}
         pm10: {type: number, minimum: 0, nullable: true}
