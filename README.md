@@ -312,7 +312,22 @@ docker run --rm -v "$PWD/data:/app/data" -v "$PWD/reports:/app/reports" \
   aire-distribuido cargar -entrada data/bronze/oefa.csv
 ```
 
-**7. El informe.** Deja un `.docx` por integrante en `docs/informe/salida/`:
+**7. Las evidencias de la API.** Con el Compose arriba y tres nodos, `cmd/carga` mide
+`POST /api/predicciones` del lado del cliente con 1, 4, 16 y 64 clientes concurrentes y escribe
+`reports/api_latencia.json` (p50, p95, p99, máximo, pedidos por segundo y errores por nivel); sale
+con 1 si algún nivel tiene errores o un p99 de 100 ms o más:
+
+```bash
+CARGA_CLAVE=<la clave de demo en API_USUARIOS> go run ./cmd/carga
+```
+
+La colección de Postman prueba cada ruta contra el contrato (código, forma de la respuesta y
+menos de 100 ms) y el Runner recorre `docs/postman/lecturas_prueba.csv`, 78 lecturas reales con
+el régimen, la media de 24 h, la alerta y el INCA esperados. Cómo usarla, en Postman o con
+`newman`, está en [`docs/postman/README.md`](docs/postman/README.md); las salidas de una corrida
+real y el guion de las capturas, en [`docs/informe/capturas/pc4/`](docs/informe/capturas/pc4/).
+
+**8. El informe.** Deja un `.docx` por integrante en `docs/informe/salida/`:
 
 ```bash
 bash docs/informe/render.sh
@@ -333,6 +348,7 @@ bash docs/informe/render.sh
 | `configs/` | `limpieza.json` (columnas, unidades, centinelas y rangos) y `kmeans.json` (la receta congelada). |
 | `reports/` | Lo que escriben los comandos: conteos, estandarización, modelo, regímenes, benchmarks y auditoría. |
 | `api/`, `modelo/`, `ventana/`, `almacen/`, `cmd/api/`, `docs/api/` | Parte C: la API coordinadora. JWT HS256, latencia por ruta, el modelo sembrado desde `reports/` y la predicción con el contrato de `kmeans`, la media de 24 h por estación con la alerta frente al ECA y la banda INCA, el almacén detrás de interfaces (con un doble en memoria) y el contrato OpenAPI que se sirve tal cual. |
+| `cmd/carga/`, `docs/postman/` | Las evidencias de la parte C: la prueba de carga de la predicción, la colección de Postman y los datos de prueba con lo que la API tiene que responder. |
 | `notebooks/` | El laboratorio en Colab: EDA, calibración, auditoría y figuras, procedencia y mapa. |
 | `docs/informe/` | El informe en Quarto, con su plantilla de Word, el filtro y el empaquetado de la entrega. |
 | `docs/diagramas/` | Los diagramas en draw.io y sus PNG. |
