@@ -16,7 +16,11 @@ from docx import Document
 
 AQUI = Path(__file__).resolve().parent
 plantilla = Path(os.environ.get("PLANTILLA_PARTICIPACION", AQUI / "recursos" / "plantilla-participacion.docx"))
-datos_ruta = AQUI / "participacion.local.yml"
+# Los datos: participacion.local.yml (PC3) o el archivo que diga $DATOS_PARTICIPACION (la PC4 usa
+# participacion-pc4.local.yml; lo pasa render.sh).
+datos_ruta = Path(os.environ.get("DATOS_PARTICIPACION", AQUI / "participacion.local.yml"))
+if not datos_ruta.is_absolute():
+    datos_ruta = AQUI / datos_ruta
 salida = Path(sys.argv[1]) if len(sys.argv) > 1 else AQUI / "salida" / "1ACC0065-202620_Participación_PC3.docx"
 if not plantilla.exists():
     sys.exit(f"falta la plantilla {plantilla} (copiarla del Aula Virtual: 1ACC0065-202620_Participación.docx)")

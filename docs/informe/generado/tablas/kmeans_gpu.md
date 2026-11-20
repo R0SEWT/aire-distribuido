@@ -1,6 +1,6 @@
 <!-- Generado por tablas.py desde reports/kmeans_gpu/*.json. No editar a mano. -->
 
-::: {#tbl-gpu tbl-colwidths="[11,17,11,19,12,15,15]"}
+::: {#tbl-gpu tbl-colwidths="[13,16,13,18,12,14,14]"}
 | Precisión | Suma por cluster | Iteraciones | Dif. máx. de centroides frente a Go | Repetible bit a bit | ms por iteración, ×1 | ms por iteración, ×300 |
 |:---|:---|---:|---:|:---|---:|---:|
 | float64 | producto de matrices | 44 | 4,4 × 10⁻¹⁶ | sí | 1,02–1,03 | 259,7–262,4 |

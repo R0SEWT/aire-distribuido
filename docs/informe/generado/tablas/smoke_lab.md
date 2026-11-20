@@ -1,6 +1,6 @@
 <!-- Generado por tablas.py desde reports/smoke_lab_*.json. No editar a mano. -->
 
-::: {#tbl-smoke tbl-colwidths="[9,10,13,13,14,17,12,12]"}
+::: {#tbl-smoke tbl-colwidths="[10,10,12,12,12,16,12,16]"}
 | Nodos | Rondas | Barrera p50 (ms) | Barrera p95 (ms) | Barrera máx. (ms) | Latido p50 por nodo (ms) | Workers por nodo | Fecha |
 |---:|---:|---:|---:|---:|---:|---:|:---|
 | 3 | 200 | 0,399 | 0,804 | 1,63 | 0,378–0,386 | 24 | 2026-11-14 |

@@ -307,7 +307,8 @@ estación), de la que este informe no presenta ningún resultado sobre datos rea
 
 Lo que importa aquí es la coordinación, y esa parte **sí es Go**: el coordinador reparte los datos
 entre los nodos, sincroniza cada ronda con la misma barrera con plazo del K-Means y promedia los
-pesos en orden de nodo. El esquema es *local SGD*: en vez de sincronizar el gradiente en cada lote,
+pesos en orden de nodo. El esquema es *local SGD*, el promedio de pesos que usa el aprendizaje
+federado [@mcmahan2017]: en vez de sincronizar el gradiente en cada lote,
 cada nodo entrena $H$ pasos con su parte de los datos y devuelve sus pesos; el coordinador espera a
 los {{< meta cifras.mapa.nodos >}}, promedia ponderando por las muestras de cada uno y reparte el
 promedio para la ronda siguiente. Cada copia de los pesos son {{< meta cifras.mapa.mb_por_nodo >}} MB,
@@ -343,20 +344,24 @@ datos (`docs/informe/capturas/mapa/`, de donde sale el @lst-mapa-log) y las foto
 
 ::: {#lst-mapa-log}
 ```text
-19:58:59 tarea mapa-20261114-195859: 7972354 parámetros, manifiesto http://10.11.97.211:8090/
-         mapa-sint168/manifiesto.json con 168 días (huella sha256:c15063627d7c…),
-         10 rondas de 200 pasos
-19:58:59 espero 21 nodos (protocolo v2) durante 25m0s (Ctrl+C empieza con los que hayan llegado)
-19:59:00 [1/21] D56-027-gpu desde 10.11.98.225:57185 (1 workers, GPU NVIDIA RTX A1000 de 8 GB)
-19:59:00 [2/21] D56-14-gpu desde 10.11.97.212:62008 (1 workers, GPU NVIDIA RTX A1000 de 8 GB)
+19:58:59 tarea mapa-20261114-195859: 7972354 parámetros, manifiesto
+         http://10.11.97.211:8090/mapa-sint168/manifiesto.json con 168 días
+         (huella sha256:c15063627d7c…), 10 rondas de 200 pasos
+19:58:59 espero 21 nodos (protocolo v2) durante 25m0s
+         (Ctrl+C empieza con los que hayan llegado)
+19:59:00 [1/21] D56-027-gpu desde 10.11.98.225:57185
+         (1 workers, GPU NVIDIA RTX A1000 de 8 GB)
+19:59:00 [2/21] D56-14-gpu desde 10.11.97.212:62008
+         (1 workers, GPU NVIDIA RTX A1000 de 8 GB)
 …
-19:59:01 [20/21] D56-12-gpu desde 10.11.97.210:62416 (1 workers, GPU NVIDIA RTX A1000 de 8 GB)
+19:59:01 [20/21] D56-12-gpu desde 10.11.97.210:62416
+         (1 workers, GPU NVIDIA RTX A1000 de 8 GB)
 19:59:27 Ctrl+C: entreno con los 20 de 21 nodos que llegaron
 19:59:49 los 20 nodos tienen sus días (21.9 s); empieza el local SGD
-20:00:17 ronda 1/10: pérdida 0.11636 · validación 0.187728 · 16000 muestras · barrera 28.3 s ·
-         promedio 106 ms · 1275.6 MB
-20:00:45 ronda 2/10: pérdida 0.0462034 · validación 0.0828054 · 16000 muestras · barrera 27.8 s ·
-         promedio 125 ms · 1275.6 MB
+20:00:17 ronda 1/10: pérdida 0.11636 · validación 0.187728 · 16000 muestras
+         · barrera 28.3 s · promedio 106 ms · 1275.6 MB
+20:00:45 ronda 2/10: pérdida 0.0462034 · validación 0.0828054 · 16000 muestras
+         · barrera 27.8 s · promedio 125 ms · 1275.6 MB
 ```
 
 Registro del coordinador en Go durante la corrida con $H$ = 200 (extracto de `docs/informe/capturas/mapa/lab_d56_20gpus_h200_coordinador.txt`; las líneas largas están partidas)

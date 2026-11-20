@@ -1,29 +1,41 @@
 #!/usr/bin/env bash
-# Renderiza el informe de la PC3 a Word: un .docx por integrante, con su código en la carátula, y
-# el reporte de participación. Todo queda en salida/ (no se versiona).
+# Renderiza el informe de un entregable a Word: un .docx por integrante, con su código en la
+# carátula, y el reporte de participación. Todo queda en salida/ (no se versiona).
 #
-#   bash render.sh                 # tablas + historial + los tres informes + participación
+#   bash render.sh                 # el de la PC4: tablas + historial + los tres informes + participación
+#   ENTREGA=pc3 bash render.sh     # el de la PC3 (informe.qmd), como se entregó
 #   bash render.sh U000000002      # solo el informe de ese código (más tablas e historial)
 #   FETCH=1 bash render.sh         # además hace git fetch antes de armar el historial
+#
+# El informe de la PC4 (informe-pc4.qmd) contiene el de la PC3: las secciones de secciones/ más las
+# de secciones/pc4/.
 #
 # Pasos:
 #   1. tablas.py: generado/*.json → generado/tablas/*.md y generado/cifras.yml
 #   2. generado/local/ (no versionado): equipo.yml (de equipo.local.yml o, si no existe, de
 #      equipo.ejemplo.yml), _participacion.md (de participacion.local.md o de la plantilla
 #      _participacion.md) e historial.md (generar-historial.sh o, si falla, el de ejemplo)
-#   3. quarto render informe.qmd -M codigo:<código> por cada integrante de `equipo`
-#   4. quarto render participacion.qmd
+#   3. quarto render informe.qmd (o informe-pc4.qmd) -M codigo:<código> por cada integrante de `equipo`
+#   4. quarto render participacion.qmd (o participacion-pc4.qmd)
 #   5. w:updateFields en cada .docx: Word pregunta al abrir si actualiza los campos (el índice)
 set -euo pipefail
 cd "$(dirname "$0")"
 
 command -v quarto >/dev/null 2>&1 || { echo "error: falta quarto (https://quarto.org)" >&2; exit 1; }
 
+ENTREGA="${ENTREGA:-pc4}"
+case "$ENTREGA" in
+  pc3) fuente=informe.qmd;     sufijo="";     etiqueta=PC3 ;;
+  pc4) fuente=informe-pc4.qmd; sufijo="-pc4"; etiqueta=PC4 ;;
+  *) echo "error: ENTREGA tiene que ser pc3 o pc4, es '$ENTREGA'" >&2; exit 1 ;;
+esac
+echo "→ informe de la $etiqueta ($fuente)"
+
 echo "→ tablas y cifras"
 if python3 -c 'import pandas' 2>/dev/null; then
-  python3 tablas.py
+  python3 tablas.py --entrega "$ENTREGA"
 elif command -v uv >/dev/null 2>&1; then
-  uv run --quiet tablas.py
+  uv run --quiet tablas.py --entrega "$ENTREGA"
 else
   echo "error: tablas.py necesita pandas (pip install pandas, o instalar uv)" >&2
   exit 1
@@ -37,11 +49,14 @@ else
   echo "aviso: no hay equipo.local.yml; la carátula sale con los códigos de ejemplo de equipo.ejemplo.yml" >&2
   cp equipo.ejemplo.yml generado/local/equipo.yml
 fi
-if [ -f participacion.local.md ]; then
-  cp participacion.local.md generado/local/_participacion.md
-else
-  cp _participacion.md generado/local/_participacion.md
-fi
+# La participación de cada entregable: la llenada (no versionada) o, si no existe, su plantilla.
+for p in participacion participacion-pc4; do
+  if [ -f "$p.local.md" ]; then
+    cp "$p.local.md" "generado/local/_$p.md"
+  else
+    cp "_$p.md" "generado/local/_$p.md"
+  fi
+done
 if ! ./generar-historial.sh; then
   echo "aviso: no se pudo generar el historial; se usa generado/historial.ejemplo.md" >&2
   cp generado/historial.ejemplo.md generado/local/historial.md
@@ -90,31 +105,33 @@ PY
 }
 
 for c in "${codigos[@]}"; do
-  nombre="1ACC0065_PC3_202610_Informe_${c}.docx"
+  nombre="1ACC0065_${etiqueta}_202610_Informe_${c}.docx"
   echo "→ $nombre"
-  quarto render informe.qmd -M "codigo:$c" --output "$nombre" --quiet
+  quarto render "$fuente" -M "codigo:$c" --output "$nombre" --quiet
   mover "$nombre" || { echo "error: quarto no produjo $nombre" >&2; exit 1; }
   actualizar_campos "salida/$nombre"
 done
 
 if [ "$#" -eq 0 ]; then
-  participacion="1ACC0065-202620_Participación_PC3.docx"
+  participacion="1ACC0065-202620_Participación_${etiqueta}.docx"
   echo "→ $participacion"
   # Con la plantilla del docente y los datos locales, se llena el .docx del curso tal cual (logo,
   # tablas y estilos del formato); si falta alguno, se renderiza la versión de Quarto como respaldo.
-  if [ -f "${PLANTILLA_PARTICIPACION:-recursos/plantilla-participacion.docx}" ] && [ -f participacion.local.yml ] && command -v uv >/dev/null 2>&1; then
-    uv run --quiet --with python-docx --with pyyaml llenar-participacion.py "salida/$participacion"
+  if [ -f "${PLANTILLA_PARTICIPACION:-recursos/plantilla-participacion.docx}" ] && [ -f "participacion$sufijo.local.yml" ] && command -v uv >/dev/null 2>&1; then
+    DATOS_PARTICIPACION="participacion$sufijo.local.yml" uv run --quiet --with python-docx --with pyyaml llenar-participacion.py "salida/$participacion"
   else
-    echo "aviso: sin recursos/plantilla-participacion.docx o participacion.local.yml: participación desde Quarto (no es el formato del curso)" >&2
-    quarto render participacion.qmd --output "$participacion" --quiet
+    echo "aviso: sin recursos/plantilla-participacion.docx o participacion$sufijo.local.yml: participación desde Quarto (no es el formato del curso)" >&2
+    quarto render "participacion$sufijo.qmd" --output "$participacion" --quiet
     mover "$participacion" || { echo "error: quarto no produjo $participacion" >&2; exit 1; }
   fi
 fi
 
-n_pendiente="$(cat informe.qmd secciones/*.qmd _participacion.md | grep -c 'title="PENDIENTE' || true)"
+fuentes=(informe.qmd secciones/*.qmd _participacion.md)
+[ "$ENTREGA" = pc4 ] && fuentes=(informe-pc4.qmd secciones/*.qmd secciones/pc4/*.qmd _participacion-pc4.md)
+n_pendiente="$(cat "${fuentes[@]}" | grep -c 'title="PENDIENTE' || true)"
 n_placeholder="$( (grep -l '"placeholder": *true' generado/*.json 2>/dev/null || true) | wc -l)"
 echo
 echo "listo: salida/"
 ls -1 salida/*.docx
 echo "avisos PENDIENTE en las fuentes: $n_pendiente · JSON PLACEHOLDER en generado/: $n_placeholder"
-echo "(la entrega final no lleva ninguno, ni datos sintéticos: ./empaquetar-pc3.sh lo comprueba)"
+echo "(la entrega final no lleva ninguno, ni datos sintéticos: ./empaquetar-$ENTREGA.sh lo comprueba)"

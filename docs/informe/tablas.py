@@ -1797,7 +1797,7 @@ class Informe:
         n_min, menor = corridas[0]
         equipos = sorted({x["nodo"] for _, d in corridas for x in d["nodos"]})
         redes = sorted({".".join(x["direccion"].split(".")[:3]) for _, d in corridas for x in d["nodos"]})
-        self.tabla("smoke_lab.md", o, mayor, "tbl-smoke", titulo, markdown(t, "rrrrrrrl"), anchos=[9, 10, 13, 13, 14, 17, 12, 12],
+        self.tabla("smoke_lab.md", o, mayor, "tbl-smoke", titulo, markdown(t, "rrrrrrrl"), anchos=[10, 10, 12, 12, 12, 16, 12, 16],
                    fuente="Fuente: " + ", ".join(f"`reports/{r.name}`" for r in rutas) + ", escritos por `cmd/smoke`.",
                    nota="Cada ronda manda un `PING` a todos los nodos a la vez (`protocolo.Latido`) y espera el último `PONG`: es la "
                         "barrera de una iteración sin el cómputo del nodo. «Latido p50 por nodo» es el menor y el mayor entre los "
@@ -1870,11 +1870,11 @@ class Informe:
             entero(d["gold"]["filas_tabla"]), entero(d["iteraciones"]), frente(d.get("referencia") or {}),
             cientifica((d.get("referencia") or {}).get("dif_max_centroides")), tiempo(d["ms_ronda"]["p50"]),
             tiempo(d["ms_fusion"]["p50"]), tiempo(d["ms"]["lloyd"]),
-        ) for d, _ in filas], columns=["Dónde", "Nodos", "Réplicas", "Filas", "Iteraciones", "Frente a `cmd/entrenar`",
+        ) for d, _ in filas], columns=["Dónde", "Nodos", "Réplicas", "Filas", "Iter.", "Frente a `cmd/entrenar`",
                                        "Dif. máx. de centroides", "Ronda p50 (ms)", "Fusión p50 (ms)", "Lloyd (ms)"])
         locales = [d for d, _ in filas if self.es_loopback(d)]
         lab = [d for d, _ in filas if not self.es_loopback(d)]
-        nota = ("«Frente a `cmd/entrenar`» compara los centroides con `reports/kmeans.json`: bit a bit, o la mayor diferencia "
+        nota = ("«Iter.» son las iteraciones hasta converger. «Frente a `cmd/entrenar`» compara los centroides con `reports/kmeans.json`: bit a bit, o la mayor diferencia "
                 "absoluta en el espacio estandarizado. «Ronda» es la barrera de red de una iteración (del primer `ITERAR` al último "
                 "`PARCIAL`) y «Fusión», lo que el coordinador hace después. ")
         if locales:
@@ -1887,7 +1887,7 @@ class Informe:
             nota += ("En `reports/` no hay corridas del K-Means distribuido sobre los equipos del laboratorio: allí se midió la "
                      "barrera con el smoke test (@tbl-smoke).")
         self.tabla("kmeans_distribuido.md", o, filas[0][0], "tbl-distribuido", titulo, markdown(t, "lrrrrlrrrr"),
-                   anchos=[11, 7, 9, 10, 10, 14, 13, 9, 9, 8],
+                   anchos=[11, 9, 11, 10, 7, 14, 12, 9, 9, 8],
                    fuente="Fuente: " + ", ".join(f"`reports/{n}`" for _, n in filas) + ", escritos por `cmd/distribuido`.", nota=nota)
         base = [d for d in (locales or lab) if d["gold"].get("replicas", 1) == 1]
         con_r = [d for d in (locales or lab) if d["gold"].get("replicas", 1) > 1]
@@ -1956,7 +1956,7 @@ class Informe:
         t = pd.DataFrame(filas, columns=["Precisión", "Suma por cluster", "Iteraciones", "Dif. máx. de centroides frente a Go",
                                          "Repetible bit a bit", "ms por iteración, ×1", f"ms por iteración, ×{entero(r_max)}"])
         equipos = sorted(d["equipo"] for d in ds)
-        self.tabla("kmeans_gpu.md", o, ds[0], "tbl-gpu", titulo, markdown(t, "llrrlrr"), anchos=[11, 17, 11, 19, 12, 15, 15],
+        self.tabla("kmeans_gpu.md", o, ds[0], "tbl-gpu", titulo, markdown(t, "llrrlrr"), anchos=[13, 16, 13, 18, 12, 14, 14],
                    fuente="Fuente: " + ", ".join(f"`reports/kmeans_gpu/{r.name}`" for r in rutas) + ", escritos por `lab/gpu/kmeans_gpu.py`.",
                    nota=f"Equipos {', '.join(f'`{e}`' for e in equipos)}, cada uno con una {ds[0].get('dispositivo')} "
                         f"(PyTorch {ds[0].get('torch')}). Lloyd desde el mismo arranque que `cmd/entrenar` (semilla "
@@ -2028,11 +2028,11 @@ class Informe:
             entero(c["nodos"]), entero(c["h"]), entero(c["rondas"]), entero(c["d"]["rondas"][0]["muestras"]), decimal(c["barrera"], 1),
             decimal(c["computo"], 1), f"{decimal(c['red'], 1)} ({pct(c['red'] / c['barrera'], 1)})", entero(c["ritmo"]),
             f"{decimal(c['veces'], 1)}×", decimal(c["d"]["ms"]["total"] / 60000, 1),
-        ) for c in corridas], columns=["Nodos (GPU)", "Pasos locales por ronda (H)", "Rondas", "Muestras por ronda", "Barrera (s)",
-                                       "Cómputo del nodo más lento (s)", "Red y espera (s)", "Muestras por segundo",
-                                       "Frente a un solo nodo", "Total (min)"])
+        ) for c in corridas], columns=["Nodos", "H (pasos por ronda)", "Rondas", "Muestras por ronda", "Barrera (s)",
+                                       "Cómputo (s)", "Red y espera (s)", "Muestras por s",
+                                       "Frente a un nodo", "Total (min)"])
         gpus = sorted({x["gpu"] for c in corridas for x in c["d"]["nodos"]})
-        self.tabla("mapa_gpu.md", o, d0, "tbl-mapa-gpu", titulo, markdown(t, "rrrrrrrrrr"), anchos=[9, 11, 8, 10, 9, 12, 12, 10, 10, 9],
+        self.tabla("mapa_gpu.md", o, d0, "tbl-mapa-gpu", titulo, markdown(t, "rrrrrrrrrr"), anchos=[9, 10, 10, 11, 10, 10, 12, 11, 9, 8],
                    fuente="Fuente: " + ", ".join(f"`reports/mapa/{r.name}`" for r in rutas) + f", escritos por `cmd/mapa-coord` "
                           f"({fecha(d0['metadatos'].get('momento'))}); el código está en la PR #52, sin fusionar.",
                    nota=f"**Datos sintéticos** de tamaño nacional ({entero(d0['manifiesto']['dias'])} días): las corridas miden el clúster, no "
@@ -2040,8 +2040,8 @@ class Informe:
                         f"que entrenan en Python con PyTorch una red de {entero(d0['parametros'])} parámetros (lote {d0['hiper']['lote']}). "
                         "Por ronda, cada nodo recibe los pesos (`PESOS`), entrena H pasos con sus datos y los devuelve (`LOCAL`); el coordinador "
                         "espera a todos (la barrera) y promedia en orden de nodo. Barrera, cómputo y red son medianas por ronda, sin la primera. "
-                        "«Red y espera» es la barrera menos el cómputo del nodo más lento, y su porcentaje, sobre la barrera. «Frente a un solo "
-                        "nodo» divide las muestras por segundo del clúster entre las de un nodo mientras calcula (sus muestras sobre su propio "
+                        "«Cómputo» es el del nodo más lento de la ronda; «Red y espera», la barrera menos ese cómputo, con su porcentaje "
+                        "sobre la barrera. «Frente a un nodo» divide las muestras por segundo del clúster entre las de un nodo mientras calcula (sus muestras sobre su propio "
                         "cómputo).")
         a, b = corridas[0], corridas[-1]
         self.cifras["mapa"] = {
@@ -2063,16 +2063,18 @@ class Informe:
 
     # Salidas en texto de corridas reales (docs/informe/capturas/pc4/*.txt, de la sesión de evidencias):
     # (archivo .md, id, .txt, tramos, título). Un tramo es ("orden", patrón, n): el bloque que empieza en la
-    # línea «$ …» que cumple el patrón, hasta n líneas; o ("cola", n): las últimas n líneas.
+    # línea «$ …» que cumple el patrón, hasta n líneas; o ("cola", n): las últimas n líneas. Con "tabla" al
+    # final, la salida es una tabla de columnas alineadas más ancha que la página: se le quita un espacio
+    # a cada separación de columnas, en todas las filas por igual, hasta que quepa.
     SALIDAS = [
-        ("salida_compose", "lst-salida-compose", "compose-ps.txt", [("orden", r"compose .* ps", 10), ("orden", r"api/salud", 8)],
+        ("salida_compose", "lst-salida-compose", "compose-ps.txt", [("orden", r"compose .* ps", 10, "tabla"), ("orden", r"api/salud", 8)],
          "`docker compose up --scale nodo=3`: los servicios sanos, los tres nodos y el seed terminado"),
         ("salida_nodos", "lst-salida-nodos", "entrenamiento.txt", [("orden", r"api/cluster/nodos", 9)],
          "`GET /api/cluster/nodos`: los nodos del pool tal como los ve el coordinador (primeras líneas)"),
         ("salida_entrenamiento", "lst-salida-entrenamiento", "entrenamiento.txt",
          [("orden", r"-X POST localhost:8080/api/entrenamientos", 4), ("orden", r"api/entrenamientos/e-", 28)],
          "Un entrenamiento distribuido por la API: el 202 con el id y el detalle al terminar (primeras líneas)"),
-        ("salida_carga", "lst-salida-carga", "carga.txt", [("cola", 14)],
+        ("salida_carga", "lst-salida-carga", "carga.txt", [("cola", 14, "tabla")],
          "`cmd/carga`: latencia de la predicción con 1, 4, 16 y 64 clientes a la vez"),
         ("salida_newman", "lst-salida-newman", "newman-coleccion.txt", [("cola", 20)],
          "`newman` sobre las carpetas 1 a 3 de la colección de Postman: resumen de la corrida"),
@@ -2094,7 +2096,20 @@ class Informe:
     def salidas(self) -> None:
         import re
         carpeta = AQUI / "capturas" / "pc4"
-        ancho = 118
+        ancho = 86
+
+        def juntar(bloque):
+            """Estrecha una tabla de texto: cada tramo de dos o más espacios pierde uno, en todas las filas."""
+            for _ in range(8):
+                # Solo cuentan las filas de la tabla (las que tienen columnas separadas por espacios).
+                if max((len(l) for l in bloque if not l.startswith("$ ") and re.search(r"\S {2,}\S", l)), default=0) <= ancho:
+                    break
+                nuevo = [l if l.startswith("$ ") else re.sub(r" {2,}", lambda m: m.group(0)[1:], l) for l in bloque]
+                if nuevo == bloque:
+                    break
+                bloque = nuevo
+            return bloque
+
         for archivo, ident, txt, tramos, titulo in self.SALIDAS:
             ruta, destino = carpeta / txt, self.salida / f"{archivo}.md"
             origen = f"docs/informe/capturas/pc4/{txt}"
@@ -2120,6 +2135,8 @@ class Informe:
                     bloque = [l for l in lineas[ini:fin] if l.strip()]
                     if len(bloque) > t[2]:
                         bloque = bloque[:t[2]] + ["…"]
+                if t[-1] == "tabla":
+                    bloque = juntar(bloque)
                 # Una línea más ancha que la página se parte con «\» al final, como en la terminal.
                 for l in bloque:
                     while len(l) > ancho:
@@ -2222,7 +2239,7 @@ class Informe:
         ) for n in niveles], columns=["Clientes a la vez", "Pedidos", "Errores", "p50 (ms)", "p95 (ms)", "p99 (ms)", "Máx. (ms)",
                                        "Pedidos por segundo", f"Pedidos de {limite} ms o más"])
         m = d.get("metadatos") or {}
-        self.tabla("api_latencia.md", o, d, "tbl-api-latencia", titulo, markdown(t, "rrrrrrrrr"), anchos=[11, 11, 9, 10, 10, 10, 11, 14, 14],
+        self.tabla("api_latencia.md", o, d, "tbl-api-latencia", titulo, markdown(t, "rrrrrrrrr"), anchos=[11, 11, 11, 10, 10, 10, 10, 13, 14],
                    fuente=f"Fuente: `reports/api_latencia.json`, escrito por `cmd/carga` ({fecha(m.get('momento'))}, commit "
                           f"`{str(m.get('commit'))[:7]}`).",
                    nota=f"Contra `{par.get('url', '¿?')}`, con las {entero(par.get('filas'))} lecturas de `{par.get('lecturas', '¿?')}` "
@@ -2376,7 +2393,7 @@ class Informe:
         t = pd.DataFrame([(f"`{col}`", que, self.campos(ejemplos[archivo]), ", ".join(indices.get(col, ["—"])), quien)
                           for col, archivo, que, quien in self.COLECCIONES],
                          columns=["Colección", "Qué guarda", "Campos (además de `_id`)", "Índices", "Quién la escribe"])
-        self.tabla("entidades_mongo.md", o, {}, "tbl-entidades-mongo", t_mongo, markdown(t, "lllll"), anchos=[14, 20, 36, 15, 15],
+        self.tabla("entidades_mongo.md", o, {}, "tbl-entidades-mongo", t_mongo, markdown(t, "lllll"), anchos=[21, 16, 33, 15, 15],
                    fuente="Fuente: los documentos de ejemplo de `docs/datos/ejemplos/` (los campos) y `docs/datos/seed.js` (los índices, con "
                           "su nombre y, entre paréntesis, sus campos).",
                    nota="Entre llaves, los campos de un subdocumento; con corchetes, los de cada elemento de un arreglo. Las pruebas "
@@ -2444,7 +2461,7 @@ class Informe:
                           entero((g["alerta_esperada"].astype(str).str.lower() == "true").sum()) if con_alerta else "—"))
         t = pd.DataFrame(filas, columns=["Caso", "Lecturas", "Estaciones", "Régimen esperado", "PM2,5 (µg/m³)", "PM10 (µg/m³)",
                                          "Con alerta esperada"])
-        self.tabla("datos_prueba.md", o, {}, "tbl-datos-prueba", titulo, markdown(t, "lrrrrrr"), anchos=[22, 10, 11, 13, 15, 15, 14],
+        self.tabla("datos_prueba.md", o, {}, "tbl-datos-prueba", titulo, markdown(t, "lrrrrrr"), anchos=[19, 12, 13, 13, 15, 15, 13],
                    fuente=f"Fuente: `{o}`.",
                    nota="Cada fila del archivo es una lectura real (estación, fecha y hora, PM2,5 y PM10) con el régimen que el modelo "
                         "tiene que asignarle" + (" y, donde aplica, la media de 24 h, la alerta y la banda INCA esperadas" if con_alerta else "")
@@ -2632,7 +2649,7 @@ class Informe:
             if l["desactualizadas"]:
                 estado.append("\nDesactualizado (se regenera con los notebooks): " + "; ".join(l["desactualizadas"]) + ".")
             if l["faltantes"]:
-                estado.append("\nFaltan: " + ", ".join(f"`{p}`" for p in l["faltantes"]) + ".")
+                estado.append("\nFaltan: " + ", ".join(f"`{p}`" for p in dict.fromkeys(l["faltantes"])) + ".")
             if l["problemas"]:
                 estado.append("\nInvariantes que no cuadran: " + "; ".join(l["problemas"]) + ".")
             estado += [":::", ""]
@@ -2659,7 +2676,7 @@ class Informe:
         ambitos = ("pc3", "pc4") if entrega == "pc4" else ("pc3",)
         junto = {n: [x for a in ambitos for x in self._listas[a][n]] for n in LISTAS}
         if (estricto or final) and (junto["faltantes"] or junto["problemas"]):
-            for x in junto["faltantes"]:
+            for x in dict.fromkeys(junto["faltantes"]):
                 print(f"falta: {x}", file=sys.stderr)
             print("error: faltan JSON o no cuadran invariantes", file=sys.stderr)
             return 1

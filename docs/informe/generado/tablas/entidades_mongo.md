@@ -1,6 +1,6 @@
 <!-- Generado por tablas.py desde docs/datos/ejemplos/. No editar a mano. -->
 
-::: {#tbl-entidades-mongo tbl-colwidths="[14,20,36,15,15]"}
+::: {#tbl-entidades-mongo tbl-colwidths="[21,16,33,15,15]"}
 | Colección | Qué guarda | Campos (además de `_id`) | Índices | Quién la escribe |
 |:---|:---|:---|:---|:---|
 | `estaciones` | El catálogo de estaciones: el código OEFA y su ficha | `objeto_fiscalizado`, `tipo_actividad`, `departamento`, `provincia`, `distrito`, `lat`, `lon` | — | El seed, desde la ficha |
