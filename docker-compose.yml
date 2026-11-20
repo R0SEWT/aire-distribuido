@@ -1,0 +1,41 @@
+services:
+  mongo:
+    image: mongo:8.0.38
+    environment:
+      MONGO_INITDB_DATABASE: aire_distribuido
+      ESTACIONES_CSV: /seed/estaciones_ficha.csv
+      INITIALIZATION_MARKER: /data/db/.pc4-seed-completo
+    ports:
+      - "127.0.0.1:${MONGO_PORT:-27017}:27017"
+    volumes:
+      - mongo_data:/data/db
+      - ./docs/datos/seed.js:/docker-entrypoint-initdb.d/10-seed.js:ro
+      - ./reports/estaciones_ficha.csv:/seed/estaciones_ficha.csv:ro
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "test -f /data/db/.pc4-seed-completo && mongosh --quiet --eval \"quit(db.adminCommand('ping').ok ? 0 : 1)\"",
+        ]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+      start_period: 10s
+
+  redis:
+    image: redis:7.4.12-alpine
+    command: ["redis-server", "--appendonly", "yes"]
+    ports:
+      - "127.0.0.1:${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+      start_period: 5s
+
+volumes:
+  mongo_data:
+  redis_data:
