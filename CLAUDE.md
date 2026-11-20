@@ -37,7 +37,7 @@ Las cuatro partes del enunciado, una por entregable:
 |------|---------|-----------|
 | A — Cargador concurrente (`datos/`, `cmd/cargar`) | bloques por bytes → workers (reglas, pivot por bloque) → recolector en orden de bloque → z-score con Welford y Chan; escribe silver, gold y reports | PC3 (07/11) |
 | B — K-Means paralelo (`kmeans/`, `cmd/entrenar`, `cmd/benchmark`) | worker pool por chunks sobre `Parciales`/`Fusionar`/`Actualizar`; regímenes con etiqueta ECA, dónde y cuándo, codo | PC3; distribuido en la PC4 (`protocolo/`, `docs/diseno.md`) |
-| C — API coordinadora | REST/WebSocket en Go, <100 ms, MongoDB + Redis | PC4 (21/11) |
+| C — API coordinadora (`api/`, `modelo/`, `ventana/`, `almacen/`, `cmd/api`) | REST/WebSocket en Go, <100 ms, MongoDB + Redis; contrato en `docs/api/openapi.yaml` | PC4 (21/11) |
 | D — Frontend SPA | mapa de estaciones con su régimen y las alertas en tiempo real | TB2 (29/11) |
 
 **Capas medallón en Google Drive** (`aire-distribuido/data/{bronze,silver,gold,reports}`, remoto

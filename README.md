@@ -243,7 +243,23 @@ go run ./cmd/cargar -entrada data/bronze/oefa.csv -bench 10 -workers 1,2,4,8,12
 go run ./cmd/benchmark -workers 1,2,4,8,12
 ```
 
-**5. En Docker.** La imagen final es distroless y corre sin root, así que las carpetas montadas
+**5. La API de la PC4.** Siembra el modelo desde `reports/` y sirve Swagger UI en
+<http://localhost:8080/docs>. Una predicción trae el régimen de la lectura y, aparte, la media de
+24 h de su estación con la alerta frente al ECA y la banda INCA. No arranca sin el secreto del JWT
+ni sin usuarios (`usuario:clave:rol`, con rol `usuario` o `admin`). Por ahora el almacén es un
+doble en memoria; MongoDB y Redis llegan con Docker Compose:
+
+```bash
+export JWT_SECRETO=$(openssl rand -hex 32)
+export API_USUARIOS='ana:una-clave-larga:admin,demo:otra-clave:usuario'
+go run ./cmd/api
+```
+
+Para desarrollo, `go run ./cmd/api -demo` arranca sin `API_USUARIOS` con los usuarios de
+demostración `demo`/`demo` (rol usuario) y `admin`/`admin` (rol admin), y lo avisa en el log.
+Solo en una máquina propia: con `-demo`, cualquiera que alcance el puerto entra como admin.
+
+**6. En Docker.** La imagen final es distroless y corre sin root, así que las carpetas montadas
 tienen que admitir escritura:
 
 ```bash
@@ -252,7 +268,7 @@ docker run --rm -v "$PWD/data:/app/data" -v "$PWD/reports:/app/reports" \
   aire-distribuido cargar -entrada data/bronze/oefa.csv
 ```
 
-**6. El informe.** Deja un `.docx` por integrante en `docs/informe/salida/`:
+**7. El informe.** Deja un `.docx` por integrante en `docs/informe/salida/`:
 
 ```bash
 bash docs/informe/render.sh
@@ -269,8 +285,10 @@ bash docs/informe/render.sh
 | `datos/`, `cmd/cargar/` | Parte A: el cargador concurrente. Bloques por bytes, workers, recolector en orden, pivot por estación y z-score por chunk. |
 | `kmeans/`, `cmd/entrenar/`, `cmd/benchmark/` | Parte B: el K-Means secuencial y el paralelo, las semillas, los regímenes frente al ECA, el codo y el benchmark. |
 | `protocolo/` | Los mensajes entre el coordinador y los nodos, su codificación y la barrera de una ronda, con pruebas. |
+| `cluster/`, `cmd/nodo/`, `cmd/distribuido/`, `cmd/smoke/`, `lab/` | El clúster de la PC4: el nodo que llama al coordinador y calcula su rango, el K-Means distribuido (rangos contiguos, una barrera de red por iteración, fusión en orden de nodo, `reports/kmeans_distribuido.json`), el smoke test de latidos y el paquete para los Windows del laboratorio. |
 | `configs/` | `limpieza.json` (columnas, unidades, centinelas y rangos) y `kmeans.json` (la receta congelada). |
 | `reports/` | Lo que escriben los comandos: conteos, estandarización, modelo, regímenes, benchmarks y auditoría. |
+| `api/`, `modelo/`, `ventana/`, `almacen/`, `cmd/api/`, `docs/api/` | Parte C: la API coordinadora. JWT HS256, latencia por ruta, el modelo sembrado desde `reports/` y la predicción con el contrato de `kmeans`, la media de 24 h por estación con la alerta frente al ECA y la banda INCA, el almacén detrás de interfaces (con un doble en memoria) y el contrato OpenAPI que se sirve tal cual. |
 | `notebooks/` | El laboratorio en Colab: EDA, calibración, auditoría y figuras, procedencia y mapa. |
 | `docs/informe/` | El informe en Quarto, con su plantilla de Word, el filtro y el empaquetado de la entrega. |
 | `docs/diagramas/` | Los diagramas en draw.io y sus PNG. |
