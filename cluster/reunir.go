@@ -10,6 +10,7 @@ import (
 	"net"
 	"slices"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/R0SEWT/aire-distribuido/protocolo"
@@ -36,50 +37,32 @@ func Enlaces(ms []*Miembro) []*protocolo.Enlace {
 // conexión tiene plazoHola para presentarse. Si un nodo con el mismo nombre
 // vuelve a llamar, la conexión nueva reemplaza a la vieja.
 //
-// No cierra ln, pero deja de aceptar al volver: después, quien llama lo cierra.
+// No cierra ln, y al volver ya no acepta ni queda ninguna goroutine suya: se
+// puede volver a llamar sobre el mismo listener (un pool de nodos) y la espera
+// siguiente recibe todas sus conexiones. Las que estaban a medio presentarse
+// tienen graciaSaludo para terminar (a un nodo con otra versión le llega su
+// ERROR) y se cierran; esos nodos vuelven a llamar. Para despertar al
+// aceptador sin cerrar ln le pone un plazo ya vencido y después lo quita, así
+// que ln tiene que tener SetDeadline, como *net.TCPListener, y no conservar un
+// plazo propio. Con otro net.Listener la espera funciona igual, pero el
+// aceptador no se puede despertar: sigue hasta que se cierra ln, y si antes
+// llega una conexión, la cierra.
+//
 // Devuelve los nodos ordenados por nombre: es el orden de los rangos y el de la
 // fusión.
 func EsperarNodos(ctx context.Context, ln net.Listener, n int, plazoHola time.Duration, lg *log.Logger) []*Miembro {
-	inicio := time.Now()
-	// hecho avisa a las goroutines de saludo que ya nadie recibe: la que termina
-	// después cierra su conexión en vez de quedarse bloqueada en llegan.
-	hecho := make(chan struct{})
-	defer close(hecho)
-	llegan := make(chan *Miembro)
-
-	go func() {
-		for {
-			conn, err := ln.Accept()
-			if err != nil {
-				return // ln cerrado: terminó la espera
-			}
-			select {
-			case <-hecho:
-				conn.Close()
-				return
-			default:
-			}
-			go func() {
-				e := protocolo.NuevoEnlace(conn)
-				if err := protocolo.RecibirHola(e, time.Now().Add(plazoHola)); err != nil {
-					lg.Printf("rechazado %s: %v", conn.RemoteAddr(), err)
-					e.Cerrar()
-					return
-				}
-				m := &Miembro{Enlace: e, Direccion: conn.RemoteAddr().String(), Llegada: time.Since(inicio)}
-				select {
-				case llegan <- m:
-				case <-hecho:
-					e.Cerrar()
-				}
-			}()
-		}
-	}()
+	r := &recepcion{
+		ln: ln, plazoHola: plazoHola, lg: lg, inicio: time.Now(),
+		llegan: make(chan *Miembro), hecho: make(chan struct{}), aceptador: make(chan struct{}),
+		saludando: make(map[*protocolo.Enlace]struct{}),
+	}
+	go r.aceptar()
+	defer r.cerrar()
 
 	porNombre := make(map[string]*Miembro, n)
 	for len(porNombre) < n {
 		select {
-		case m := <-llegan:
+		case m := <-r.llegan:
 			if viejo, ok := porNombre[m.Enlace.Nodo]; ok {
 				lg.Printf("%s volvió a llamar desde %s; reemplazo la conexión de %s", m.Enlace.Nodo, m.Direccion, viejo.Direccion)
 				viejo.Enlace.Cerrar()
@@ -98,6 +81,115 @@ func EsperarNodos(ctx context.Context, ln net.Listener, n int, plazoHola time.Du
 	}
 	slices.SortFunc(miembros, func(a, b *Miembro) int { return cmp.Compare(a.Enlace.Nodo, b.Enlace.Nodo) })
 	return miembros
+}
+
+// graciaSaludo es lo que cerrar espera a las conexiones que todavía no mandaron
+// su HOLA cuando termina la espera, si a su plazoHola le queda más que eso. Un
+// HOLA que ya venía en camino se atiende: el nodo con otra versión se entera
+// de por qué no entra, en vez de leer un EOF. El que no dijo nada se corta.
+const graciaSaludo = time.Second
+
+// recepcion es lo que una espera tiene corriendo: el aceptador y un saludo por
+// cada conexión que todavía no mandó su HOLA. cerrar los termina a todos.
+type recepcion struct {
+	ln        net.Listener
+	plazoHola time.Duration
+	lg        *log.Logger
+	inicio    time.Time
+
+	llegan    chan *Miembro // los que se presentaron bien
+	hecho     chan struct{} // cerrado: ya nadie recibe de llegan
+	aceptador chan struct{} // cerrado cuando el aceptador terminó
+
+	mu        sync.Mutex
+	cerrada   bool                           // no se admiten más saludos
+	saludando map[*protocolo.Enlace]struct{} // conexiones que todavía no mandaron su HOLA
+	saludos   sync.WaitGroup
+}
+
+// conPlazo es un listener cuyo Accept se puede despertar sin cerrarlo:
+// *net.TCPListener y *net.UnixListener.
+type conPlazo interface {
+	SetDeadline(time.Time) error
+}
+
+// aceptar lanza un saludo por conexión hasta que Accept falla: se cerró ln o
+// cerrar le puso un plazo vencido.
+func (r *recepcion) aceptar() {
+	defer close(r.aceptador)
+	for {
+		conn, err := r.ln.Accept()
+		if err != nil {
+			return
+		}
+		e := protocolo.NuevoEnlace(conn)
+		// Con el mismo Mutex que cerrar: o el saludo queda anotado antes de que
+		// cerrar los recorra, o no llega a nacer.
+		r.mu.Lock()
+		if r.cerrada {
+			r.mu.Unlock()
+			e.Cerrar()
+			return
+		}
+		r.saludando[e] = struct{}{}
+		r.saludos.Add(1)
+		r.mu.Unlock()
+		go r.saludar(e, conn.RemoteAddr().String())
+	}
+}
+
+// saludar espera el HOLA de una conexión y entrega el miembro.
+func (r *recepcion) saludar(e *protocolo.Enlace, direccion string) {
+	defer r.saludos.Done()
+	err := protocolo.RecibirHola(e, time.Now().Add(r.plazoHola))
+	r.mu.Lock()
+	delete(r.saludando, e)
+	r.mu.Unlock()
+	if err != nil {
+		if !errors.Is(err, net.ErrClosed) { // la cortó cerrar: no es un rechazo
+			r.lg.Printf("rechazado %s: %v", direccion, err)
+		}
+		e.Cerrar()
+		return
+	}
+	m := &Miembro{Enlace: e, Direccion: direccion, Llegada: time.Since(r.inicio)}
+	select {
+	case r.llegan <- m:
+	case <-r.hecho:
+		e.Cerrar()
+	}
+}
+
+// cerrar termina la recepción y vuelve cuando no queda ninguna goroutine suya
+// (con un listener sin plazos, salvo el aceptador: ver EsperarNodos).
+func (r *recepcion) cerrar() {
+	close(r.hecho)
+	r.mu.Lock()
+	r.cerrada = true // desde aquí el aceptador no lanza más saludos
+	pendientes := len(r.saludando)
+	r.mu.Unlock()
+	// Un plazo vencido hace fallar el Accept en curso, o el siguiente, sin
+	// cerrar el listener; las conexiones que lleguen después quedan en la cola
+	// del sistema para quien acepte luego.
+	if ln, ok := r.ln.(conPlazo); ok && ln.SetDeadline(time.Now()) == nil {
+		<-r.aceptador
+		ln.SetDeadline(time.Time{})
+	}
+	if pendientes > 0 {
+		gracia := time.AfterFunc(graciaSaludo, r.cortarSaludos)
+		defer gracia.Stop()
+	}
+	r.saludos.Wait()
+}
+
+// cortarSaludos cierra las conexiones que siguen sin mandar su HOLA: destraba
+// la lectura de cada saludo.
+func (r *recepcion) cortarSaludos() {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	for e := range r.saludando {
+		e.Cerrar()
+	}
 }
 
 // Terminar manda FIN a cada nodo (la corrida salió bien: el nodo libera su
