@@ -184,6 +184,63 @@ func TestCargarConOtraHuellaRespondeErrorYSigueAtendiendo(t *testing.T) {
 	})
 }
 
+func TestUnCargarQueFallaDescartaLaParticionAnterior(t *testing.T) {
+	// Un CARGAR nuevo reemplaza la partición anterior, también si falla: un
+	// ITERAR después de un CARGAR fallido no puede responder con las filas del
+	// CARGAR anterior, que el coordinador ya no cree que el nodo tenga.
+	ruta, _ := goldDePrueba(t, 30)
+	huella := huellaDe(t, ruta)
+	cent := []float64{-2, -2, 0, 3, 4, 1}
+	fallidos := map[string]protocolo.Mensaje{
+		"otra huella":           cargar(0, 10, "sha256:"+strings.Repeat("ab", 32)),
+		"más filas que el tope": cargar(0, MaxFilasPorOmision+1, huella),
+	}
+	for nombre, fallido := range fallidos {
+		t.Run(nombre, func(t *testing.T) {
+			atenderCon(t, nodoDePrueba(ruta), func(cod *protocolo.Codificador, dec *protocolo.Decodificador) error {
+				iter := 0
+				iterar := func(tipo protocolo.Tipo) (protocolo.Mensaje, error) {
+					iter++
+					return pedir(cod, dec, protocolo.Mensaje{Tipo: protocolo.Iterar, Iter: iter, Centroides: cent}, tipo)
+				}
+				// Con un CARGAR bueno, el nodo itera.
+				if _, err := pedir(cod, dec, cargar(0, 30, huella), protocolo.Listo); err != nil {
+					return err
+				}
+				if _, err := iterar(protocolo.Parcial); err != nil {
+					return err
+				}
+				// Después de uno que falla, ya no: no queda partición.
+				if _, err := pedir(cod, dec, fallido, protocolo.Error); err != nil {
+					return err
+				}
+				m, err := iterar(protocolo.Error)
+				if err != nil {
+					return fmt.Errorf("ITERAR después de un CARGAR fallido: %w", err)
+				}
+				if !strings.Contains(m.Mensaje, "sin partición") {
+					return errors.New("el ERROR no dice que no hay partición: " + m.Mensaje)
+				}
+				// Y con otro CARGAR bueno itera sobre el rango nuevo.
+				if _, err := pedir(cod, dec, cargar(5, 20, huella), protocolo.Listo); err != nil {
+					return err
+				}
+				if m, err = iterar(protocolo.Parcial); err != nil {
+					return err
+				}
+				total := 0
+				for _, c := range m.Conteos {
+					total += c
+				}
+				if total != 15 {
+					return fmt.Errorf("los conteos suman %d y el rango nuevo tiene 15 filas", total)
+				}
+				return cod.Escribir(fin)
+			})
+		})
+	}
+}
+
 func TestCargarSinGoldRespondeUnErrorLegible(t *testing.T) {
 	ruta := filepath.Join(t.TempDir(), "no-esta.csv")
 	atenderCon(t, nodoDePrueba(ruta), func(cod *protocolo.Codificador, dec *protocolo.Decodificador) error {

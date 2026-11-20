@@ -296,6 +296,61 @@ func TestLloydConVariosNodosCoincideConToleranciaYEsDeterminista(t *testing.T) {
 	}
 }
 
+func TestLaInerciaEsLaDeLaPasadaFinalAunqueCorteMaxIter(t *testing.T) {
+	// Con max_iter chico Lloyd corta con los centroides todavía moviéndose: la
+	// inercia de la última iteración se midió con los centroides de antes de
+	// actualizarlos, y la que se publica es la de los centroides publicados (la
+	// pasada final). Cuando converge las dos casi coinciden y no se nota cuál
+	// se devuelve; aquí sí.
+	const n, chunk, maxIter = 2000, 64, 2
+	ruta, g := goldConRuido(t, n)
+	cent := inicio(t, g.Datos, 3, 42)
+	op := opcionesLloyd(3)
+	op.MaxIter = maxIter
+	rangos, _ := Repartir(n, 3)
+	exacto := lloydEnMemoria(g.Datos, rangos, cent, op, chunk)
+
+	p := levantar(t, ruta, n, 3, chunk)
+	c, err := Lloyd(p.enlaces, cent, op, 2*time.Second, 1)
+	if err != nil {
+		t.Fatalf("Lloyd: %v", err)
+	}
+	p.terminar(t)
+	comprobarCorrida(t, c, n)
+	r := c.Resultado
+	if r.Iteraciones != maxIter || r.Paro != kmeans.ParoMaxIter || c.UltimaRonda != maxIter+1 {
+		t.Fatalf("%d iteraciones (%s), última ronda %d; se esperaba cortar en max_iter = %d y una pasada más",
+			r.Iteraciones, r.Paro, c.UltimaRonda, maxIter)
+	}
+	if !mismosBits(r.Centroides, exacto.Centroides) {
+		t.Fatalf("los centroides no son los de la cuenta en memoria (dif. máx. %.3g)", difMax(r.Centroides, exacto.Centroides))
+	}
+
+	// La inercia de los centroides finales, contada fila por fila.
+	directa := 0.0
+	for i := range n {
+		x := g.Datos.Punto(i)
+		mejor := math.Inf(1)
+		for j := range 3 {
+			dx, dy := x[0]-r.Centroides[2*j], x[1]-r.Centroides[2*j+1]
+			mejor = min(mejor, dx*dx+dy*dy)
+		}
+		directa += mejor
+	}
+	ultima := r.Inercias[len(r.Inercias)-1]
+	if math.Abs(ultima-directa)/directa < 1e-6 {
+		t.Fatalf("la inercia de la iteración %d (%.17g) y la de los centroides finales (%.17g) casi coinciden: el test no distingue cuál se publica",
+			maxIter, ultima, directa)
+	}
+	if d := math.Abs(r.Inercia-directa) / directa; d > 1e-12 {
+		t.Fatalf("inercia %.17g; con los centroides finales es %.17g (dif. relativa %.3g) y la de la iteración %d fue %.17g",
+			r.Inercia, directa, d, maxIter, ultima)
+	}
+	if math.Float64bits(r.Inercia) != math.Float64bits(exacto.Inercia) {
+		t.Fatalf("inercia %.17g; la cuenta en memoria con los mismos rangos da %.17g", r.Inercia, exacto.Inercia)
+	}
+}
+
 func TestReplicasVirtualesDanLosMismosCentroides(t *testing.T) {
 	// Con r réplicas virtuales la tabla tiene r × N filas y la fila i es la
 	// i mod N (docs/diseno.md, §4.3). Cada fila aparece r veces, así que sumas y
