@@ -93,7 +93,15 @@ const (
 	msgCuerpoLectura = "el cuerpo tiene que ser un objeto JSON con estacion, fecha_hora, pm2_5 y pm10"
 	msgEstacion      = "estacion tiene que ser un texto no vacío"
 	msgFechaHora     = "fecha_hora tiene que ser una fecha RFC3339 con zona, como 2026-11-14T15:00:00-05:00"
+	msgFechaFutura   = "fecha_hora no puede estar más de 1 hora adelante de la hora del servidor"
 )
+
+// margenFuturo es cuánto puede adelantarse la fecha_hora de una lectura al
+// reloj del servidor: los relojes de quien mide y de la API no están
+// sincronizados al segundo. Más allá se rechaza, porque el régimen de la
+// estación no retrocede y una fecha lejana lo dejaría clavado. Las fechas
+// pasadas se aceptan todas: los datos históricos son el caso normal.
+const margenFuturo = time.Hour
 
 // Topes del esquema Lectura: el código de una estación del catálogo y una
 // concentración que un monitor de PM puede medir.
@@ -174,6 +182,9 @@ func (s *Servidor) leerLectura(w http.ResponseWriter, r *http.Request) (lectura,
 	fecha, err := time.Parse(time.RFC3339, *c.FechaHora)
 	if err != nil {
 		return lectura{}, msgFechaHora
+	}
+	if fecha.After(s.ahora().Add(margenFuturo)) {
+		return lectura{}, msgFechaFutura
 	}
 	for _, pm := range []struct {
 		campo string
