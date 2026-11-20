@@ -1,0 +1,6 @@
+# Lo que publicar.sh arma en sitio/ y no se versiona: cada entrega renderizada (el HTML pesa unos
+# 15 MB) y el estado local de la CLI de Netlify. sitio/index.html (la portada) sí se versiona.
+/sitio/pc*/
+/sitio/tb2/
+/.netlify/
+/sitio/.netlify/

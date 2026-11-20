@@ -1,0 +1,850 @@
+openapi: 3.0.3
+info:
+  title: API coordinadora de aire-distribuido
+  version: 0.1.0
+  description: |
+    Contrato de la API de la PC4 (spec §6, PR #51). Coordina el K-Means distribuido
+    y asigna cada lectura horaria a un régimen del modelo activo.
+
+    Los ejemplos salen de la spec §6.5 y de reports/regimenes.json.
+servers:
+  - url: http://localhost:8080
+    description: API local o publicada por Docker Compose
+tags:
+  - name: Autenticación
+  - name: Salud
+  - name: Predicciones
+  - name: Estaciones
+  - name: Modelos
+  - name: Clúster
+  - name: Entrenamientos
+  - name: Métricas
+  - name: Documentación
+  - name: Eventos
+security:
+  - bearerAuth: []
+paths:
+  /api/auth/token:
+    post:
+      tags: [Autenticación]
+      operationId: crearToken
+      summary: Obtiene un JWT HS256 para un usuario de demostración
+      description: Las credenciales y el rol se configuran en el servidor. El ejemplo demo/demo corresponde al rol usuario.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/Credenciales'}
+            example: {usuario: demo, clave: demo}
+      responses:
+        '200':
+          description: Token con expiración y rol. El token de ejemplo no es una credencial utilizable.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Token'}
+              example:
+                token: '<token>'
+                rol: usuario
+                expira: '2026-11-21T23:30:00-05:00'
+        '400': {$ref: '#/components/responses/PedidoInvalido'}
+        '401':
+          description: Usuario o clave incorrectos
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Error'}
+              example: {error: usuario o clave incorrectos}
+  /api/salud:
+    get:
+      tags: [Salud]
+      operationId: consultarSalud
+      summary: Consulta la API, sus almacenes, el pool y el modelo activo
+      security: []
+      responses:
+        '200':
+          description: Estado de los componentes
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Salud'}
+              example: {api: ok, mongo: ok, redis: ok, nodos_en_pool: 4, modelo_activo: sembrado-kmeans-json}
+  /api/predicciones:
+    post:
+      tags: [Predicciones]
+      operationId: predecirRegimen
+      summary: Asigna una lectura al régimen más cercano del modelo activo
+      description: |
+        Rol usuario o admin. La lectura llega en µg/m³, sin estandarizar.
+        El servidor aplica la receta y la estandarización del modelo activo.
+        La estación tiene que estar en el catálogo, que la API tiene en memoria: el
+        camino del pedido no consulta ninguna base (spec §6.2). La fecha_hora se
+        trunca a la hora: hay una lectura por estación y hora, y repetirla la reemplaza.
+      x-roles: [usuario, admin]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/Lectura'}
+            example: {estacion: CA-AYAS-01, fecha_hora: '2026-11-14T15:00:00-05:00', pm2_5: 70.2, pm10: 190.5}
+      responses:
+        '200':
+          description: Régimen del modelo activo y, aparte, la media de 24 h de la estación frente al ECA y al INCA
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Prediccion'}
+              example:
+                estacion: CA-AYAS-01
+                regimen: 1
+                excede_eca: true
+                media_24h: {pm2_5: 58.3, pm10: 121.4, lecturas: 24}
+                alerta: true
+                inca: mala
+                pm2_5_medio_regimen: 65.1
+                pm10_medio_regimen: 186.7
+                modelo_id: sembrado-kmeans-json
+                ms: 0.04
+        '400':
+          description: JSON, estación, fecha o concentraciones inválidos
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Error'}
+              examples:
+                negativo: {value: {error: pm2_5 tiene que ser un número no negativo}}
+                fuera_de_rango: {value: {error: 'pm10 no puede superar 10000 µg/m³'}}
+                estacion: {value: {error: 'estación desconocida: CA-XX-99'}}
+                fecha_futura: {value: {error: fecha_hora no puede estar más de 1 hora adelante de la hora del servidor}}
+        '401': {$ref: '#/components/responses/NoAutenticado'}
+        '503':
+          description: No hay modelo activo
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Error'}
+              example: {error: no hay modelo activo}
+  /api/estaciones:
+    get:
+      tags: [Estaciones]
+      operationId: listarEstaciones
+      summary: Lista las estaciones almacenadas en MongoDB
+      x-roles: [usuario, admin]
+      responses:
+        '200':
+          description: Estaciones; una lista vacía es válida
+          content:
+            application/json:
+              schema:
+                type: array
+                items: {$ref: '#/components/schemas/Estacion'}
+              example:
+                - {id: CA-AYAS-01, objeto_fiscalizado: Unidad minera Antamina, tipo_actividad: minería,
+                   departamento: ANCASH, provincia: HUARI, distrito: SAN MARCOS, lat: -9.52384, lon: -77.02043}
+        '401': {$ref: '#/components/responses/NoAutenticado'}
+        '503': {$ref: '#/components/responses/NoDisponible'}
+  /api/estaciones/{id}/regimen:
+    parameters:
+      - $ref: '#/components/parameters/EstacionId'
+    get:
+      tags: [Estaciones]
+      operationId: consultarRegimenEstacion
+      summary: Obtiene de Redis el último régimen registrado de una estación
+      x-roles: [usuario, admin]
+      responses:
+        '200':
+          description: Último régimen y momento de actualización
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/RegimenEstacion'}
+              example: {fecha_hora: '2026-11-14T15:00:00-05:00', regimen: 1, excede_eca: true,
+                        media_24h: {pm2_5: 58.3, pm10: 121.4, lecturas: 24},
+                        alerta: true, inca: mala, ts: '2026-11-14T15:00:02-05:00'}
+        '401': {$ref: '#/components/responses/NoAutenticado'}
+        '404':
+          description: La estación no existe, o existe pero todavía no tiene una predicción registrada
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Error'}
+              examples:
+                desconocida: {value: {error: 'estación desconocida: CA-XX-99'}}
+                sin_regimen: {value: {error: 'la estación CA-AYAS-01 todavía no tiene un régimen registrado'}}
+        '503': {$ref: '#/components/responses/NoDisponible'}
+  /api/modelos/activo:
+    get:
+      tags: [Modelos]
+      operationId: consultarModeloActivo
+      summary: Consulta el modelo activo y sus regímenes en unidades originales
+      description: El modelo se siembra al arrancar desde reports o la caché. Los índices de régimen no implican orden de gravedad.
+      x-roles: [usuario, admin]
+      responses:
+        '200':
+          description: Modelo usado por las predicciones
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Modelo'}
+              example:
+                id: sembrado-kmeans-json
+                k: 3
+                features: [pm2_5, pm10]
+                iteraciones: 44
+                inercia: 50950.37
+                regimenes:
+                  - {regimen: 0, pm2_5_medio: 9.0, pm10_medio: 17.6, excede_eca: false, tamano: 48161}
+                  - {regimen: 1, pm2_5_medio: 65.1, pm10_medio: 186.7, excede_eca: true, tamano: 1536}
+                  - {regimen: 2, pm2_5_medio: 24.4, pm10_medio: 58.2, excede_eca: false, tamano: 16176}
+        '401': {$ref: '#/components/responses/NoAutenticado'}
+        '503': {$ref: '#/components/responses/NoDisponible'}
+  /api/cluster/nodos:
+    get:
+      tags: [Clúster]
+      operationId: listarNodos
+      summary: Lista nodos, workers, latencia y disponibilidad del pool
+      x-roles: [admin]
+      responses:
+        '200':
+          description: Nodos conocidos por el coordinador
+          content:
+            application/json:
+              schema:
+                type: array
+                items: {$ref: '#/components/schemas/Nodo'}
+              example: [{nombre: H45-022, direccion: '10.11.38.69:56455', workers: 24, latencia_ms: 0.49, libre: true}]
+        '401': {$ref: '#/components/responses/NoAutenticado'}
+        '403': {$ref: '#/components/responses/SinPermiso'}
+  /api/entrenamientos:
+    post:
+      tags: [Entrenamientos]
+      operationId: iniciarEntrenamiento
+      summary: Inicia un entrenamiento distribuido de forma asíncrona
+      description: |
+        Rol admin. Solo se permite un entrenamiento a la vez: un segundo pedido
+        mientras corre el primero recibe 409 con el id del que está en curso.
+        No hay clave de idempotencia: un pedido repetido después de que el
+        primero terminó lanza otro entrenamiento.
+
+        Si replicas es mayor que 1, la corrida es una medición y no reemplaza el
+        modelo activo. Con replicas = 1 y si termina bien, el modelo nuevo pasa
+        a ser el activo con el id entrenado-{id} (modelo_id), salvo que
+        dif_secuencial supere 1e-9: dentro de esa tolerancia la diferencia con
+        el K-Means secuencial es redondeo; fuera, los centroides son otros
+        (algún nodo devolvió parciales que no corresponden a sus filas). En ese
+        caso el entrenamiento queda terminado, pero no activa su modelo y lo
+        dice en aviso.
+
+        El id es e-AAAAMMDD-HHMM en la hora de Lima, con un sufijo (-2, -3…)
+        si en ese minuto ya hubo otro. Al terminar, los nodos vuelven a llamar
+        a la API después de su pausa entre intentos (unos 2 s): un pedido
+        inmediato puede recibir 422.
+        Si cae un nodo, el entrenamiento queda abortado con el nombre del nodo en
+        error y no activa ningún modelo.
+      x-roles: [admin]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/PedidoEntrenamiento'}
+            example: {nodos: 4, replicas: 1, semilla: 42}
+      responses:
+        '202':
+          description: Pedido aceptado; consultar el id para seguir el resultado
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/EntrenamientoAceptado'}
+              example: {id: e-20261119-1530, estado: en_curso}
+        '400': {$ref: '#/components/responses/PedidoInvalido'}
+        '401': {$ref: '#/components/responses/NoAutenticado'}
+        '403': {$ref: '#/components/responses/SinPermiso'}
+        '409':
+          description: Ya hay un entrenamiento en curso
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Error'}
+              example: {error: 'ya hay un entrenamiento en curso: e-20261119-1528'}
+        '422':
+          description: No hay suficientes nodos libres para el pedido
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Error'}
+              example: {error: hay 2 nodos libres en el pool y se pidieron 4}
+        '503':
+          description: La API arrancó sin el gold y no puede entrenar, se está apagando, o no responde MongoDB
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Error'}
+              example: {error: 'esta API no puede entrenar: arrancó sin el gold (-gold)'}
+    get:
+      tags: [Entrenamientos]
+      operationId: listarEntrenamientos
+      summary: Lista el historial de entrenamientos, sin las rondas
+      description: Las rondas de cada entrenamiento se piden con GET /api/entrenamientos/{id}.
+      x-roles: [admin]
+      responses:
+        '200':
+          description: Historial, del más reciente al más antiguo; una lista vacía es válida
+          content:
+            application/json:
+              schema:
+                type: array
+                items: {$ref: '#/components/schemas/EntrenamientoResumen'}
+              example:
+                - id: e-20261119-1540
+                  estado: abortado
+                  nodos: [H45-022, H45-023]
+                  replicas: 1
+                  error: 'ronda 1: el nodo H45-023 no respondió dentro del plazo'
+                - id: e-20261119-1530
+                  estado: terminado
+                  nodos: [H45-022, H45-023, H45-024, H45-032]
+                  replicas: 1
+                  iteraciones: 44
+                  paro: tolerancia
+                  dif_secuencial: 8.9e-16
+                  ms_total: 31.2
+        '401': {$ref: '#/components/responses/NoAutenticado'}
+        '403': {$ref: '#/components/responses/SinPermiso'}
+        '503': {$ref: '#/components/responses/NoDisponible'}
+  /api/entrenamientos/{id}:
+    parameters:
+      - $ref: '#/components/parameters/EntrenamientoId'
+    get:
+      tags: [Entrenamientos]
+      operationId: consultarEntrenamiento
+      summary: Consulta un entrenamiento con sus rondas o el error de aborto
+      x-roles: [admin]
+      responses:
+        '200':
+          description: Estado y rondas disponibles hasta el momento
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Entrenamiento'}
+              examples:
+                en_curso:
+                  value:
+                    id: e-20261119-1530
+                    estado: en_curso
+                    nodos: [H45-022, H45-023, H45-024, H45-032]
+                    replicas: 1
+                    rondas:
+                      - iter: 1
+                        inercia: 73075.5
+                        ms_ronda: 0.61
+                        ms_fusion: 0.003
+                        ms_por_nodo: {H45-022: 0.11, H45-023: 0.12, H45-024: 0.11, H45-032: 0.13}
+                terminado:
+                  value:
+                    id: e-20261119-1530
+                    estado: terminado
+                    nodos: [H45-022, H45-023, H45-024, H45-032]
+                    replicas: 1
+                    iteraciones: 44
+                    paro: tolerancia
+                    dif_secuencial: 8.9e-16
+                    ms_total: 31.2
+                    rondas:
+                      - iter: 1
+                        inercia: 73075.5
+                        ms_ronda: 0.61
+                        ms_fusion: 0.003
+                        ms_por_nodo: {H45-022: 0.11, H45-023: 0.12, H45-024: 0.11, H45-032: 0.13}
+                abortado:
+                  value:
+                    id: e-20261119-1540
+                    estado: abortado
+                    nodos: [H45-022, H45-023]
+                    replicas: 1
+                    rondas: []
+                    error: 'ronda 1: el nodo H45-023 no respondió dentro del plazo'
+        '401': {$ref: '#/components/responses/NoAutenticado'}
+        '403': {$ref: '#/components/responses/SinPermiso'}
+        '404': {$ref: '#/components/responses/NoEncontrado'}
+        '503': {$ref: '#/components/responses/NoDisponible'}
+  /api/metricas:
+    get:
+      tags: [Métricas]
+      operationId: consultarMetricas
+      summary: Consulta pedidos, percentiles de latencia y estado del clúster
+      x-roles: [admin]
+      responses:
+        '200':
+          description: Percentiles en milisegundos por endpoint
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Metricas'}
+              example:
+                endpoints:
+                  POST /api/predicciones: {pedidos: 12000, p50_ms: 0.3, p95_ms: 0.9, p99_ms: 2.1}
+                nodos_en_pool: 4
+                ultimo_entrenamiento: e-20261119-1530
+                escrituras_descartadas: 0
+                escrituras_fallidas: 0
+                escritura:
+                  mongo: {escritas: 12000, descartadas: 0, fallidas: 0, lotes: 3120}
+                  redis: {escritas: 12000, descartadas: 0, fallidas: 0, lotes: 3050}
+                puntos_de_control: {escritos: 44, fallidos: 0, omitidos: 0}
+        '401': {$ref: '#/components/responses/NoAutenticado'}
+        '403': {$ref: '#/components/responses/SinPermiso'}
+  /openapi.yaml:
+    get:
+      tags: [Documentación]
+      operationId: descargarOpenAPI
+      summary: Sirve este contrato OpenAPI sin transformación
+      security: []
+      responses:
+        '200':
+          description: Documento YAML OpenAPI 3.0.3
+          content:
+            application/yaml:
+              schema: {type: string}
+  /docs:
+    get:
+      tags: [Documentación]
+      operationId: consultarSwaggerUI
+      summary: Muestra Swagger UI con el contrato de /openapi.yaml
+      security: []
+      responses:
+        '200':
+          description: Página HTML de Swagger UI
+          content:
+            text/html:
+              schema: {type: string}
+  /ws:
+    get:
+      tags: [Eventos]
+      operationId: seguirEventos
+      summary: Abre un WebSocket de eventos del entrenamiento
+      description: |
+        Rol usuario o admin. Solo el servidor envía. Cada trama de texto es un
+        objeto JSON con el nombre del evento y sus datos (esquema EventoWS):
+        {"evento": "entrenamiento.ronda", "datos": {...}}.
+
+        Qué eventos ve cada rol: entrenamiento.ronda y entrenamiento.fin llegan
+        solo a los clientes con rol admin (los entrenamientos son de admin). Un
+        cliente con rol usuario se conecta igual y hoy no recibe ningún evento:
+        el WebSocket queda abierto para los eventos que sí son de todos, como
+        las alertas que consumirá la SPA.
+
+        El JWT se acepta de tres maneras, en este orden:
+        - Authorization: Bearer, como en el resto de la API, para un cliente
+          que puede poner encabezados (Postman, curl, otro servicio).
+        - Sec-WebSocket-Protocol: el subprotocolo aire.jwt seguido del token.
+          Es lo recomendado para el navegador, que no deja poner Authorization:
+          new WebSocket(url, ["aire.jwt", token]). El token no queda en la URL
+          (historial, logs de un proxy). El 101 confirma aire.jwt.
+        - La consulta token (?token=…), para probar a mano. La API no escribe
+          la consulta en su log.
+
+        Si el pedido trae Origin, tiene que ser el mismo host de la API o un
+        origen permitido en el servidor (CORS_ORIGENES); si no, 403. El servidor
+        manda un ping cada 30 s y cierra con 1008 al cliente que no lee al ritmo
+        de los eventos o cuyo token venció, y con 1001 al apagarse.
+      security:
+        - wsSubprotocolo: []
+        - wsToken: []
+        - bearerAuth: []
+      x-roles: [usuario, admin]
+      x-websocket-events:
+        entrenamiento.ronda:
+          schema: {$ref: '#/components/schemas/EventoWS'}
+          example:
+            evento: entrenamiento.ronda
+            datos: {id: e-20261119-1530, iter: 1, inercia: 73075.5, ms_ronda: 0.61, ms_fusion: 0.003,
+                    ms_por_nodo: {H45-022: 0.11, H45-023: 0.12}}
+        entrenamiento.fin:
+          schema: {$ref: '#/components/schemas/EventoWS'}
+          examples:
+            terminado:
+              evento: entrenamiento.fin
+              datos: {id: e-20261119-1530, iteraciones: 44, paro: tolerancia, dif_secuencial: 8.9e-16, ms_total: 31.2}
+            abortado:
+              evento: entrenamiento.fin
+              datos: {id: e-20261119-1540, error: 'ronda 1: el nodo H45-023 no respondió dentro del plazo'}
+      responses:
+        '101':
+          description: Conexión actualizada a WebSocket; a partir de aquí se reciben tramas de texto
+          headers:
+            Sec-WebSocket-Protocol:
+              description: aire.jwt, si el cliente lo ofreció. Nunca el token.
+              schema: {type: string, enum: [aire.jwt]}
+            Upgrade:
+              schema: {type: string, enum: [websocket]}
+            Connection:
+              schema: {type: string, example: Upgrade}
+            Sec-WebSocket-Accept:
+              schema: {type: string}
+        '400': {$ref: '#/components/responses/PedidoInvalido'}
+        '401': {$ref: '#/components/responses/NoAutenticado'}
+        '403':
+          description: El Origin del pedido no es el de la API ni uno permitido
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Error'}
+              example: {error: 'el origen http://otro.example no puede abrir este WebSocket'}
+        '503':
+          description: La API se está apagando
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Error'}
+              example: {error: la API se está apagando}
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT HS256 en Authorization. Los roles usuario/admin se comprueban en el servidor; x-roles documenta el acceso.
+    wsToken:
+      type: apiKey
+      in: query
+      name: token
+      description: El mismo JWT HS256 en la consulta del handshake WebSocket. No registrar la consulta en logs.
+    wsSubprotocolo:
+      type: apiKey
+      in: header
+      name: Sec-WebSocket-Protocol
+      description: |
+        El mismo JWT HS256 como subprotocolo del handshake WebSocket: «aire.jwt, <token>». Es lo
+        recomendado para el navegador: new WebSocket(url, ["aire.jwt", token]).
+  parameters:
+    EstacionId:
+      name: id
+      in: path
+      required: true
+      description: Código de la estación OEFA
+      schema: {type: string, minLength: 1}
+      example: CA-AYAS-01
+    EntrenamientoId:
+      name: id
+      in: path
+      required: true
+      description: Identificador devuelto al iniciar el entrenamiento
+      schema: {type: string, minLength: 1}
+      example: e-20261119-1530
+  responses:
+    PedidoInvalido:
+      description: JSON o parámetros inválidos
+      content:
+        application/json:
+          schema: {$ref: '#/components/schemas/Error'}
+          example: {error: pedido inválido}
+    NoAutenticado:
+      description: Falta el JWT, es inválido o expiró
+      content:
+        application/json:
+          schema: {$ref: '#/components/schemas/Error'}
+          example: {error: 'token ausente, inválido o expirado'}
+    SinPermiso:
+      description: El JWT es válido pero el rol no autoriza la operación
+      content:
+        application/json:
+          schema: {$ref: '#/components/schemas/Error'}
+          example: {error: se requiere el rol admin}
+    NoEncontrado:
+      description: No existe el recurso
+      content:
+        application/json:
+          schema: {$ref: '#/components/schemas/Error'}
+          example: {error: 'no existe el entrenamiento e-20261119-9999'}
+    NoDisponible:
+      description: El almacén que atiende la ruta (MongoDB o Redis) no responde
+      content:
+        application/json:
+          schema: {$ref: '#/components/schemas/Error'}
+          example: {error: MongoDB no disponible}
+  schemas:
+    Error:
+      type: object
+      required: [error]
+      properties:
+        error: {type: string, minLength: 1}
+    Credenciales:
+      type: object
+      required: [usuario, clave]
+      properties:
+        usuario: {type: string, minLength: 1}
+        clave: {type: string, minLength: 1, format: password, writeOnly: true}
+    Token:
+      type: object
+      required: [token, rol, expira]
+      properties:
+        token: {type: string, minLength: 1}
+        rol: {type: string, enum: [usuario, admin]}
+        expira: {type: string, format: date-time}
+    Salud:
+      type: object
+      required: [api, mongo, redis, nodos_en_pool, modelo_activo]
+      properties:
+        api: {type: string, enum: [ok]}
+        mongo: {type: string, enum: [ok, error]}
+        redis: {type: string, enum: [ok, error]}
+        nodos_en_pool: {type: integer, minimum: 0}
+        modelo_activo: {type: string, nullable: true}
+    Lectura:
+      type: object
+      required: [estacion, fecha_hora, pm2_5, pm10]
+      properties:
+        estacion: {type: string, minLength: 1, maxLength: 64, description: Código de una estación del catálogo}
+        fecha_hora:
+          type: string
+          format: date-time
+          description: |
+            Fecha RFC3339 con zona explícita; los ejemplos usan America/Lima (UTC-5).
+            Se trunca a la hora. Se aceptan fechas históricas y lecturas desordenadas, pero no
+            una fecha más de 1 hora adelante del reloj del servidor.
+        pm2_5: {type: number, format: double, minimum: 0, maximum: 10000, description: Concentración de PM2.5 en µg/m³}
+        pm10: {type: number, format: double, minimum: 0, maximum: 10000, description: Concentración de PM10 en µg/m³}
+    Prediccion:
+      type: object
+      required: [estacion, regimen, excede_eca, media_24h, alerta, inca, pm2_5_medio_regimen, pm10_medio_regimen, modelo_id, ms]
+      properties:
+        estacion: {type: string, minLength: 1}
+        regimen: {type: integer, minimum: 0}
+        excede_eca: {type: boolean, description: 'Si la media del régimen supera el ECA; describe el régimen, no la estación'}
+        media_24h: {$ref: '#/components/schemas/Media24h'}
+        alerta: {$ref: '#/components/schemas/Alerta'}
+        inca: {$ref: '#/components/schemas/BandaINCA'}
+        pm2_5_medio_regimen: {type: number, minimum: 0, description: Media horaria del régimen en µg/m³}
+        pm10_medio_regimen: {type: number, minimum: 0, description: Media horaria del régimen en µg/m³}
+        modelo_id: {type: string, minLength: 1}
+        ms: {type: number, minimum: 0, description: Tiempo interno de predicción en milisegundos}
+    Estacion:
+      type: object
+      required: [id, objeto_fiscalizado, tipo_actividad, departamento, provincia, distrito, lat, lon]
+      description: |
+        Documento de la colección estaciones (spec §7.1), sembrado desde
+        reports/estaciones_ficha.csv; id es su _id, el código OEFA. Las 33
+        estaciones tienen coordenadas; un campo que falte en la fuente llega como null.
+      properties:
+        id: {type: string, minLength: 1}
+        objeto_fiscalizado: {type: string, nullable: true}
+        tipo_actividad: {type: string, nullable: true}
+        departamento: {type: string, nullable: true}
+        provincia: {type: string, nullable: true}
+        distrito: {type: string, nullable: true}
+        lat: {type: number, minimum: -90, maximum: 90}
+        lon: {type: number, minimum: -180, maximum: 180}
+    RegimenEstacion:
+      type: object
+      required: [fecha_hora, regimen, excede_eca, media_24h, alerta, inca, ts]
+      description: |
+        El estado de la estación en su lectura más reciente por fecha_hora. Una
+        lectura más antigua que la guardada no lo reemplaza.
+      properties:
+        fecha_hora: {type: string, format: date-time, description: La hora de la lectura a la que corresponde}
+        regimen: {type: integer, minimum: 0}
+        excede_eca: {type: boolean}
+        media_24h: {$ref: '#/components/schemas/Media24h'}
+        alerta: {$ref: '#/components/schemas/Alerta'}
+        inca: {$ref: '#/components/schemas/BandaINCA'}
+        ts: {type: string, format: date-time}
+    Media24h:
+      type: object
+      required: [pm2_5, pm10, lecturas]
+      description: |
+        Media de las lecturas de la estación con fecha_hora en (t − 24 h, t], donde t es la
+        fecha_hora de la lectura, truncada a la hora. La API lleva en memoria, por estación,
+        las 72 lecturas horarias más cercanas a la última recibida: una fecha lejana no
+        borra las demás. Con menos de 18 lecturas en la ventana, pm2_5 y pm10 son null.
+      properties:
+        pm2_5: {type: number, minimum: 0, nullable: true}
+        pm10: {type: number, minimum: 0, nullable: true}
+        lecturas: {type: integer, minimum: 0, maximum: 24}
+    Alerta:
+      type: boolean
+      description: |
+        La media de 24 h de la estación supera el ECA (DS 003-2017-MINAM): PM2.5 > 50 µg/m³
+        o PM10 > 100 µg/m³. Es false mientras la ventana tenga menos de 18 lecturas. No
+        depende del régimen.
+    BandaINCA:
+      type: string
+      nullable: true
+      enum: [buena, moderada, mala, umbral_de_cuidado, null]
+      description: |
+        Banda del INCA (RM 181-2016-MINAM, tabla 3) de la media de 24 h; la peor entre
+        PM10 (≤ 75, ≤ 150, ≤ 250, > 250 µg/m³) y PM2.5 (≤ 12.5, ≤ 25, ≤ 125, > 125 µg/m³).
+        Se informa aparte del ECA: no se mezclan. null con menos de 18 lecturas.
+    RegimenModelo:
+      type: object
+      required: [regimen, pm2_5_medio, pm10_medio, excede_eca, tamano]
+      properties:
+        regimen: {type: integer, minimum: 0}
+        pm2_5_medio: {type: number, minimum: 0}
+        pm10_medio: {type: number, minimum: 0}
+        excede_eca: {type: boolean}
+        tamano: {type: integer, minimum: 0}
+    Modelo:
+      type: object
+      required: [id, k, features, iteraciones, inercia, regimenes]
+      properties:
+        id: {type: string, minLength: 1}
+        k: {type: integer, minimum: 1}
+        features:
+          type: array
+          minItems: 1
+          uniqueItems: true
+          items: {type: string}
+        iteraciones: {type: integer, minimum: 0}
+        inercia: {type: number, minimum: 0}
+        centroides:
+          type: array
+          description: Centroides en unidades originales y en el orden de features, si el servidor los incluye.
+          items:
+            type: array
+            items: {type: number}
+        regimenes:
+          type: array
+          items: {$ref: '#/components/schemas/RegimenModelo'}
+    Nodo:
+      type: object
+      required: [nombre, direccion, workers, latencia_ms, libre]
+      properties:
+        nombre: {type: string, minLength: 1}
+        direccion: {type: string, description: Dirección TCP remota observada por el coordinador}
+        workers: {type: integer, minimum: 1}
+        latencia_ms: {type: number, minimum: 0}
+        libre: {type: boolean}
+    PedidoEntrenamiento:
+      type: object
+      required: [nodos, replicas, semilla]
+      properties:
+        nodos: {type: integer, minimum: 1}
+        replicas:
+          type: integer
+          minimum: 1
+          description: Si supera 1, la corrida no activa el modelo obtenido.
+        semilla: {type: integer, format: int64}
+    EntrenamientoAceptado:
+      type: object
+      required: [id, estado]
+      properties:
+        id: {type: string, minLength: 1}
+        estado: {type: string, enum: [en_curso]}
+    Ronda:
+      type: object
+      required: [iter, inercia, ms_ronda, ms_fusion, ms_por_nodo]
+      properties:
+        iter: {type: integer, minimum: 1}
+        inercia: {type: number, minimum: 0}
+        ms_ronda: {type: number, minimum: 0}
+        ms_fusion: {type: number, minimum: 0}
+        ms_por_nodo:
+          type: object
+          description: Tiempo observado por nodo desde el coordinador, en ms. No es un porcentaje de CPU.
+          additionalProperties: {type: number, minimum: 0}
+    EntrenamientoResumen:
+      type: object
+      required: [id, estado, nodos, replicas]
+      description: |
+        Qué campos trae según el estado: en_curso, solo los de identificación;
+        terminado, además iteraciones, paro, dif_secuencial y ms_total, y
+        modelo_id si activó su modelo o aviso si tenía que activarlo y no lo
+        hizo; abortado, además error.
+      properties:
+        id: {type: string, minLength: 1}
+        estado: {type: string, enum: [en_curso, terminado, abortado]}
+        nodos:
+          type: array
+          items: {type: string}
+        replicas: {type: integer, minimum: 1}
+        iteraciones: {type: integer, minimum: 0}
+        paro: {$ref: '#/components/schemas/Paro'}
+        dif_secuencial: {type: number, minimum: 0, description: Mayor diferencia con el K-Means secuencial}
+        ms_total: {type: number, minimum: 0}
+        modelo_id: {type: string, minLength: 1, description: 'Modelo que este entrenamiento dejó activo; ausente si no activó ninguno'}
+        aviso: {type: string, minLength: 1, description: 'Por qué un entrenamiento terminado con replicas = 1 no activó su modelo'}
+        error: {type: string, minLength: 1, description: 'Motivo del aborto, con el nodo que falló'}
+    Entrenamiento:
+      description: El resumen más las rondas completadas hasta el momento.
+      allOf:
+        - $ref: '#/components/schemas/EntrenamientoResumen'
+        - type: object
+          required: [rondas]
+          properties:
+            rondas:
+              type: array
+              items: {$ref: '#/components/schemas/Ronda'}
+    Paro:
+      type: string
+      enum: [tolerancia, max_iter]
+      description: Por qué terminó el algoritmo (constantes de kmeans/secuencial.go)
+    MetricaEndpoint:
+      type: object
+      required: [pedidos, p50_ms, p95_ms, p99_ms]
+      properties:
+        pedidos: {type: integer, minimum: 0}
+        p50_ms: {type: number, minimum: 0}
+        p95_ms: {type: number, minimum: 0}
+        p99_ms: {type: number, minimum: 0}
+    EscrituraAlmacen:
+      type: object
+      required: [escritas, descartadas, fallidas, lotes]
+      description: |
+        Lo que el escritor de predicciones hizo en un almacén desde que arrancó la API. La
+        predicción responde sin esperar al almacén: se encola y una goroutine por almacén la
+        escribe por lotes.
+      properties:
+        escritas: {type: integer, minimum: 0, description: Predicciones en lotes que el almacén aceptó}
+        descartadas: {type: integer, minimum: 0, description: 'Predicciones que no se escribieron: la cola estaba llena, o quedaron sin escribir al apagar'}
+        fallidas: {type: integer, minimum: 0, description: Predicciones en lotes que el almacén rechazó o no respondió a tiempo}
+        lotes: {type: integer, minimum: 0, description: Idas y vueltas al almacén}
+    Metricas:
+      type: object
+      required: [endpoints, nodos_en_pool, ultimo_entrenamiento, escrituras_descartadas, escrituras_fallidas, escritura, puntos_de_control]
+      properties:
+        endpoints:
+          type: object
+          additionalProperties: {$ref: '#/components/schemas/MetricaEndpoint'}
+        nodos_en_pool: {type: integer, minimum: 0}
+        ultimo_entrenamiento: {type: string, nullable: true}
+        escrituras_descartadas: {type: integer, minimum: 0, description: 'Descartes al llenarse una cola de persistencia; suma de los dos almacenes'}
+        escrituras_fallidas: {type: integer, minimum: 0, description: 'Escrituras que el almacén rechazó; suma de los dos almacenes'}
+        escritura:
+          type: object
+          required: [mongo, redis]
+          description: El detalle por almacén.
+          properties:
+            mongo: {$ref: '#/components/schemas/EscrituraAlmacen'}
+            redis: {$ref: '#/components/schemas/EscrituraAlmacen'}
+        puntos_de_control:
+          type: object
+          required: [escritos, fallidos, omitidos]
+          description: |
+            Los puntos de control de los entrenamientos (la clave entrenamiento:{id}:punto de
+            Redis, con la iteración y los centroides de la última ronda completa) desde que
+            arrancó la API. Se escribe uno por ronda sin frenar la corrida: si Redis no llega a
+            guardar uno antes de la ronda siguiente, se omite, porque solo importa el último.
+          properties:
+            escritos: {type: integer, minimum: 0, description: Puntos que Redis guardó}
+            fallidos: {type: integer, minimum: 0, description: Escrituras que Redis rechazó o no respondió a tiempo}
+            omitidos: {type: integer, minimum: 0, description: Puntos reemplazados por el de una ronda posterior antes de escribirse}
+    EventoRonda:
+      allOf:
+        - $ref: '#/components/schemas/Ronda'
+        - type: object
+          required: [id]
+          properties:
+            id: {type: string, minLength: 1}
+    EventoFin:
+      type: object
+      required: [id, iteraciones, paro, dif_secuencial, ms_total]
+      properties:
+        id: {type: string, minLength: 1}
+        iteraciones: {type: integer, minimum: 0}
+        paro: {$ref: '#/components/schemas/Paro'}
+        dif_secuencial: {type: number, minimum: 0}
+        ms_total: {type: number, minimum: 0}
+        modelo_id: {type: string, minLength: 1, description: 'Como en EntrenamientoResumen'}
+        aviso: {type: string, minLength: 1, description: 'Como en EntrenamientoResumen'}
+    EventoError:
+      type: object
+      required: [id, error]
+      properties:
+        id: {type: string, minLength: 1}
+        error: {type: string, minLength: 1}
+    EventoWS:
+      type: object
+      required: [evento, datos]
+      description: Una trama de texto del WebSocket.
+      properties:
+        evento: {type: string, enum: [entrenamiento.ronda, entrenamiento.fin]}
+        datos:
+          description: EventoRonda con entrenamiento.ronda; EventoFin o EventoError con entrenamiento.fin.
+          oneOf:
+            - $ref: '#/components/schemas/EventoRonda'
+            - $ref: '#/components/schemas/EventoFin'
+            - $ref: '#/components/schemas/EventoError'

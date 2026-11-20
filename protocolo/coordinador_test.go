@@ -623,3 +623,31 @@ func TestParcialRezagadoRealistaSobreTCP(t *testing.T) {
 		t.Errorf("nodo: %v", err)
 	}
 }
+
+// El tiempo por nodo se mide en el coordinador: el nodo lento tarda lo que
+// tardó en responder, y el rápido no carga con la espera del otro.
+func TestRondaMideElTiempoDeCadaNodo(t *testing.T) {
+	const demora = 60 * time.Millisecond
+	lento := &nodoFalso{nombre: "a", filas: [][]float64{{0, 0}, {1, 0}},
+		responder: func(_, honesto protocolo.Mensaje) []protocolo.Mensaje {
+			time.Sleep(demora)
+			return []protocolo.Mensaje{honesto}
+		}}
+	rapido := &nodoFalso{nombre: "b", filas: [][]float64{{10, 10}, {11, 11}}}
+	enlaces := montar(t, lento, rapido)
+	if enlaces[0].TiempoRonda != 0 || enlaces[1].TiempoRonda != 0 {
+		t.Fatalf("antes de la primera ronda no hay tiempo: %v y %v", enlaces[0].TiempoRonda, enlaces[1].TiempoRonda)
+	}
+	inicio := time.Now()
+	if _, err := protocolo.Ronda(enlaces, 1, 2, []float64{0, 0, 10, 10}, time.Now().Add(5*time.Second)); err != nil {
+		t.Fatal(err)
+	}
+	barrera := time.Since(inicio)
+	a, b := enlaces[0].TiempoRonda, enlaces[1].TiempoRonda
+	if a < demora || a > barrera {
+		t.Errorf("el nodo lento tardó %v: tiene que estar entre su demora (%v) y la barrera (%v)", a, demora, barrera)
+	}
+	if b <= 0 || b >= demora {
+		t.Errorf("el nodo rápido tardó %v: no puede cargar con la demora del otro (%v)", b, demora)
+	}
+}

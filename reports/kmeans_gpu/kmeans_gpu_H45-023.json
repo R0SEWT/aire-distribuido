@@ -1,0 +1,275 @@
+{
+  "equipo": "H45-023",
+  "dispositivo": "NVIDIA T1000 8GB",
+  "torch": "2.14.1+cu126",
+  "cuda": "12.6",
+  "gold_sha256": "2fdace5ad8599149c9ed2b177151881025d895a50738519d9358d537236f87f7",
+  "mismo_gold_que_go": true,
+  "go": {
+    "iteraciones": 44,
+    "inercia": 50950.36689106275,
+    "centroides": [
+      [
+        -0.3810318622031203,
+        -0.3734783717613215
+      ],
+      [
+        3.82926921964012,
+        4.165192564331025
+      ],
+      [
+        0.7708406277322728,
+        0.7164537638219929
+      ]
+    ]
+  },
+  "convergencia": [
+    {
+      "precision": "float64",
+      "suma": "matmul",
+      "iteraciones": 44,
+      "paro": "tolerancia",
+      "inercia": 50950.366891062746,
+      "dif_inercia_go": -7.275957614183426e-12,
+      "dif_max_centroides_go": 4.440892098500626e-16,
+      "repetible_bit_a_bit": true,
+      "ms_por_iteracion_mediana": 1.5375499997389852,
+      "centroides": [
+        [
+          -0.38103186220312035,
+          -0.3734783717613215
+        ],
+        [
+          3.8292692196401195,
+          4.165192564331025
+        ],
+        [
+          0.7708406277322729,
+          0.7164537638219926
+        ]
+      ]
+    },
+    {
+      "precision": "float64",
+      "suma": "atomica",
+      "iteraciones": 44,
+      "paro": "tolerancia",
+      "inercia": 50950.366891062746,
+      "dif_inercia_go": -7.275957614183426e-12,
+      "dif_max_centroides_go": 4.884981308350689e-15,
+      "repetible_bit_a_bit": false,
+      "ms_por_iteracion_mediana": 0.6261499997890496,
+      "centroides": [
+        [
+          -0.38103186220312113,
+          -0.37347837176132637
+        ],
+        [
+          3.829269219640116,
+          4.165192564331023
+        ],
+        [
+          0.7708406277322728,
+          0.7164537638219953
+        ]
+      ]
+    },
+    {
+      "precision": "float32",
+      "suma": "matmul",
+      "iteraciones": 44,
+      "paro": "tolerancia",
+      "inercia": 50950.3671875,
+      "dif_inercia_go": 0.0002964372470160015,
+      "dif_max_centroides_go": 9.139403998048579e-07,
+      "repetible_bit_a_bit": true,
+      "ms_por_iteracion_mediana": 1.1698000002979825,
+      "centroides": [
+        [
+          -0.38103193044662476,
+          -0.37347838282585144
+        ],
+        [
+          3.8292694091796875,
+          4.165191650390625
+        ],
+        [
+          0.770840585231781,
+          0.7164536714553833
+        ]
+      ]
+    },
+    {
+      "precision": "float32",
+      "suma": "atomica",
+      "iteraciones": 45,
+      "paro": "tolerancia",
+      "inercia": 50950.3671875,
+      "dif_inercia_go": 0.0002964372470160015,
+      "dif_max_centroides_go": 1.0590888977590751e-05,
+      "repetible_bit_a_bit": false,
+      "ms_por_iteracion_mediana": 1.1219999996683327,
+      "centroides": [
+        [
+          -0.38102957606315613,
+          -0.3734889626502991
+        ],
+        [
+          3.8292715549468994,
+          4.165185928344727
+        ],
+        [
+          0.7708399295806885,
+          0.7164515852928162
+        ]
+      ]
+    }
+  ],
+  "velocidad": [
+    {
+      "replicas": 1,
+      "filas": 65873,
+      "precision": "float64",
+      "suma": "matmul",
+      "ms_subir_datos": 0.5914000003031106,
+      "ms_por_iteracion": 1.0252499996568076,
+      "millones_filas_por_s": 64.2506705896614
+    },
+    {
+      "replicas": 1,
+      "filas": 65873,
+      "precision": "float64",
+      "suma": "atomica",
+      "ms_subir_datos": 0.5914000003031106,
+      "ms_por_iteracion": 0.6365999997797189,
+      "millones_filas_por_s": 103.4762802745741
+    },
+    {
+      "replicas": 1,
+      "filas": 65873,
+      "precision": "float32",
+      "suma": "matmul",
+      "ms_subir_datos": 0.699999999596912,
+      "ms_por_iteracion": 0.7279999999809661,
+      "millones_filas_por_s": 90.48489011225587
+    },
+    {
+      "replicas": 1,
+      "filas": 65873,
+      "precision": "float32",
+      "suma": "atomica",
+      "ms_subir_datos": 0.699999999596912,
+      "ms_por_iteracion": 1.1070999998992193,
+      "millones_filas_por_s": 59.50049679884067
+    },
+    {
+      "replicas": 10,
+      "filas": 658730,
+      "precision": "float64",
+      "suma": "matmul",
+      "ms_subir_datos": 3.942100000131177,
+      "ms_por_iteracion": 7.7714999997624545,
+      "millones_filas_por_s": 84.76227240817536
+    },
+    {
+      "replicas": 10,
+      "filas": 658730,
+      "precision": "float64",
+      "suma": "atomica",
+      "ms_subir_datos": 3.942100000131177,
+      "ms_por_iteracion": 4.602150000209804,
+      "millones_filas_por_s": 143.13527372423098
+    },
+    {
+      "replicas": 10,
+      "filas": 658730,
+      "precision": "float32",
+      "suma": "matmul",
+      "ms_subir_datos": 3.2154000000446104,
+      "ms_por_iteracion": 3.79800000018804,
+      "millones_filas_por_s": 173.4412848781954
+    },
+    {
+      "replicas": 10,
+      "filas": 658730,
+      "precision": "float32",
+      "suma": "atomica",
+      "ms_subir_datos": 3.2154000000446104,
+      "ms_por_iteracion": 3.5866499997609935,
+      "millones_filas_por_s": 183.66163412763896
+    },
+    {
+      "replicas": 100,
+      "filas": 6587300,
+      "precision": "float64",
+      "suma": "matmul",
+      "ms_subir_datos": 33.48989999994956,
+      "ms_por_iteracion": 86.28954999994676,
+      "millones_filas_por_s": 76.33948722648414
+    },
+    {
+      "replicas": 100,
+      "filas": 6587300,
+      "precision": "float64",
+      "suma": "atomica",
+      "ms_subir_datos": 33.48989999994956,
+      "ms_por_iteracion": 43.477599999732774,
+      "millones_filas_por_s": 151.51020295601614
+    },
+    {
+      "replicas": 100,
+      "filas": 6587300,
+      "precision": "float32",
+      "suma": "matmul",
+      "ms_subir_datos": 29.789700000037556,
+      "ms_por_iteracion": 35.20389999994222,
+      "millones_filas_por_s": 187.11847266952842
+    },
+    {
+      "replicas": 100,
+      "filas": 6587300,
+      "precision": "float32",
+      "suma": "atomica",
+      "ms_subir_datos": 29.789700000037556,
+      "ms_por_iteracion": 33.37099999998827,
+      "millones_filas_por_s": 197.39594258494847
+    },
+    {
+      "replicas": 300,
+      "filas": 19761900,
+      "precision": "float64",
+      "suma": "matmul",
+      "ms_subir_datos": 92.06480000011652,
+      "ms_por_iteracion": 259.7845000000234,
+      "millones_filas_por_s": 76.07035831621293
+    },
+    {
+      "replicas": 300,
+      "filas": 19761900,
+      "precision": "float64",
+      "suma": "atomica",
+      "ms_subir_datos": 92.06480000011652,
+      "ms_por_iteracion": 131.3927500000318,
+      "millones_filas_por_s": 150.40327567537187
+    },
+    {
+      "replicas": 300,
+      "filas": 19761900,
+      "precision": "float32",
+      "suma": "matmul",
+      "ms_subir_datos": 99.28020000006654,
+      "ms_por_iteracion": 108.14849999997023,
+      "millones_filas_por_s": 182.729302764305
+    },
+    {
+      "replicas": 300,
+      "filas": 19761900,
+      "precision": "float32",
+      "suma": "atomica",
+      "ms_subir_datos": 99.28020000006654,
+      "ms_por_iteracion": 101.36544999977559,
+      "millones_filas_por_s": 194.95696018755652
+    }
+  ],
+  "memoria_pico_gb": 1.6472978591918945
+}
