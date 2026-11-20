@@ -21,8 +21,8 @@ un `usuario` recibe 403. `x-roles` deja el rol escrito en cada operación.
   normas de 24 h y se informan por separado. Hacen falta 18 lecturas en la ventana. La ventana se
   calcula respecto de la lectura que llega (su `fecha_hora`, truncada a la hora), así que sirven los
   datos históricos y las lecturas desordenadas; por estación se conservan las 72 lecturas horarias
-  más cercanas a la última recibida. La estación tiene que estar en el catálogo y un PM mayor de
-  10 000 µg/m³ se rechaza. El régimen por estación guarda la `fecha_hora` de su lectura y no
+  más cercanas a la última recibida. La estación tiene que estar en el catálogo, y se rechazan un PM mayor
+  de 10 000 µg/m³ y una fecha más de 1 hora adelante del reloj del servidor. El régimen por estación guarda la `fecha_hora` de su lectura y no
   retrocede con una lectura más antigua. En el gold, el
   régimen alto solo acierta el 35 % de las horas sobre el ECA de 24 h: por eso la alerta no sale
   del régimen.
