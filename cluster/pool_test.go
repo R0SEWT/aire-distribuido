@@ -199,21 +199,51 @@ func TestPoolTomarNoEntregaUnNodoQueDejoDeResponder(t *testing.T) {
 	}
 }
 
+// El caso normal de un nombre que vuelve a llamar: la conexión vieja está
+// muerta (aquí, colgada: no responde el PING) y la nueva la reemplaza con una baja.
 func TestPoolUnaReconexionReemplazaALaConexionVieja(t *testing.T) {
 	pp := levantarPool(t, time.Hour)
-	vieja := nodoFalso(t, pp.addr, "pc-01", protocolo.Version)
+	vieja, err := net.Dial("tcp", pp.addr)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer vieja.Close()
+	cod, dec := protocolo.NuevoCodificador(vieja), protocolo.NuevoDecodificador(vieja)
+	cod.Escribir(protocolo.Mensaje{Tipo: protocolo.Hola, Version: protocolo.Version, Nodo: "pc-01", Workers: 2})
+	dec.Leer()
+	cod.Escribir(protocolo.Mensaje{Tipo: protocolo.Pong}) // entra y se cuelga
 	pp.esperarNodos(t, 1)
 	dirVieja := pp.Nodos()[0].Direccion
+
 	nodoFalso(t, pp.addr, "pc-01", protocolo.Version)
 	hasta(t, "que la conexión nueva reemplace a la vieja", func() bool {
 		n := pp.Nodos()
 		return len(n) == 1 && n[0].Direccion != dirVieja
 	})
-	if err := <-vieja; err == nil {
-		t.Fatal("la conexión vieja se tenía que cortar sin FIN")
+	hasta(t, "la baja de la vieja y el alta de la nueva", func() bool { return pp.vistos() == "alta:pc-01 baja:pc-01 alta:pc-01" })
+}
+
+// Dos nodos VIVOS con el mismo nombre: el nuevo desplaza al viejo, pero queda
+// dicho en un evento de error y el desplazado recibe un ERROR que le dice qué hacer.
+func TestPoolAvisaCuandoUnNombreDesplazaAUnNodoVivo(t *testing.T) {
+	pp := levantarPool(t, time.Hour)
+	viejo := nodoFalso(t, pp.addr, "H45-022", protocolo.Version)
+	pp.esperarNodos(t, 1)
+	dirVieja := pp.Nodos()[0].Direccion
+	nodoFalso(t, pp.addr, "H45-022", protocolo.Version)
+	hasta(t, "que el nuevo desplace al viejo", func() bool {
+		n := pp.Nodos()
+		return len(n) == 1 && n[0].Direccion != dirVieja
+	})
+	if err := <-viejo; err == nil || !strings.Contains(err.Error(), "ERROR: nombre repetido") || !strings.Contains(err.Error(), "-nombre") {
+		t.Fatalf("el nodo desplazado tenía que recibir un ERROR que le diga qué hacer: %v", err)
 	}
-	if got := pp.vistos(); got != "alta:pc-01 baja:pc-01 alta:pc-01" {
-		t.Fatalf("eventos = %q", got)
+	hasta(t, "los eventos ("+pp.vistos()+")", func() bool { return pp.vistos() == "alta:H45-022 error:H45-022 alta:H45-022" })
+	pp.mu.Lock()
+	detalle, direccion := pp.eventos[1].Detalle, pp.eventos[1].Direccion
+	pp.mu.Unlock()
+	if !strings.Contains(detalle, "nombre repetido") || !strings.Contains(detalle, "-nombre distinto") || direccion != dirVieja {
+		t.Fatalf("el evento tiene que decir qué pasó y qué hacer: %q (%s)", detalle, direccion)
 	}
 }
 

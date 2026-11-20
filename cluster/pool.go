@@ -177,6 +177,13 @@ func (p *Pool) cerrar() {
 // responde, lo deja libre. Su primer PING es su primera latencia y descarta al
 // que se presentó y se fue. Si ya había un nodo libre con ese nombre, la
 // conexión nueva reemplaza a la vieja, como en EsperarNodos.
+//
+// Lo normal es que la vieja esté muerta: el mismo nodo que volvió a llamar. Si
+// todavía responde, son DOS nodos con el mismo nombre (dos procesos en una
+// máquina con el nombre por omisión, o dos equipos con el mismo -nombre), que
+// se desalojarían uno al otro cada vez que el desplazado vuelve a llamar. El
+// pool no puede arreglarlo, pero lo dice donde se ve: un evento de error y un
+// ERROR al nodo desplazado con qué hacer.
 func (p *Pool) alta(m *Miembro) {
 	p.uso.Lock()
 	defer p.uso.Unlock()
@@ -196,8 +203,18 @@ func (p *Pool) alta(m *Miembro) {
 	p.libres[m.Enlace.Nodo] = &entrada{m: m, latencia: latencia}
 	p.mu.Unlock()
 	if viejo != nil {
-		viejo.m.Enlace.Cerrar()
-		p.evento(EventoBaja, viejo.m, fmt.Sprintf("volvió a llamar desde %s: la conexión nueva reemplaza a esta", m.Direccion))
+		// viejo ya no está en el mapa y quien llama tiene uso: nadie más le habla.
+		if _, err := protocolo.Latido(viejo.m.Enlace, time.Now().Add(p.op.PlazoLatido)); err == nil {
+			despedir([]*protocolo.Enlace{viejo.m.Enlace}, protocolo.Mensaje{Tipo: protocolo.Error, Mensaje: fmt.Sprintf(
+				"nombre repetido: otro nodo se presentó como %q desde %s y te desplazó del pool; dos nodos no pueden compartir nombre: "+
+					"relanza este con un -nombre distinto", m.Enlace.Nodo, m.Direccion)}, p.op.PlazoLatido)
+			p.evento(EventoError, viejo.m, fmt.Sprintf("nombre repetido: otro nodo se presentó como %q desde %s mientras este seguía vivo, y lo desplazó; "+
+				"dos nodos no pueden compartir nombre (se desalojan uno al otro cada vez que vuelven a llamar): lanza cada uno con un -nombre distinto",
+				m.Enlace.Nodo, m.Direccion))
+		} else {
+			viejo.m.Enlace.Cerrar()
+			p.evento(EventoBaja, viejo.m, fmt.Sprintf("volvió a llamar desde %s: la conexión nueva reemplaza a esta, que ya no respondía", m.Direccion))
+		}
 	}
 	p.evento(EventoAlta, m, fmt.Sprintf("%d workers, latencia %.2f ms", m.Enlace.Workers, float64(latencia.Microseconds())/1000))
 }

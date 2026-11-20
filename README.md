@@ -272,8 +272,12 @@ go run ./cmd/nodo -coordinador localhost:7070 -nombre nodo-1 -gold data/gold/oef
 curl -s -X POST localhost:8080/api/entrenamientos -H "Authorization: Bearer $TOKEN" -d '{"nodos": 3, "replicas": 1, "semilla": 42}'
 ```
 
-Con `replicas = 1` el modelo entrenado pasa a ser el activo; con un solo nodo es el de
-`reports/kmeans.json` bit a bit. La SPA del TB2 necesita `CORS_ORIGENES` (por ejemplo
+Con `replicas = 1` el modelo entrenado pasa a ser el activo, siempre que su diferencia con el
+K-Means secuencial (`dif_secuencial`) no pase de 1e-9; con un solo nodo es el de
+`reports/kmeans.json` bit a bit. Al terminar un entrenamiento la API cierra las conexiones y los
+nodos vuelven a llamar solos después de su pausa entre intentos (`-espera`, 2 s): durante esos
+2 s el pool está vacío y otro `POST` recibe 422. Cada nodo necesita un nombre único; sin `-nombre`
+usa el del equipo más su PID. La SPA del TB2 necesita `CORS_ORIGENES` (por ejemplo
 `http://localhost:5173`) para llamar a la API desde otro origen.
 
 **6. En Docker.** La imagen final es distroless y corre sin root, así que las carpetas montadas
