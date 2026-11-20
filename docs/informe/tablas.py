@@ -754,6 +754,23 @@ class Informe:
             "maquina": str((d.get("metadatos") or {}).get("maquina") or d.get("host", "")),
         })
 
+    def revision(self) -> None:
+        base = self.reports / "revision_dayana"
+        e = json.loads((base / "ejecucion.json").read_text(encoding="utf-8"))
+        a = json.loads((base / "auditoria.json").read_text(encoding="utf-8"))
+        med = (self.datos.get("benchmark_cargador.json") or {}).get("mediciones", [])
+        mismo = ({m.get("sha256_silver") for m in med} == {e["silver_sha256"]}
+                 and {m.get("sha256_gold") for m in med} == {e["gold_sha256"]})
+        self.comprobar("revision_dayana/ejecucion.json", mismo,
+                       "el silver o el gold de la reproducción no es el de referencia")
+        estados = [c["estado"] for c in a["chequeos"]]
+        _, _, version, plataforma = e["go"].split()
+        self.guardar_cifras("revision", e, {
+            "go": version, "plataforma": plataforma,
+            "chequeos": entero(len(estados)), "ok": entero(estados.count("OK")),
+            "mismos_hashes": "sí" if mismo else "no",
+        })
+
     def benchmark_kmeans(self) -> None:
         o = "benchmark_kmeans.json"
         d = self.leer(o)
@@ -1746,6 +1763,7 @@ def main() -> int:
     inf.limpieza()          # primero: estandarizacion lo usa para cruzar n
     inf.estandarizacion()
     inf.benchmark_cargador()
+    inf.revision()
     inf.benchmark_kmeans()
     inf.kmeans()
     inf.regimenes()
