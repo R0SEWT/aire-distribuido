@@ -5,7 +5,7 @@ Evidencias de la parte C de la PC4 (spec §9). La colección prueba la API real 
 
 | Archivo | Qué es |
 |---|---|
-| `aire-distribuido.postman_collection.json` | La colección: 50 pedidos en cuatro carpetas |
+| `aire-distribuido.postman_collection.json` | La colección: 50 pedidos definidos en cuatro carpetas (34, 10, 4 y 2) |
 | `local.postman_environment.json` | El entorno local, **sin credenciales**: se completan al importarlo |
 | `lecturas_prueba.csv` | Datos de prueba para el Runner: 78 lecturas reales con lo que la API tiene que responder |
 | `generar_lecturas.py` | Cómo se armó el CSV y se calculó lo esperado, sin consultar a la API |
@@ -28,6 +28,24 @@ Evidencias de la parte C de la PC4 (spec §9). La colección prueba la API real 
 | 2. Entrenamiento | 400 (cero nodos, cero réplicas, sin semilla), 422 (más nodos de los que hay), 202 y el detalle hasta `terminado`; después, el historial, las métricas y el modelo activo, que pasa a ser `entrenado-{id}` |
 | 3. Conflicto controlado | Un entrenamiento largo (`replicas_conflicto` copias del gold) y, mientras corre, un segundo pedido que recibe 409 con el id del que está en curso |
 | 4. Datos de prueba | El Runner con `lecturas_prueba.csv`: una fila por iteración |
+
+**Cuántos pedidos ejecuta una corrida.** La colección define 50 pedidos, pero el resumen de una
+corrida de las carpetas 1 a 3 dice 62 o 63, y no siempre el mismo número. No es un fallo:
+
+- De los 50, se envían los 48 de las carpetas 1 a 3. Los 2 de la carpeta 4 se saltan si no hay
+  archivo de datos.
+- El resumen cuenta además los 2 pedidos automáticos de token (uno por rol) que la colección hace
+  antes del primer pedido.
+- Cuatro pedidos son sondeos que se repiten hasta que se cumple su condición: «Esperar nodos
+  libres» (dos veces en la colección), «Consultar hasta terminar» y «Cerrar escenario de conflicto».
+  Cuántas veces se repiten depende de cuánto tarden los nodos en volver al pool (unos 2 s después
+  de cada entrenamiento) y de cuánto dure el entrenamiento largo: alrededor de una docena de
+  repeticiones en total, cada una con 5 aserciones.
+
+Por eso dos corridas correctas pueden dar, por ejemplo, 62 pedidos y 310 aserciones, y 63 y 315. Lo
+que tiene que coincidir es que no haya ninguna aserción fallida. El Runner con el CSV sí es fijo:
+78 iteraciones, 82 pedidos (78 predicciones, 2 consultas del estado al cerrar cada serie y los 2
+tokens) y 714 aserciones.
 
 `GET /ws` no está: una colección v2.1 no guarda pedidos WebSocket. Se prueba en `api/` y
 `cmd/api/` con `go test`.

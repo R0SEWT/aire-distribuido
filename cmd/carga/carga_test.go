@@ -137,9 +137,17 @@ type apiFalsa struct {
 	predicciones atomic.Int64
 	sinToken     atomic.Int64
 	cuerposMalos atomic.Int64
+	validas      atomic.Int64 // predicciones con token y cuerpo bien formado
+	metricas     atomic.Int64 // consultas a /api/metricas
+	// escritura decide lo que /api/metricas dice de cada almacén; nil = todas
+	// las predicciones válidas ya están escritas en los dos.
+	escritura func(validas, consulta int64) (mongo, redis almacenEscritura)
 }
 
-const tokenDePrueba = "token-de-prueba"
+const (
+	tokenDePrueba = "token-de-prueba"
+	tokenDeAdmin  = "token-de-admin"
+)
 
 func nuevaAPIFalsa(t *testing.T, predecir func(w http.ResponseWriter, estacion string)) *apiFalsa {
 	t.Helper()
@@ -147,12 +155,34 @@ func nuevaAPIFalsa(t *testing.T, predecir func(w http.ResponseWriter, estacion s
 	mux := http.NewServeMux()
 	mux.HandleFunc("POST /api/auth/token", func(w http.ResponseWriter, r *http.Request) {
 		var c struct{ Usuario, Clave string }
-		if err := json.NewDecoder(r.Body).Decode(&c); err != nil || c.Usuario != "demo" || c.Clave != "secreta" {
+		_ = json.NewDecoder(r.Body).Decode(&c)
+		switch {
+		case c.Usuario == "demo" && c.Clave == "secreta":
+			_, _ = io.WriteString(w, `{"token":"`+tokenDePrueba+`","rol":"usuario","expira":"2026-11-21T23:30:00-05:00"}`)
+		case c.Usuario == "admin" && c.Clave == "secreta-admin":
+			_, _ = io.WriteString(w, `{"token":"`+tokenDeAdmin+`","rol":"admin","expira":"2026-11-21T23:30:00-05:00"}`)
+		default:
 			w.WriteHeader(http.StatusUnauthorized)
 			_, _ = io.WriteString(w, `{"error":"usuario o clave incorrectos"}`)
+		}
+	})
+	mux.HandleFunc("GET /api/metricas", func(w http.ResponseWriter, r *http.Request) {
+		consulta := a.metricas.Add(1)
+		if r.Header.Get("Authorization") != "Bearer "+tokenDeAdmin {
+			w.WriteHeader(http.StatusForbidden)
+			_, _ = io.WriteString(w, `{"error":"se requiere el rol admin"}`)
 			return
 		}
-		_, _ = io.WriteString(w, `{"token":"`+tokenDePrueba+`","rol":"usuario","expira":"2026-11-21T23:30:00-05:00"}`)
+		validas := a.validas.Load()
+		todas := almacenEscritura{Escritas: uint64(validas), Lotes: uint64(validas)}
+		mongo, redis := todas, todas
+		if a.escritura != nil {
+			mongo, redis = a.escritura(validas, consulta)
+		}
+		_ = json.NewEncoder(w).Encode(map[string]any{
+			"endpoints": map[string]any{}, "nodos_en_pool": 3,
+			"escritura": map[string]almacenEscritura{"mongo": mongo, "redis": redis},
+		})
 	})
 	mux.HandleFunc("GET /api/salud", func(w http.ResponseWriter, r *http.Request) {
 		_, _ = io.WriteString(w, `{"api":"ok","mongo":"ok","redis":"ok","nodos_en_pool":3,"modelo_activo":"sembrado-kmeans-json"}`)
@@ -175,6 +205,7 @@ func nuevaAPIFalsa(t *testing.T, predecir func(w http.ResponseWriter, estacion s
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
+		a.validas.Add(1)
 		predecir(w, l.Estacion)
 	})
 	a.Server = httptest.NewServer(mux)
@@ -336,6 +367,7 @@ func configDePrueba(t *testing.T, url string) config {
 		url: url, usuario: "demo", clave: "secreta", lecturas: lecturas, clientes: []int{1, 4},
 		pedidos: 40, calentamiento: 4, limiteMs: 100, plazo: 5 * time.Second,
 		salida: filepath.Join(dir, "reports", "api_latencia.json"),
+		admin:  "admin", claveAdmin: "secreta-admin", esperaEscrituras: 2 * time.Second,
 	}
 }
 
@@ -356,7 +388,7 @@ func TestCorrerEscribeElInforme(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if bytes.Contains(crudo, []byte("secreta")) || bytes.Contains(crudo, []byte(tokenDePrueba)) {
+	if bytes.Contains(crudo, []byte("secreta")) || bytes.Contains(crudo, []byte(tokenDePrueba)) || bytes.Contains(crudo, []byte(tokenDeAdmin)) {
 		t.Error("el informe no puede traer la clave ni el token")
 	}
 	var leido struct {
@@ -454,8 +486,201 @@ func TestCorrerInformaQueNoCumple(t *testing.T) {
 	}
 }
 
+// Las predicciones responden 200 antes de escribirse: lo que pasó con ellas en
+// MongoDB y en Redis sale de /api/metricas, antes y después de la corrida.
+func TestCorrerMideLasEscrituras(t *testing.T) {
+	api := nuevaAPIFalsa(t, responderBien)
+	cfg := configDePrueba(t, api.URL)
+
+	var pantalla bytes.Buffer
+	inf, err := correr(context.Background(), cfg, &pantalla)
+	if err != nil {
+		t.Fatal(err)
+	}
+	const aceptadas = 2 * (40 + 4) // dos niveles, con su calentamiento
+	e := inf.Escrituras
+	if !e.Medido || e.PrediccionesAceptadas != aceptadas || !e.Completas {
+		t.Fatalf("escrituras = %+v: quiero medido, %d aceptadas y completas", e, aceptadas)
+	}
+	for nombre, a := range map[string]*almacenEscritura{"mongo": e.Mongo, "redis": e.Redis} {
+		if a == nil || a.Escritas != aceptadas || a.Descartadas != 0 || a.Fallidas != 0 {
+			t.Errorf("%s = %+v: quiero %d escritas y nada perdido", nombre, a, aceptadas)
+		}
+	}
+	if e.Perdidas() != 0 {
+		t.Errorf("perdidas = %d, quiero 0", e.Perdidas())
+	}
+	if !strings.Contains(pantalla.String(), "escrituras") || strings.Contains(pantalla.String(), "AVISO") {
+		t.Errorf("la pantalla tiene que decir las escrituras, sin aviso:\n%s", pantalla.String())
+	}
+
+	crudo, err := os.ReadFile(cfg.salida)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var leido struct {
+		Escrituras struct {
+			Medido                bool `json:"medido"`
+			PrediccionesAceptadas int  `json:"predicciones_aceptadas"`
+			Completas             bool `json:"completas"`
+			Mongo                 struct {
+				Escritas    int `json:"escritas"`
+				Descartadas int `json:"descartadas"`
+				Fallidas    int `json:"fallidas"`
+				Lotes       int `json:"lotes"`
+			} `json:"mongo"`
+			Redis struct {
+				Escritas int `json:"escritas"`
+			} `json:"redis"`
+		} `json:"escrituras"`
+	}
+	if err := json.Unmarshal(crudo, &leido); err != nil {
+		t.Fatal(err)
+	}
+	le := leido.Escrituras
+	if !le.Medido || !le.Completas || le.PrediccionesAceptadas != aceptadas || le.Mongo.Escritas != aceptadas || le.Redis.Escritas != aceptadas || le.Mongo.Lotes == 0 {
+		t.Errorf("escrituras en el archivo = %+v", le)
+	}
+}
+
+// Solo cuenta lo de esta corrida: lo que la API ya traía de antes se resta.
+func TestCorrerRestaLasEscriturasAnteriores(t *testing.T) {
+	api := nuevaAPIFalsa(t, responderBien)
+	api.escritura = func(validas, _ int64) (almacenEscritura, almacenEscritura) {
+		return almacenEscritura{Escritas: 1000 + uint64(validas), Descartadas: 7, Fallidas: 3, Lotes: 500 + uint64(validas)},
+			almacenEscritura{Escritas: 2000 + uint64(validas), Lotes: 900 + uint64(validas)}
+	}
+	cfg := configDePrueba(t, api.URL)
+
+	inf, err := correr(context.Background(), cfg, io.Discard)
+	if err != nil {
+		t.Fatal(err)
+	}
+	e := inf.Escrituras
+	if e.Mongo.Escritas != 88 || e.Mongo.Descartadas != 0 || e.Mongo.Fallidas != 0 || e.Mongo.Lotes != 88 || e.Redis.Escritas != 88 {
+		t.Errorf("mongo = %+v, redis = %+v: quiero solo las 88 de esta corrida", e.Mongo, e.Redis)
+	}
+}
+
+func TestCorrerDejaALaVistaLasEscriturasPerdidas(t *testing.T) {
+	api := nuevaAPIFalsa(t, responderBien)
+	// MongoDB descarta una de cada cuatro y Redis rechaza dos.
+	api.escritura = func(validas, _ int64) (almacenEscritura, almacenEscritura) {
+		v := uint64(validas)
+		fallidas := min(v, 2)
+		return almacenEscritura{Escritas: v - v/4, Descartadas: v / 4, Lotes: v}, almacenEscritura{Escritas: v - fallidas, Fallidas: fallidas, Lotes: v}
+	}
+	cfg := configDePrueba(t, api.URL)
+
+	var pantalla bytes.Buffer
+	inf, err := correr(context.Background(), cfg, &pantalla)
+	if err != nil {
+		t.Fatal(err)
+	}
+	e := inf.Escrituras
+	if e.Mongo.Descartadas != 22 || e.Redis.Fallidas != 2 || e.Perdidas() != 24 || !e.Completas {
+		t.Errorf("escrituras = %+v (mongo %+v, redis %+v): quiero 22 descartadas en mongo y 2 fallidas en redis", e, e.Mongo, e.Redis)
+	}
+	if !strings.Contains(pantalla.String(), "AVISO") {
+		t.Errorf("con escrituras perdidas la pantalla tiene que avisar:\n%s", pantalla.String())
+	}
+	// La latencia se cumplió: «cumple» es de los pedidos, y las escrituras van aparte.
+	if !inf.Cumple {
+		t.Error("cumple es de la latencia y los errores de los pedidos; las escrituras perdidas se informan aparte")
+	}
+}
+
+// La API escribe por lotes después de responder: se espera a que los dos
+// almacenes den cuenta de todas las predicciones.
+func TestCorrerEsperaAQueSeEscriban(t *testing.T) {
+	api := nuevaAPIFalsa(t, responderBien)
+	api.escritura = func(validas, consulta int64) (almacenEscritura, almacenEscritura) {
+		// Cada consulta ve 20 predicciones escritas más, hasta llegar a todas.
+		v := uint64(min(validas, max(0, consulta-1)*20))
+		return almacenEscritura{Escritas: v, Lotes: v}, almacenEscritura{Escritas: v, Lotes: v}
+	}
+	cfg := configDePrueba(t, api.URL)
+
+	inf, err := correr(context.Background(), cfg, io.Discard)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if e := inf.Escrituras; !e.Completas || e.Mongo.Escritas != 88 || e.Redis.Escritas != 88 {
+		t.Errorf("escrituras = %+v (mongo %+v): quiero haber esperado a las 88", e, e.Mongo)
+	}
+	if api.metricas.Load() < 4 {
+		t.Errorf("consultó /api/metricas %d veces: tenía que volver a preguntar hasta verlas todas", api.metricas.Load())
+	}
+}
+
+func TestCorrerNoEsperaMasQueElPlazo(t *testing.T) {
+	api := nuevaAPIFalsa(t, responderBien)
+	api.escritura = func(validas, _ int64) (almacenEscritura, almacenEscritura) {
+		v := uint64(validas) / 2 // la mitad nunca aparece
+		return almacenEscritura{Escritas: v, Lotes: v}, almacenEscritura{Escritas: v, Lotes: v}
+	}
+	cfg := configDePrueba(t, api.URL)
+	cfg.esperaEscrituras = 150 * time.Millisecond
+
+	var pantalla bytes.Buffer
+	inicio := time.Now()
+	inf, err := correr(context.Background(), cfg, &pantalla)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if time.Since(inicio) > 5*time.Second {
+		t.Errorf("tardó %v: el plazo de espera era de 150 ms", time.Since(inicio))
+	}
+	e := inf.Escrituras
+	if e.Completas || e.Mongo.Escritas != 44 || e.SinCuenta() != 44 {
+		t.Errorf("escrituras = %+v (mongo %+v): quiero incompletas, con 44 escritas y 44 sin cuenta", e, e.Mongo)
+	}
+	if !strings.Contains(pantalla.String(), "AVISO") {
+		t.Errorf("si no dieron cuenta de todas, la pantalla tiene que avisar:\n%s", pantalla.String())
+	}
+}
+
+func TestCorrerSinAdminNoMideLasEscrituras(t *testing.T) {
+	api := nuevaAPIFalsa(t, responderBien)
+	cfg := configDePrueba(t, api.URL)
+	cfg.claveAdmin = ""
+
+	var pantalla bytes.Buffer
+	inf, err := correr(context.Background(), cfg, &pantalla)
+	if err != nil {
+		t.Fatal(err)
+	}
+	e := inf.Escrituras
+	if e.Medido || e.Motivo == "" || e.Mongo != nil || e.Redis != nil {
+		t.Errorf("escrituras = %+v: sin clave de admin no se miden, y se dice por qué", e)
+	}
+	if api.metricas.Load() != 0 {
+		t.Errorf("sin admin no se consulta /api/metricas (%d consultas)", api.metricas.Load())
+	}
+	if !strings.Contains(pantalla.String(), "CARGA_CLAVE_ADMIN") {
+		t.Errorf("la pantalla tiene que decir cómo medirlas:\n%s", pantalla.String())
+	}
+	if !inf.Cumple || len(inf.Niveles) != 2 {
+		t.Error("sin admin se mide la latencia igual")
+	}
+}
+
+func TestCorrerFallaSiElAdminNoPuedeLeerLasMetricas(t *testing.T) {
+	api := nuevaAPIFalsa(t, responderBien)
+	cfg := configDePrueba(t, api.URL)
+	cfg.admin, cfg.claveAdmin = "demo", "secreta" // existe, pero es de rol usuario
+
+	_, err := correr(context.Background(), cfg, io.Discard)
+	if err == nil || !strings.Contains(err.Error(), "403") {
+		t.Fatalf("err = %v: quiero que diga que /api/metricas respondió 403", err)
+	}
+	if api.predicciones.Load() != 0 {
+		t.Error("si se pidió medir las escrituras y no se puede, no se mide nada")
+	}
+}
+
 func TestLeerConfig(t *testing.T) {
-	entorno := map[string]string{"CARGA_CLAVE": "del-entorno"}
+	entorno := map[string]string{"CARGA_CLAVE": "del-entorno", "CARGA_CLAVE_ADMIN": "admin-del-entorno"}
 	cfg, err := leerConfig([]string{"-clientes", "2,8", "-pedidos", "100", "-url", "http://localhost:18080/"}, func(k string) string { return entorno[k] })
 	if err != nil {
 		t.Fatal(err)
@@ -465,6 +690,14 @@ func TestLeerConfig(t *testing.T) {
 	}
 	if cfg.salida != filepath.Join("reports", "api_latencia.json") || cfg.limiteMs != 100 {
 		t.Errorf("valores por omisión: %+v", cfg)
+	}
+	if cfg.admin != "admin" || cfg.claveAdmin != "admin-del-entorno" || cfg.esperaEscrituras <= 0 {
+		t.Errorf("admin = %q, clave del admin = %q, espera = %v", cfg.admin, cfg.claveAdmin, cfg.esperaEscrituras)
+	}
+	// La clave del admin es opcional: sin ella no se miden las escrituras.
+	solo, err := leerConfig(nil, func(k string) string { return map[string]string{"CARGA_CLAVE": "x"}[k] })
+	if err != nil || solo.claveAdmin != "" {
+		t.Errorf("sin CARGA_CLAVE_ADMIN: config = %+v, err = %v", solo, err)
 	}
 
 	malas := [][]string{

@@ -11,22 +11,35 @@
 //
 //   - Pide un token con -usuario y la clave (CARGA_CLAVE o -clave) y lo usa en
 //     todos los pedidos. Cualquier rol puede predecir.
+//
 //   - Manda las lecturas de -lecturas (los datos de prueba del Runner de
 //     Postman) en orden y en ronda. Repetirlas no cambia el estado de la API:
 //     la misma estación y hora reemplaza a la anterior.
+//
 //   - Por cada nivel, C goroutines cliente toman turnos de un canal: siempre
 //     hay C pedidos en vuelo. Cada una guarda sus latencias en su propia lista
 //     y se juntan al final; no comparten nada más que el http.Client.
+//
 //   - La latencia de un pedido va desde antes de enviarlo hasta tener el cuerpo
 //     completo de la respuesta. Antes de medir, cada nivel hace -calentamiento
 //     pedidos que se descartan: abren las conexiones, que después se reutilizan
 //     (keep-alive), así que el saludo TCP no entra en la medida.
+//
 //   - Los percentiles son por rango más cercano sobre los pedidos que
 //     respondieron 200. Los demás se cuentan como errores, por tipo. También
 //     se cuenta la respuesta 200 cuyo régimen no es el esperado del archivo.
 //
+//   - La API responde 200 antes de escribir la predicción en MongoDB y en
+//     Redis, y si una cola se llena la descarta: eso no se ve en la latencia.
+//     Con la clave de un admin en CARGA_CLAVE_ADMIN (y -admin, si no se llama
+//     admin), lee GET /api/metricas antes y después y deja en el informe
+//     cuántas predicciones se escribieron, se descartaron y fallaron en cada
+//     almacén durante la corrida. Sin esa clave lo dice y mide solo la latencia.
+//
 // Sale con 1 si algún nivel no cumple: tuvo errores, alguna respuesta con otro
-// régimen, o un p99 de -limite-ms o más. El informe se escribe igual.
+// régimen, o un p99 de -limite-ms o más. El informe se escribe igual. Las
+// escrituras perdidas no cambian ese resultado, que es de los pedidos: salen
+// aparte, con un AVISO en pantalla y en «escrituras» del informe.
 //
 // Se corre desde la raíz del repo, con la API levantada (docker compose up).
 package main
@@ -61,6 +74,9 @@ type config struct {
 	limiteMs       int
 	plazo          time.Duration
 	salida         string
+	// Para leer /api/metricas: si claveAdmin está vacía, no se miden las escrituras.
+	admin, claveAdmin string
+	esperaEscrituras  time.Duration
 }
 
 func leerConfig(args []string, getenv func(string) string) (config, error) {
@@ -77,6 +93,8 @@ func leerConfig(args []string, getenv func(string) string) (config, error) {
 	fs.IntVar(&c.limiteMs, "limite-ms", 100, "el p99 de cada nivel tiene que quedar por debajo")
 	fs.DurationVar(&c.plazo, "plazo", 5*time.Second, "plazo de cada pedido")
 	fs.StringVar(&c.salida, "salida", filepath.Join("reports", "api_latencia.json"), "dónde se escribe el informe")
+	fs.StringVar(&c.admin, "admin", "admin", "usuario de rol admin con que se lee /api/metricas; su clave va en la variable CARGA_CLAVE_ADMIN")
+	fs.DurationVar(&c.esperaEscrituras, "espera-escrituras", 15*time.Second, "cuánto esperar, al terminar, a que MongoDB y Redis den cuenta de las predicciones")
 	if err := fs.Parse(args); err != nil {
 		return config{}, err
 	}
@@ -100,7 +118,10 @@ func leerConfig(args []string, getenv func(string) string) (config, error) {
 		return config{}, errors.New("-limite-ms tiene que ser al menos 1")
 	case c.plazo <= 0:
 		return config{}, errors.New("-plazo tiene que ser positivo")
+	case c.esperaEscrituras <= 0:
+		return config{}, errors.New("-espera-escrituras tiene que ser positivo")
 	}
+	c.claveAdmin = getenv("CARGA_CLAVE_ADMIN")
 	if c.clave == "" {
 		c.clave = getenv("CARGA_CLAVE")
 	}
@@ -120,6 +141,9 @@ type informe struct {
 	Medicion string          `json:"medicion"`
 	Niveles  []nivel         `json:"niveles"`
 	Cumple   bool            `json:"cumple"`
+	// Escrituras es lo que pasó en MongoDB y en Redis con las predicciones de
+	// la corrida. No entra en Cumple, que es de los pedidos.
+	Escrituras escrituras `json:"escrituras"`
 }
 
 type parametros struct {
@@ -139,7 +163,11 @@ const notaMedicion = "Latencia del lado del cliente: desde antes de enviar el pe
 	"con un JWT y sobre conexiones keep-alive ya abiertas por el calentamiento. Cada nivel tiene siempre `clientes` pedidos en vuelo. " +
 	"Percentiles por rango más cercano sobre los pedidos que respondieron 200; pedidos_por_segundo son esos pedidos sobre duracion_s. " +
 	"respuestas_distintas: respondieron 200 con un régimen que no es el regimen_esperado del archivo. " +
-	"cumple: sin errores, sin respuestas distintas y p99_ms < limite_ms."
+	"cumple: sin errores, sin respuestas distintas y p99_ms < limite_ms. " +
+	"escrituras: lo que GET /api/metricas sumó en cada almacén entre antes y después de la corrida, con el calentamiento; la API responde " +
+	"antes de escribir, así que una predicción descartada o fallida respondió 200 igual. No entra en cumple."
+
+const motivoSinAdmin = "falta la clave de un usuario admin en la variable CARGA_CLAVE_ADMIN: GET /api/metricas es de rol admin"
 
 func correr(ctx context.Context, cfg config, pantalla io.Writer) (informe, error) {
 	f, err := os.Open(cfg.lecturas)
@@ -165,6 +193,18 @@ func correr(ctx context.Context, cfg config, pantalla io.Writer) (informe, error
 	if err != nil {
 		return informe{}, err
 	}
+	// Antes de medir: si se pidió contar las escrituras y no se puede, se
+	// sabe ahora y no después de la corrida.
+	var tokenAdmin string
+	var antes fotoEscritura
+	if cfg.claveAdmin != "" {
+		if tokenAdmin, err = pedirToken(ctx, hc, cfg.url, cfg.admin, cfg.claveAdmin); err != nil {
+			return informe{}, err
+		}
+		if antes, err = pedirEscritura(ctx, hc, cfg.url, tokenAdmin); err != nil {
+			return informe{}, err
+		}
+	}
 
 	inf := informe{
 		Metadatos: kmeans.RecolectarMetadatos(),
@@ -179,10 +219,17 @@ func correr(ctx context.Context, cfg config, pantalla io.Writer) (informe, error
 	}
 	fmt.Fprintf(pantalla, "POST %s%s · %d lecturas de %s · %d pedidos por nivel (+%d de calentamiento) · límite %d ms\n",
 		cfg.url, rutaPrediccion, len(lecturas), cfg.lecturas, cfg.pedidos, cfg.calentamiento, cfg.limiteMs)
-	fmt.Fprintf(pantalla, "servidor: %s\n\n", salud)
+	fmt.Fprintf(pantalla, "servidor: %s\n", salud)
+	var almacenes struct{ Mongo, Redis string }
+	if json.Unmarshal(salud, &almacenes) == nil && (almacenes.Mongo != "ok" || almacenes.Redis != "ok") {
+		fmt.Fprintf(pantalla, "AVISO: /api/salud dice mongo = %q y redis = %q: las predicciones van a responder, pero no todas se van a guardar\n",
+			almacenes.Mongo, almacenes.Redis)
+	}
+	fmt.Fprintln(pantalla)
 
 	c := nuevoCliente(cfg.url, token, cfg.plazo)
 	defer c.http.CloseIdleConnections()
+	aceptadas := 0
 	for _, clientes := range cfg.clientes {
 		n, err := medirNivel(ctx, c, lecturas, clientes, cfg.pedidos, cfg.calentamiento, cfg.limiteMs)
 		if err != nil {
@@ -190,8 +237,17 @@ func correr(ctx context.Context, cfg config, pantalla io.Writer) (informe, error
 		}
 		inf.Niveles = append(inf.Niveles, n)
 		inf.Cumple = inf.Cumple && n.Cumple
+		aceptadas += n.aceptadas
 	}
 	imprimirTabla(pantalla, inf)
+
+	inf.Escrituras = escrituras{Motivo: motivoSinAdmin}
+	if tokenAdmin != "" {
+		if inf.Escrituras, err = esperarEscrituras(ctx, hc, cfg.url, tokenAdmin, antes, aceptadas, cfg.esperaEscrituras); err != nil {
+			return informe{}, err
+		}
+	}
+	imprimirEscrituras(pantalla, inf.Escrituras)
 
 	if err := os.MkdirAll(filepath.Dir(cfg.salida), 0o755); err != nil {
 		return informe{}, err
@@ -270,7 +326,7 @@ func pedirToken(ctx context.Context, hc *http.Client, base, usuario, clave strin
 		Token string `json:"token"`
 	}
 	if resp.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("POST /api/auth/token respondió %d para el usuario %s: revisa -usuario y CARGA_CLAVE", resp.StatusCode, usuario)
+		return "", fmt.Errorf("POST /api/auth/token respondió %d para el usuario %s: revisa el usuario y su clave (CARGA_CLAVE, CARGA_CLAVE_ADMIN)", resp.StatusCode, usuario)
 	}
 	if err := json.NewDecoder(io.LimitReader(resp.Body, 1<<16)).Decode(&r); err != nil || r.Token == "" {
 		return "", errors.New("POST /api/auth/token no devolvió un token")

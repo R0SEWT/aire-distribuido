@@ -315,10 +315,13 @@ docker run --rm -v "$PWD/data:/app/data" -v "$PWD/reports:/app/reports" \
 **7. Las evidencias de la API.** Con el Compose arriba y tres nodos, `cmd/carga` mide
 `POST /api/predicciones` del lado del cliente con 1, 4, 16 y 64 clientes concurrentes y escribe
 `reports/api_latencia.json` (p50, p95, p99, máximo, pedidos por segundo y errores por nivel); sale
-con 1 si algún nivel tiene errores o un p99 de 100 ms o más:
+con 1 si algún nivel tiene errores o un p99 de 100 ms o más. La API responde antes de escribir en
+las bases, así que la latencia no dice si lo predicho quedó guardado: con la clave de un admin,
+`cmd/carga` lee `/api/metricas` antes y después y deja en el informe cuántas predicciones se
+escribieron, se descartaron y fallaron en MongoDB y en Redis durante la corrida:
 
 ```bash
-CARGA_CLAVE=<la clave de demo en API_USUARIOS> go run ./cmd/carga
+CARGA_CLAVE=<la clave de demo en API_USUARIOS> CARGA_CLAVE_ADMIN=<la de admin> go run ./cmd/carga
 ```
 
 La colección de Postman prueba cada ruta contra el contrato (código, forma de la respuesta y

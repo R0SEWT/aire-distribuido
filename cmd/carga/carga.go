@@ -206,14 +206,22 @@ type nivel struct {
 	MediaMs             float64        `json:"media_ms"`
 	SobreElLimite       int            `json:"sobre_el_limite"`
 	Cumple              bool           `json:"cumple"`
+
+	// aceptadas son los pedidos que respondieron 200, con los del
+	// calentamiento: los que la API encoló para escribir.
+	aceptadas int
 }
 
 // medirNivel calienta las conexiones con `calentamiento` pedidos que no se
 // miden y después mide `pedidos` con `clientes` goroutines. Un nivel cumple si
 // no hubo errores ni respuestas con otro régimen y el p99 quedó bajo limiteMs.
 func medirNivel(ctx context.Context, c *cliente, lecturas []lectura, clientes, pedidos, calentamiento, limiteMs int) (nivel, error) {
+	aceptadas := 0
 	if calentamiento > 0 {
-		disparar(ctx, c, lecturas, clientes, calentamiento, 0)
+		previos, _ := disparar(ctx, c, lecturas, clientes, calentamiento, 0)
+		for _, r := range previos {
+			aceptadas += len(r.ms)
+		}
 	}
 	resultados, duracion := disparar(ctx, c, lecturas, clientes, pedidos, calentamiento)
 	if err := ctx.Err(); err != nil {
@@ -230,6 +238,7 @@ func medirNivel(ctx context.Context, c *cliente, lecturas []lectura, clientes, p
 			n.Errores += cuantos
 		}
 	}
+	n.aceptadas = aceptadas + len(ms)
 	slices.Sort(ms)
 	var suma float64
 	for _, x := range ms {
