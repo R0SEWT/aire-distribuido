@@ -63,6 +63,7 @@ COMANDOS = {
     "reports/smoke_lab_*.json": "cmd/smoke",
     "reports/kmeans_distribuido_*.json": "cmd/distribuido",
     "reports/kmeans_gpu/*.json": "lab/gpu/kmeans_gpu.py",
+    "reports/mapa/lab_d56_*.json": "cmd/mapa-coord (PR #52)",
     "reports/alerta_24h.json": "go test ./ventana -run LaVentanaSobreElGold -actualizar",
     "reports/api_latencia.json": "cmd/carga",
     "docs/postman/lecturas_prueba.csv": "docs/postman/generar_lecturas.py",
@@ -1972,6 +1973,167 @@ class Informe:
             "replicas_max": entero(r_max), "filas_max": entero(max(v["filas"] for d in ds for v in d["velocidad"])),
         }
 
+    def mapa_gpu(self) -> None:
+        """reports/mapa/lab_d56_*.json (cmd/mapa-coord, PR #52): local SGD en las GPU del laboratorio D56.
+
+        Las corridas usan DATOS SINTÉTICOS a propósito (miden el clúster, no el aire): no se anotan como
+        «sintéticos» del informe, que es la guarda contra entregar la muestra como si fueran los datos;
+        la tabla y la prosa lo dicen a la vista.
+        """
+        from statistics import median
+        o = "reports/mapa/lab_d56_*.json"
+        titulo = ("Experimento de laboratorio, fuera del sistema y con DATOS SINTÉTICOS: una red convolucional entrenada con local SGD "
+                  "en las GPU del laboratorio, con el coordinador en Go")
+        claves = ["corridas", "nodos", "gpu", "vram_gb", "parametros", "parametros_millones", "mb_por_ronda", "mb_por_nodo", "fecha",
+                  "dias", "lote", "promedio_ms", "h_menor", "h_mayor", "rondas_menor", "rondas_mayor", "barrera_s_menor",
+                  "barrera_s_mayor", "computo_s_menor", "computo_s_mayor", "red_s_menor", "red_s_mayor", "pct_red_menor",
+                  "pct_red_mayor", "muestras_s_menor", "muestras_s_mayor", "veces_menor", "veces_mayor", "dispersion_computo",
+                  "total_min_menor", "total_min_mayor"]
+        rutas = sorted((self.reports / "mapa").glob("lab_d56_*.json"))
+        if not rutas:
+            self.faltantes.append(o)
+            self.tabla("mapa_gpu.md", o, None, "tbl-mapa-gpu", titulo)
+            self.pendientes("mapa", claves)
+            return
+        corridas = []
+        for ruta in rutas:
+            d = json.loads(ruta.read_text(encoding="utf-8"))
+            nj = f"reports/mapa/{ruta.name}"
+            nodos, rondas, n_par, lote = d["nodos"], d["rondas"], d["parametros"], d["hiper"]["lote"]
+            self.comprobar(nj, d.get("estado") == "completa" and len(rondas) == d.get("rondas_pedidas"), "la corrida no terminó todas sus rondas")
+            self.comprobar(nj, all(len(r["nodos"]) == len(nodos) for r in rondas), "alguna ronda no tiene a todos los nodos")
+            # Por ronda cruzan la red un PESOS y un LOCAL por nodo, de n parámetros float32 cada uno.
+            self.comprobar(nj, all(r["bytes"] == 2 * len(nodos) * n_par * 4 for r in rondas), "los bytes por ronda no son 2 × nodos × parámetros × 4")
+            self.comprobar(nj, all(r["muestras"] == len(nodos) * d["pasos"] * lote for r in rondas), "las muestras por ronda no son nodos × pasos × lote")
+            self.comprobar(nj, all(x.get("rezagados", 0) == 0 for x in nodos), "hubo mensajes rezagados")
+            self.comprobar(nj, "sint" in str(d["manifiesto"].get("fuente", "")) or "sintetico" in ruta.name,
+                           "no está marcada como corrida con datos sintéticos: revisar cómo se presenta en el informe")
+            # Medianas sin la primera ronda (carga los datos en la GPU y calienta) cuando hay más de una.
+            rs = rondas[1:] if len(rondas) > 1 else rondas
+            barrera = median(r["ms_barrera"] for r in rs) / 1000
+            computo = median(max(x["ms_computo"] for x in r["nodos"]) for r in rs) / 1000
+            red = median(r["ms_barrera"] - max(x["ms_computo"] for x in r["nodos"]) for r in rs) / 1000
+            ritmo = median(r["muestras"] / ((r["ms_barrera"] + r["ms_promedio"]) / 1000) for r in rs)
+            # Lo que rinde un nodo mientras calcula: sus muestras de la ronda sobre su propio cómputo.
+            ritmo_nodo = median(x["muestras"] / (x["ms_computo"] / 1000) for r in rs for x in r["nodos"])
+            cs = [median(x["ms_computo"] for r in rs for x in r["nodos"] if x["nodo"] == n["nodo"]) for n in nodos]
+            corridas.append({"d": d, "h": d["pasos"], "rondas": len(rondas), "nodos": len(nodos), "barrera": barrera, "computo": computo,
+                             "red": red, "ritmo": ritmo, "veces": ritmo / ritmo_nodo, "promedio": median(r["ms_promedio"] for r in rs),
+                             "dispersion": (max(cs) - min(cs)) / min(cs), "perdida": (rondas[0]["perdida"], rondas[-1]["perdida"])})
+        corridas.sort(key=lambda c: c["h"])
+        d0 = corridas[0]["d"]
+        self.comprobar(o, len({(c["nodos"], c["d"]["parametros"], c["d"]["manifiesto"]["huella"]) for c in corridas}) == 1,
+                       "las corridas no son comparables (otros nodos, otra red u otros datos)")
+        t = pd.DataFrame([(
+            entero(c["nodos"]), entero(c["h"]), entero(c["rondas"]), entero(c["d"]["rondas"][0]["muestras"]), decimal(c["barrera"], 1),
+            decimal(c["computo"], 1), f"{decimal(c['red'], 1)} ({pct(c['red'] / c['barrera'], 1)})", entero(c["ritmo"]),
+            f"{decimal(c['veces'], 1)}×", decimal(c["d"]["ms"]["total"] / 60000, 1),
+        ) for c in corridas], columns=["Nodos (GPU)", "Pasos locales por ronda (H)", "Rondas", "Muestras por ronda", "Barrera (s)",
+                                       "Cómputo del nodo más lento (s)", "Red y espera (s)", "Muestras por segundo",
+                                       "Frente a un solo nodo", "Total (min)"])
+        gpus = sorted({x["gpu"] for c in corridas for x in c["d"]["nodos"]})
+        self.tabla("mapa_gpu.md", o, d0, "tbl-mapa-gpu", titulo, markdown(t, "rrrrrrrrrr"), anchos=[9, 11, 8, 10, 9, 12, 12, 10, 10, 9],
+                   fuente="Fuente: " + ", ".join(f"`reports/mapa/{r.name}`" for r in rutas) + f", escritos por `cmd/mapa-coord` "
+                          f"({fecha(d0['metadatos'].get('momento'))}); el código está en la PR #52, sin fusionar.",
+                   nota=f"**Datos sintéticos** de tamaño nacional ({entero(d0['manifiesto']['dias'])} días): las corridas miden el clúster, no "
+                        f"el aire. Nodos: {entero(corridas[0]['nodos'])} equipos del laboratorio D56, cada uno con una {', '.join(gpus)}, "
+                        f"que entrenan en Python con PyTorch una red de {entero(d0['parametros'])} parámetros (lote {d0['hiper']['lote']}). "
+                        "Por ronda, cada nodo recibe los pesos (`PESOS`), entrena H pasos con sus datos y los devuelve (`LOCAL`); el coordinador "
+                        "espera a todos (la barrera) y promedia en orden de nodo. Barrera, cómputo y red son medianas por ronda, sin la primera. "
+                        "«Red y espera» es la barrera menos el cómputo del nodo más lento, y su porcentaje, sobre la barrera. «Frente a un solo "
+                        "nodo» divide las muestras por segundo del clúster entre las de un nodo mientras calcula (sus muestras sobre su propio "
+                        "cómputo).")
+        a, b = corridas[0], corridas[-1]
+        self.cifras["mapa"] = {
+            "corridas": entero(len(corridas)), "nodos": entero(a["nodos"]), "gpu": ", ".join(gpus),
+            "vram_gb": lista([x["vram_gb"] for x in d0["nodos"]]), "parametros": entero(d0["parametros"]),
+            "parametros_millones": decimal(d0["parametros"] / 1e6, 1), "mb_por_ronda": decimal(d0["rondas"][0]["bytes"] / 1e6, 0),
+            "mb_por_nodo": decimal(d0["parametros"] * 4 / 1e6, 0), "fecha": fecha(d0["metadatos"].get("momento")),
+            "dias": entero(d0["manifiesto"]["dias"]), "lote": entero(d0["hiper"]["lote"]), "promedio_ms": decimal(a["promedio"], 0),
+            "h_menor": entero(a["h"]), "h_mayor": entero(b["h"]), "rondas_menor": entero(a["rondas"]), "rondas_mayor": entero(b["rondas"]),
+            "barrera_s_menor": decimal(a["barrera"], 1), "barrera_s_mayor": decimal(b["barrera"], 1),
+            "computo_s_menor": decimal(a["computo"], 1), "computo_s_mayor": decimal(b["computo"], 1),
+            "red_s_menor": decimal(a["red"], 1), "red_s_mayor": decimal(b["red"], 1),
+            "pct_red_menor": pct(a["red"] / a["barrera"], 0), "pct_red_mayor": pct(b["red"] / b["barrera"], 1),
+            "muestras_s_menor": entero(a["ritmo"]), "muestras_s_mayor": entero(b["ritmo"]),
+            "veces_menor": decimal(a["veces"], 1), "veces_mayor": decimal(b["veces"], 1),
+            "dispersion_computo": pct(a["dispersion"], 1),
+            "total_min_menor": decimal(a["d"]["ms"]["total"] / 60000, 1), "total_min_mayor": decimal(b["d"]["ms"]["total"] / 60000, 1),
+        }
+
+    # Salidas en texto de corridas reales (docs/informe/capturas/pc4/*.txt, de la sesión de evidencias):
+    # (archivo .md, id, .txt, tramos, título). Un tramo es ("orden", patrón, n): el bloque que empieza en la
+    # línea «$ …» que cumple el patrón, hasta n líneas; o ("cola", n): las últimas n líneas.
+    SALIDAS = [
+        ("salida_compose", "lst-salida-compose", "compose-ps.txt", [("orden", r"compose .* ps", 10), ("orden", r"api/salud", 8)],
+         "`docker compose up --scale nodo=3`: los servicios sanos, los tres nodos y el seed terminado"),
+        ("salida_nodos", "lst-salida-nodos", "entrenamiento.txt", [("orden", r"api/cluster/nodos", 9)],
+         "`GET /api/cluster/nodos`: los nodos del pool tal como los ve el coordinador (primeras líneas)"),
+        ("salida_entrenamiento", "lst-salida-entrenamiento", "entrenamiento.txt",
+         [("orden", r"-X POST localhost:8080/api/entrenamientos", 4), ("orden", r"api/entrenamientos/e-", 28)],
+         "Un entrenamiento distribuido por la API: el 202 con el id y el detalle al terminar (primeras líneas)"),
+        ("salida_carga", "lst-salida-carga", "carga.txt", [("cola", 14)],
+         "`cmd/carga`: latencia de la predicción con 1, 4, 16 y 64 clientes a la vez"),
+        ("salida_newman", "lst-salida-newman", "newman-coleccion.txt", [("cola", 20)],
+         "`newman` sobre las carpetas 1 a 3 de la colección de Postman: resumen de la corrida"),
+        ("salida_newman_csv", "lst-salida-newman-csv", "newman-runner-csv.txt", [("cola", 20)],
+         "`newman` con los datos de prueba (`lecturas_prueba.csv`): resumen de la corrida"),
+        ("salida_mongo", "lst-salida-mongo", "mongo.txt",
+         [("orden", r"countDocuments", 7), ("orden", r"db\.predicciones\.find", 21)],
+         "MongoDB después de las pruebas: documentos por colección y la última predicción de una estación"),
+        ("salida_mongo_modelos", "lst-salida-mongo-modelos", "mongo.txt", [("orden", r"db\.modelos\.find\(\{\}", 28)],
+         "MongoDB: los modelos guardados y cuál está activo"),
+        ("salida_redis", "lst-salida-redis", "redis.txt",
+         [("orden", r"--scan --pattern modelo", 3), ("orden", r"--scan --pattern entrenamiento", 5),
+          ("orden", r"GET estacion:CA-HU-04", 3), ("orden", r"GET entrenamiento:", 3)],
+         "Redis después de las pruebas: las claves, el estado de una estación y un punto de control"),
+        ("salida_metricas", "lst-salida-metricas", "metricas.txt", [("orden", r"api/metricas", 26)],
+         "`GET /api/metricas`: percentiles por ruta medidos dentro del servidor (primeras líneas)"),
+    ]
+
+    def salidas(self) -> None:
+        import re
+        carpeta = AQUI / "capturas" / "pc4"
+        ancho = 118
+        for archivo, ident, txt, tramos, titulo in self.SALIDAS:
+            ruta, destino = carpeta / txt, self.salida / f"{archivo}.md"
+            origen = f"docs/informe/capturas/pc4/{txt}"
+            if not ruta.exists():
+                self.faltantes.append(origen)
+                destino.write_text("\n".join([
+                    f"<!-- Generado por tablas.py desde {origen}. No editar a mano. -->", "",
+                    "::: {.callout-warning title=\"PENDIENTE\"}",
+                    f"Falta `{origen}`: la salida en texto de la corrida real, que llega con las evidencias de la PC4.", ":::", "",
+                    f"::: {{#{ident}}}", "```text", "(salida pendiente)", "```", "", titulo, ":::", ""]), encoding="utf-8")
+                continue
+            lineas = ruta.read_text(encoding="utf-8").splitlines()
+            cuerpo = []
+            for t in tramos:
+                if t[0] == "cola":
+                    bloque = [l for l in lineas if l.strip()][-t[1]:]
+                else:
+                    ini = next((i for i, l in enumerate(lineas) if l.startswith("$ ") and re.search(t[1], l)), None)
+                    if ini is None:
+                        self.problema(origen, f"no se encontró la orden «{t[1]}»: ¿cambió la salida?")
+                        continue
+                    fin = next((i for i in range(ini + 1, len(lineas)) if lineas[i].startswith("$ ")), len(lineas))
+                    bloque = [l for l in lineas[ini:fin] if l.strip()]
+                    if len(bloque) > t[2]:
+                        bloque = bloque[:t[2]] + ["…"]
+                # Una línea más ancha que la página se parte con «\» al final, como en la terminal.
+                for l in bloque:
+                    while len(l) > ancho:
+                        corte = l.rfind(" ", 0, ancho)
+                        corte = corte if corte > ancho // 2 else ancho
+                        cuerpo.append(l[:corte] + " \\")
+                        l = "    " + l[corte:].lstrip()
+                    cuerpo.append(l)
+                cuerpo.append("")
+            destino.write_text("\n".join([
+                f"<!-- Generado por tablas.py desde {origen}. No editar a mano. -->", "",
+                f"::: {{#{ident}}}", "```text", "\n".join(cuerpo).rstrip(), "```", "",
+                f"{titulo} (salida real, `{origen}`)", ":::", ""]), encoding="utf-8")
+
     # ----------------------------------------------------------------------- API
     def alerta(self) -> None:
         """reports/alerta_24h.json (go test ./ventana -actualizar): por qué la alerta sale de la media de 24 h."""
@@ -2545,11 +2707,13 @@ def main() -> int:
     inf.smoke()
     inf.distribuido()
     inf.gpu()
+    inf.mapa_gpu()
     inf.alerta()
     inf.api_latencia()
     inf.api_rutas()
     inf.entidades()
     inf.datos_prueba()
+    inf.salidas()
     inf.pruebas_pc4()
     inf.constantes_pc4()
     inf.fragmentos(inf.FRAGMENTOS_PC4)

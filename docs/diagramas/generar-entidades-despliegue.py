@@ -1,4 +1,10 @@
-"""Genera docs/diagramas/entidades.drawio y despliegue.drawio (se corre una vez; el .drawio es la fuente)."""
+"""Genera entidades.drawio y despliegue.drawio en la carpeta que se le pasa.
+
+    python3 generar-entidades-despliegue.py .
+    drawio -x -f png -e -b 12 -s 2 -o entidades.png entidades.drawio     # y lo mismo con despliegue
+
+Los .drawio se pueden editar a mano en draw.io; este script solo evita calcular las posiciones.
+"""
 import sys
 from html import escape
 from pathlib import Path
@@ -46,16 +52,16 @@ ALTO_FILA, CABECERA = 17, 34
 
 
 def entidad(d, x, y, w, nombre, sub, campos, color):
-    """Una entidad: cabecera con el nombre y cuerpo con un campo por línea. Devuelve (id del cuerpo, alto)."""
+    """Una entidad: cabecera con el nombre y cuerpo con un campo por línea. Devuelve (id del cuerpo, id de la cabecera)."""
     relleno, borde, texto = color
     alto_cuerpo = len(campos) * ALTO_FILA + 12
-    d.caja(x, y, w, CABECERA, f"<b>{nombre}</b>" + (f"<br><font style=\"font-size: 10px;\">{sub}</font>" if sub else ""),
+    cabecera = d.caja(x, y, w, CABECERA, f"<b>{nombre}</b>" + (f"<br><font style=\"font-size: 10px;\">{sub}</font>" if sub else ""),
            f"rounded=0;whiteSpace=wrap;html=1;fillColor={relleno};strokeColor={borde};fontColor={texto};fontSize=12;")
-    lineas = "<br>".join(f"<b>{c}</b> · {t}" if t else f"<b>{c}</b>" for c, t in campos)
+    lineas = "<br>".join((f"<b>{c}</b> · {t}" if t else f"<b>{c}</b>") if c else t for c, t in campos)
     cuerpo = d.caja(x, y + CABECERA, w, alto_cuerpo, lineas,
                     f"rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=4;fillColor=#ffffff;"
                     f"strokeColor={borde};fontColor=#222222;fontSize=11;")
-    return cuerpo, CABECERA + alto_cuerpo
+    return cuerpo, cabecera
 
 
 def entidades():
@@ -63,7 +69,7 @@ def entidades():
     d.caja(20, 20, 1100, 790, "MongoDB · base aire_distribuido · lo persistente (cinco colecciones)", FONDO)
     d.caja(1150, 20, 390, 790, "Redis · la caché (tres familias de claves, valor JSON)", FONDO)
 
-    est, _ = entidad(d, 40, 100, 250, "estaciones", "la escribe el seed, desde la ficha", [
+    est, est_c = entidad(d, 40, 100, 250, "estaciones", "la escribe el seed, desde la ficha", [
         ("_id", "texto: código OEFA"), ("objeto_fiscalizado", "texto o null"), ("tipo_actividad", "texto o null"),
         ("departamento", "texto o null"), ("provincia", "texto o null"), ("distrito", "texto o null"),
         ("lat", "número"), ("lon", "número")], VERDE)
@@ -73,13 +79,13 @@ def entidades():
         ("regimen", "entero"), ("excede_eca", "booleano, del régimen"), ("media_24h", "{pm2_5, pm10, lecturas}"),
         ("alerta", "booleano, de la media de 24 h"), ("inca", "texto o null: banda INCA"),
         ("modelo_id", "texto → modelos._id"), ("ms", "número: latencia en el servidor")], VERDE)
-    mod, _ = entidad(d, 800, 100, 300, "modelos", "índices activo {activo} y creado {creado}", [
+    mod, mod_c = entidad(d, 800, 100, 300, "modelos", "índices activo {activo} y creado {creado}", [
         ("_id", "texto: sembrado-… o entrenado-{id}"), ("creado", "fecha"), ("origen", "«sembrado» o → entrenamientos._id"),
         ("receta", "{features, k, semilla, tolerancia…}"), ("gold_sha256", "texto: huella del gold"),
         ("estandarizacion", "{features, n, media, desv…}"), ("centroides_std", "k × D números"),
         ("centroides", "k × D, unidades originales"), ("regimenes", "[{regimen, excede_eca, medias, tamano}]"),
         ("inercia", "número"), ("iteraciones", "entero"), ("activo", "booleano: a lo sumo uno true")], VERDE)
-    ent, _ = entidad(d, 560, 450, 410, "entrenamientos", "índice inicio {inicio} · un documento por corrida distribuida", [
+    ent, ent_c = entidad(d, 560, 450, 410, "entrenamientos", "índice inicio {inicio} · un documento por corrida distribuida", [
         ("_id", "texto: e-AAAAMMDD-HHMM"), ("inicio", "fecha"), ("fin", "fecha o null"),
         ("estado", "en_curso | terminado | abortado"), ("parametros", "{nodos, replicas, semilla}"),
         ("nodos", "[{nombre, direccion, workers, rango {desde, hasta}}]"),
@@ -90,12 +96,12 @@ def entidades():
         ("_id", "ObjectId"), ("ts", "fecha"), ("tipo", "alta | baja | error"), ("nodo", "texto: nombre del nodo"),
         ("detalle", "texto")], VERDE)
 
-    reg, _ = entidad(d, 1180, 100, 330, "estacion:{id}:regimen", "una clave por estación; no retrocede", [
+    reg, reg_c = entidad(d, 1180, 100, 330, "estacion:{id}:regimen", "una clave por estación; no retrocede", [
         ("fecha_hora", "texto RFC 3339, hora de Lima"), ("regimen", "entero"), ("excede_eca", "booleano"),
         ("media_24h", "{pm2_5, pm10, lecturas}"), ("alerta", "booleano"), ("inca", "texto o null"),
         ("ts", "texto RFC 3339")], ROJO)
     act, _ = entidad(d, 1180, 320, 330, "modelo:activo", "una sola clave", [
-        ("(valor)", "el documento de modelos que está"), ("", "")], ROJO)
+        ("(valor)", "el documento de modelos que tiene"), ("", "activo: true, completo")], ROJO)
     pun, _ = entidad(d, 1180, 590, 330, "entrenamiento:{id}:punto", "una clave por entrenamiento", [
         ("iter", "entero: última ronda completa"), ("centroides", "k × D números, estandarizados")], ROJO)
 
@@ -103,9 +109,9 @@ def entidades():
     punteada = ETIQUETA + "dashed=1;dashPattern=5 4;endArrow=open;"
     d.flecha(pre, est, solida + "exitX=0;exitY=0.18;entryX=1;entryY=0.3;", "N : 1")
     d.flecha(pre, mod, solida + "exitX=1;exitY=0.9;entryX=0;entryY=0.9;", "N : 1")
-    d.flecha(ent, mod, solida + "exitX=0.8;exitY=0;entryX=0.3;entryY=1;startArrow=block;", "modelo_id ↔ origen<br>0..1 : 0..1")
+    d.flecha(ent_c, mod, solida + "exitX=0.8;exitY=0;entryX=0.3;entryY=1;startArrow=block;", "modelo_id ↔ origen<br>0..1 : 0..1")
     d.flecha(eve, ent, punteada + "exitX=1;exitY=0.6;entryX=0;entryY=0.6;", "nodo = nodos[].nombre")
-    d.flecha(reg, est, punteada + "exitX=0.3;exitY=0;entryX=0.5;entryY=0;", "{id} = estaciones._id · el valor es el estado de su predicción de fecha_hora más reciente",
+    d.flecha(reg_c, est_c, punteada + "exitX=0.3;exitY=0;entryX=0.5;entryY=0;", "{id} = estaciones._id · el valor es el estado de su predicción de fecha_hora más reciente",
              puntos=[(1279, 68), (165, 68)])
     d.flecha(act, mod, punteada + "exitX=0;exitY=0.5;entryX=1;entryY=0.93;", "copia")
     d.flecha(pun, ent, punteada + "exitX=0;exitY=0.5;entryX=1;entryY=0.62;", "{id} = entrenamientos._id")
