@@ -13,4 +13,5 @@ era distinta; la comparación directa de los SHA de silver y gold está en `ejec
 
 Para repetir la ejecución, ver [`docs/limpieza.md`](../../docs/limpieza.md).
 Las copias ejecutadas de los notebooks, con figuras y logs, están localmente en
-`data/revision/ejecutados/`; los CSV e intermedios no se versionan.
+la carpeta `ejecutados/` de la raíz `data/revision-<fecha>-<pid>/`; los CSV e intermedios no se
+versionan.

@@ -29,7 +29,7 @@ descarga local. Estas salidas no se versionan y no pisan las capas ni los report
 (
 set -euo pipefail
 CSV="/ruta/al/1a_Vigilancia y Seguimiento ambiental en la calidad del aire.csv"
-R="$PWD/data/revision"
+R="$PWD/data/revision-$(date +%Y%m%dT%H%M%S)-$$"
 mkdir -p "$R/data/silver" "$R/data/gold" "$R/reports"
 cp -f reports/centroides_iniciales.json reports/benchmark_cargador.json reports/benchmark_kmeans.json "$R/reports/"
 go run ./cmd/cargar -entrada "$CSV" \
@@ -42,9 +42,14 @@ uv run scripts/ejecutar_revision.py --bronze "$CSV" --raiz "$R"
 )
 ```
 
-El ejecutor usa los notebooks 01 y 03 del checkout actual. Guarda copias ejecutadas con
+Cada invocación usa una raíz nueva, con fecha, hora y PID, para que incluso dos reproducciones
+simultáneas mantengan separados el cargador, el entrenamiento y los notebooks. El ejecutor usa
+los notebooks 01 y 03 del checkout actual. Guarda copias ejecutadas con
 sus salidas y logs en `ejecutados/` dentro de la raíz de revisión; los notebooks fuente
 siguen sin salidas. Las dependencias se resuelven en el entorno de `uv`, sin LaTeX.
+Un archivo de exclusión junto a la raíz impide que dos procesos escriban allí al mismo
+tiempo; si ya existe una ejecución, el segundo proceso termina con error en vez de mezclar
+artefactos. Al terminar correctamente o por error, el ejecutor retira ese archivo.
 Los centroides iniciales se reutilizan para comparar el mismo arranque; los benchmarks
 copiados son referencias históricas, no mediciones nuevas del Mac.
 
