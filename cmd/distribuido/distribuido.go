@@ -169,22 +169,10 @@ func (op opciones) topeFilas() int {
 	return op.maxFilas
 }
 
-// maxReplicas dice cuántas réplicas de un gold de n filas entran en nodos nodos
-// que cargan hasta tope filas cada uno. Repartir da rangos iguales (difieren a
-// lo sumo en una fila), así que entran si réplicas × n <= tope × nodos. La
-// tabla entera, además, no pasa de 2³¹ filas, y ahí se satura la cuenta.
-func maxReplicas(n, nodos, tope int) int {
-	total := math.MaxInt32
-	if tope < math.MaxInt32 && nodos <= total/tope {
-		total = tope * nodos
-	}
-	return total / n
-}
-
 // comprobarReplicas rechaza un -replicas que a algún nodo le dejaría un rango
 // de más filas que su tope, y dice cuál es el máximo.
 func comprobarReplicas(replicas, n, nodos, tope int) error {
-	maximo := maxReplicas(n, nodos, tope)
+	maximo := cluster.MaxReplicas(n, nodos, tope)
 	switch {
 	case replicas <= maximo:
 		return nil

@@ -7,7 +7,9 @@ import (
 	"errors"
 	"log/slog"
 	"net"
+	"net/http"
 	"slices"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -121,6 +123,20 @@ func (h *Hub) Correr(ctx context.Context) {
 		close(c.envios)
 		h.conectados.Store(int64(len(clientes)))
 	}
+	repartir := func(d difusion) {
+		for c := range clientes {
+			if d.roles != nil && !slices.Contains(d.roles, c.rol) {
+				continue
+			}
+			select {
+			case c.envios <- d.trama:
+			default:
+				h.lentos.Add(1)
+				h.log.Warn("websocket: cliente lento, se desconecta", "remoto", c.conn.RemoteAddr().String(), "pendientes", len(c.envios))
+				soltar(c, motivoBaja{cierrePolitica, "cliente lento: no lee al ritmo de los eventos"})
+			}
+		}
+	}
 	for {
 		select {
 		case c := <-h.altas:
@@ -135,23 +151,22 @@ func (h *Hub) Correr(ctx context.Context) {
 				h.conectados.Store(int64(len(clientes)))
 			}
 		case d := <-h.difusion:
-			for c := range clientes {
-				if d.roles != nil && !slices.Contains(d.roles, c.rol) {
-					continue
-				}
-				select {
-				case c.envios <- d.trama:
-				default:
-					h.lentos.Add(1)
-					h.log.Warn("websocket: cliente lento, se desconecta", "remoto", c.conn.RemoteAddr().String(), "pendientes", len(c.envios))
-					soltar(c, motivoBaja{cierrePolitica, "cliente lento: no lee al ritmo de los eventos"})
-				}
-			}
+			repartir(d)
 		case <-ctx.Done():
 			h.mu.Lock()
 			h.cerrado = true
 			h.mu.Unlock()
 			close(h.fin)
+			// Lo que ya se había difundido se reparte antes de despedirse: el
+			// fin de un entrenamiento que se abortó por el apagado llega.
+			for pendientes := true; pendientes; {
+				select {
+				case d := <-h.difusion:
+					repartir(d)
+				default:
+					pendientes = false
+				}
+			}
 			for c := range clientes {
 				soltar(c, motivoBaja{cierreSeVa, "la API se está apagando"})
 			}
@@ -337,9 +352,10 @@ func (h *Hub) escribir(c *clienteWS, saludo []byte) {
 		vence = t.C
 	}
 	for {
-		// El hub lo dio de baja (lento, o la API se apaga): lo pendiente ya no
-		// se manda, solo el cierre con el motivo.
-		if m := c.baja.Load(); m != nil {
+		// El hub lo dio de baja. A un cliente lento lo pendiente ya no se le
+		// manda, solo el cierre con el motivo; si es la API la que se apaga,
+		// primero sale lo que quedó en su búfer.
+		if m := c.baja.Load(); m != nil && (m.codigo != cierreSeVa || len(c.envios) == 0) {
 			mandar(tramaDeCierre(m.codigo, m.texto))
 			cortar(true)
 			return
@@ -381,4 +397,66 @@ func (h *Hub) escribir(c *clienteWS, saludo []byte) {
 			return
 		}
 	}
+}
+
+// Quién puede abrir el WebSocket y quién recibe los eventos de un
+// entrenamiento. Ver seguirEventos.
+var (
+	rolesWS                   = []string{RolUsuario, RolAdmin}
+	rolesEventosEntrenamiento []string // nil: todos los conectados
+)
+
+// tokenWS saca el JWT del apretón de manos. El navegador no deja poner
+// Authorization en un WebSocket, así que el contrato lo manda en la consulta
+// (?token=…); un cliente que sí puede (Postman, curl, otro servicio) lo manda
+// en Authorization, como en el resto de la API.
+func tokenWS(r *http.Request) (string, bool) {
+	if tok, ok := tokenBearer(r); ok {
+		return tok, true
+	}
+	tok := r.URL.Query().Get("token")
+	return tok, tok != ""
+}
+
+// GET /ws
+//
+// El apretón de manos de RFC 6455. Se valida todo ANTES de tomar la conexión,
+// mientras todavía se puede responder con un error HTTP: que sea un apretón
+// (400), el origen (403), el token (401) y el rol (403). Después se toma la
+// conexión, se anota en el hub y recién entonces sale el 101.
+func (s *Servidor) seguirEventos(w http.ResponseWriter, r *http.Request) {
+	clave, msg := validarApreton(r)
+	if msg != "" {
+		w.Header().Set("Sec-WebSocket-Version", "13") // la que este servidor habla (RFC 6455, §4.4)
+		escribirError(w, http.StatusBadRequest, msg)
+		return
+	}
+	if !s.cors.permiteWebSocket(r) {
+		escribirError(w, http.StatusForbidden, "el origen "+recortar(r.Header.Get("Origin"), 128)+" no puede abrir este WebSocket")
+		return
+	}
+	tok, ok := tokenWS(r)
+	if !ok {
+		noAutenticado(w)
+		return
+	}
+	rec, err := s.firmador.Verificar(tok)
+	if err != nil {
+		noAutenticado(w)
+		return
+	}
+	if !slices.Contains(rolesWS, rec.Rol) {
+		escribirError(w, http.StatusForbidden, "se requiere el rol "+strings.Join(rolesWS, " o "))
+		return
+	}
+	if !s.hub.admite() {
+		escribirError(w, http.StatusServiceUnavailable, errApagando.Error())
+		return
+	}
+	conn, lector, err := tomarConexion(w)
+	if err != nil {
+		s.log.Error("websocket: no se pudo tomar la conexión", "err", err)
+		return
+	}
+	s.hub.Atender(conn, lector, rec.Rol, time.Unix(rec.Expira, 0), respuesta101(clave, ""))
 }
