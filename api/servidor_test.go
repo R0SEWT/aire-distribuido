@@ -526,25 +526,52 @@ func TestRegimenNoRetrocedeConUnaLecturaMasAntigua(t *testing.T) {
 	}
 }
 
-// Una fecha futura no borra la ventana de la estación, y lecturas a menos de
-// una hora una de otra son la misma lectura (el contrato dice a lo sumo 24).
+// Una lectura con fecha más de una hora adelante del reloj del servidor se
+// rechaza: si entrara, dejaría clavado el régimen de la estación, que no
+// retrocede. Y lecturas a menos de una hora una de otra son la misma lectura
+// (el contrato dice a lo sumo 24).
 func TestFechaFuturaYSubHoraria(t *testing.T) {
 	e := nuevoEntorno(t)
+	ahora := time.Date(2026, 11, 20, 12, 0, 0, 0, kmeans.ZonaPeru)
+	e.srv.ahora = func() time.Time { return ahora }
 	tok := e.token(t, "demo", "demo")
 	predecir := func(cuerpo string) map[string]any {
 		t.Helper()
 		return objeto(t, e.pedir(t, "POST", "/api/predicciones", tok, cuerpo), 200, camposPrediccion...)
 	}
+	lectura := func(estacion string, fecha time.Time) string {
+		return `{"estacion": "` + estacion + `", "fecha_hora": "` + fecha.Format(time.RFC3339) + `", "pm2_5": 5, "pm10": 5}`
+	}
 	for h := 1; h <= 24; h++ {
 		predecir(lecturaJSON("CA-ROM-01", h, 80, 150))
 	}
-	predecir(`{"estacion": "CA-ROM-01", "fecha_hora": "2099-01-01T00:00:00-05:00", "pm2_5": 5, "pm10": 5}`)
-	if obj := predecir(lecturaJSON("CA-ROM-01", 25, 80, 150)); obj["alerta"] != true || obj["media_24h"].(map[string]any)["lecturas"] != 24.0 {
-		t.Fatalf("la hora siguiente a una lectura de 2099: %v", obj)
+	for _, futura := range []time.Time{
+		time.Date(2099, 1, 1, 0, 0, 0, 0, kmeans.ZonaPeru),
+		ahora.Add(time.Hour + time.Second),
+		ahora.Add(2 * time.Hour).UTC(), // la zona no cambia el instante
+	} {
+		w := e.pedir(t, "POST", "/api/predicciones", tok, lectura("CA-ROM-01", futura))
+		if obj := objeto(t, w, 400, "error"); obj["error"] != msgFechaFutura {
+			t.Fatalf("fecha %s: %s", futura.Format(time.RFC3339), w.Body)
+		}
 	}
+	// Las rechazadas no tocaron ni la ventana ni el régimen de la estación.
+	if obj := predecir(lecturaJSON("CA-ROM-01", 25, 80, 150)); obj["alerta"] != true || obj["media_24h"].(map[string]any)["lecturas"] != 24.0 {
+		t.Fatalf("la hora siguiente a las fechas rechazadas: %v", obj)
+	}
+	// Se espera a que el escritor procese las 25 predicciones.
+	for limite := time.Now().Add(2 * time.Second); len(e.pred.Todas()) < 25 && time.Now().Before(limite); {
+		time.Sleep(5 * time.Millisecond)
+	}
+	reg := objeto(t, e.pedir(t, "GET", "/api/estaciones/CA-ROM-01/regimen", tok, ""), 200, camposRegimenEstacion...)
+	if reg["alerta"] != true || !strings.HasPrefix(reg["fecha_hora"].(string), "2026-11-14T01:00:00") {
+		t.Fatalf("régimen de CA-ROM-01 tras las fechas rechazadas: %v", reg)
+	}
+	// Dentro del margen de una hora sí entra: los relojes no están sincronizados al segundo.
+	predecir(lectura("CA-ROM-01", ahora.Add(time.Hour)))
 	for seg := range 30 {
-		fecha := time.Date(2026, 11, 20, 10, 0, seg, 0, kmeans.ZonaPeru).Format(time.RFC3339)
-		obj := predecir(`{"estacion": "CA-JUPR-01", "fecha_hora": "` + fecha + `", "pm2_5": 1, "pm10": 1}`)
+		fecha := time.Date(2026, 11, 20, 10, 0, seg, 0, kmeans.ZonaPeru)
+		obj := predecir(`{"estacion": "CA-JUPR-01", "fecha_hora": "` + fecha.Format(time.RFC3339) + `", "pm2_5": 1, "pm10": 1}`)
 		if obj["media_24h"].(map[string]any)["lecturas"] != 1.0 {
 			t.Fatalf("lectura %d en el mismo minuto: %v; se esperaba una sola lectura en la ventana", seg, obj)
 		}
