@@ -310,6 +310,7 @@ type entrenamientoDoc struct {
 	DifSecuencial *float64        `bson:"dif_secuencial"`
 	MsTotal       *float64        `bson:"ms_total"`
 	ModeloID      *string         `bson:"modelo_id"`
+	Aviso         *string         `bson:"aviso"`
 	Error         *string         `bson:"error"`
 }
 
@@ -352,13 +353,13 @@ func deref[T any](p *T) T {
 // solo tienen valor si la corrida terminó: en una abortada no se midieron, y
 // un 0 ahí se leería como «idéntico al secuencial».
 type resultado struct {
-	fin                    *time.Time
-	paro, modeloID, motivo *string
-	dif, ms                *float64
+	fin                           *time.Time
+	paro, modeloID, aviso, motivo *string
+	dif, ms                       *float64
 }
 
-func resultadoDe(estado string, fin time.Time, paro string, dif, ms float64, modeloID, motivo string) resultado {
-	r := resultado{paro: textoONulo(paro), modeloID: textoONulo(modeloID), motivo: textoONulo(motivo)}
+func resultadoDe(estado string, fin time.Time, paro string, dif, ms float64, modeloID, aviso, motivo string) resultado {
+	r := resultado{paro: textoONulo(paro), modeloID: textoONulo(modeloID), aviso: textoONulo(aviso), motivo: textoONulo(motivo)}
 	if !fin.IsZero() {
 		r.fin = &fin
 	}
@@ -369,11 +370,11 @@ func resultadoDe(estado string, fin time.Time, paro string, dif, ms float64, mod
 }
 
 func aEntrenamientoDoc(e almacen.Entrenamiento) entrenamientoDoc {
-	r := resultadoDe(e.Estado, e.Fin, e.Paro, e.DifSecuencial, e.MsTotal, e.ModeloID, e.Error)
+	r := resultadoDe(e.Estado, e.Fin, e.Paro, e.DifSecuencial, e.MsTotal, e.ModeloID, e.Aviso, e.Error)
 	d := entrenamientoDoc{
 		ID: e.ID, Inicio: e.Inicio, Fin: r.fin, Estado: e.Estado, Parametros: parametrosDoc(e.Parametros),
 		Nodos: make([]nodoDoc, len(e.Nodos)), Rondas: e.Rondas, Iteraciones: e.Iteraciones,
-		Paro: r.paro, DifSecuencial: r.dif, MsTotal: r.ms, ModeloID: r.modeloID, Error: r.motivo,
+		Paro: r.paro, DifSecuencial: r.dif, MsTotal: r.ms, ModeloID: r.modeloID, Aviso: r.aviso, Error: r.motivo,
 	}
 	for i, n := range e.Nodos {
 		d.Nodos[i] = nodoDoc{n.Nombre, n.Direccion, n.Workers, rangoDoc{n.Desde, n.Hasta}}
@@ -386,7 +387,7 @@ func (d entrenamientoDoc) entrenamiento() almacen.Entrenamiento {
 		ID: d.ID, Inicio: d.Inicio, Fin: deref(d.Fin), Estado: d.Estado, Parametros: almacen.ParametrosEntrenamiento(d.Parametros),
 		Nodos: make([]almacen.NodoEntrenamiento, len(d.Nodos)), Rondas: d.Rondas, Iteraciones: d.Iteraciones,
 		Paro: deref(d.Paro), DifSecuencial: deref(d.DifSecuencial), MsTotal: deref(d.MsTotal),
-		ModeloID: deref(d.ModeloID), Error: deref(d.Error),
+		ModeloID: deref(d.ModeloID), Aviso: deref(d.Aviso), Error: deref(d.Error),
 	}
 	for i, n := range d.Nodos {
 		e.Nodos[i] = almacen.NodoEntrenamiento{Nombre: n.Nombre, Direccion: n.Direccion, Workers: n.Workers, Desde: n.Rango.Desde, Hasta: n.Rango.Hasta}
@@ -417,7 +418,7 @@ func (e *Entrenamientos) AgregarRonda(ctx context.Context, id string, r almacen.
 
 // Cerrar es un $set de los campos del resultado: no toca las rondas.
 func (e *Entrenamientos) Cerrar(ctx context.Context, id string, c almacen.CierreEntrenamiento) error {
-	r := resultadoDe(c.Estado, c.Fin, c.Paro, c.DifSecuencial, c.MsTotal, c.ModeloID, c.Error)
+	r := resultadoDe(c.Estado, c.Fin, c.Paro, c.DifSecuencial, c.MsTotal, c.ModeloID, c.Aviso, c.Error)
 	return e.actualizar(ctx, id, bson.D{{Key: "$set", Value: bson.D{
 		{Key: "fin", Value: r.fin},
 		{Key: "estado", Value: c.Estado},
@@ -426,6 +427,7 @@ func (e *Entrenamientos) Cerrar(ctx context.Context, id string, c almacen.Cierre
 		{Key: "dif_secuencial", Value: r.dif},
 		{Key: "ms_total", Value: r.ms},
 		{Key: "modelo_id", Value: r.modeloID},
+		{Key: "aviso", Value: r.aviso},
 		{Key: "error", Value: r.motivo},
 	}}})
 }

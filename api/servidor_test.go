@@ -35,6 +35,8 @@ type entorno struct {
 	srv   *Servidor
 	pred  *memoria.Predicciones
 	cache *memoria.Cache
+	ent   *memoria.Entrenamientos
+	ev    *memoria.Eventos
 }
 
 // nuevoEntorno arma la API como cmd/api, con el modelo sembrado desde
@@ -70,8 +72,10 @@ func nuevoEntorno(t *testing.T, cambiar ...func(*Config)) *entorno {
 		t.Fatal(err)
 	}
 	usuarios, _ := LeerUsuarios("demo:demo:usuario,admin:clave-admin:admin")
-	e := &entorno{pred: memoria.NuevasPredicciones(), cache: memoria.NuevaCache()}
+	e := &entorno{pred: memoria.NuevasPredicciones(), cache: memoria.NuevaCache(),
+		ent: memoria.NuevosEntrenamientos(), ev: memoria.NuevosEventos()}
 	cfg := Config{
+		Entrenamientos: e.ent, Eventos: e.ev,
 		Modelo: m, Firmador: firmador, Usuarios: usuarios,
 		Catalogo: ficha, Estaciones: est, Predicciones: e.pred, Cache: e.cache, Mongo: est, Redis: e.cache,
 		OpenAPI: contrato, TamCola: 64, Log: logMudo,
@@ -84,9 +88,10 @@ func nuevoEntorno(t *testing.T, cambiar ...func(*Config)) *entorno {
 		t.Fatal(err)
 	}
 	ctx, cancel := context.WithCancel(context.Background())
-	listo := make(chan struct{})
+	listo, coordinado := make(chan struct{}), make(chan struct{})
 	go func() { e.srv.Escribir(ctx); close(listo) }()
-	t.Cleanup(func() { cancel(); <-listo })
+	go func() { e.srv.Coordinar(ctx); close(coordinado) }()
+	t.Cleanup(func() { cancel(); <-listo; <-coordinado })
 	return e
 }
 
@@ -726,7 +731,7 @@ func TestNuevoExigeLoNecesario(t *testing.T) {
 			Firmador: &Firmador{}, Usuarios: map[string]Usuario{"a": {"b", RolUsuario}},
 			Catalogo:   []almacen.Estacion{{ID: "CA-A"}},
 			Estaciones: e.srv.estaciones, Predicciones: e.pred, Cache: e.cache, Mongo: e.cache, Redis: e.cache,
-			OpenAPI: []byte("x"), TamCola: 1,
+			OpenAPI: []byte("x"), TamCola: 1, Entrenamientos: e.ent, Eventos: e.ev,
 		}
 	}
 	if _, err := Nuevo(base()); err != nil {

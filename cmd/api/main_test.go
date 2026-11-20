@@ -25,6 +25,9 @@ var argsDelRepo = []string{
 	"-kmeans", "../../reports/kmeans.json", "-regimenes", "../../reports/regimenes.json",
 	"-estandarizacion", "../../reports/estandarizacion.json", "-estaciones", "../../reports/estaciones_ficha.csv",
 	"-openapi", "../../docs/api/openapi.yaml",
+	// Sin clúster ni gold: estas pruebas son las del arranque. El coordinador
+	// se prueba de punta a punta en coordinador_test.go.
+	"-nodos-addr", "", "-gold", "",
 }
 
 func entornoCon(vars map[string]string) func(string) string {
@@ -38,7 +41,7 @@ func TestArrancaContestaYSeApagaEnOrden(t *testing.T) {
 	fin := make(chan error, 1)
 	go func() {
 		fin <- correr(ctx, append([]string{"-addr", "127.0.0.1:0", "-demo"}, argsDelRepo...),
-			entornoCon(map[string]string{"JWT_SECRETO": secreto}), &bufferSeguro{b: &log}, func(d string) { dir <- d })
+			entornoCon(map[string]string{"JWT_SECRETO": secreto}), &bufferSeguro{b: &log}, func(d, _ string) { dir <- d })
 	}()
 	var base string
 	select {
@@ -86,11 +89,11 @@ func TestUsuariosObligatorios(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, _, err = armar(op, entornoCon(map[string]string{"JWT_SECRETO": secreto}), logMudo())
+	_, _, err = armar(op, entornoCon(map[string]string{"JWT_SECRETO": secreto}), logMudo(), nil)
 	if err == nil || !strings.Contains(err.Error(), "API_USUARIOS") || !strings.Contains(err.Error(), "-demo") {
 		t.Fatalf("sin API_USUARIOS ni -demo: %v; tiene que negarse a arrancar y nombrar las dos salidas", err)
 	}
-	srv, _, err := armar(op, entornoCon(map[string]string{"JWT_SECRETO": secreto, "API_USUARIOS": "ana:una-clave-larga:admin"}), logMudo())
+	srv, _, err := armar(op, entornoCon(map[string]string{"JWT_SECRETO": secreto, "API_USUARIOS": "ana:una-clave-larga:admin"}), logMudo(), nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -128,7 +131,7 @@ func TestArmarFallaConUnaConfiguracionMala(t *testing.T) {
 			if c.cambiar != nil {
 				c.cambiar(&o)
 			}
-			_, _, err := armar(o, entornoCon(c.vars), logMudo())
+			_, _, err := armar(o, entornoCon(c.vars), logMudo(), nil)
 			if err == nil || !strings.Contains(err.Error(), c.texto) {
 				t.Fatalf("armar = %v, se esperaba un error que mencione %q", err, c.texto)
 			}
@@ -191,4 +194,6 @@ func (s *bufferSeguro) Write(p []byte) (int, error) {
 	return s.b.Write(p)
 }
 
-func logMudo() *slog.Logger { return slog.New(slog.NewTextHandler(io.Discard, nil)) }
+func logMudo() *slog.Logger { return slogDe(io.Discard) }
+
+func slogDe(w io.Writer) *slog.Logger { return slog.New(slog.NewTextHandler(w, nil)) }

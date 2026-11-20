@@ -19,15 +19,9 @@ import (
 	"github.com/R0SEWT/aire-distribuido/protocolo"
 )
 
-// toleranciaPorOmision separa los dos efectos que pueden apartar el modelo
-// distribuido del de cmd/entrenar. Reasociar la suma de los parciales de K
-// nodos cambia los centroides en unos pocos ulp (del orden de 1e-16 en el
-// espacio estandarizado, donde son de orden 1). Que una sola fila cambie de
-// cluster mueve un centroide del orden de su distancia a la fila dividida por
-// el tamaño del cluster: con el cluster más grande del gold real (48 161
-// filas) y una fila de la frontera, más de 1e-5. 1e-9 queda a cuatro órdenes
-// de magnitud de cada uno: dentro, es redondeo; fuera, es otra asignación.
-const toleranciaPorOmision = 1e-9
+// toleranciaPorOmision es cluster.Tolerancia: dentro, la diferencia con
+// cmd/entrenar es redondeo; fuera, es otra asignación.
+const toleranciaPorOmision = cluster.Tolerancia
 
 var (
 	errPlazoEspera       = errors.New("venció el plazo de espera")
@@ -169,22 +163,10 @@ func (op opciones) topeFilas() int {
 	return op.maxFilas
 }
 
-// maxReplicas dice cuántas réplicas de un gold de n filas entran en nodos nodos
-// que cargan hasta tope filas cada uno. Repartir da rangos iguales (difieren a
-// lo sumo en una fila), así que entran si réplicas × n <= tope × nodos. La
-// tabla entera, además, no pasa de 2³¹ filas, y ahí se satura la cuenta.
-func maxReplicas(n, nodos, tope int) int {
-	total := math.MaxInt32
-	if tope < math.MaxInt32 && nodos <= total/tope {
-		total = tope * nodos
-	}
-	return total / n
-}
-
 // comprobarReplicas rechaza un -replicas que a algún nodo le dejaría un rango
 // de más filas que su tope, y dice cuál es el máximo.
 func comprobarReplicas(replicas, n, nodos, tope int) error {
-	maximo := maxReplicas(n, nodos, tope)
+	maximo := cluster.MaxReplicas(n, nodos, tope)
 	switch {
 	case replicas <= maximo:
 		return nil

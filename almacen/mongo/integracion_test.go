@@ -287,7 +287,7 @@ func TestEntrenamientosCicloCompleto(t *testing.T) {
 	if v := raw.Lookup("nodos", "1", "rango", "hasta"); v.AsInt64() != 65873 {
 		t.Errorf("nodos.1.rango.hasta = %v", v)
 	}
-	for _, campo := range []string{"fin", "paro", "dif_secuencial", "ms_total", "modelo_id", "error"} {
+	for _, campo := range []string{"fin", "paro", "dif_secuencial", "ms_total", "modelo_id", "aviso", "error"} {
 		if tipo := raw.Lookup(campo).Type; tipo != bson.TypeNull {
 			t.Errorf("%s en curso es %v, se esperaba null", campo, tipo)
 		}
@@ -310,7 +310,7 @@ func TestEntrenamientosCicloCompleto(t *testing.T) {
 		t.Fatal(err)
 	}
 	if en.Estado != almacen.EstadoTerminado || en.Iteraciones != 3 || en.Paro != "tolerancia" ||
-		en.DifSecuencial != 8.9e-16 || en.ModeloID != "entrenado-e-20261119-1530" || en.Error != "" {
+		en.DifSecuencial != 8.9e-16 || en.ModeloID != "entrenado-e-20261119-1530" || en.Aviso != "" || en.Error != "" {
 		t.Errorf("cierre = %+v", en)
 	}
 	// ms_total es un campo: con fin - inicio al milisegundo saldrían 31 ms.
@@ -324,6 +324,22 @@ func TestEntrenamientosCicloCompleto(t *testing.T) {
 	if err != nil || len(lista) != 2 || lista[0].ID != "e-20261119-1600" || lista[1].ID != nuevo.ID ||
 		lista[1].Rondas != nil || lista[1].Iteraciones != 3 || len(lista[1].Nodos) != 2 {
 		t.Fatalf("Listar = %+v, %v; se esperaban dos, el más reciente primero y sin rondas", lista, err)
+	}
+	// Terminado sin activar su modelo: el aviso dice por qué.
+	aviso := "el modelo no se activó y sigue el anterior: dif_secuencial 0.5 supera la tolerancia 1e-09"
+	sinModelo := almacen.Entrenamiento{ID: "e-20261119-1700", Inicio: t0.Add(90 * time.Minute), Estado: almacen.EstadoEnCurso}
+	if err := e.Crear(ctx, sinModelo); err != nil {
+		t.Fatal(err)
+	}
+	if err := e.Cerrar(ctx, sinModelo.ID, almacen.CierreEntrenamiento{Fin: t0.Add(91 * time.Minute), Estado: almacen.EstadoTerminado,
+		Iteraciones: 9, Paro: "tolerancia", DifSecuencial: 0.5, MsTotal: 12, Aviso: aviso}); err != nil {
+		t.Fatal(err)
+	}
+	if sm, err := e.Obtener(ctx, sinModelo.ID); err != nil || sm.Aviso != aviso || sm.ModeloID != "" || sm.DifSecuencial != 0.5 {
+		t.Errorf("terminado sin modelo = %+v, %v", sm, err)
+	}
+	if err := e.col.FindOneAndDelete(ctx, bson.D{{Key: "_id", Value: sinModelo.ID}}).Err(); err != nil {
+		t.Fatal(err)
 	}
 	// Abortado: el motivo queda y lo que no se midió sigue siendo null.
 	motivo := "el nodo H45-022 dejó de responder en la ronda 7"

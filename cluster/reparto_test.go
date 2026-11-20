@@ -54,3 +54,19 @@ func TestRepartirRechazaMasNodosQueFilas(t *testing.T) {
 		}
 	}
 }
+
+func TestMaxReplicas(t *testing.T) {
+	for _, c := range []struct{ n, nodos, tope, want int }{
+		{65873, 1, 25_000_000, 379},                  // el gold real en un nodo: hasta ×379
+		{65873, 4, 25_000_000, 1518},                 // con 4 nodos, 4 veces más
+		{1200, 2, 25_000_000, 41666},                 //
+		{1000, 3, 500, 1},                            // justo una copia
+		{1000, 1, 500, 0},                            // ni una copia entra
+		{1000, 1000, 25_000_000, 2_147_483},          // la tabla no pasa de 2³¹ filas
+		{0, 1, 10, 0}, {10, 0, 10, 0}, {10, 1, 0, 0}, // argumentos sin sentido
+	} {
+		if got := MaxReplicas(c.n, c.nodos, c.tope); got != c.want {
+			t.Errorf("MaxReplicas(%d, %d, %d) = %d, se esperaba %d", c.n, c.nodos, c.tope, got, c.want)
+		}
+	}
+}

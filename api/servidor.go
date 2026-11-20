@@ -1,8 +1,9 @@
 // Package api es la API coordinadora de la PC4 (spec §6): REST sobre net/http
 // con JWT HS256, latencia medida por ruta y el contrato de docs/api/openapi.yaml.
-// Esta es la primera parte: salud, token, predicción, estaciones, modelo
-// activo, métricas, el contrato y Swagger UI. El clúster, los entrenamientos y
-// el WebSocket llegan después.
+// Tiene salud, token, predicción, estaciones, modelo activo, métricas, el
+// contrato y Swagger UI; y el coordinador del clúster (§5.2): el pool de nodos
+// (cluster.Pool), los entrenamientos distribuidos (entrenamientos.go) y sus
+// eventos en tiempo real por WebSocket (ws.go y hub.go).
 //
 // El camino de una predicción no espera a ningún almacén: el modelo vive en
 // memoria detrás de un atomic.Pointer, la media de 24 h de cada estación
@@ -20,13 +21,16 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"net"
 	"net/http"
 	"slices"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"time"
 
 	"github.com/R0SEWT/aire-distribuido/almacen"
+	"github.com/R0SEWT/aire-distribuido/cluster"
 	"github.com/R0SEWT/aire-distribuido/kmeans"
 	"github.com/R0SEWT/aire-distribuido/modelo"
 	"github.com/R0SEWT/aire-distribuido/ventana"
@@ -48,12 +52,35 @@ type Config struct {
 	// Modelos y CacheModelo son donde ActivarModelo guarda el modelo activo
 	// (la colección modelos y la clave modelo:activo). Pueden ser nil: el
 	// modelo se activa igual, solo en memoria.
-	Modelos      almacen.Modelos
-	CacheModelo  almacen.CacheModelo
+	Modelos     almacen.Modelos
+	CacheModelo almacen.CacheModelo
+	// Puntos es donde el coordinador deja el punto de control de cada
+	// entrenamiento (las claves entrenamiento:{id}:punto). Puede ser nil.
+	Puntos       almacen.PuntosControl
 	Mongo, Redis almacen.Pinger // lo que /api/salud informa como mongo y redis
 	OpenAPI      []byte         // docs/api/openapi.yaml, que se sirve tal cual
 	TamCola      int            // búfer de la cola de escritura
 	Log          *slog.Logger
+
+	// Lo del coordinador del clúster (spec §5.2).
+	//
+	// Entrenamientos y Eventos son los almacenes del historial de
+	// entrenamientos y de las altas y bajas de los nodos; son obligatorios.
+	Entrenamientos almacen.Entrenamientos
+	Eventos        almacen.Eventos
+	// Nodos es el listener TCP donde llaman los nodos (el 7070). Con nil la
+	// API no tiene clúster: predice igual, lista cero nodos y un pedido de
+	// entrenamiento responde 422. El listener sigue siendo de quien lo abrió.
+	Nodos net.Listener
+	// Pool son los plazos del pool de nodos; los que queden en cero toman su
+	// valor por omisión. AlEvento y Log los pone el servidor.
+	Pool cluster.OpcionesPool
+	// Entrenador es lo que hace falta para entrenar (el gold, la receta y la
+	// estandarización). Con nil la API no puede entrenar y responde 503.
+	Entrenador *Entrenador
+	// OrigenesCORS son los orígenes que pueden llamar a la API desde un
+	// navegador (LeerOrigenesCORS). Vacío: solo el mismo origen.
+	OrigenesCORS []string
 }
 
 // Servidor es la API. Implementa http.Handler.
@@ -65,6 +92,7 @@ type Servidor struct {
 	estaciones   almacen.Estaciones
 	cache        almacen.Cache
 	modelos      almacenesDeModelo
+	puntos       almacen.PuntosControl
 	mongo, redis almacen.Pinger
 	openapi      []byte
 	log          *slog.Logger
@@ -73,6 +101,18 @@ type Servidor struct {
 	escritor     *escritor
 	mux          *http.ServeMux
 	ahora        func() time.Time
+
+	// apagando se pone al empezar el apagado ordenado (Coordinar): desde ahí
+	// no se lanzan entrenamientos ni se abren WebSockets, aunque el
+	// entrenamiento en curso todavía esté terminando de cortarse.
+	apagando atomic.Bool
+
+	cors    *cors
+	hub     *Hub
+	pool    *cluster.Pool // nil: sin clúster
+	coord   *coordinador
+	eventos almacen.Eventos
+	cronica chan almacen.EventoCluster // los eventos del clúster, camino al almacén
 }
 
 // Nuevo arma el servidor y registra las rutas. Para que las predicciones se
@@ -85,7 +125,8 @@ func Nuevo(cfg Config) (*Servidor, error) {
 		return nil, errors.New("api: no hay usuarios")
 	case len(cfg.Catalogo) == 0:
 		return nil, errors.New("api: el catálogo de estaciones está vacío")
-	case cfg.Estaciones == nil || cfg.Predicciones == nil || cfg.Cache == nil || cfg.Mongo == nil || cfg.Redis == nil:
+	case cfg.Estaciones == nil || cfg.Predicciones == nil || cfg.Cache == nil || cfg.Mongo == nil || cfg.Redis == nil ||
+		cfg.Entrenamientos == nil || cfg.Eventos == nil:
 		return nil, errors.New("api: falta un almacén")
 	case len(cfg.OpenAPI) == 0:
 		return nil, errors.New("api: falta el contrato OpenAPI")
@@ -116,8 +157,20 @@ func Nuevo(cfg Config) (*Servidor, error) {
 		escritor:   nuevoEscritor(cfg.TamCola, cfg.Predicciones, cfg.Cache, log),
 		mux:        http.NewServeMux(),
 		ahora:      time.Now,
+		cors:       nuevoCORS(cfg.OrigenesCORS),
+		hub:        nuevoHub(opcionesHubPorOmision(), log),
+		eventos:    cfg.Eventos,
+		cronica:    make(chan almacen.EventoCluster, tamCronica),
 	}
 	s.modelo.Store(cfg.Modelo)
+	s.puntos = cfg.Puntos
+	if cfg.Nodos != nil {
+		op := cfg.Pool
+		op.AlEvento = s.registrarEvento
+		op.Log = slog.NewLogLogger(log.Handler(), slog.LevelInfo)
+		s.pool = cluster.NuevoPool(cfg.Nodos, op)
+	}
+	s.coord = nuevoCoordinador(s, s.pool, cfg.Entrenador, cfg.Entrenamientos)
 
 	cualquiera := []string{RolUsuario, RolAdmin}
 	s.ruta("POST /api/auth/token", nil, s.crearToken)
@@ -127,6 +180,11 @@ func Nuevo(cfg Config) (*Servidor, error) {
 	s.ruta("GET /api/estaciones/{id}/regimen", cualquiera, s.regimenEstacion)
 	s.ruta("GET /api/modelos/activo", cualquiera, s.modeloActivo)
 	s.ruta("GET /api/metricas", []string{RolAdmin}, s.consultarMetricas)
+	s.ruta("GET /api/cluster/nodos", []string{RolAdmin}, s.listarNodos)
+	s.ruta("POST /api/entrenamientos", []string{RolAdmin}, s.iniciarEntrenamiento)
+	s.ruta("GET /api/entrenamientos", []string{RolAdmin}, s.listarEntrenamientos)
+	s.ruta("GET /api/entrenamientos/{id}", []string{RolAdmin}, s.consultarEntrenamiento)
+	s.ruta("GET /ws", nil, s.seguirEventos) // se autentica en el handler: el navegador no manda Authorization
 	s.ruta("GET /openapi.yaml", nil, s.servirOpenAPI)
 	s.ruta("GET /docs", nil, s.servirDocs)
 	return s, nil
@@ -136,6 +194,10 @@ func Nuevo(cfg Config) (*Servidor, error) {
 // 404 o 405 (con Allow); la respuesta sale con el esquema Error en JSON, como
 // todas las de la API. Las redirecciones del mux (a la ruta limpia) pasan tal cual.
 func (s *Servidor) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	// CORS va antes que el mux: un preflight OPTIONS no es de ninguna ruta.
+	if s.cors.atender(w, r) {
+		return
+	}
 	h, patron := s.mux.Handler(r)
 	if patron != "" {
 		s.mux.ServeHTTP(w, r) // el mux, no h, para que llene r.PathValue
@@ -173,6 +235,91 @@ func (c *capturado) Write(b []byte) (int, error) { return c.cuerpo.Write(b) }
 // cancela; antes de volver escribe lo que quedó en las colas, sin pasarse de
 // plazoVaciado.
 func (s *Servidor) Escribir(ctx context.Context) { s.escritor.correr(ctx) }
+
+// tamCronica es el búfer de los eventos del clúster camino al almacén. Son
+// pocos (altas y bajas de nodos): si se llena es que el almacén no responde.
+const tamCronica = 256
+
+// Coordinar corre lo que el coordinador del clúster tiene en segundo plano: el
+// hub del WebSocket, el pool de nodos (si hay) y la goroutine que guarda los
+// eventos del clúster. Vuelve cuando ctx se cancela y todo eso terminó, en
+// este orden: se corta el entrenamiento en curso, que queda abortado en el
+// almacén y avisa su fin por el WebSocket; se cierra el pool; el hub despide a
+// sus clientes con un cierre 1001; y se guardan los eventos pendientes. Sin
+// Coordinar la API predice igual, pero no entran nodos ni salen eventos.
+func (s *Servidor) Coordinar(ctx context.Context) {
+	fondo, parar := context.WithCancel(context.Background())
+	defer parar()
+	var pool, hub, cronista sync.WaitGroup
+	hub.Go(func() { s.hub.Correr(fondo) })
+	pararCronista := make(chan struct{})
+	cronista.Go(func() { s.guardarEventos(pararCronista) })
+	pararPool := func() {}
+	if s.pool != nil {
+		var ctxPool context.Context
+		ctxPool, pararPool = context.WithCancel(context.Background())
+		pool.Go(func() { s.pool.Correr(ctxPool) })
+	}
+
+	<-ctx.Done()
+	s.apagando.Store(true)
+	s.coord.apagar()
+	pararPool()
+	pool.Wait()
+	parar()
+	hub.Wait()
+	close(pararCronista)
+	cronista.Wait()
+}
+
+// registrarEvento recibe un evento del clúster (es el AlEvento del pool) y lo
+// encola para el almacén. No bloquea: la llaman las goroutines del pool.
+func (s *Servidor) registrarEvento(e cluster.EventoPool) {
+	ev := almacen.EventoCluster{TS: enLima(e.TS).Truncate(time.Millisecond), Tipo: e.Tipo, Nodo: e.Nodo, Detalle: e.Detalle}
+	if e.Direccion != "" {
+		ev.Detalle = e.Direccion + ": " + e.Detalle
+	}
+	select {
+	case s.cronica <- ev:
+	default:
+		s.log.Warn("evento del clúster descartado: la cola está llena", "tipo", e.Tipo, "nodo", e.Nodo)
+	}
+}
+
+// guardarEventos escribe en el almacén los eventos del clúster hasta que se
+// cierra parar; antes de volver escribe los que quedaron encolados.
+func (s *Servidor) guardarEventos(parar <-chan struct{}) {
+	guardar := func(e almacen.EventoCluster) {
+		ctx, cancel := context.WithTimeout(context.Background(), plazoEscritura)
+		defer cancel()
+		if err := s.eventos.Guardar(ctx, e); err != nil {
+			s.log.Error("no se pudo guardar el evento del clúster", "tipo", e.Tipo, "nodo", e.Nodo, "err", err)
+		}
+	}
+	for {
+		select {
+		case e := <-s.cronica:
+			guardar(e)
+		case <-parar:
+			for {
+				select {
+				case e := <-s.cronica:
+					guardar(e)
+				default:
+					return
+				}
+			}
+		}
+	}
+}
+
+// DireccionNodos es donde la API escucha a los nodos, o nil si no tiene clúster.
+func (s *Servidor) DireccionNodos() net.Addr {
+	if s.pool == nil {
+		return nil
+	}
+	return s.pool.Direccion()
+}
 
 // ActivarModelo reemplaza el modelo activo. Las predicciones en curso terminan
 // con el anterior; ninguna toma un lock. Después lo guarda como activo en

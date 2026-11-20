@@ -49,7 +49,8 @@ type Ronda struct {
 // rondas van dentro: son a lo sumo max_iter por corrida. Mientras está en
 // curso, Fin es el tiempo cero y los campos del resultado están vacíos;
 // terminado, tiene Iteraciones, Paro, DifSecuencial, MsTotal y, si activó un
-// modelo, ModeloID; abortado, tiene Error con el nodo que falló.
+// modelo, ModeloID (si tenía que activarlo y no lo hizo, Aviso dice por qué);
+// abortado, tiene Error con el nodo que falló.
 type Entrenamiento struct {
 	ID         string
 	Inicio     time.Time
@@ -64,6 +65,7 @@ type Entrenamiento struct {
 	DifSecuencial float64
 	MsTotal       float64
 	ModeloID      string
+	Aviso         string
 	Error         string
 }
 
@@ -78,6 +80,7 @@ type CierreEntrenamiento struct {
 	DifSecuencial float64
 	MsTotal       float64
 	ModeloID      string
+	Aviso         string
 	Error         string
 }
 

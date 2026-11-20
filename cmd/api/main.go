@@ -1,22 +1,40 @@
 // Comando api es la API coordinadora de la PC4 (spec §6): REST con JWT,
 // predicción del régimen de una lectura en menos de 100 ms, latencia por ruta,
-// el contrato OpenAPI y Swagger UI. Guarda en MongoDB y Redis o, sin ellas, en
-// el doble en memoria (almacenes.go). El clúster, los entrenamientos y el
-// WebSocket llegan después.
+// el contrato OpenAPI y Swagger UI; y el coordinador del clúster (§5.2): los
+// nodos (cmd/nodo) la llaman por TCP en -nodos-addr, quedan en su pool, y un
+// admin lanza un entrenamiento distribuido por HTTP y lo sigue por WebSocket.
+// Guarda en MongoDB y Redis o, sin ellas, en el doble en memoria
+// (almacenes.go).
 //
-// Al arrancar siembra el modelo desde reports/kmeans.json, reports/regimenes.json
-// y reports/estandarizacion.json, y no arranca si no son de la misma corrida.
+// Al arrancar lee el modelo de reports/kmeans.json, reports/regimenes.json y
+// reports/estandarizacion.json, y no arranca si no son de la misma corrida. Si
+// MongoDB o Redis guardan un modelo más nuevo que entrenó la API, arranca con
+// ese (almacenes.go, modeloActivo).
 // Se corre desde la raíz del repo:
 //
 //	export JWT_SECRETO=$(openssl rand -hex 32)
 //	export API_USUARIOS='ana:una-clave-larga:admin,demo:otra-clave:usuario'
 //	go run ./cmd/api                     # http://localhost:8080/docs
 //
-// Variables de entorno, las dos obligatorias:
+// Variables de entorno; las dos primeras son obligatorias:
 //
 //   - JWT_SECRETO: la clave HS256, de al menos 32 bytes.
 //   - API_USUARIOS: «usuario:clave:rol» separados por comas, con rol usuario o
 //     admin.
+//   - CORS_ORIGENES: los orígenes que pueden llamar a la API desde un
+//     navegador, separados por comas («http://localhost:5173»), o «*». Sin
+//     ella, solo el mismo origen (Swagger UI). La necesita la SPA del TB2.
+//   - MONGO_URI y MONGO_DB, REDIS_ADDR y REDIS_DB: dónde están MongoDB y Redis
+//     (almacenes.go). Sin MONGO_URI las colecciones están en memoria; sin
+//     REDIS_ADDR, la caché. Con docker compose las pone docker-compose.yml.
+//
+// Para entrenar hace falta el gold (-gold), el mismo archivo que tienen los
+// nodos: de él salen la huella y el tamaño de la tabla que se reparte, la
+// comparación con el K-Means secuencial y el perfil del modelo nuevo. Si no
+// está, la API arranca igual, con un aviso: predice y recibe nodos, pero
+// POST /api/entrenamientos responde 503.
+//
+//	go run ./cmd/nodo -coordinador localhost:7070 -nombre nodo-1   # en otra terminal
 //
 // Para desarrollo, -demo arranca sin API_USUARIOS con los usuarios de
 // demostración demo/demo (usuario) y admin/admin (admin), con un aviso en el
@@ -26,15 +44,9 @@
 // sale con 0 si responde. Es el healthcheck de Docker (spec §8), porque la
 // imagen distroless no tiene curl.
 //
-// MongoDB y Redis se eligen con MONGO_URI, MONGO_DB, REDIS_ADDR y REDIS_DB
-// (almacenes.go); con docker compose las pone docker-compose.yml. Si alguna
-// guarda un modelo activo que entrenó la API, se arranca con ese en vez del de
-// reports/.
-//
-// Al recibir SIGTERM o Ctrl+C deja de aceptar pedidos, espera hasta
-// plazoPedidos a los que están en curso y el escritor vacía sus colas en a lo
-// sumo 3 s más: el apagado completo cabe en los 10 s que Docker espera antes
-// de matar el proceso.
+// Al recibir SIGTERM o Ctrl+C corta el entrenamiento en curso y despide a los
+// nodos, deja de aceptar pedidos, espera hasta plazoPedidos a los que están en
+// curso y el escritor vacía sus colas en a lo sumo 3 s más.
 package main
 
 import (
@@ -44,6 +56,7 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"io/fs"
 	"log/slog"
 	"net"
 	"net/http"
@@ -54,6 +67,7 @@ import (
 
 	"github.com/R0SEWT/aire-distribuido/almacen"
 	"github.com/R0SEWT/aire-distribuido/api"
+	"github.com/R0SEWT/aire-distribuido/cluster"
 	"github.com/R0SEWT/aire-distribuido/modelo"
 )
 
@@ -69,6 +83,14 @@ type opciones struct {
 	duracionJWT                        time.Duration
 	cola                               int
 	salud, demo                        bool
+
+	// El coordinador del clúster.
+	nodosAddr             string // "" = sin clúster
+	gold, receta, inicios string
+	latido, plazoHola     time.Duration
+	plazoCarga            time.Duration
+	plazoRonda            time.Duration
+	maxFilas              int
 }
 
 func main() {
@@ -85,6 +107,10 @@ func main() {
 	}
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
+	// La primera señal empieza el apagado ordenado. Desde ahí se dejan de
+	// capturar: una segunda (otro Ctrl+C) termina el proceso en el acto, por si
+	// el apagado ordenado se queda esperando a algo.
+	context.AfterFunc(ctx, stop)
 	if err := correr(ctx, os.Args[1:], os.Getenv, os.Stderr, nil); err != nil {
 		fmt.Fprintln(os.Stderr, "api:", err)
 		os.Exit(1)
@@ -103,6 +129,15 @@ func leerOpciones(args []string) (opciones, error) {
 	fs.DurationVar(&op.duracionJWT, "jwt-duracion", time.Hour, "validez de un token")
 	fs.IntVar(&op.cola, "cola", 1024, "búfer de la cola de escritura de predicciones")
 	fs.BoolVar(&op.salud, "salud", false, "consultar /api/salud de la API en -addr y salir con 0 o 1")
+	fs.StringVar(&op.nodosAddr, "nodos-addr", ":7070", "dirección TCP donde llaman los nodos del clúster; \"\" = sin clúster")
+	fs.StringVar(&op.gold, "gold", "data/gold/oefa_features.csv", "gold con que se entrena, el mismo de los nodos; si no existe, la API no entrena")
+	fs.StringVar(&op.receta, "receta", "configs/kmeans.json", "receta del K-Means de un entrenamiento")
+	fs.StringVar(&op.inicios, "inicios", "reports/centroides_iniciales.json", "centroides iniciales guardados por semilla; con otra semilla se calculan con k-means++")
+	fs.DurationVar(&op.latido, "latido", 5*time.Second, "cada cuánto se les toma el pulso a los nodos libres")
+	fs.DurationVar(&op.plazoHola, "plazo-hola", 5*time.Second, "lo que un nodo tiene para presentarse después de conectar")
+	fs.DurationVar(&op.plazoCarga, "plazo-carga", 30*time.Second, "lo que los nodos tienen para cargar su rango del gold")
+	fs.DurationVar(&op.plazoRonda, "plazo-ronda", 10*time.Second, "plazo común de cada ronda de un entrenamiento")
+	fs.IntVar(&op.maxFilas, "max-filas", cluster.MaxFilasPorOmision, "tope de filas por nodo, el -max-filas de los nodos: acota replicas")
 	fs.BoolVar(&op.demo, "demo", false, "sin API_USUARIOS, usar los usuarios de demostración demo/demo y admin/admin (solo desarrollo)")
 	if err := fs.Parse(args); err != nil {
 		return opciones{}, err
@@ -110,13 +145,20 @@ func leerOpciones(args []string) (opciones, error) {
 	if fs.NArg() > 0 {
 		return opciones{}, fmt.Errorf("argumentos de más: %v", fs.Args())
 	}
+	if op.latido <= 0 || op.plazoHola <= 0 || op.plazoCarga <= 0 || op.plazoRonda <= 0 {
+		return opciones{}, errors.New("los plazos del clúster tienen que ser positivos")
+	}
+	if op.maxFilas <= 0 {
+		return opciones{}, fmt.Errorf("-max-filas tiene que ser positivo, es %d", op.maxFilas)
+	}
 	return op, nil
 }
 
 // armar lee la configuración, siembra el modelo, abre los almacenes y crea el
-// servidor. Todo lo que puede fallar falla aquí, antes de escuchar. Devuelve
-// también cómo cerrar las conexiones a las bases.
-func armar(op opciones, getenv func(string) string, log *slog.Logger) (*api.Servidor, func(), error) {
+// servidor. Todo lo que puede fallar falla aquí, antes de escuchar. nodos es el
+// listener donde llaman los nodos del clúster, o nil si la API no tiene clúster.
+// Devuelve también cómo cerrar las conexiones a las bases.
+func armar(op opciones, getenv func(string) string, log *slog.Logger, nodos net.Listener) (*api.Servidor, func(), error) {
 	secreto := getenv("JWT_SECRETO")
 	if secreto == "" {
 		return nil, nil, errors.New("falta la variable de entorno JWT_SECRETO (por ejemplo: export JWT_SECRETO=$(openssl rand -hex 32))")
@@ -157,48 +199,104 @@ func armar(op opciones, getenv func(string) string, log *slog.Logger) (*api.Serv
 	if err != nil {
 		return nil, nil, err
 	}
+	origenes, err := api.LeerOrigenesCORS(getenv("CORS_ORIGENES"))
+	if err != nil {
+		return nil, nil, err
+	}
+	entrenador, err := leerEntrenador(op, log)
+	if err != nil {
+		return nil, nil, err
+	}
 	alm, err := abrirAlmacenes(getenv, ficha, log)
 	if err != nil {
 		return nil, nil, err
 	}
 	srv, err := api.Nuevo(api.Config{
-		Modelo:       alm.modeloActivo(m, log),
-		Firmador:     firmador,
-		Usuarios:     usuarios,
-		Catalogo:     ficha,
-		Estaciones:   alm.estaciones,
-		Predicciones: alm.predicciones,
-		Cache:        alm.cache,
-		Modelos:      alm.modelos,
-		CacheModelo:  alm.cacheModelo,
-		Mongo:        alm.mongo,
-		Redis:        alm.redis,
-		OpenAPI:      contrato,
-		TamCola:      op.cola,
-		Log:          log,
+		Entrenamientos: alm.entrenamientos,
+		Eventos:        alm.eventos,
+		Puntos:         alm.puntos,
+		Nodos:          nodos,
+		Pool:           cluster.OpcionesPool{PlazoHola: op.plazoHola, CadaLatido: op.latido},
+		Entrenador:     entrenador,
+		OrigenesCORS:   origenes,
+		Modelo:         alm.modeloActivo(m, log),
+		Firmador:       firmador,
+		Usuarios:       usuarios,
+		Catalogo:       ficha,
+		Estaciones:     alm.estaciones,
+		Predicciones:   alm.predicciones,
+		Cache:          alm.cache,
+		Modelos:        alm.modelos,
+		CacheModelo:    alm.cacheModelo,
+		Mongo:          alm.mongo,
+		Redis:          alm.redis,
+		OpenAPI:        contrato,
+		TamCola:        op.cola,
+		Log:            log,
 	})
 	if err != nil {
 		alm.cerrar()
 		return nil, nil, err
 	}
+	if len(origenes) > 0 {
+		log.Info("CORS", "origenes", origenes)
+	}
 	return srv, alm.cerrar, nil
 }
 
-// correr levanta la API hasta que ctx se cancela; entonces deja de aceptar
-// pedidos, espera a los que están en curso (hasta plazoPedidos), el escritor
-// vacía sus colas (con su propio plazo) y se cierran las conexiones a las
-// bases. escuchando, si no es nil, recibe la dirección real (útil con -addr :0).
-func correr(ctx context.Context, args []string, getenv func(string) string, salida io.Writer, escuchando func(string)) error {
+// leerEntrenador carga lo que hace falta para entrenar. Sin gold (-gold "" o
+// un archivo que no existe) devuelve nil con un aviso: la API arranca y
+// predice, pero no entrena. Un gold que existe y no cuadra con la receta o con
+// la estandarización sí es un error: mejor no arrancar que entrenar con otra tabla.
+func leerEntrenador(op opciones, log *slog.Logger) (*api.Entrenador, error) {
+	if op.gold == "" {
+		log.Warn("sin gold (-gold \"\"): la API no puede entrenar")
+		return nil, nil
+	}
+	e, err := api.LeerEntrenador(op.receta, op.estandarizacion, op.gold, op.inicios)
+	if errors.Is(err, fs.ErrNotExist) {
+		log.Warn("la API no puede entrenar: falta un archivo (el gold no se versiona: cópialo o indícalo con -gold)", "err", err)
+		return nil, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("lo necesario para entrenar: %w", err)
+	}
+	e.PlazoCarga, e.PlazoRonda, e.MaxFilas = op.plazoCarga, op.plazoRonda, op.maxFilas
+	log.Info("gold para entrenar", "ruta", op.gold, "filas", e.Gold.Datos.N, "features", e.Receta.Features, "k", e.Receta.K,
+		"sha256", e.Sha256[:12], "centroides_iniciales_guardados", e.Inicios != nil)
+	if e.Receta.Chunk != cluster.ChunkPorOmision {
+		log.Warn("la receta usa otro chunk que el que los nodos usan por omisión: lánzalos con -chunk para que un nodo dé el modelo de cmd/entrenar bit a bit",
+			"receta", e.Receta.Chunk, "nodos", cluster.ChunkPorOmision)
+	}
+	return e, nil
+}
+
+// correr levanta la API hasta que ctx se cancela; entonces corta el
+// entrenamiento en curso, despide a los nodos y a los clientes del WebSocket,
+// deja de aceptar pedidos, espera a los que están en curso (hasta
+// plazoPedidos), vacía las colas de escritura y cierra las conexiones a las
+// bases. escuchando, si no es nil, recibe las direcciones reales de HTTP y
+// de los nodos (útil con :0); la de los nodos es "" si no hay clúster.
+func correr(ctx context.Context, args []string, getenv func(string) string, salida io.Writer, escuchando func(http, nodos string)) error {
 	op, err := leerOpciones(args)
 	if err != nil {
 		return err
 	}
 	log := slog.New(slog.NewTextHandler(salida, nil))
-	srv, cerrarAlmacenes, err := armar(op, getenv, log)
+	var lnNodos net.Listener
+	dirNodos := ""
+	if op.nodosAddr != "" {
+		if lnNodos, err = net.Listen("tcp", op.nodosAddr); err != nil {
+			return fmt.Errorf("escuchar a los nodos: %w", err)
+		}
+		defer lnNodos.Close()
+		dirNodos = lnNodos.Addr().String()
+	}
+	srv, cerrarAlmacenes, err := armar(op, getenv, log, lnNodos)
 	if err != nil {
 		return err
 	}
-	defer cerrarAlmacenes() // después de que el escritor termine
+	defer cerrarAlmacenes() // al final: después del coordinador y del escritor
 	ln, err := net.Listen("tcp", op.addr)
 	if err != nil {
 		return err
@@ -207,6 +305,13 @@ func correr(ctx context.Context, args []string, getenv func(string) string, sali
 	escritorListo := make(chan struct{})
 	go func() { srv.Escribir(ctxEscritor); close(escritorListo) }()
 	defer func() { pararEscritor(); <-escritorListo }()
+	// El coordinador (hub del WebSocket, pool de nodos y eventos) se apaga
+	// antes que el servidor HTTP: Shutdown no espera a las conexiones que ya
+	// son WebSocket, y un entrenamiento en curso tiene que quedar abortado.
+	ctxCoordinador, pararCoordinador := context.WithCancel(context.Background())
+	coordinadorListo := make(chan struct{})
+	go func() { srv.Coordinar(ctxCoordinador); close(coordinadorListo) }()
+	defer func() { pararCoordinador(); <-coordinadorListo }()
 
 	hs := &http.Server{
 		Handler:           srv,
@@ -219,15 +324,22 @@ func correr(ctx context.Context, args []string, getenv func(string) string, sali
 	sirviendo := make(chan error, 1)
 	go func() { sirviendo <- hs.Serve(ln) }()
 	log.Info("API escuchando", "addr", ln.Addr().String(), "docs", "/docs")
+	if lnNodos != nil {
+		log.Info("clúster: los nodos llaman aquí", "addr", dirNodos, "ejemplo", "nodo -coordinador <IP>:<puerto>")
+	} else {
+		log.Warn("sin clúster (-nodos-addr \"\"): no entran nodos y no se puede entrenar")
+	}
 	if escuchando != nil {
-		escuchando(ln.Addr().String())
+		escuchando(ln.Addr().String(), dirNodos)
 	}
 	select {
 	case err := <-sirviendo:
 		return err
 	case <-ctx.Done():
 	}
-	log.Info("apagando: se terminan los pedidos en curso y se vacían las colas de escritura")
+	log.Info("apagando: se corta el entrenamiento en curso, se terminan los pedidos y se vacía la cola de escritura")
+	pararCoordinador()
+	<-coordinadorListo
 	apagar, cancelar := context.WithTimeout(context.Background(), plazoPedidos)
 	defer cancelar()
 	if err := hs.Shutdown(apagar); err != nil {

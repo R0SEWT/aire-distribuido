@@ -11,7 +11,8 @@ file**).
 
 Libres: token, salud, `/openapi.yaml` y `/docs`. Con rol `usuario` o `admin`: predicciones,
 estaciones, modelo activo y `/ws`. Solo `admin`: nodos del clúster, entrenamientos y métricas;
-un `usuario` recibe 403. `x-roles` deja el rol escrito en cada operación.
+un `usuario` recibe 403. `x-roles` deja el rol escrito en cada operación. Por `/ws` los eventos de
+un entrenamiento llegan solo a los `admin`; un `usuario` conectado hoy no recibe ninguno.
 
 ## Lo que el contrato fija y la spec no decía
 
@@ -38,4 +39,19 @@ un `usuario` recibe 403. `x-roles` deja el rol escrito en cada operación.
   `escrituras_descartadas` (una cola llena) y `escrituras_fallidas` (el almacén rechazó el lote), y
   en `escritura` el detalle de cada almacén. `/api/salud` informa si cada base responde.
 - **WebSocket**: cada trama es `{"evento": "entrenamiento.ronda" | "entrenamiento.fin", "datos":
-  {…}}`, con los datos de §6.4.
+  {…}}`, con los datos de §6.4. El JWT va en `Authorization`, en `Sec-WebSocket-Protocol`
+  (`aire.jwt` seguido del token: lo recomendado para el navegador, que no deja poner encabezados,
+  porque el token no queda en la URL) o en `?token=`. El `entrenamiento.fin` sale cuando el detalle
+  ya tiene el estado final: quien lo recibe puede pedir `GET /api/entrenamientos/{id}` en el acto.
+- **Modelo de un entrenamiento**: con `replicas = 1` el modelo nuevo se activa (`modelo_id`) solo si
+  `dif_secuencial` no supera 1e-9; si la supera, el entrenamiento queda `terminado`, el modelo
+  activo no cambia y `aviso` dice por qué. No hay clave de idempotencia: un segundo pedido mientras
+  corre el primero recibe 409 con su id.
+- **Clúster**: los nodos (`cmd/nodo -coordinador <IP>:7070`) llaman a la API por TCP en un puerto
+  aparte (`-nodos-addr`, por omisión `:7070`) y quedan en su pool. `latencia_ms` es la ida y vuelta
+  del último latido, que solo corre sobre los nodos libres; `ms_por_nodo` es lo que tardó el PARCIAL
+  de cada nodo, medido en la API. Para entrenar, la API necesita el mismo gold que los nodos
+  (`-gold`); sin él arranca igual y `POST /api/entrenamientos` responde 503. Cada nodo necesita un
+  nombre único: `cmd/nodo` usa el del equipo más su PID si no se le da `-nombre`.
+- **CORS**: los orígenes que pueden llamar desde un navegador se configuran con la variable de
+  entorno `CORS_ORIGENES` (separados por comas, o `*`); la API responde el preflight `OPTIONS`.

@@ -36,7 +36,7 @@ func levantar(t *testing.T, vars map[string]string) (base string, log *bytes.Buf
 	dir, fin := make(chan string, 1), make(chan error, 1)
 	go func() {
 		fin <- correr(ctx, append([]string{"-addr", "127.0.0.1:0", "-demo"}, argsDelRepo...),
-			entornoCon(vars), &bufferSeguro{b: log}, func(d string) { dir <- d })
+			entornoCon(vars), &bufferSeguro{b: log}, func(d, _ string) { dir <- d })
 	}()
 	apagado := false
 	apagar = func() error {

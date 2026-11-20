@@ -156,7 +156,7 @@ func TestTiposDeLosCampos(t *testing.T) {
 	for campo, tipo := range map[string]bson.Type{
 		"_id": bson.TypeString, "inicio": bson.TypeDateTime, "fin": bson.TypeNull, "rondas": bson.TypeArray,
 		"nodos": bson.TypeArray, "paro": bson.TypeNull, "dif_secuencial": bson.TypeNull, "ms_total": bson.TypeNull,
-		"modelo_id": bson.TypeNull, "error": bson.TypeNull,
+		"modelo_id": bson.TypeNull, "aviso": bson.TypeNull, "error": bson.TypeNull,
 	} {
 		if got := en.Lookup(campo).Type; got != tipo {
 			t.Errorf("entrenamientos.%s en curso es %v, se esperaba %v", campo, got, tipo)
