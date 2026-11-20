@@ -45,6 +45,11 @@ type Config struct {
 	Estaciones   almacen.Estaciones
 	Predicciones almacen.Predicciones
 	Cache        almacen.Cache
+	// Modelos y CacheModelo son donde ActivarModelo guarda el modelo activo
+	// (la colección modelos y la clave modelo:activo). Pueden ser nil: el
+	// modelo se activa igual, solo en memoria.
+	Modelos      almacen.Modelos
+	CacheModelo  almacen.CacheModelo
 	Mongo, Redis almacen.Pinger // lo que /api/salud informa como mongo y redis
 	OpenAPI      []byte         // docs/api/openapi.yaml, que se sirve tal cual
 	TamCola      int            // búfer de la cola de escritura
@@ -59,6 +64,8 @@ type Servidor struct {
 	catalogo     map[string]bool
 	estaciones   almacen.Estaciones
 	cache        almacen.Cache
+	modelos      almacen.Modelos
+	cacheModelo  almacen.CacheModelo
 	mongo, redis almacen.Pinger
 	openapi      []byte
 	log          *slog.Logger
@@ -95,20 +102,22 @@ func Nuevo(cfg Config) (*Servidor, error) {
 		catalogo[e.ID] = true
 	}
 	s := &Servidor{
-		firmador:   cfg.Firmador,
-		usuarios:   cfg.Usuarios,
-		catalogo:   catalogo,
-		estaciones: cfg.Estaciones,
-		cache:      cfg.Cache,
-		mongo:      cfg.Mongo,
-		redis:      cfg.Redis,
-		openapi:    cfg.OpenAPI,
-		log:        log,
-		metricas:   NuevasMetricas(),
-		ventanas:   ventana.Nuevas(),
-		escritor:   nuevoEscritor(cfg.TamCola, cfg.Predicciones, cfg.Cache, log),
-		mux:        http.NewServeMux(),
-		ahora:      time.Now,
+		firmador:    cfg.Firmador,
+		usuarios:    cfg.Usuarios,
+		catalogo:    catalogo,
+		estaciones:  cfg.Estaciones,
+		cache:       cfg.Cache,
+		modelos:     cfg.Modelos,
+		cacheModelo: cfg.CacheModelo,
+		mongo:       cfg.Mongo,
+		redis:       cfg.Redis,
+		openapi:     cfg.OpenAPI,
+		log:         log,
+		metricas:    NuevasMetricas(),
+		ventanas:    ventana.Nuevas(),
+		escritor:    nuevoEscritor(cfg.TamCola, cfg.Predicciones, cfg.Cache, log),
+		mux:         http.NewServeMux(),
+		ahora:       time.Now,
 	}
 	s.modelo.Store(cfg.Modelo)
 
@@ -168,8 +177,13 @@ func (c *capturado) Write(b []byte) (int, error) { return c.cuerpo.Write(b) }
 func (s *Servidor) Escribir(ctx context.Context) { s.escritor.correr(ctx) }
 
 // ActivarModelo reemplaza el modelo activo. Las predicciones en curso terminan
-// con el anterior; ninguna toma un lock.
-func (s *Servidor) ActivarModelo(m *modelo.Modelo) { s.modelo.Store(m) }
+// con el anterior; ninguna toma un lock. Después lo guarda como activo en
+// MongoDB y Redis, si la API los tiene (modelo_activo.go): eso puede tardar
+// hasta plazoEscritura por almacén, así que no se llama desde un handler.
+func (s *Servidor) ActivarModelo(m *modelo.Modelo) {
+	s.modelo.Store(m)
+	s.guardarModeloActivo(m)
+}
 
 // ruta registra un handler medido. roles nil es una ruta libre; si no, hace
 // falta un JWT válido con alguno de esos roles.

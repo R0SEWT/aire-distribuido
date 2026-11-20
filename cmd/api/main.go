@@ -174,6 +174,8 @@ func armar(op opciones, getenv func(string) string, log *slog.Logger) (*api.Serv
 		Estaciones:   alm.estaciones,
 		Predicciones: alm.predicciones,
 		Cache:        alm.cache,
+		Modelos:      alm.modelos,
+		CacheModelo:  alm.cacheModelo,
 		Mongo:        alm.mongo,
 		Redis:        alm.redis,
 		OpenAPI:      contrato,

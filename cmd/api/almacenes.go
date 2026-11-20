@@ -26,11 +26,17 @@ const plazoArranque = 3 * time.Second
 // almacenes es lo que la API guarda y consulta, ya elegido entre las bases
 // reales y el doble en memoria.
 type almacenes struct {
-	estaciones   almacen.Estaciones
-	predicciones almacen.Predicciones
-	modelos      almacen.Modelos
-	cache        almacen.Cache
-	cacheModelo  almacen.CacheModelo
+	// En MongoDB.
+	estaciones     almacen.Estaciones
+	predicciones   almacen.Predicciones
+	modelos        almacen.Modelos
+	entrenamientos almacen.Entrenamientos
+	eventos        almacen.Eventos
+	// En Redis.
+	cache       almacen.Cache
+	cacheModelo almacen.CacheModelo
+	puntos      almacen.PuntosControl
+
 	mongo, redis almacen.Pinger // lo que /api/salud informa
 	cierres      []func()
 }
@@ -67,6 +73,7 @@ func abrirAlmacenes(getenv func(string) string, ficha []almacen.Estacion, log *s
 			_ = m.Cerrar(ctx)
 		})
 		a.estaciones, a.predicciones, a.modelos, a.mongo = m.Estaciones(), m.Predicciones(), m.Modelos(), m
+		a.entrenamientos, a.eventos = m.Entrenamientos(), m.Eventos()
 		avisar(log, "MongoDB", m, "base", base)
 	} else {
 		if base := getenv("MONGO_DB"); base != "" {
@@ -77,6 +84,7 @@ func abrirAlmacenes(getenv func(string) string, ficha []almacen.Estacion, log *s
 			return nil, err
 		}
 		a.estaciones, a.predicciones, a.modelos, a.mongo = estaciones, memoria.NuevasPredicciones(), memoria.NuevosModelos(), estaciones
+		a.entrenamientos, a.eventos = memoria.NuevosEntrenamientos(), memoria.NuevosEventos()
 		log.Warn("sin MONGO_URI: las colecciones están en memoria y se pierden al apagar", "estaciones", len(ficha))
 	}
 	if addr := getenv("REDIS_ADDR"); addr != "" {
@@ -94,11 +102,11 @@ func abrirAlmacenes(getenv func(string) string, ficha []almacen.Estacion, log *s
 			return nil, fmt.Errorf("REDIS_ADDR: %w", err)
 		}
 		a.cierres = append(a.cierres, func() { _ = r.Cerrar() })
-		a.cache, a.cacheModelo, a.redis = r, r, r
+		a.cache, a.cacheModelo, a.puntos, a.redis = r, r, r, r
 		avisar(log, "Redis", r, "addr", addr, "db", db)
 	} else {
 		cache := memoria.NuevaCache()
-		a.cache, a.cacheModelo, a.redis = cache, cache, cache
+		a.cache, a.cacheModelo, a.puntos, a.redis = cache, cache, cache, cache
 		log.Warn("sin REDIS_ADDR: la caché está en memoria y se pierde al apagar")
 	}
 	return a, nil
