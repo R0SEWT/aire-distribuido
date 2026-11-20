@@ -1,6 +1,7 @@
 package cluster
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"slices"
@@ -64,6 +65,36 @@ type Corrida struct {
 	UltimaRonda int
 }
 
+// Ronda es lo que Lloyd informa al terminar cada iteración (OpcionesLloyd.AlRonda).
+type Ronda struct {
+	Iter    int     // número de iteración, desde 1
+	Inercia float64 // la de esta iteración: con los centroides que produjeron la asignación
+	// Barrera es la barrera de red: desde que sale el primer ITERAR hasta que
+	// llega el último PARCIAL. Fusion es lo que el coordinador hace después.
+	Barrera time.Duration
+	Fusion  time.Duration
+	// PorNodo es lo que tardó cada nodo, en el orden de los enlaces
+	// (protocolo.Enlace.TiempoRonda). La barrera va al ritmo del más lento.
+	PorNodo []time.Duration
+}
+
+// OpcionesLloyd es lo que LloydCtx necesita además del contrato numérico.
+type OpcionesLloyd struct {
+	Plazo   time.Duration // plazo común de cada ronda
+	Primera int           // número de la primera ronda (ver Lloyd)
+	// AlRonda, si no es nil, se llama al cerrar cada iteración, en la goroutine
+	// que llamó a LloydCtx y antes de empezar la ronda siguiente: lo que tarde
+	// se suma al total de la corrida, no a las mediciones de la ronda. El
+	// coordinador de la API lo usa para repartir cada ronda a sus consumidores.
+	// La pasada final no se informa: no es una iteración.
+	AlRonda func(Ronda)
+}
+
+// ErrCancelada: la corrida terminó porque se canceló su contexto (la API se
+// está apagando), no porque fallara un nodo. Se compara con errors.Is; el
+// error que la envuelve trae además la causa del contexto.
+var ErrCancelada = errors.New("corrida cancelada")
+
 // Lloyd corre K-Means sobre los nodos ya cargados (Cargar), desde los
 // centroides cent0 y con el contrato numérico de op: el mismo de una sola
 // máquina. Cada iteración es una protocolo.Ronda con plazo común (fan-out del
@@ -82,7 +113,32 @@ type Corrida struct {
 // y ningún resultado: un modelo con menos nodos sería otro modelo
 // (docs/diseno.md, §4.7). Quien llama decide qué hacer con las conexiones
 // (Abortar).
+//
+// Es LloydCtx sin cancelación ni gancho por ronda: lo que usa cmd/distribuido.
 func Lloyd(enlaces []*protocolo.Enlace, cent0 []float64, op kmeans.Opciones, plazo time.Duration, primera int) (*Corrida, error) {
+	c, err := LloydCtx(context.Background(), enlaces, cent0, op, OpcionesLloyd{Plazo: plazo, Primera: primera})
+	if err != nil {
+		return nil, err
+	}
+	return c, nil
+}
+
+// LloydCtx es Lloyd con dos cosas más, que son las que necesita el coordinador
+// dentro de la API (spec de la PC4, §5.2): un gancho por ronda (ol.AlRonda) y
+// un contexto para cancelar la corrida.
+//
+// Si se cancela ctx, LloydCtx vuelve enseguida con un error que cumple
+// errors.Is(err, ErrCancelada): entre dos rondas no envía la siguiente; a
+// mitad de una, cierra las conexiones de todos los nodos, que es lo único que
+// destraba la lectura de un PARCIAL (los nodos leen EOF y vuelven a llamar).
+// En ese caso ya no se les puede mandar el ERROR de Abortar.
+//
+// Cuando la corrida no termina (un nodo falló o se canceló), además del error
+// devuelve lo que alcanzó a hacer: una Corrida con las rondas completas, sus
+// tiempos y sus inercias, y con Resultado.Centroides en nil. No es un modelo
+// —los centroides de una corrida a medias no se publican— pero las rondas
+// hechas no se pierden. Si el error es de los argumentos, la Corrida es nil.
+func LloydCtx(ctx context.Context, enlaces []*protocolo.Enlace, cent0 []float64, op kmeans.Opciones, ol OpcionesLloyd) (*Corrida, error) {
 	k := op.K
 	if k <= 0 || len(cent0) == 0 || len(cent0)%k != 0 {
 		return nil, fmt.Errorf("%d centroides iniciales no son k×D con k = %d", len(cent0), k)
@@ -90,48 +146,85 @@ func Lloyd(enlaces []*protocolo.Enlace, cent0 []float64, op kmeans.Opciones, pla
 	if op.MaxIter <= 0 {
 		return nil, fmt.Errorf("max_iter debe ser positivo, es %d", op.MaxIter)
 	}
-	if primera <= 0 || plazo <= 0 {
-		return nil, fmt.Errorf("la primera ronda (%d) y el plazo (%v) tienen que ser positivos", primera, plazo)
+	if ol.Primera <= 0 || ol.Plazo <= 0 {
+		return nil, fmt.Errorf("la primera ronda (%d) y el plazo (%v) tienen que ser positivos", ol.Primera, ol.Plazo)
 	}
 	dim := len(cent0) / k
 	cent := slices.Clone(cent0)
 	r := &kmeans.Resultado{K: k, D: dim, Paro: kmeans.ParoMaxIter}
-	c := &Corrida{Resultado: r}
+	c := &Corrida{Resultado: r, UltimaRonda: ol.Primera - 1}
 
-	ronda := primera
-	for it := 1; it <= op.MaxIter; it++ {
+	// A mitad de una ronda cada goroutine de protocolo.Ronda está leyendo de su
+	// conexión: cerrarlas es lo que las despierta. Cerrar un net.Conn es seguro
+	// desde otra goroutine.
+	dejarDeCortar := context.AfterFunc(ctx, func() {
+		for _, e := range enlaces {
+			e.Cerrar()
+		}
+	})
+	defer dejarDeCortar()
+	cancelada := func() error {
+		if ctx.Err() == nil {
+			return nil
+		}
+		return fmt.Errorf("%w tras %d rondas completas: %w", ErrCancelada, len(c.Rondas), context.Cause(ctx))
+	}
+	// ronda es una barrera con sus dos salidas malas: cancelada o con un nodo
+	// que falló. El error de una ronda que se cortó por la cancelación es el
+	// de la cancelación, no el del nodo al que se le cerró la conexión.
+	ronda := func(n int) ([]protocolo.Mensaje, time.Duration, error) {
+		if err := cancelada(); err != nil {
+			return nil, 0, err
+		}
 		inicio := time.Now()
-		ms, err := protocolo.Ronda(enlaces, ronda, k, cent, inicio.Add(plazo))
+		ms, err := protocolo.Ronda(enlaces, n, k, cent, inicio.Add(ol.Plazo))
+		c.UltimaRonda = n
 		if err != nil {
-			return nil, err
+			if errC := cancelada(); errC != nil {
+				return nil, 0, errC
+			}
+			return nil, 0, err
+		}
+		return ms, time.Since(inicio), nil
+	}
+
+	n := ol.Primera
+	for it := 1; it <= op.MaxIter; it++ {
+		ms, barrera, err := ronda(n)
+		if err != nil {
+			return c, err
 		}
 		fusion := time.Now()
-		p, err := fusionar(enlaces, ms, ronda, k, dim)
+		p, err := fusionar(enlaces, ms, n, k, dim)
 		if err != nil {
-			return nil, err
+			return c, err
 		}
 		// Ronda ya volvió: ninguna goroutine sigue leyendo cent mientras se actualiza.
 		convergio := kmeans.CerrarIteracion(r, cent, p, it, op)
-		fin := time.Now()
-		c.Rondas = append(c.Rondas, fusion.Sub(inicio))
-		c.Fusiones = append(c.Fusiones, fin.Sub(fusion))
-		ronda++
+		c.Rondas = append(c.Rondas, barrera)
+		c.Fusiones = append(c.Fusiones, time.Since(fusion))
+		if ol.AlRonda != nil {
+			porNodo := make([]time.Duration, len(enlaces))
+			for i, e := range enlaces {
+				porNodo[i] = e.TiempoRonda
+			}
+			ol.AlRonda(Ronda{Iter: it, Inercia: p.Inercia, Barrera: barrera, Fusion: c.Fusiones[it-1], PorNodo: porNodo})
+		}
+		n++
 		if convergio {
 			break
 		}
 	}
 
-	inicio := time.Now()
-	ms, err := protocolo.Ronda(enlaces, ronda, k, cent, inicio.Add(plazo))
+	ms, barrera, err := ronda(n)
 	if err != nil {
-		return nil, fmt.Errorf("pasada final: %w", err)
+		return c, fmt.Errorf("pasada final: %w", err)
 	}
-	c.PasadaFinal = time.Since(inicio)
-	p, err := fusionar(enlaces, ms, ronda, k, dim)
+	c.PasadaFinal = barrera
+	p, err := fusionar(enlaces, ms, n, k, dim)
 	if err != nil {
-		return nil, fmt.Errorf("pasada final: %w", err)
+		return c, fmt.Errorf("pasada final: %w", err)
 	}
-	c.UltimaRonda = ronda
 	r.Inercia = p.Inercia
 	r.Centroides = cent
 	c.Tamanos = p.Conteos
