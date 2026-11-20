@@ -27,6 +27,7 @@ data/*
 *.parquet
 *.csv
 !data/sample/*.csv
+!docs/postman/*.csv
 
 # Go
 /bin/
