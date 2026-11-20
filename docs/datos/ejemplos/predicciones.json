@@ -1,0 +1,19 @@
+{
+  "_id": "sintetico-prediccion-ca-ayas-01-20211210t010000-0500",
+  "ts": "2026-11-16T22:05:00-05:00",
+  "estacion": "CA-AYAS-01",
+  "fecha_hora": "2021-12-10T01:00:00-05:00",
+  "pm2_5": 1.6,
+  "pm10": 2.1,
+  "regimen": 0,
+  "excede_eca": false,
+  "media_24h": {
+    "pm2_5": null,
+    "pm10": null,
+    "lecturas": 1
+  },
+  "alerta": false,
+  "inca": null,
+  "modelo_id": "sembrado-kmeans-json",
+  "ms": 0.04
+}
