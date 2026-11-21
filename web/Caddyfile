@@ -1,0 +1,62 @@
+# El único servidor web del sistema (spec del frontend, §10 y §11): sirve la UI
+# ya compilada (web/dist) y pasa /api, /ws, /docs y /openapi.yaml a la API. Como
+# la UI y la API quedan en el mismo origen, no hay CORS que configurar y el
+# WebSocket pasa el control de origen de la API (api/cors.go) sin tocar nada:
+# Caddy reenvía el Host tal cual llega.
+#
+# Escucha HTTP en el 80 dentro de la red de Compose, que lo publica solo en
+# localhost. No saca certificados ni expone su API de administración.
+{
+	admin off
+	auto_https off
+}
+
+:80 {
+	encode zstd gzip
+
+	# En todas las respuestas, también las de la API.
+	header {
+		# El navegador no adivina el tipo de un archivo: un JSON no se ejecuta como script.
+		X-Content-Type-Options nosniff
+		# Los enlaces que salen de la app (el repositorio, la licencia) no dicen de dónde vienen.
+		Referrer-Policy no-referrer
+		-Server
+	}
+
+	# La API. reverse_proxy también pasa el WebSocket de /ws.
+	@api path /api/* /ws /openapi.yaml
+	handle @api {
+		reverse_proxy api:8080
+	}
+
+	# Swagger UI lo sirve la API y carga de un CDN, con un script en línea que lo
+	# arranca: lleva su propia política. Solo se admite esa versión de Swagger y
+	# ese script (por su hash; si cambia la página en api/rutas.go, la prueba
+	# web/src/pruebas/caddy.test.ts dice el hash nuevo). Swagger pone estilos en
+	# línea, y por eso style-src lleva 'unsafe-inline' aquí y solo aquí.
+	handle /docs {
+		header Content-Security-Policy "default-src 'none'; script-src https://cdn.jsdelivr.net/npm/swagger-ui-dist@5.17.14/ 'sha256-Bh/L1I8Jz3e+G6+99nT+g0tTChazroLfSG0Sz+e0ZVc='; style-src https://cdn.jsdelivr.net/npm/swagger-ui-dist@5.17.14/ 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; connect-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"
+		reverse_proxy api:8080
+	}
+
+	# Todo lo demás es la UI.
+	handle {
+		root * /srv
+
+		# Scripts, estilos y fuentes solo del propio origen: nada en línea y nada
+		# de terceros. connect-src 'self' cubre los pedidos a /api y el WebSocket
+		# de /ws, con y sin TLS. frame-ancestors 'none': nadie la mete en un marco.
+		header Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self'; font-src 'self'; img-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
+
+		# Vite pone un hash en el nombre de cada archivo de /assets: no cambian
+		# nunca. index.html sí, y se vuelve a pedir siempre.
+		@assets path /assets/*
+		header @assets Cache-Control "public, max-age=31536000, immutable"
+		@pagina not path /assets/*
+		header @pagina Cache-Control "no-cache"
+
+		# Es una SPA: una ruta como /cluster no es un archivo, la resuelve la UI.
+		try_files {path} /index.html
+		file_server
+	}
+}

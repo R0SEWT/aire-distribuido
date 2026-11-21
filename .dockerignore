@@ -4,6 +4,8 @@ data/
 .beads/
 notebooks/
 experimentos/
+# La UI tiene su propia imagen, con web/ como contexto (web/Dockerfile).
+web/
 
 # De docs/ y reports/ solo entra lo que la API lee al arrancar: el contrato, el
 # modelo que siembra, la ficha de estaciones y los centroides iniciales.

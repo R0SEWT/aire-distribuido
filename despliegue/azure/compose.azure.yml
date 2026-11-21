@@ -27,6 +27,14 @@ services:
         condition: service_healthy
     mem_limit: 64m
 
+  # La UI todavía no se despliega en esta máquina (spec del frontend, §11): el
+  # tráfico sigue entrando por el Caddy de arriba, directo a la API. Con el
+  # perfil, «up» no levanta ni construye el servicio web, que necesita compilar
+  # con Node y esta máquina no puede. Cuando se despliegue, web reemplaza a
+  # caddy y su imagen se construye en la laptop.
+  web:
+    profiles: ["ui"]
+
   api:
     restart: unless-stopped
     ports: !reset []
