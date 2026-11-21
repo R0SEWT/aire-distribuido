@@ -1,11 +1,12 @@
 # Postman: pruebas de la API y datos de prueba
 
-Evidencias de la parte C de la PC4 (spec §9). La colección prueba la API real contra el contrato
-`docs/api/openapi.yaml`; no hay simulador.
+Evidencias de la parte C de la PC4 (spec §9), con las rutas que sumó el frontend del TB2 (spec del
+frontend, §6). La colección prueba la API real contra el contrato `docs/api/openapi.yaml`; no hay
+simulador.
 
 | Archivo | Qué es |
 |---|---|
-| `aire-distribuido.postman_collection.json` | La colección: 50 pedidos definidos en cuatro carpetas (34, 10, 4 y 2) |
+| `aire-distribuido.postman_collection.json` | La colección: 58 pedidos definidos en cuatro carpetas (41, 11, 4 y 2) |
 | `local.postman_environment.json` | El entorno local, **sin credenciales**: se completan al importarlo |
 | `lecturas_prueba.csv` | Datos de prueba para el Runner: 78 lecturas reales con lo que la API tiene que responder |
 | `generar_lecturas.py` | Cómo se armó el CSV y se calculó lo esperado, sin consultar a la API |
@@ -20,19 +21,22 @@ Evidencias de la parte C de la PC4 (spec §9). La colección prueba la API real 
   `POST /api/entrenamientos` entra porque responde 202 enseguida y entrena en segundo plano.
 - Lo propio del caso: el mensaje del error, el rol del token, que `media_24h`, `alerta` e `inca`
   sean coherentes entre sí, que un entrenamiento traiga una ronda por iteración con el tiempo de cada
-  nodo, que `ultimo_entrenamiento` y `escritura` de las métricas digan lo que pasó.
+  nodo, que `ultimo_entrenamiento` y `escritura` de las métricas digan lo que pasó, que
+  `GET /api/regimenes` traiga una entrada por estación con estado y ordenadas, que los eventos del
+  clúster vengan del más reciente al más antiguo y que `proceso_api` traiga el CPU y la memoria del
+  proceso de la API.
 
 | Carpeta | Qué cubre |
 |---|---|
-| 1. Base HTTP | Salud, token (200, 400, 401), predicción válida y sus rechazos (sin token, PM negativo, PM mayor de 10 000, estación vacía o desconocida, fecha inválida o futura, cuerpo que no es JSON), estaciones y su régimen (200 y los dos 404), modelo activo, `/openapi.yaml`, `/docs`, los 403 del rol usuario, y nodos, métricas e historial como admin |
-| 2. Entrenamiento | 400 (cero nodos, cero réplicas, sin semilla), 422 (más nodos de los que hay), 202 y el detalle hasta `terminado`; después, el historial, las métricas y el modelo activo, que pasa a ser `entrenado-{id}` |
+| 1. Base HTTP | Salud, token (200, 400, 401), predicción válida y sus rechazos (sin token, PM negativo, PM mayor de 10 000, estación vacía o desconocida, fecha inválida o futura, cuerpo que no es JSON), estaciones y su régimen (200 y los dos 404), el estado de todas las estaciones (`GET /api/regimenes`: 200 y 401), modelo activo, `/openapi.yaml`, `/docs`, los 403 del rol usuario, y nodos, eventos del clúster (200, con `limite`, y los dos 400), métricas e historial como admin |
+| 2. Entrenamiento | 400 (cero nodos, cero réplicas, sin semilla), 422 (más nodos de los que hay), 202 y el detalle hasta `terminado`; después, el historial, los eventos del clúster (una baja por nodo del entrenamiento), las métricas y el modelo activo, que pasa a ser `entrenado-{id}` |
 | 3. Conflicto controlado | Un entrenamiento largo (`replicas_conflicto` copias del gold) y, mientras corre, un segundo pedido que recibe 409 con el id del que está en curso |
 | 4. Datos de prueba | El Runner con `lecturas_prueba.csv`: una fila por iteración |
 
-**Cuántos pedidos ejecuta una corrida.** La colección define 50 pedidos, pero el resumen de una
-corrida de las carpetas 1 a 3 dice 62 o 63, y no siempre el mismo número. No es un fallo:
+**Cuántos pedidos ejecuta una corrida.** La colección define 58 pedidos, pero el resumen de una
+corrida de las carpetas 1 a 3 dice 70 o 71, y no siempre el mismo número. No es un fallo:
 
-- De los 50, se envían los 48 de las carpetas 1 a 3. Los 2 de la carpeta 4 se saltan si no hay
+- De los 58, se envían los 56 de las carpetas 1 a 3. Los 2 de la carpeta 4 se saltan si no hay
   archivo de datos.
 - El resumen cuenta además los 2 pedidos automáticos de token (uno por rol) que la colección hace
   antes del primer pedido.
@@ -42,13 +46,16 @@ corrida de las carpetas 1 a 3 dice 62 o 63, y no siempre el mismo número. No es
   de cada entrenamiento) y de cuánto dure el entrenamiento largo: alrededor de una docena de
   repeticiones en total, cada una con 5 aserciones.
 
-Por eso dos corridas correctas pueden dar, por ejemplo, 62 pedidos y 310 aserciones, y 63 y 315. Lo
+Por eso dos corridas correctas pueden dar, por ejemplo, 70 pedidos y 357 aserciones, y 71 y 362. Lo
 que tiene que coincidir es que no haya ninguna aserción fallida. El Runner con el CSV sí es fijo:
 78 iteraciones, 82 pedidos (78 predicciones, 2 consultas del estado al cerrar cada serie y los 2
 tokens) y 714 aserciones.
 
 `GET /ws` no está: una colección v2.1 no guarda pedidos WebSocket. Se prueba en `api/` y
-`cmd/api/` con `go test`.
+`cmd/api/` con `go test`, también el evento `estacion.regimen`.
+
+Las corridas de la PC4 que están en `docs/informe/capturas/pc4/` son anteriores a los pedidos del
+TB2: por eso dicen 62 pedidos y 310 aserciones.
 
 ## Usarla en Postman
 

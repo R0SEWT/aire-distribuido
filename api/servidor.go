@@ -9,6 +9,12 @@
 // memoria detrás de un atomic.Pointer, la media de 24 h de cada estación
 // también (paquete ventana) y la escritura va a dos colas con búfer, una por
 // almacén, que se vacían por lotes (escritor.go).
+//
+// Para el frontend del TB2 (spec del frontend, §6): el estado de todas las
+// estaciones en un pedido (GET /api/regimenes), ese mismo estado por WebSocket
+// cuando cambia (el evento estacion.regimen, avisos.go), los eventos del
+// clúster (GET /api/cluster/eventos) y el CPU y la memoria de este proceso en
+// las métricas (proceso_api).
 package api
 
 import (
