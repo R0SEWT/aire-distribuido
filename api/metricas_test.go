@@ -123,10 +123,16 @@ func TestMetricasPublicanElCPUYLaMemoriaDelProcesoDeLaAPI(t *testing.T) {
 	if uno["max_rss_mb"] <= 0 || uno["cpu_usuario_s"]+uno["cpu_sistema_s"] <= 0 {
 		t.Fatalf("sin CPU ni RSS medidos: %v", uno)
 	}
-	// 150 ms con un núcleo ocupado: el CPU acumulado tiene que notarlo.
+	// Se trabaja hasta que el proceso consumió 100 ms de CPU, medidos con lo
+	// mismo que usa la ruta. No se trabaja «150 ms de reloj»: con la máquina
+	// cargada, en ese rato al proceso le puede tocar muy poco CPU.
+	consumido := func() float64 { r := kmeans.MedirRecursos(); return r.CPUUsuarioS + r.CPUSistemaS }
 	x := 0.0
-	for limite := time.Now().Add(150 * time.Millisecond); time.Now().Before(limite); {
-		for i := range 10000 {
+	for meta, limite := consumido()+0.1, time.Now().Add(30*time.Second); consumido() < meta; {
+		if time.Now().After(limite) {
+			t.Fatal("el proceso no llegó a consumir 100 ms de CPU en 30 s")
+		}
+		for i := range 100000 {
 			x += math.Sqrt(float64(i))
 		}
 	}
@@ -134,8 +140,8 @@ func TestMetricasPublicanElCPUYLaMemoriaDelProcesoDeLaAPI(t *testing.T) {
 	dos := procesoAPI(t, e, admin)
 	cpu := (dos["cpu_usuario_s"] + dos["cpu_sistema_s"]) - (uno["cpu_usuario_s"] + uno["cpu_sistema_s"])
 	reloj := dos["en_marcha_s"] - uno["en_marcha_s"]
-	// Los dos vienen redondeados al milisegundo: de ahí el margen sobre los 150 ms.
-	if reloj < 0.14 || cpu < 0.05 || dos["max_rss_mb"] < uno["max_rss_mb"] {
+	// Los valores vienen redondeados al milisegundo: de ahí el margen sobre los 100 ms.
+	if reloj <= 0 || cpu < 0.09 || dos["max_rss_mb"] < uno["max_rss_mb"] {
 		t.Fatalf("entre dos consultas: %.3f s de CPU en %.3f s de reloj (RSS máximo de %.1f a %.1f MB)", cpu, reloj, uno["max_rss_mb"], dos["max_rss_mb"])
 	}
 	// El uso que calcularía el panel: entre nada y todos los núcleos.
