@@ -1,0 +1,67 @@
+# aire-distribuido · mapa nacional de PM · local SGD en el laboratorio D56
+# 2026-11-14 20:06:50 -0500 · A019803 · 10.11.97.211/22
+# commit 60de7c2 (rama feature/mapa-nacional, con cambios sin commit)
+$ ./mapa-coord -escuchar 10.11.97.211:7071 -nodos 20 -manifiesto http://10.11.97.211:8090/mapa-sint168/manifiesto.json -pesos-iniciales pesos64/pesos_0.bin -hiper hiper64.json -rondas 5 -pasos 2000 -validacion SIN-01,SIN-02 -salida mapa_gpu_20_h2000_a64.json -pesos-finales pesos_final_20_h2000_a64.bin
+20:06:50 escuchando en 10.11.97.211:7071; los nodos pueden llamar a:
+20:06:50     10.11.97.211:7071
+20:06:50 tarea mapa-20261114-200650: 7972354 parámetros, manifiesto http://10.11.97.211:8090/mapa-sint168/manifiesto.json con 168 días (huella sha256:c15063627d7c…), 5 rondas de 2000 pasos
+20:06:50 espero 20 nodos (protocolo v2) durante 10m0s (Ctrl+C empieza con los que hayan llegado)
+20:06:50 [1/20] D56-17-gpu desde 10.11.97.215:63654 (1 workers, GPU NVIDIA RTX A1000 de 8 GB)
+20:06:50 [2/20] D56-10-gpu desde 10.11.97.208:56723 (1 workers, GPU NVIDIA RTX A1000 de 8 GB)
+20:06:50 [3/20] D56-08-gpu desde 10.11.97.206:64795 (1 workers, GPU NVIDIA RTX A1000 de 8 GB)
+20:06:50 [4/20] D56-11-gpu desde 10.11.97.209:58817 (1 workers, GPU NVIDIA RTX A1000 de 8 GB)
+20:06:50 [5/20] D56-12-gpu desde 10.11.97.210:63837 (1 workers, GPU NVIDIA RTX A1000 de 8 GB)
+20:06:50 [6/20] D56-06-gpu desde 10.11.97.204:58142 (1 workers, GPU NVIDIA RTX A1000 de 8 GB)
+20:06:50 [7/20] D56-027-gpu desde 10.11.98.225:62284 (1 workers, GPU NVIDIA RTX A1000 de 8 GB)
+20:06:50 [8/20] D56-01-gpu desde 10.11.97.199:64665 (1 workers, GPU NVIDIA RTX A1000 de 8 GB)
+20:06:50 [9/20] D56-16-gpu desde 10.11.97.214:52408 (1 workers, GPU NVIDIA RTX A1000 de 8 GB)
+20:06:50 [10/20] D56-20-gpu desde 10.11.97.218:63998 (1 workers, GPU NVIDIA RTX A1000 de 8 GB)
+20:06:50 [11/20] D56-07-gpu desde 10.11.97.205:62882 (1 workers, GPU NVIDIA RTX A1000 de 8 GB)
+20:06:50 [12/20] D56-14-gpu desde 10.11.97.212:52430 (1 workers, GPU NVIDIA RTX A1000 de 8 GB)
+20:06:50 [13/20] D56-15-gpu desde 10.11.97.213:63474 (1 workers, GPU NVIDIA RTX A1000 de 8 GB)
+20:06:50 [14/20] D56-004-gpu desde 10.11.98.202:51672 (1 workers, GPU NVIDIA RTX A1000 de 8 GB)
+20:06:50 [15/20] D56-21-gpu desde 10.11.97.219:64798 (1 workers, GPU NVIDIA RTX A1000 de 8 GB)
+20:06:50 [16/20] D56-18-gpu desde 10.11.97.216:53411 (1 workers, GPU NVIDIA RTX A1000 de 8 GB)
+20:06:50 [17/20] D56-005-gpu desde 10.11.98.203:53829 (1 workers, GPU NVIDIA RTX A1000 de 8 GB)
+20:06:50 [18/20] D56-02-gpu desde 10.11.97.200:60324 (1 workers, GPU NVIDIA RTX A1000 de 8 GB)
+20:06:50 [19/20] D56-19-gpu desde 10.11.97.217:65075 (1 workers, GPU NVIDIA RTX A1000 de 8 GB)
+20:06:51 [20/20] D56-03-gpu desde 10.11.97.201:63995 (1 workers, GPU NVIDIA RTX A1000 de 8 GB)
+20:06:52 los 20 nodos tienen sus días (1.5 s); empieza el local SGD
+20:09:51 ronda 1/5: pérdida 0.0452207 · validación 0.137364 · 160000 muestras · barrera 178.5 s · promedio 111 ms · 1275.6 MB
+20:12:50 ronda 2/5: pérdida 0.0207451 · validación 0.166682 · 160000 muestras · barrera 179.0 s · promedio 123 ms · 1275.6 MB
+20:15:53 ronda 3/5: pérdida 0.00315703 · validación 0.202321 · 160000 muestras · barrera 183.1 s · promedio 107 ms · 1275.6 MB
+20:18:57 ronda 4/5: pérdida 0.00157223 · validación 0.202672 · 160000 muestras · barrera 183.7 s · promedio 118 ms · 1275.6 MB
+20:22:01 ronda 5/5: pérdida 0.00118849 · validación 0.198953 · 160000 muestras · barrera 183.9 s · promedio 103 ms · 1275.6 MB
+
+tarea       mapa-20261114-200650 · completa
+manifiesto  http://10.11.97.211:8090/mapa-sint168/manifiesto.json · 168 días · huella sha256:c15063627d7c…
+modelo      7972354 parámetros (31.9 MB) · 5 rondas de 2000 pasos · validación SIN-01,SIN-02
+nodos       20 de 20 · bloques de 7 días barajados con la semilla 42
+            D56-004-gpu    10.11.98.202:51672     NVIDIA RTX A1000      14 días      336 muestras  tarea 0.9 s
+            D56-005-gpu    10.11.98.203:53829     NVIDIA RTX A1000      14 días      313 muestras  tarea 0.7 s
+            D56-01-gpu     10.11.97.199:64665     NVIDIA RTX A1000      14 días      336 muestras  tarea 0.7 s
+            D56-02-gpu     10.11.97.200:60324     NVIDIA RTX A1000      14 días      336 muestras  tarea 0.7 s
+            D56-027-gpu    10.11.98.225:62284     NVIDIA RTX A1000       7 días      168 muestras  tarea 0.5 s
+            D56-03-gpu     10.11.97.201:63995     NVIDIA RTX A1000       7 días      168 muestras  tarea 0.8 s
+            D56-06-gpu     10.11.97.204:58142     NVIDIA RTX A1000       7 días      168 muestras  tarea 0.5 s
+            D56-07-gpu     10.11.97.205:62882     NVIDIA RTX A1000       7 días      168 muestras  tarea 0.5 s
+            D56-08-gpu     10.11.97.206:64795     NVIDIA RTX A1000       7 días      168 muestras  tarea 0.5 s
+            D56-10-gpu     10.11.97.208:56723     NVIDIA RTX A1000       7 días      168 muestras  tarea 0.5 s
+            D56-11-gpu     10.11.97.209:58817     NVIDIA RTX A1000       7 días      168 muestras  tarea 0.5 s
+            D56-12-gpu     10.11.97.210:63837     NVIDIA RTX A1000       7 días      168 muestras  tarea 0.5 s
+            D56-14-gpu     10.11.97.212:52430     NVIDIA RTX A1000       7 días      168 muestras  tarea 0.5 s
+            D56-15-gpu     10.11.97.213:63474     NVIDIA RTX A1000       7 días      168 muestras  tarea 0.6 s
+            D56-16-gpu     10.11.97.214:52408     NVIDIA RTX A1000       7 días      168 muestras  tarea 0.5 s
+            D56-17-gpu     10.11.97.215:63654     NVIDIA RTX A1000       7 días      168 muestras  tarea 0.5 s
+            D56-18-gpu     10.11.97.216:53411     NVIDIA RTX A1000       7 días      168 muestras  tarea 0.5 s
+            D56-19-gpu     10.11.97.217:65075     NVIDIA RTX A1000       7 días      168 muestras  tarea 0.5 s
+            D56-20-gpu     10.11.97.218:63998     NVIDIA RTX A1000       7 días      168 muestras  tarea 1.5 s
+            D56-21-gpu     10.11.97.219:64798     NVIDIA RTX A1000       7 días      168 muestras  tarea 1.5 s
+ronda   1   pérdida 0.0452207 · validación 0.137364 · barrera 178.51 s · promedio 110.7 ms
+ronda   2   pérdida 0.0207451 · validación 0.166682 · barrera 178.99 s · promedio 123.1 ms
+ronda   3   pérdida 0.00315703 · validación 0.202321 · barrera 183.14 s · promedio 107.4 ms
+ronda   4   pérdida 0.00157223 · validación 0.202672 · barrera 183.67 s · promedio 118.0 ms
+ronda   5   pérdida 0.00118849 · validación 0.198953 · barrera 183.91 s · promedio 103.4 ms
+pesos       pesos_final_20_h2000_a64.bin (ronda 5, sha256 fc5e459dca5c…)
+→ mapa_gpu_20_h2000_a64.json
+# fin: código 0 · log en /home/rody/Code/personal/aire-wt/mapa/docs/informe/capturas/mapa/lab_d56_20gpus_h2000_coordinador.txt

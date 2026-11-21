@@ -1,0 +1,45 @@
+<!-- b) Resumen del informe de la PC4: lo que ya respondió la PC3 y lo que suma este entregable. -->
+
+# Resumen {.unnumbered}
+
+El Organismo de Evaluación y Fiscalización Ambiental (OEFA) publica las lecturas horarias de calidad
+del aire que toma junto a las actividades que fiscaliza: {{< meta cifras.limpieza.filas_largas_leidas >}}
+filas de {{< meta cifras.limpieza.n_estaciones >}} estaciones, de {{< meta cifras.limpieza.anios >}}
+[@oefa2026aire]. La pregunta de impacto es en qué estaciones y a qué horas el aire entra en un nivel
+alto de PM2,5 y PM10, y cuándo eso supera el Estándar de Calidad Ambiental (ECA) [@minam2017eca]. El
+primer entregable (PC3), que este informe contiene completo, construyó en Go el cargador concurrente
+y el K-Means paralelo, y encontró tres niveles de aire sobre {{< meta cifras.limpieza.filas_completas >}}
+horas-estación: el alto, el {{< meta cifras.alto.pct >}} de ellas, promedia
+{{< meta cifras.alto.pm2_5 >}} µg/m³ de PM2,5 y {{< meta cifras.alto.pm10 >}} de PM10.
+
+Este segundo entregable (PC4) pone ese modelo a funcionar en red y lo expone como servicio.
+**Distribución**: el K-Means corre en un clúster en estrella. Los nodos llaman por TCP a un
+coordinador, que les reparte rangos contiguos de la tabla, sincroniza cada iteración con una barrera
+con plazo y fusiona las sumas parciales en orden de nodo. Con un nodo, el modelo es el de una sola
+máquina bit a bit; con {{< meta cifras.distribuido.nodos_lista >}} nodos, sus centroides difieren a lo
+sumo en {{< meta cifras.distribuido.dif_max >}}; si un nodo cae, la corrida aborta con un error que
+lo nombra. En el laboratorio, con {{< meta cifras.smoke.nodos >}} PC como nodos, la barrera de una
+ronda mide {{< meta cifras.smoke.p50 >}} ms de mediana. **API**: un servicio REST escrito con la
+biblioteca estándar de Go, con JWT y un contrato OpenAPI de {{< meta cifras.api.rutas >}} rutas que se
+consulta en Swagger UI; es también el coordinador del clúster y avisa cada ronda de un entrenamiento
+por WebSocket. La predicción no espera a ninguna base de datos: con
+{{< meta cifras.api_latencia.clientes_max >}} clientes a la vez, el percentil 99 de la latencia es de
+{{< meta cifras.api_latencia.p99_max >}} ms, frente al límite de 100 ms del enunciado. La alerta no sale
+del régimen sino de la media de 24 horas de la estación frente al ECA, porque en el gold el régimen
+alto solo acierta el {{< meta cifras.alerta.regimen_precision >}} de las veces. **Bases de datos**:
+MongoDB guarda {{< meta cifras.datos.colecciones >}} colecciones (estaciones, predicciones, modelos,
+entrenamientos y eventos del clúster) y Redis, {{< meta cifras.datos.claves >}} familias de claves (el
+último régimen de cada estación, el modelo activo y el punto de control de cada ronda). Todo se
+despliega con Docker Compose.
+
+Las evidencias son {{< meta cifras.pruebas.pc4 >}} pruebas automáticas con `go test -race`, una
+colección de Postman que recorre la API con {{< meta cifras.datos_prueba.lecturas >}} lecturas reales
+de prueba, y las salidas y capturas de corridas reales. Los límites van a la vista: en el laboratorio
+se midió la barrera del clúster, no todavía el K-Means distribuido completo; el clúster no reanuda
+una corrida desde su punto de control ni reasigna el rango de un nodo caído; y la interfaz web y la
+anticipación de los episodios son del entregable final. Como experimento aparte, fuera del sistema y
+con datos sintéticos, un coordinador en Go sincronizó el entrenamiento de una red convolucional en
+{{< meta cifras.mapa.nodos >}} GPU del laboratorio.
+
+*Palabras clave:* calidad del aire, PM2,5, PM10, K-Means distribuido, Go, sockets TCP, barrera,
+API REST, JWT, WebSocket, MongoDB, Redis, Docker Compose, OEFA, ECA.

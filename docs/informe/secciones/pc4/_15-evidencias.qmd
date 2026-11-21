@@ -1,0 +1,292 @@
+<!-- f.9) PC4 · Evidencias de la implementación y pruebas de funcionamiento: datos de prueba y pantallazos. -->
+
+## Evidencias de la implementación y pruebas de funcionamiento {#sec-evidencias-pc4}
+
+Las evidencias de este entregable son de tres clases: las pruebas automáticas, que corren en cada
+cambio; una corrida completa del sistema desplegado, con sus salidas tal como quedaron; y las
+capturas de pantalla de esa misma secuencia. Los listados marcados como «salida real» se copian en
+cada render de los archivos de `docs/informe/capturas/pc4/`, que guardan la salida en texto de la
+corrida; las capturas se toman a mano siguiendo el guion de esa carpeta (`GUION.md`), con el comando
+o el pedido a la vista.
+
+### Despliegue con Docker Compose {#sec-despliegue}
+
+Todo el sistema se levanta con una orden, `docker compose up --build --scale nodo=K`
+(@fig-despliegue). Son cinco servicios: la API, que es también el coordinador; los nodos, que se
+escalan sin tocar la configuración porque no publican ningún puerto y solo llaman al coordinador;
+MongoDB; Redis; y el seed, que corre una vez por arranque. La API y los nodos son la misma imagen,
+sin shell, con otro comando; por eso la comprobación de salud de la API es la propia API
+(`api -salud`), que consulta su ruta de salud y termina con 0 o 1.
+
+![Despliegue con Docker Compose: servicios, puertos, volúmenes y orden de arranque](../diagramas/despliegue.png){#fig-despliegue width=16cm}
+
+:::: {si-falta="../diagramas/despliegue.png"}
+::: {.callout-warning title="PENDIENTE"}
+Falta `docs/diagramas/despliegue.png` (se exporta con draw.io desde `despliegue.drawio`).
+:::
+::::
+
+El orden de arranque está declarado: la API espera a que MongoDB y Redis estén sanos y a que el seed
+termine bien, y los nodos esperan a que la API esté sana. El gold no se versiona ni va en la imagen:
+se monta de solo lectura en la API y en los nodos, y el protocolo comprueba con la huella que todos
+tengan el mismo archivo. Los secretos (la clave del JWT y los usuarios) llegan por un archivo `.env`
+que tampoco se versiona; sin ellos la API no arranca y dice cuál falta. El @lst-salida-compose es el
+sistema recién levantado con tres nodos.
+
+{{< include generado/tablas/salida_compose.md >}}
+
+![`docker compose ps -a` con el sistema levantado: la API, MongoDB y Redis sanos, tres nodos y el seed terminado](capturas/pc4/compose-ps.png){#fig-compose-ps width=16cm}
+
+:::: {si-falta="capturas/pc4/compose-ps.png"}
+::: {.callout-warning title="PENDIENTE"}
+Captura real de pantalla: `docker compose ps -a`: `api`, `mongo` y `redis` en `healthy`, tres `nodo` arriba y `seed` en `Exited (0)`. Va en `docs/informe/capturas/pc4/compose-ps.png` (guion: `docs/informe/capturas/pc4/GUION.md`).
+:::
+::::
+
+### Pruebas automáticas
+
+Los paquetes de este entregable se escribieron con sus pruebas, y todas corren con el detector de
+carreras (`go test -race`), en la laptop y en la integración continua de GitHub en cada cambio. La
+@tbl-pruebas-pc4 las cuenta por paquete; con las de la PC3 (@tbl-pruebas), el repositorio tiene
+{{< meta cifras.pruebas.repo >}}.
+
+{{< include generado/tablas/pruebas_pc4.md >}}
+
+No son pruebas de cada función por separado solamente. Las del clúster levantan nodos reales que
+hablan por TCP en la misma máquina; las del coordinador de la API corren un entrenamiento completo
+con uno y con tres nodos, con un cliente de WebSocket escuchando, y comprueban que con el gold real
+y un nodo el modelo sea el de la PC3 bit a bit. Las {{< meta cifras.pruebas.pc4_integracion >}} de
+integración escriben en un MongoDB y un Redis reales. Y hay una, `TestPrediccionEnMenosDe100ms`, que
+fija el requisito de latencia del enunciado dentro del propio conjunto de pruebas.
+
+### Datos de prueba {#sec-datos-prueba}
+
+Los datos de prueba son lecturas reales, no inventadas (@tbl-datos-prueba). Hay dos clases: lecturas
+sueltas de distintas estaciones, elegidas para cubrir los tres regímenes, y dos series de 24 horas
+seguidas de una misma estación, una que termina con la media sobre el ECA y otra que no. Las series
+son lo que prueba la alerta: con una lectura suelta no hay ventana que promediar.
+
+{{< include generado/tablas/datos_prueba.md >}}
+
+Cada fila trae lo que la API tiene que responder: el régimen, cuántas lecturas hay en la ventana, la
+media de 24 horas, la alerta y la banda INCA. Lo esperado **no se le preguntó a la API**: lo calcula
+un script aparte (`docs/postman/generar_lecturas.py`) desde los datos de la PC3 y con la regla del
+contrato. Si la API y ese cálculo independiente no coinciden, la prueba falla. Son los mismos datos
+que usa la prueba de carga de la @sec-latencia.
+
+### Pruebas con Postman {#sec-postman}
+
+La colección de Postman (`docs/postman/`) recorre la API real contra el contrato. Cada pedido
+comprueba el código HTTP del caso, la forma de la respuesta (el esquema del contrato, sin campos de
+más ni de menos), que el tiempo HTTP completo sea menor de 100 ms y lo propio del caso: el mensaje
+del error, el rol del token, que la media, la alerta y el INCA sean coherentes entre sí. Está
+organizada en cuatro carpetas: la base de la API con sus rechazos, un entrenamiento de punta a
+punta, un conflicto provocado (un segundo entrenamiento mientras corre el primero) y los datos de
+prueba, una fila por iteración. La misma colección corre sin interfaz con `newman`: el
+@lst-salida-newman y el @lst-salida-newman-csv son los resúmenes de esa corrida.
+
+{{< include generado/tablas/salida_newman.md >}}
+
+{{< include generado/tablas/salida_newman_csv.md >}}
+
+El WebSocket no está en la colección, porque el formato de Postman no guarda ese tipo de pedido: se
+prueba con `go test` (@tbl-pruebas-pc4). Las capturas que siguen son una por ruta, con el tiempo de
+respuesta y el resultado de las pruebas a la vista; la de la predicción está en la @sec-latencia.
+
+![`GET /api/salud`: la API, las dos bases y los nodos del pool](capturas/pc4/postman-salud.png){#fig-postman-salud width=16cm}
+
+:::: {si-falta="capturas/pc4/postman-salud.png"}
+::: {.callout-warning title="PENDIENTE"}
+Captura real de pantalla: Postman, «Salud pública»: 200, `mongo` y `redis` en `ok`, `nodos_en_pool: 3`. Va en `docs/informe/capturas/pc4/postman-salud.png` (guion: `docs/informe/capturas/pc4/GUION.md`).
+:::
+::::
+
+![`POST /api/auth/token`: el rol y el vencimiento del token](capturas/pc4/postman-token.png){#fig-postman-token width=16cm}
+
+:::: {si-falta="capturas/pc4/postman-token.png"}
+::: {.callout-warning title="PENDIENTE"}
+Captura real de pantalla: Postman, «Token usuario»: 200, `rol` y `expira` (con el token tapado). Va en `docs/informe/capturas/pc4/postman-token.png` (guion: `docs/informe/capturas/pc4/GUION.md`).
+:::
+::::
+
+![Una lectura inválida: 400 con el mensaje que dice qué campo está mal](capturas/pc4/postman-prediccion-400.png){#fig-postman-400 width=16cm}
+
+:::: {si-falta="capturas/pc4/postman-prediccion-400.png"}
+::: {.callout-warning title="PENDIENTE"}
+Captura real de pantalla: Postman, «Fecha futura» (o PM2.5 mayor de 10 000): 400 y el mensaje del error. Va en `docs/informe/capturas/pc4/postman-prediccion-400.png` (guion: `docs/informe/capturas/pc4/GUION.md`).
+:::
+::::
+
+![Una predicción sin token: 401](capturas/pc4/postman-prediccion-401.png){#fig-postman-401 width=16cm}
+
+:::: {si-falta="capturas/pc4/postman-prediccion-401.png"}
+::: {.callout-warning title="PENDIENTE"}
+Captura real de pantalla: Postman, «Predicción sin token»: 401. Va en `docs/informe/capturas/pc4/postman-prediccion-401.png` (guion: `docs/informe/capturas/pc4/GUION.md`).
+:::
+::::
+
+![Una ruta de administrador con un token de usuario: 403](capturas/pc4/postman-403.png){#fig-postman-403 width=16cm}
+
+:::: {si-falta="capturas/pc4/postman-403.png"}
+::: {.callout-warning title="PENDIENTE"}
+Captura real de pantalla: Postman, «Métricas denegado a usuario»: 403, «se requiere el rol admin». Va en `docs/informe/capturas/pc4/postman-403.png` (guion: `docs/informe/capturas/pc4/GUION.md`).
+:::
+::::
+
+![`GET /api/estaciones`: el catálogo, desde MongoDB](capturas/pc4/postman-estaciones.png){#fig-postman-estaciones width=16cm}
+
+:::: {si-falta="capturas/pc4/postman-estaciones.png"}
+::: {.callout-warning title="PENDIENTE"}
+Captura real de pantalla: Postman, «Listar estaciones»: 200 y el catálogo. Va en `docs/informe/capturas/pc4/postman-estaciones.png` (guion: `docs/informe/capturas/pc4/GUION.md`).
+:::
+::::
+
+![`GET /api/estaciones/{id}/regimen`: el último estado de una estación, desde Redis](capturas/pc4/postman-regimen-estacion.png){#fig-postman-regimen width=16cm}
+
+:::: {si-falta="capturas/pc4/postman-regimen-estacion.png"}
+::: {.callout-warning title="PENDIENTE"}
+Captura real de pantalla: Postman, «Régimen de estación»: 200 con `fecha_hora`, `alerta`, `inca` y `ts`. Va en `docs/informe/capturas/pc4/postman-regimen-estacion.png` (guion: `docs/informe/capturas/pc4/GUION.md`).
+:::
+::::
+
+![`GET /api/modelos/activo`: el modelo activo con sus tres regímenes](capturas/pc4/postman-modelo.png){#fig-postman-modelo width=16cm}
+
+:::: {si-falta="capturas/pc4/postman-modelo.png"}
+::: {.callout-warning title="PENDIENTE"}
+Captura real de pantalla: Postman, «Modelo activo»: 200 con los tres regímenes. Va en `docs/informe/capturas/pc4/postman-modelo.png` (guion: `docs/informe/capturas/pc4/GUION.md`).
+:::
+::::
+
+![`GET /api/metricas`: percentiles por ruta, el último entrenamiento y el estado de la escritura](capturas/pc4/postman-metricas.png){#fig-postman-metricas width=16cm}
+
+:::: {si-falta="capturas/pc4/postman-metricas.png"}
+::: {.callout-warning title="PENDIENTE"}
+Captura real de pantalla: Postman, «Métricas admin»: `endpoints` con p50, p95 y p99, `ultimo_entrenamiento` y `escritura`. Va en `docs/informe/capturas/pc4/postman-metricas.png` (guion: `docs/informe/capturas/pc4/GUION.md`).
+:::
+::::
+
+![El Runner de Postman con las carpetas 1 a 3: todas las pruebas pasadas](capturas/pc4/postman-runner-coleccion.png){#fig-postman-runner width=16cm}
+
+:::: {si-falta="capturas/pc4/postman-runner-coleccion.png"}
+::: {.callout-warning title="PENDIENTE"}
+Captura real de pantalla: Runner, carpetas 1 a 3: el resumen con todas las pruebas pasadas y 0 fallidas. Va en `docs/informe/capturas/pc4/postman-runner-coleccion.png` (guion: `docs/informe/capturas/pc4/GUION.md`).
+:::
+::::
+
+![El Runner con los datos de prueba: una iteración por lectura](capturas/pc4/postman-runner-csv.png){#fig-postman-runner-csv width=16cm}
+
+:::: {si-falta="capturas/pc4/postman-runner-csv.png"}
+::: {.callout-warning title="PENDIENTE"}
+Captura real de pantalla: Runner, carpeta 4 con `lecturas_prueba.csv`: 78 iteraciones, 0 fallidas. Va en `docs/informe/capturas/pc4/postman-runner-csv.png` (guion: `docs/informe/capturas/pc4/GUION.md`).
+:::
+::::
+
+![La última lectura de la serie con alerta: 24 lecturas en la ventana, la media sobre el ECA y la alerta encendida](capturas/pc4/postman-alerta.png){#fig-postman-alerta width=16cm}
+
+:::: {si-falta="capturas/pc4/postman-alerta.png"}
+::: {.callout-warning title="PENDIENTE"}
+Captura real de pantalla: Runner, iteración 54 (última de `serie_alerta`): `media_24h` con 24 lecturas, `alerta: true`, `inca: "mala"`. Va en `docs/informe/capturas/pc4/postman-alerta.png` (guion: `docs/informe/capturas/pc4/GUION.md`).
+:::
+::::
+
+### Un entrenamiento distribuido por la API {#sec-evidencia-entrenamiento}
+
+Con el sistema levantado con tres nodos, un administrador ve los nodos del pool (@lst-salida-nodos),
+lanza un entrenamiento y consulta su resultado (@lst-salida-entrenamiento). El pedido responde 202
+enseguida; el detalle, ya terminado, trae las iteraciones, la diferencia con el K-Means secuencial,
+el modelo que quedó activo y, por ronda, la inercia y lo que tardó cada nodo.
+
+{{< include generado/tablas/salida_nodos.md >}}
+
+{{< include generado/tablas/salida_entrenamiento.md >}}
+
+![`GET /api/cluster/nodos`: los tres nodos del pool, con sus workers y su latencia](capturas/pc4/nodos.png){#fig-captura-nodos width=16cm}
+
+:::: {si-falta="capturas/pc4/nodos.png"}
+::: {.callout-warning title="PENDIENTE"}
+Captura real de pantalla: Postman, «Nodos admin»: los tres nodos con `workers`, `latencia_ms` y `libre: true`, y el tiempo en ms. Va en `docs/informe/capturas/pc4/nodos.png` (guion: `docs/informe/capturas/pc4/GUION.md`).
+:::
+::::
+
+![`POST /api/entrenamientos`: 202 con el identificador, sin esperar a la corrida](capturas/pc4/postman-entrenamiento-202.png){#fig-postman-202 width=16cm}
+
+:::: {si-falta="capturas/pc4/postman-entrenamiento-202.png"}
+::: {.callout-warning title="PENDIENTE"}
+Captura real de pantalla: Postman, «Aceptar entrenamiento»: 202 con el `id` y `en_curso`. Va en `docs/informe/capturas/pc4/postman-entrenamiento-202.png` (guion: `docs/informe/capturas/pc4/GUION.md`).
+:::
+::::
+
+![El entrenamiento terminado: iteraciones, diferencia con el secuencial, modelo activado y rondas con el tiempo de cada nodo](capturas/pc4/postman-entrenamiento-rondas.png){#fig-postman-rondas width=16cm}
+
+:::: {si-falta="capturas/pc4/postman-entrenamiento-rondas.png"}
+::: {.callout-warning title="PENDIENTE"}
+Captura real de pantalla: Postman, «Consultar hasta terminar»: `terminado`, `iteraciones`, `dif_secuencial`, `modelo_id` y las `rondas` con `ms_por_nodo`. Va en `docs/informe/capturas/pc4/postman-entrenamiento-rondas.png` (guion: `docs/informe/capturas/pc4/GUION.md`).
+:::
+::::
+
+![Un segundo entrenamiento mientras corre el primero: 409 con el identificador del que está en curso](capturas/pc4/postman-entrenamiento-409.png){#fig-postman-409 width=16cm}
+
+:::: {si-falta="capturas/pc4/postman-entrenamiento-409.png"}
+::: {.callout-warning title="PENDIENTE"}
+Captura real de pantalla: Postman, «Rechazar entrenamiento simultáneo»: 409 con el id en curso. Va en `docs/informe/capturas/pc4/postman-entrenamiento-409.png` (guion: `docs/informe/capturas/pc4/GUION.md`).
+:::
+::::
+
+![Un entrenamiento que pide más nodos de los que hay libres: 422](capturas/pc4/postman-entrenamiento-422.png){#fig-postman-422 width=16cm}
+
+:::: {si-falta="capturas/pc4/postman-entrenamiento-422.png"}
+::: {.callout-warning title="PENDIENTE"}
+Captura real de pantalla: Postman, «Nodos insuficientes»: 422. Va en `docs/informe/capturas/pc4/postman-entrenamiento-422.png` (guion: `docs/informe/capturas/pc4/GUION.md`).
+:::
+::::
+
+![`GET /api/entrenamientos`: el historial, del más reciente al más antiguo](capturas/pc4/postman-historial.png){#fig-postman-historial width=16cm}
+
+:::: {si-falta="capturas/pc4/postman-historial.png"}
+::: {.callout-warning title="PENDIENTE"}
+Captura real de pantalla: Postman, «Historial con el entrenamiento»: la lista, del más reciente al más antiguo. Va en `docs/informe/capturas/pc4/postman-historial.png` (guion: `docs/informe/capturas/pc4/GUION.md`).
+:::
+::::
+
+![El mismo entrenamiento desde la terminal, con `curl`](capturas/pc4/entrenamiento.png){#fig-captura-entrenamiento width=16cm}
+
+:::: {si-falta="capturas/pc4/entrenamiento.png"}
+::: {.callout-warning title="PENDIENTE"}
+Captura real de pantalla: El `POST /api/entrenamientos` y el `GET` del detalle con `curl`: 202 con el id; después `terminado`, 44 iteraciones y las primeras rondas. Va en `docs/informe/capturas/pc4/entrenamiento.png` (guion: `docs/informe/capturas/pc4/GUION.md`).
+:::
+::::
+
+### Latencia bajo carga {#sec-evidencia-carga}
+
+El @lst-salida-carga es la salida de la prueba de carga de la que sale la @tbl-api-latencia, y el
+@lst-salida-metricas, lo que el propio servidor midió por ruta durante esa corrida.
+
+{{< include generado/tablas/salida_carga.md >}}
+
+{{< include generado/tablas/salida_metricas.md >}}
+
+![La prueba de carga en la terminal: percentiles y pedidos por segundo en los cuatro niveles de concurrencia](capturas/pc4/carga.png){#fig-captura-carga width=16cm}
+
+:::: {si-falta="capturas/pc4/carga.png"}
+::: {.callout-warning title="PENDIENTE"}
+Captura real de pantalla: `CARGA_CLAVE=… go run ./cmd/carga -pedidos 20000` (con la clave tapada): la tabla con p50, p95, p99, máximo y pedidos por segundo de los cuatro niveles, y 0 errores. Va en `docs/informe/capturas/pc4/carga.png` (guion: `docs/informe/capturas/pc4/GUION.md`).
+:::
+::::
+
+![`GET /api/metricas` después de la carga: los percentiles de la predicción y ninguna escritura descartada](capturas/pc4/metricas.png){#fig-captura-metricas width=16cm}
+
+:::: {si-falta="capturas/pc4/metricas.png"}
+::: {.callout-warning title="PENDIENTE"}
+Captura real de pantalla: `GET /api/metricas`: `POST /api/predicciones` con sus percentiles y `escrituras_descartadas: 0`. Va en `docs/informe/capturas/pc4/metricas.png` (guion: `docs/informe/capturas/pc4/GUION.md`).
+:::
+::::
+
+### Gestión del proyecto en este entregable
+
+El trabajo siguió el mismo Git Flow de la PC3: cada pieza en su rama `feature/*`, una solicitud de
+cambios hacia `develop` con su revisión y con la integración continua en verde, y la entrega por una
+rama `release/pc4` hacia `main`, con el tag `pc4`. Las piezas se escribieron en paralelo contra un
+contrato acordado antes (la especificación de diseño de la PC4 y el documento OpenAPI), que es lo
+que permitió que la API, el almacén, el coordinador, las pruebas de Postman y este informe avanzaran
+a la vez. Las tareas están en el tablero Kanban (Anexo B) y el historial de cambios por integrante y
+de solicitudes fusionadas, en el Anexo C.

@@ -1,6 +1,4 @@
-<!-- g) Conclusiones. -->
-
-# Conclusiones
+<!-- g) Conclusiones.  El título «# Conclusiones» lo pone el esqueleto (informe.qmd o informe-pc4.qmd). -->
 
 1. **La carga concurrente cumple el millón de registros y no pierde ni una fila sin contarla.** De
    {{< meta cifras.limpieza.filas_largas_leidas >}} filas leídas,

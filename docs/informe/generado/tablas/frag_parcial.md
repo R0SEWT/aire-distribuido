@@ -26,5 +26,5 @@ Conteos    []int     `json:"conteos,omitempty"`    // k
 Inercia    float64   `json:"inercia,omitempty"`
 ```
 
-Los tipos de mensaje del protocolo y los campos de ITERAR y PARCIAL (`protocolo/mensaje.go`, líneas 17–29 y 60–67)
+Los tipos de mensaje del protocolo y los campos de ITERAR y PARCIAL (`protocolo/mensaje.go`, líneas 17–29 y 63–70)
 :::
