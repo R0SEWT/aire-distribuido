@@ -51,7 +51,7 @@ fi
 # macOS todavía incluye Bash 3.2, que no tiene mapfile; el bucle funciona tanto
 # allí como en versiones nuevas de Bash.
 equipo=()
-while IFS= read -r codigo_equipo; do
+while IFS= read -r codigo_equipo || [[ -n "$codigo_equipo" ]]; do
   equipo+=("$codigo_equipo")
 done < <(sed -n 's/^[[:space:]]\{1,\}codigo:[[:space:]]*\(U[0-9]\{9\}\)[[:space:]]*\(#.*\)\{0,1\}$/\1/p' generado/local/equipo.yml)
 [ "${#equipo[@]}" -gt 0 ] || { echo "error: no hay códigos en generado/local/equipo.yml" >&2; exit 1; }
