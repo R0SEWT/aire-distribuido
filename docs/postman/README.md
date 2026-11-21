@@ -124,6 +124,24 @@ La salida de una corrida real está en `docs/informe/capturas/pc4/`.
 
 ## Procedencia
 
+### Verificación de Julio del 20 de noviembre de 2026
+
+Se regeneró el CSV con `generar_lecturas.py`, a partir del silver y de las asignaciones
+del entrenamiento real de semilla 42. Coincide con el archivo versionado (normalizando
+solo los saltos de línea a LF): SHA-256
+`67e78001d098d10f5932fc3af04384f7bffecb21a1922d4af06f53c6dfc5e85c`.
+No se cambiaron las lecturas ni se calcularon las respuestas esperadas consultando la API.
+
+El Runner se ejecutó contra la API real de Rody (`72efc400`), con MongoDB, Redis y tres
+nodos en Docker, en `http://127.0.0.1:18082`. Pasaron las 78 iteraciones, 82 peticiones
+y 714 aserciones, sin fallos. El resumen y los hashes de gold y silver están en
+`evidencias/j3-runner-real.json`. La ejecución adicional por CLI está en
+`../informe/capturas/pc4/newman-runner-csv.txt`; su máximo HTTP fue 18 ms, frente a
+7 ms en la primera ejecución. Son corridas distintas, ambas con límite de 100 ms.
+
+Esto valida J3 en el entorno local con la API real. No acredita experimentos en los
+equipos físicos del laboratorio ni reemplaza la captura del Runner en Postman.
+
 La colección parte de la que Julio Meza hizo para J2 contra un simulador (`feature/postman-pc4`).
 De ahí se conservan las carpetas, el recorrido de los casos y el sondeo del entrenamiento; se
 quitaron el simulador y su modo, y se puso al día con el contrato actual.
