@@ -1,8 +1,8 @@
 import { useQueryClient } from '@tanstack/react-query'
-import { useEffect, useState, useSyncExternalStore, type ReactNode } from 'react'
+import { useContext, useEffect, useState, useSyncExternalStore, type ReactNode } from 'react'
 import { useSesion } from '../sesion/useSesion'
-import { aplicarEstadoEstacion, refrescarEnVivo } from './enVivo'
-import { ContextoTiempoReal, EnlaceTiempoReal, useEstadoWS, useEvento } from './tiempoReal'
+import { alConectarEnVivo, aplicarEstadoEstacion } from './enVivo'
+import { ContextoTiempoReal, EnlaceTiempoReal, useEvento } from './tiempoReal'
 import type { OpcionesWS } from './ws'
 
 /**
@@ -32,18 +32,26 @@ export function TiempoRealProveedor({ children, opciones }: { children: ReactNod
 /**
  * El camino del WebSocket a la caché (api/enVivo.ts): cada `estacion.regimen`
  * actualiza la lista y la entrada de su estación, y cada vez que la conexión
- * queda «conectada» (la primera vez y después de un corte) se vuelven a pedir
- * las consultas marcadas EN_VIVO, que pueden haberse perdido eventos.
+ * queda abierta (la primera vez y después de un corte) se olvida de qué
+ * estaciones había eventos y se vuelven a pedir las consultas EN_VIVO.
  */
 function CacheEnVivo() {
   const consultas = useQueryClient()
-  const estado = useEstadoWS()
+  const { conexion } = useContext(ContextoTiempoReal)
 
   useEvento('estacion.regimen', (evento) => aplicarEstadoEstacion(consultas, evento))
 
   useEffect(() => {
-    if (estado === 'conectada') void refrescarEnVivo(consultas)
-  }, [estado, consultas])
+    if (!conexion) return
+    // Escuchando a la conexión misma, no al estado que ve React: el aviso llega
+    // en el instante en que se abre, antes que cualquier evento. Si la memoria
+    // se vaciara un render después, se llevaría un evento recién llegado.
+    const alConectar = () => void alConectarEnVivo(consultas)
+    if (conexion.estado === 'conectada') alConectar()
+    return conexion.alCambiar((estado) => {
+      if (estado === 'conectada') alConectar()
+    })
+  }, [conexion, consultas])
 
   return null
 }

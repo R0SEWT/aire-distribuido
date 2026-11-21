@@ -15,15 +15,23 @@
 //     queryFn: () => pedirRegimenes(consultas, () => pedir(api.GET('/api/regimenes'))),
 //   })
 //
-// Con eso quedan cubiertos los tres huecos entre un GET y el WebSocket:
+// LA REGLA DE FUSIÓN entre un GET y los eventos. El GET y el WebSocket viajan
+// por conexiones distintas, así que la respuesta de un GET puede llegar DESPUÉS
+// de un evento más nuevo de la misma estación. Por eso:
 //
-//   1. Lo que cambió mientras el WebSocket estaba caído: al volver a
-//      «conectada» se vuelven a pedir todas las consultas marcadas EN_VIVO.
-//   2. El orden al entrar: no hace falta abrir el WebSocket antes del GET.
-//      La primera conexión también refresca lo marcado EN_VIVO.
-//   3. Un evento que llega mientras un GET viaja: la respuesta del GET es de
-//      antes del evento y lo pisaría. pedirRegimenes y pedirRegimen guardan los
-//      eventos que llegan durante el pedido y los superponen a la respuesta.
+//   De una estación de la que ya llegó un evento desde que se abrió (o se
+//   reabrió) el WebSocket, la entrada del GET se ignora: vale el evento.
+//
+// Si el GET traía algo más nuevo que ese evento, su propio evento viene detrás
+// por el WebSocket, que entrega en orden. No se compara por `ts` (va al
+// segundo) ni por `fecha_hora` (una corrección de la misma hora la conserva):
+// entre dos eventos manda el que llegó último, y entre un evento y un GET, el
+// evento.
+//
+// Al abrirse o reabrirse el WebSocket, esa memoria se vacía y se vuelven a
+// pedir las consultas EN_VIVO: mientras estuvo caído se perdieron eventos, y
+// lo que se sabía por eventos ya no es de fiar. Con eso tampoco importa el
+// orden al entrar: no hace falta abrir el WebSocket antes del primer GET.
 
 import type { QueryClient } from '@tanstack/react-query'
 import { claves } from './cliente'
@@ -47,104 +55,87 @@ export const EN_VIVO = { enVivo: true } as const
 export type EstadoEstacion = EventosWS['estacion.regimen']
 type RegimenEstacion = components['schemas']['RegimenEstacion']
 
-/** Vuelve a pedir todas las consultas marcadas EN_VIVO. El armazón lo llama al (re)conectar. */
-export function refrescarEnVivo(consultas: QueryClient): Promise<void> {
-  return consultas.invalidateQueries({ predicate: (c) => c.meta?.enVivo === true })
+// Por caché: el último evento de cada estación desde que se abrió el WebSocket.
+const conEvento = new WeakMap<QueryClient, Map<string, EstadoEstacion>>()
+
+function eventosDe(consultas: QueryClient): Map<string, EstadoEstacion> {
+  let eventos = conEvento.get(consultas)
+  if (!eventos) {
+    eventos = new Map()
+    conEvento.set(consultas, eventos)
+  }
+  return eventos
 }
+
+const porCodigo = (a: EstadoEstacion, b: EstadoEstacion) => a.estacion.localeCompare(b.estacion)
 
 /**
- * Si `nuevo` es tan reciente o más que `previo`: por la hora de la lectura y,
- * a igual hora (se repitió la lectura), por cuándo se calculó. Es la regla de
- * la API: el último estado de una estación no retrocede.
+ * La respuesta de GET /api/regimenes con la regla de fusión aplicada: las
+ * estaciones con evento desde la última conexión conservan su evento (y entran
+ * si el GET no las traía); las demás son las del GET. Ordenada por código,
+ * como la manda la API. No modifica lo que recibe.
  */
-export function esMasReciente(nuevo: RegimenEstacion, previo: RegimenEstacion): boolean {
-  const hora = Date.parse(nuevo.fecha_hora) - Date.parse(previo.fecha_hora)
-  if (hora !== 0) return hora > 0
-  return Date.parse(nuevo.ts) >= Date.parse(previo.ts)
-}
-
-/**
- * La lista con `estados` encima: de cada estación queda su estado más
- * reciente, y una estación que no estaba entra. Ordenada por código, como la
- * manda la API. No modifica la lista que recibe.
- */
-export function superponer(lista: readonly EstadoEstacion[], estados: Iterable<EstadoEstacion>): EstadoEstacion[] {
-  const porEstacion = new Map(lista.map((e) => [e.estacion, e]))
-  for (const estado of estados) {
-    const previo = porEstacion.get(estado.estacion)
-    if (!previo || esMasReciente(estado, previo)) porEstacion.set(estado.estacion, estado)
-  }
-  return [...porEstacion.values()].sort((a, b) => a.estacion.localeCompare(b.estacion))
-}
-
-// Los eventos que llegaron mientras un GET viajaba, por caché y por pedido.
-const enViaje = new WeakMap<QueryClient, Set<Map<string, EstadoEstacion>>>()
-
-function anotar(consultas: QueryClient): { eventos: Map<string, EstadoEstacion>; dejar: () => void } {
-  let pedidos = enViaje.get(consultas)
-  if (!pedidos) {
-    pedidos = new Set()
-    enViaje.set(consultas, pedidos)
-  }
-  const eventos = new Map<string, EstadoEstacion>()
-  pedidos.add(eventos)
-  return { eventos, dejar: () => pedidos.delete(eventos) }
+export function fusionar(delGet: readonly EstadoEstacion[], eventos: ReadonlyMap<string, EstadoEstacion>): EstadoEstacion[] {
+  return [...delGet.filter((e) => !eventos.has(e.estacion)), ...eventos.values()].sort(porCodigo)
 }
 
 /**
  * Lleva un evento `estacion.regimen` a la caché: actualiza la lista (si ya se
- * pidió) y la entrada de la estación. Un estado más viejo que el guardado no
- * lo reemplaza. Lo llama el armazón; una pantalla solo lee la caché.
+ * pidió) y la entrada de la estación, y recuerda que esa estación ya tiene un
+ * evento en esta conexión. Lo llama el armazón; una pantalla solo lee la caché.
  */
 export function aplicarEstadoEstacion(consultas: QueryClient, estado: EstadoEstacion) {
-  for (const eventos of enViaje.get(consultas) ?? []) {
-    const previo = eventos.get(estado.estacion)
-    if (!previo || esMasReciente(estado, previo)) eventos.set(estado.estacion, estado)
-  }
+  eventosDe(consultas).set(estado.estacion, estado)
   // Sin lista pedida no se inventa una con una sola estación: se deja sin datos.
-  consultas.setQueryData<EstadoEstacion[]>(claves.regimenes, (lista) => lista && superponer(lista, [estado]))
-  consultas.setQueryData<RegimenEstacion>(claves.regimen(estado.estacion), (previo) =>
-    previo && !esMasReciente(estado, previo) ? previo : estado,
+  consultas.setQueryData<EstadoEstacion[]>(
+    claves.regimenes,
+    (lista) => lista && [...lista.filter((e) => e.estacion !== estado.estacion), estado].sort(porCodigo),
   )
+  consultas.setQueryData<RegimenEstacion>(claves.regimen(estado.estacion), estado)
 }
 
 /**
- * Pide la lista de estados (GET /api/regimenes) para una consulta EN_VIVO: a
- * la respuesta le superpone los eventos que llegaron mientras el pedido viajaba.
+ * El WebSocket se abrió o se reabrió: se olvida de qué estaciones había
+ * eventos (se pudieron perder otros más nuevos mientras estuvo caído) y se
+ * vuelven a pedir todas las consultas marcadas EN_VIVO. El armazón lo llama en
+ * el mismo instante en que la conexión queda abierta, antes de que pueda
+ * llegar ningún evento por ella.
+ */
+export function alConectarEnVivo(consultas: QueryClient): Promise<void> {
+  eventosDe(consultas).clear()
+  return consultas.invalidateQueries({ predicate: (c) => c.meta?.enVivo === true })
+}
+
+/**
+ * Pide la lista de estados (GET /api/regimenes) para una consulta EN_VIVO y le
+ * aplica la regla de fusión con los eventos que hayan llegado hasta el momento
+ * de la respuesta, también los que llegaron mientras el pedido viajaba.
  */
 export async function pedirRegimenes(
   consultas: QueryClient,
   pedirLista: () => Promise<EstadoEstacion[]>,
 ): Promise<EstadoEstacion[]> {
-  const { eventos, dejar } = anotar(consultas)
-  try {
-    return superponer(await pedirLista(), eventos.values())
-  } finally {
-    dejar()
-  }
+  return fusionar(await pedirLista(), eventosDe(consultas))
 }
 
 /**
  * Pide el estado de una estación (GET /api/estaciones/{id}/regimen) para una
- * consulta EN_VIVO. Si mientras tanto llegó un evento de esa estación más
- * reciente que la respuesta, gana el evento; también si la API respondió 404
- * porque la estación todavía no tenía estado.
+ * consulta EN_VIVO, con la misma regla: si de esa estación ya llegó un evento
+ * en esta conexión, vale el evento, también si la API respondió 404 porque al
+ * atender el pedido la estación todavía no tenía estado.
  */
 export async function pedirRegimen(
   consultas: QueryClient,
   estacion: string,
   pedirUno: () => Promise<RegimenEstacion>,
 ): Promise<RegimenEstacion> {
-  const { eventos, dejar } = anotar(consultas)
+  const eventos = eventosDe(consultas)
   try {
     const respuesta = await pedirUno()
-    const evento = eventos.get(estacion)
-    return evento && esMasReciente(evento, respuesta) ? evento : respuesta
+    return eventos.get(estacion) ?? respuesta
   } catch (error) {
     const evento = eventos.get(estacion)
     if (evento && error instanceof ErrorApi && error.tipo === 'no_encontrado') return evento
     throw error
-  } finally {
-    dejar()
   }
 }

@@ -2,19 +2,18 @@ import { QueryClient } from '@tanstack/react-query'
 import { describe, expect, it } from 'vitest'
 import { claves } from './cliente'
 import {
+  alConectarEnVivo,
   aplicarEstadoEstacion,
   EN_VIVO,
-  esMasReciente,
+  fusionar,
   pedirRegimen,
   pedirRegimenes,
-  refrescarEnVivo,
-  superponer,
   type EstadoEstacion,
 } from './enVivo'
 import { errorDeRespuesta } from './errores'
 
-/** Un estado de la estación a una hora del 13/12/2021, calculado `ts` segundos después. */
-function estado(estacion: string, hora: number, extra: Partial<EstadoEstacion> = {}, ts = 2): EstadoEstacion {
+/** Un estado de la estación a una hora del 13/12/2021. */
+function estado(estacion: string, hora: number, extra: Partial<EstadoEstacion> = {}): EstadoEstacion {
   const hh = String(hora).padStart(2, '0')
   return {
     estacion,
@@ -24,12 +23,12 @@ function estado(estacion: string, hora: number, extra: Partial<EstadoEstacion> =
     media_24h: { pm2_5: 10, pm10: 20, lecturas: 24 },
     alerta: false,
     inca: 'buena',
-    ts: `2021-12-13T${hh}:00:${String(ts).padStart(2, '0')}-05:00`,
+    ts: `2021-12-13T${hh}:00:02-05:00`,
     ...extra,
   }
 }
 
-/** Una promesa que se resuelve a mano, para hacer llegar un evento mientras un GET viaja. */
+/** Una promesa que se resuelve a mano, para entrelazar un evento con un GET que viaja. */
 function pendiente<T>() {
   let resolver!: (valor: T) => void
   let rechazar!: (error: unknown) => void
@@ -42,46 +41,39 @@ function pendiente<T>() {
 
 const nuevaCache = () => new QueryClient({ defaultOptions: { queries: { retry: false } } })
 
-describe('esMasReciente', () => {
-  it('gana la hora de lectura más tardía', () => {
-    expect(esMasReciente(estado('A', 15), estado('A', 14))).toBe(true)
-    expect(esMasReciente(estado('A', 14), estado('A', 15))).toBe(false)
+/** La lista como la pide una pantalla: marcada en vivo y con el ayudante. */
+function pedirLista(consultas: QueryClient, get: () => Promise<EstadoEstacion[]>) {
+  return consultas.fetchQuery({
+    queryKey: claves.regimenes,
+    meta: EN_VIVO,
+    queryFn: () => pedirRegimenes(consultas, get),
+  })
+}
+
+describe('fusionar', () => {
+  it('sin eventos, la lista es la del GET, ordenada por código', () => {
+    expect(fusionar([estado('CA-B', 14), estado('CA-A', 14)], new Map()).map((e) => e.estacion)).toEqual(['CA-A', 'CA-B'])
   })
 
-  it('a igual hora de lectura, gana el que se calculó después (la lectura se repitió)', () => {
-    expect(esMasReciente(estado('A', 15, {}, 9), estado('A', 15, {}, 2))).toBe(true)
-    expect(esMasReciente(estado('A', 15, {}, 2), estado('A', 15, {}, 9))).toBe(false)
-    expect(esMasReciente(estado('A', 15), estado('A', 15))).toBe(true)
+  it('de una estación con evento se ignora la entrada del GET; las demás son las del GET', () => {
+    const delGet = [estado('CA-A', 14), estado('CA-B', 14)]
+    const eventos = new Map([['CA-B', estado('CA-B', 15, { alerta: true })]])
+
+    expect(fusionar(delGet, eventos)).toEqual([estado('CA-A', 14), estado('CA-B', 15, { alerta: true })])
+    expect(delGet).toEqual([estado('CA-A', 14), estado('CA-B', 14)]) // no modifica lo que recibe
   })
 
-  it('compara instantes, no textos: la misma hora en otra zona es la misma', () => {
-    const enUtc = { ...estado('A', 15), fecha_hora: '2021-12-13T20:00:00Z', ts: '2021-12-13T20:00:02Z' }
+  it('una estación con evento que el GET no traía entra a la lista', () => {
+    const eventos = new Map([['CA-B', estado('CA-B', 15)]])
 
-    expect(esMasReciente(enUtc, estado('A', 15))).toBe(true)
-    expect(esMasReciente(estado('A', 15), enUtc)).toBe(true)
-  })
-})
-
-describe('superponer', () => {
-  it('reemplaza el estado de una estación por uno más reciente y deja las demás', () => {
-    const lista = [estado('CA-A', 14), estado('CA-B', 14)]
-
-    const nueva = superponer(lista, [estado('CA-B', 15, { alerta: true })])
-
-    expect(nueva).toEqual([estado('CA-A', 14), estado('CA-B', 15, { alerta: true })])
-    expect(lista[1]).toEqual(estado('CA-B', 14)) // la lista original no se toca
+    expect(fusionar([estado('CA-A', 14), estado('CA-C', 14)], eventos).map((e) => e.estacion)).toEqual(['CA-A', 'CA-B', 'CA-C'])
   })
 
-  it('una estación que no estaba entra, en su lugar por código', () => {
-    const nueva = superponer([estado('CA-A', 14), estado('CA-C', 14)], [estado('CA-B', 14)])
+  it('no compara fechas: vale el evento aunque la entrada del GET diga una hora posterior', () => {
+    // Si el GET de verdad traía algo más nuevo, su evento llega detrás por el WebSocket.
+    const eventos = new Map([['CA-B', estado('CA-B', 15)]])
 
-    expect(nueva.map((e) => e.estacion)).toEqual(['CA-A', 'CA-B', 'CA-C'])
-  })
-
-  it('un estado más viejo que el que hay no lo reemplaza: el último estado no retrocede', () => {
-    const lista = [estado('CA-A', 15, { alerta: true })]
-
-    expect(superponer(lista, [estado('CA-A', 9)])).toEqual(lista)
+    expect(fusionar([estado('CA-B', 16)], eventos)).toEqual([estado('CA-B', 15)])
   })
 })
 
@@ -110,68 +102,128 @@ describe('aplicarEstadoEstacion', () => {
     expect(consultas.getQueryData(claves.regimen('CA-B'))).toEqual(estado('CA-B', 15))
   })
 
-  it('una estación que no tenía estado entra a la lista ya pedida', () => {
+  it('una estación que no tenía estado entra a la lista ya pedida, en su lugar por código', () => {
     const consultas = nuevaCache()
-    consultas.setQueryData(claves.regimenes, [])
+    consultas.setQueryData(claves.regimenes, [estado('CA-A', 14), estado('CA-C', 14)])
 
     aplicarEstadoEstacion(consultas, estado('CA-B', 15))
 
-    expect(consultas.getQueryData(claves.regimenes)).toEqual([estado('CA-B', 15)])
+    expect(consultas.getQueryData<EstadoEstacion[]>(claves.regimenes)!.map((e) => e.estacion)).toEqual(['CA-A', 'CA-B', 'CA-C'])
   })
 
-  it('un evento más viejo que lo guardado no pisa nada', () => {
+  it('entre dos eventos manda el que llegó último, sin mirar fechas: una corrección de la misma hora se ve', () => {
     const consultas = nuevaCache()
-    consultas.setQueryData(claves.regimenes, [estado('CA-B', 15)])
-    consultas.setQueryData(claves.regimen('CA-B'), estado('CA-B', 15))
+    consultas.setQueryData(claves.regimenes, [])
+    const primera = estado('CA-B', 15, { media_24h: { pm2_5: 10, pm10: 90, lecturas: 24 } })
+    // La misma hora, corregida: misma fecha_hora y, porque ts va al segundo, mismo ts.
+    const corregida = estado('CA-B', 15, { media_24h: { pm2_5: 10, pm10: 121.4, lecturas: 24 }, alerta: true })
 
-    aplicarEstadoEstacion(consultas, estado('CA-B', 9, { alerta: true }))
+    aplicarEstadoEstacion(consultas, primera)
+    aplicarEstadoEstacion(consultas, corregida)
 
-    expect(consultas.getQueryData(claves.regimenes)).toEqual([estado('CA-B', 15)])
-    expect(consultas.getQueryData(claves.regimen('CA-B'))).toEqual(estado('CA-B', 15))
+    expect(consultas.getQueryData(claves.regimenes)).toEqual([corregida])
+    expect(consultas.getQueryData(claves.regimen('CA-B'))).toEqual(corregida)
   })
 })
 
-describe('un evento que llega mientras un GET viaja', () => {
-  it('la lista: la respuesta, que es de antes del evento, no lo pisa', async () => {
+describe('la fusión del GET con los eventos', () => {
+  it('llega el evento S2 y después la respuesta del GET con S1: queda S2', async () => {
     const consultas = nuevaCache()
+    void alConectarEnVivo(consultas) // se abrió el WebSocket
+    const S1 = estado('CA-B', 14)
+    const S2 = estado('CA-B', 15, { alerta: true })
     const get = pendiente<EstadoEstacion[]>()
-    const pedido = consultas.fetchQuery({
-      queryKey: claves.regimenes,
-      meta: EN_VIVO,
-      queryFn: () => pedirRegimenes(consultas, () => get.promesa),
-    })
+    const pedido = pedirLista(consultas, () => get.promesa) // el GET sale…
 
-    aplicarEstadoEstacion(consultas, estado('CA-B', 15, { alerta: true })) // llega con el GET en viaje
-    get.resolver([estado('CA-A', 14), estado('CA-B', 14)]) // la API respondió con lo de antes
+    aplicarEstadoEstacion(consultas, S2) // …llega el evento, más nuevo, por la otra conexión…
+    get.resolver([estado('CA-A', 14), S1]) // …y recién entonces la respuesta, que es de antes
 
-    expect(await pedido).toEqual([estado('CA-A', 14), estado('CA-B', 15, { alerta: true })])
-    expect(consultas.getQueryData(claves.regimenes)).toEqual([estado('CA-A', 14), estado('CA-B', 15, { alerta: true })])
+    expect(await pedido).toEqual([estado('CA-A', 14), S2])
+    expect(consultas.getQueryData(claves.regimenes)).toEqual([estado('CA-A', 14), S2])
   })
 
-  it('la lista: si la respuesta ya trae algo más reciente que el evento, gana la respuesta', async () => {
+  it('lo mismo si el evento llegó antes de que saliera el GET, en esta conexión', async () => {
     const consultas = nuevaCache()
-    const get = pendiente<EstadoEstacion[]>()
-    const pedido = pedirRegimenes(consultas, () => get.promesa)
+    void alConectarEnVivo(consultas)
+    const S2 = estado('CA-B', 15, { alerta: true })
+    aplicarEstadoEstacion(consultas, S2)
 
+    const lista = await pedirLista(consultas, async () => [estado('CA-A', 14), estado('CA-B', 14)])
+
+    expect(lista).toEqual([estado('CA-A', 14), S2])
+  })
+
+  it('y aunque el GET traiga el mismo ts o una fecha_hora posterior: del evento no se duda', async () => {
+    const consultas = nuevaCache()
+    void alConectarEnVivo(consultas)
+    const evento = estado('CA-B', 15, { alerta: true })
+    aplicarEstadoEstacion(consultas, evento)
+
+    expect(await pedirLista(consultas, async () => [estado('CA-B', 15)])).toEqual([evento]) // mismo ts y misma hora
+    await consultas.invalidateQueries({ queryKey: claves.regimenes })
+    expect(await pedirLista(consultas, async () => [estado('CA-B', 16)])).toEqual([evento]) // hora posterior
+  })
+
+  it('una estación sin evento en esta conexión toma lo que diga el GET, aunque en la caché hubiera otra cosa', async () => {
+    const consultas = nuevaCache()
+    void alConectarEnVivo(consultas)
+    consultas.setQueryData(claves.regimenes, [estado('CA-A', 9)])
+
+    expect(await pedirLista(consultas, async () => [estado('CA-A', 14)])).toEqual([estado('CA-A', 14)])
+  })
+
+  it('al reabrirse el WebSocket se olvidan los eventos: el GET vuelve a mandar', async () => {
+    const consultas = nuevaCache()
+    void alConectarEnVivo(consultas)
     aplicarEstadoEstacion(consultas, estado('CA-B', 15))
-    get.resolver([estado('CA-B', 16)])
 
-    expect(await pedido).toEqual([estado('CA-B', 16)])
+    // Corte y reconexión. Mientras tanto la estación avanzó y ese evento se perdió.
+    void alConectarEnVivo(consultas)
+
+    expect(await pedirLista(consultas, async () => [estado('CA-B', 17, { alerta: true })])).toEqual([
+      estado('CA-B', 17, { alerta: true }),
+    ])
   })
 
-  it('la lista: un evento de antes o de después del pedido no se mezcla con su respuesta', async () => {
+  it('al reabrirse tras un reinicio limpio del sistema, la lista vacía del GET queda vacía', async () => {
     const consultas = nuevaCache()
-    aplicarEstadoEstacion(consultas, estado('CA-X', 15)) // antes: el sistema se reinició después y ya no existe
+    void alConectarEnVivo(consultas)
+    aplicarEstadoEstacion(consultas, estado('CA-B', 15))
+    expect(await pedirLista(consultas, async () => [])).toEqual([estado('CA-B', 15)])
 
-    const lista = await pedirRegimenes(consultas, async () => [])
-    aplicarEstadoEstacion(consultas, estado('CA-Y', 15)) // después
+    void alConectarEnVivo(consultas) // docker compose down -v y arriba otra vez, con la pestaña abierta
+    await consultas.invalidateQueries({ queryKey: claves.regimenes })
 
-    expect(lista).toEqual([]) // una API recién levantada responde vacío, y vacío queda
-    expect(await pedirRegimenes(consultas, async () => [])).toEqual([])
+    expect(await pedirLista(consultas, async () => [])).toEqual([])
   })
 
-  it('una estación: gana el evento si es más reciente que la respuesta', async () => {
+  it('un evento posterior a la reconexión vuelve a mandar sobre el GET que la reconexión disparó', async () => {
     const consultas = nuevaCache()
+    void alConectarEnVivo(consultas)
+    aplicarEstadoEstacion(consultas, estado('CA-B', 15))
+    void alConectarEnVivo(consultas)
+    const get = pendiente<EstadoEstacion[]>()
+    const pedido = pedirLista(consultas, () => get.promesa)
+
+    aplicarEstadoEstacion(consultas, estado('CA-B', 18, { alerta: true }))
+    get.resolver([estado('CA-B', 17)])
+
+    expect(await pedido).toEqual([estado('CA-B', 18, { alerta: true })])
+  })
+
+  it('cada caché lleva su cuenta: los eventos de una no se mezclan en otra', async () => {
+    const una = nuevaCache()
+    const otra = nuevaCache()
+    aplicarEstadoEstacion(una, estado('CA-B', 15))
+
+    expect(await pedirLista(otra, async () => [estado('CA-B', 14)])).toEqual([estado('CA-B', 14)])
+  })
+})
+
+describe('pedirRegimen, una sola estación', () => {
+  it('llega el evento S2 y después la respuesta del GET con S1: queda S2', async () => {
+    const consultas = nuevaCache()
+    void alConectarEnVivo(consultas)
     const get = pendiente<EstadoEstacion>()
     const pedido = pedirRegimen(consultas, 'CA-B', () => get.promesa)
 
@@ -182,8 +234,17 @@ describe('un evento que llega mientras un GET viaja', () => {
     expect(await pedido).toEqual(estado('CA-B', 15, { alerta: true }))
   })
 
-  it('una estación: si la API respondió 404 porque aún no tenía estado y llegó su primer evento, vale el evento', async () => {
+  it('sin evento de esa estación, vale la respuesta', async () => {
     const consultas = nuevaCache()
+    void alConectarEnVivo(consultas)
+    aplicarEstadoEstacion(consultas, estado('CA-A', 18))
+
+    expect(await pedirRegimen(consultas, 'CA-B', async () => estado('CA-B', 14))).toEqual(estado('CA-B', 14))
+  })
+
+  it('si la API respondió 404 porque aún no tenía estado y ya llegó su primer evento, vale el evento', async () => {
+    const consultas = nuevaCache()
+    void alConectarEnVivo(consultas)
     const get = pendiente<EstadoEstacion>()
     const pedido = pedirRegimen(consultas, 'CA-B', () => get.promesa)
 
@@ -193,22 +254,20 @@ describe('un evento que llega mientras un GET viaja', () => {
     expect(await pedido).toEqual(estado('CA-B', 15))
   })
 
-  it('una estación: sin evento, el 404 y cualquier otro error siguen siendo errores', async () => {
+  it('sin evento, el 404 es un error; y un 503 no se tapa con un evento', async () => {
     const consultas = nuevaCache()
+    void alConectarEnVivo(consultas)
     const noEsta = errorDeRespuesta(404, { error: 'sin régimen' }, true)
     const caida = errorDeRespuesta(503, { error: 'Redis no disponible' }, true)
 
     await expect(pedirRegimen(consultas, 'CA-B', () => Promise.reject(noEsta))).rejects.toBe(noEsta)
 
-    const get = pendiente<EstadoEstacion>()
-    const pedido = pedirRegimen(consultas, 'CA-B', () => get.promesa)
     aplicarEstadoEstacion(consultas, estado('CA-B', 15))
-    get.rechazar(caida)
-    await expect(pedido).rejects.toBe(caida) // un 503 no se tapa con el evento
+    await expect(pedirRegimen(consultas, 'CA-B', () => Promise.reject(caida))).rejects.toBe(caida)
   })
 })
 
-describe('refrescarEnVivo', () => {
+describe('alConectarEnVivo', () => {
   it('marca para volver a pedir las consultas EN_VIVO y deja en paz a las demás', async () => {
     const consultas = nuevaCache()
     await consultas.fetchQuery({ queryKey: claves.regimenes, meta: EN_VIVO, queryFn: async () => [] })
@@ -216,7 +275,7 @@ describe('refrescarEnVivo', () => {
     await consultas.fetchQuery({ queryKey: claves.estaciones, queryFn: async () => [] })
     const invalidada = (clave: readonly unknown[]) => consultas.getQueryCache().find({ queryKey: clave })!.state.isInvalidated
 
-    await refrescarEnVivo(consultas)
+    await alConectarEnVivo(consultas)
 
     // Que una consulta con alguien mirándola se vuelve a pedir de verdad lo prueba App.test.tsx.
     expect(invalidada(claves.regimenes)).toBe(true)

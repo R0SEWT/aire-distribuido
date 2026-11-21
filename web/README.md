@@ -98,14 +98,21 @@ const estado = useQuery({
 })
 ```
 
-Con eso la pantalla se mantiene al día sola, y quedan cubiertos los tres huecos entre un GET y el WebSocket:
+Con eso la pantalla se mantiene al día sola. El GET y el WebSocket viajan por conexiones distintas, así que la
+respuesta de un GET puede llegar **después** de un evento más nuevo de la misma estación. La regla, que es la del
+contrato y que el ayudante aplica:
 
-- **Un corte**: cada vez que el WebSocket queda «conectado» (también después de reconectar) se vuelven a pedir
-  todas las consultas marcadas `EN_VIVO`. Lo que cambió sin conexión aparece.
+> De una estación de la que ya llegó un evento desde que se abrió (o se reabrió) el WebSocket, la entrada del GET
+> se ignora: vale el evento.
+
+Si el GET traía algo más nuevo, su evento viene detrás por el WebSocket, que entrega en orden. No se compara por
+`ts` (va al segundo) ni por `fecha_hora` (una corrección de la misma hora la conserva): entre dos eventos manda el
+que llegó último. De ahí sale lo demás:
+
+- **Un evento con el GET en viaje**, o anterior al GET: `pedirRegimenes` y `pedirRegimen` conservan el evento.
+- **Un corte**: en el instante en que el WebSocket se abre o se reabre se olvida de qué estaciones había eventos
+  (mientras estuvo caído se perdieron otros) y se vuelven a pedir todas las consultas marcadas `EN_VIVO`.
 - **El orden al entrar**: no hay que abrir el WebSocket antes de pedir. La primera conexión también refresca.
-- **Un evento con el GET en viaje**: la respuesta del GET es una foto de antes del evento y lo pisaría.
-  `pedirRegimenes` y `pedirRegimen` guardan los eventos que llegan durante el pedido y los superponen a la
-  respuesta. Un estado más viejo nunca reemplaza a uno más reciente (`esMasReciente`).
 
 `GET /api/regimenes` y el esquema `EstadoEstacion` llegan con la PR de la API. Cuando estén en `develop`:
 `pnpm tipos`, y en `src/api/eventos.ts` el tipo de `'estacion.regimen'` pasa a ser `Esquemas['EstadoEstacion']`.

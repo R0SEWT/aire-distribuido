@@ -546,19 +546,42 @@ describe('la app', () => {
         const { enchufes } = montar('/', <Lista pedirLista={pedirLista} />)
         act(() => enchufes.ultimo().abrir())
         await waitFor(() => expect(filas()).toEqual(['CA-A sin alerta']))
+        // Un evento antes del corte: de CA-A «ya se sabe por eventos»… hasta que la conexión se cae.
+        act(() => enchufes.ultimo().recibir({ evento: 'estacion.regimen', datos: estadoDe('CA-A', 15) }))
         const antes = pedirLista.mock.calls.length
 
         act(() => enchufes.ultimo().cerrarDesdeElServidor(1006))
-        enLaApi = [estadoDe('CA-A', 15, true)] // cambió mientras no había WebSocket: ese evento se perdió
+        enLaApi = [estadoDe('CA-A', 16, true)] // cambió mientras no había WebSocket: ese evento se perdió
         act(() => void vi.advanceTimersByTime(1_000))
         expect(pedirLista).toHaveBeenCalledTimes(antes) // reconectando todavía no pide nada
         act(() => enchufes.ultimo().abrir())
 
+        // Al reabrirse se olvidó el evento viejo de CA-A: manda lo que responde el GET.
         await waitFor(() => expect(filas()).toEqual(['CA-A en alerta']))
         expect(pedirLista).toHaveBeenCalledTimes(antes + 1)
       })
 
-      it('un evento que llega mientras el GET viaja no se pierde cuando llega la respuesta', async () => {
+      it('un evento que llega apenas se abre el WebSocket no se pierde al vaciar la memoria de la conexión', async () => {
+        simularApi({ 'GET /api/salud': SALUD_OK })
+        sesionDe('usuario')
+        let responder!: (lista: EstadoEstacion[]) => void
+        const pedirLista = vi.fn(() => new Promise<EstadoEstacion[]>((r) => (responder = r)))
+        const { enchufes } = montar('/', <Lista pedirLista={pedirLista} />)
+        await waitFor(() => expect(pedirLista).toHaveBeenCalled())
+
+        // Abre y recibe en el mismo turno, sin dejar que React dibuje en el medio: la memoria
+        // de la conexión se vacía al abrir, no un render después, o se llevaría este evento.
+        act(() => {
+          enchufes.ultimo().abrir()
+          enchufes.ultimo().recibir({ evento: 'estacion.regimen', datos: estadoDe('CA-B', 15, true) })
+        })
+        await act(() => new Promise((r) => setTimeout(r, 30))) // React dibuja y corren sus efectos
+        await act(async () => responder([estadoDe('CA-B', 14)])) // y recién ahora llega la foto vieja del GET
+
+        await waitFor(() => expect(filas()).toEqual(['CA-B en alerta']))
+      })
+
+      it('llega el evento S2 y después la respuesta del GET con S1: queda S2', async () => {
         simularApi({ 'GET /api/salud': SALUD_OK })
         sesionDe('usuario')
         let responder!: (lista: EstadoEstacion[]) => void
