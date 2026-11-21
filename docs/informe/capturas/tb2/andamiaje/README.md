@@ -12,3 +12,4 @@ marcador de «en construcción». Las capturas del informe se toman cuando las p
 | `componentes.png`, `componentes-proyector.png` | Los componentes base, en `/muestrario` |
 | `aviso-vencimiento.png` | El aviso de que la sesión está por vencer |
 | `sesion-vencida.png` | La vuelta al ingreso cuando el token vence |
+| `pantalla-no-cargo.png` | La barrera de errores: el archivo de una pantalla ya no está en el servidor y se ofrece recargar, con la barra a la vista |
