@@ -165,6 +165,19 @@ describe('la app', () => {
       expect(await screen.findByRole('heading', { name: 'Panel' })).toBeInTheDocument()
     })
 
+    it('un token sin fecha de vencimiento válida no abre sesión', async () => {
+      simularApi({
+        'GET /api/salud': SALUD_OK,
+        'POST /api/auth/token': { estado: 200, cuerpo: { token: 't', rol: 'usuario', expira: 'mañana' } },
+      })
+      montar('/ingreso')
+
+      await ingresarComo('demo', 'una-clave')
+
+      expect(await screen.findByRole('alert')).toHaveTextContent('fecha de vencimiento')
+      expect(sesionActual()).toBeNull()
+    })
+
     it('con sesión ya iniciada, /ingreso lleva al panel', async () => {
       simularApi({ 'GET /api/salud': SALUD_OK })
       sesionDe('usuario')

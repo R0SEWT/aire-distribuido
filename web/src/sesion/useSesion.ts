@@ -2,6 +2,7 @@
 
 import { useCallback, useSyncExternalStore } from 'react'
 import { api, pedir } from '../api/cliente'
+import { ErrorApi } from '../api/errores'
 import { abrirSesion, cerrarSesion, estadoSesion, suscribir, type EstadoSesion } from './almacen'
 
 export interface UsoDeSesion extends EstadoSesion {
@@ -15,7 +16,10 @@ export function useSesion(): UsoDeSesion {
 
   const ingresar = useCallback(async (usuario: string, clave: string) => {
     const token = await pedir(api.POST('/api/auth/token', { body: { usuario, clave } }), { ingreso: true })
-    abrirSesion({ usuario, token: token.token, rol: token.rol, expira: Date.parse(token.expira) })
+    const expira = Date.parse(token.expira)
+    // Sin una hora de vencimiento no se puede avisar ni cerrar a tiempo: no es una sesión.
+    if (!Number.isFinite(expira)) throw new ErrorApi('inesperado', 200, 'la API respondió un token sin una fecha de vencimiento válida')
+    abrirSesion({ usuario, token: token.token, rol: token.rol, expira })
   }, [])
 
   const salir = useCallback(() => cerrarSesion('salir'), [])
