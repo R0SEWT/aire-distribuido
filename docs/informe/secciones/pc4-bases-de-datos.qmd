@@ -1,0 +1,116 @@
+## Bases de datos {#sec-pc4-bases-datos}
+
+La PC4 separa la persistencia duradera del estado operativo de acceso inmediato.
+MongoDB conserva el catálogo y la historia del sistema; Redis mantiene las copias que
+la API consulta o reemplaza con baja latencia. La API depende de las interfaces
+pequeñas de `almacen/`, no de los drivers: `almacen/mongo` y `almacen/redis` son los
+únicos paquetes que importan los clientes oficiales, mientras las pruebas unitarias
+pueden usar el doble en memoria.
+
+![Entidades persistentes de MongoDB, familias de claves de Redis y relaciones lógicas por identificador.](../diagramas/entidades.png){#fig-pc4-entidades width=16cm}
+
+El diagrama de la @fig-pc4-entidades corresponde al entregable D3. Las relaciones no
+son *joins* impuestos por el motor: `predicciones.estacion` identifica la estación;
+`predicciones.modelo_id` identifica el modelo que clasificó la lectura;
+`modelos.origen` y `entrenamientos.modelo_id` enlazan el entrenamiento con el modelo
+que produjo. Los mismos identificadores forman las claves equivalentes de Redis.
+
+### MongoDB: persistencia e índices
+
+| Colección | Contenido y responsabilidad | Índices creados por el seed |
+|:---|:---|:---|
+| `estaciones` | Catálogo de 33 estaciones OEFA. `_id` es el código; conserva objeto fiscalizado, actividad, ubicación administrativa y coordenadas. | Índice único implícito `_id_`. |
+| `predicciones` | Lectura, régimen, media de 24 h, alerta, INCA, modelo usado y tiempo interno. La API inserta lotes sin bloquear la respuesta HTTP. | `{estacion: 1, ts: 1}`, llamado `estacion_ts`. |
+| `modelos` | Receta, huella del Gold, estandarización, centroides, perfiles, inercia, iteraciones y condición de activo. | `activo` y `creado`. |
+| `entrenamientos` | Parámetros, nodos y rangos, rondas, tiempos, criterio de parada, diferencia secuencial, resultado o error. | `inicio`. |
+| `eventos_cluster` | Altas, bajas y errores relevantes de los nodos. Los latidos no se persisten porque no agregan historia útil. | `ts`. |
+
+Las fechas se guardan como BSON Date y `mongosh` las presenta como `ISODate`. Un
+valor que todavía no existe se representa con `null`, no con cero ni con una cadena
+vacía. Las rondas se embeben en `entrenamientos`: la receta limita la corrida a 100
+iteraciones, de modo que una colección adicional solo añadiría una consulta para
+reconstruir una entidad acotada.
+
+### Redis: estado operativo
+
+| Familia de claves | Valor JSON | Uso |
+|:---|:---|:---|
+| `modelo:activo` | Modelo completo: origen, creación, receta, huella, estandarización, centroides y perfiles. | Arranque en caliente y acceso al modelo vigente. |
+| `estacion:{id}:regimen` | Fecha de la lectura, régimen, ECA, media de 24 h, alerta, INCA y `ts`. | Último estado por estación; una lectura anterior no reemplaza una posterior. |
+| `entrenamiento:{id}:punto` | Iteración y centroides estandarizados de la última ronda completa. | Punto de control observable; la PC4 lo registra, pero no reanuda desde él. |
+
+La actualización del régimen compara y escribe mediante un script Lua, por lo que la
+regla temporal es atómica. Las fechas de estas claves se serializan en RFC 3339 con
+el huso de Lima. Ninguna clave expira: hay una por estación, una copia del modelo
+activo y una por entrenamiento. Redis usa AOF (`appendonly yes`); MongoDB usa el
+volumen `mongo_data`. `docker compose down` conserva ambos volúmenes y solo la opción
+explícita `-v` los elimina.
+
+### Seed y arranque reproducible
+
+`docs/datos/seed.js` lee `reports/estaciones_ficha.csv` y valida toda la ficha antes
+de modificar MongoDB. Rechaza estaciones repetidas, coordenadas ausentes, no numéricas
+o fuera de rango, y filas con un número incorrecto de campos. Solo después crea las
+cinco colecciones y sus índices, hace *upsert* idempotente de las 33 estaciones y
+retira las que ya no pertenezcan a la ficha.
+
+Compose monta `${GOLD_DIR:-./data/gold}` como `/datos/gold:ro` tanto en la API como
+en los nodos. El Gold usado en esta evidencia tiene 65 873 filas de datos y la huella
+SHA-256 `2fdace5ad8599149c9ed2b177151881025d895a50738519d9358d537236f87f7`,
+la misma publicada en `reports/kmeans.json`. La API comprueba que ese número de filas
+coincida con `reports/estandarizacion.json`; esta validación evita mezclar un modelo y
+un Gold de corridas distintas. Los servicios MongoDB y Redis deben estar sanos y el
+seed debe terminar con código cero antes de que arranque la API.
+
+### Registros reales de D4
+
+Las seis figuras siguientes son capturas manuales de consultas a los contenedores
+reales. La correspondencia entre identificadores permite comprobar la trazabilidad:
+el entrenamiento `e-20261120-2251` terminó en 44 iteraciones y produjo el modelo
+`entrenado-e-20261120-2251`; MongoDB y Redis muestran el mismo modelo activo, y el
+checkpoint de Redis conserva la iteración 44 y sus tres centroides.
+
+![La colección `estaciones` contiene 33 documentos; se muestra la ficha real de `CA-HU-04`, con actividad, ubicación y coordenadas.](capturas/pc4/mongo-estaciones.png){#fig-pc4-mongo-estaciones width=15.5cm}
+
+![Predicción escrita por la API en MongoDB para `CA-HU-04`, con `ObjectId`, marcas temporales, concentraciones, régimen, modelo y tiempo interno.](capturas/pc4/mongo-predicciones.png){#fig-pc4-mongo-predicciones width=15.5cm}
+
+![Entrenamiento terminado y modelo activo en MongoDB. `modelo_id`, `_id` y `origen` conservan el identificador común de la corrida.](capturas/pc4/mongo-entrenamientos-modelos.png){#fig-pc4-mongo-entrenamientos width=15.5cm}
+
+![Clave `modelo:activo` de Redis: el identificador, origen, 44 iteraciones, inercia, tres clusters y semilla coinciden con el entrenamiento persistido.](capturas/pc4/redis-modelo-activo.png){#fig-pc4-redis-modelo width=15.5cm}
+
+![Clave `estacion:CA-HU-04:regimen` de Redis, con la fecha de la lectura, régimen, estado ECA, ventana disponible y marca de escritura.](capturas/pc4/redis-regimen-estacion.png){#fig-pc4-redis-regimen width=15.5cm}
+
+![Punto de control de Redis en la iteración 44, con los tres centroides estandarizados de la última ronda completa.](capturas/pc4/redis-checkpoint-entrenamiento.png){#fig-pc4-redis-checkpoint width=15.5cm}
+
+### Consistencia y comportamiento ante fallas
+
+Una predicción no espera a las bases: una goroutine por almacén consume su propia
+cola y escribe lotes. Si una base deja de responder, la API puede seguir clasificando,
+lo informa en `/api/salud` y contabiliza escrituras fallidas o descartadas en
+`/api/metricas`. Compose configura 32 768 posiciones por cola para absorber ráfagas.
+
+Activar un modelo requiere actualizar MongoDB y Redis. Al reiniciar, la API compara
+las copias entrenadas, elige la más nueva según `creado` y reconcilia la otra; el
+modelo sembrado se vuelve a construir desde los reportes versionados. Los contenedores
+de desarrollo publican las bases únicamente en `localhost` y no configuran
+autenticación. Esto hace reproducible la demostración local, pero no es una
+configuración de producción: allí se requieren credenciales, cifrado, aislamiento de
+red, copias de seguridad y una política de retención.
+
+### Correcciones y reproducciones de la PC3
+
+La especificación de PC4 registra que la PC3 no recibió observaciones del docente
+(`docs/specs/2026-11-14-pc4-design.md`, decisión cerrada de la sección 13). Por tanto,
+la tabla no inventa correcciones externas: separa esa ausencia de observaciones de las
+revisiones internas que sí tienen artefactos verificables en el historial Git.
+
+| Procedencia | Evidencia verificable | Tratamiento en PC4 |
+|:---|:---|:---|
+| Docente | La decisión cerrada de la especificación PC4 dice: “La PC3 no tuvo observaciones”. | Se conserva el contenido de PC3 y no se atribuyen al docente cambios que no documentó. |
+| Reproducción interna — Dayana, macOS | El commit `aa1fa9c` conserva `reports/revision_dayana/ejecucion.json`: Go 1.27.1 `darwin/arm64`, auditoría con 40 comprobaciones correctas, conteos idénticos y Gold `2fdace5a…`. También declara árbol con cambios y que los benchmarks históricos no se repitieron. | Se usa como evidencia de reproducción funcional y de igualdad del artefacto Gold; no se presenta como benchmark nuevo ni como corrida sobre un árbol limpio. |
+| Revisión interna — benchmark Windows | El commit `ee231b5` conserva `reports/benchmark_cargador_windows.json`: Go 1.26.8 `windows/amd64`, 32 CPU lógicas, diez repeticiones por configuración, `identicos: true` y las mismas huellas Silver `63b707f4…` y Gold `2fdace5a…`. El reporte declara árbol con cambios. | Se mantiene la procedencia, el protocolo y la dispersión de esa máquina; no se extrapolan sus tiempos a macOS o Linux. |
+| Revisión interna — conclusiones de rendimiento | El mismo commit `ee231b5` reemplaza afirmaciones generales por conclusiones limitadas al equipo, orden de ejecución y configuraciones realmente medidas. | La PC4 distingue igualdad de salidas, corrección funcional y rendimiento: una huella igual no demuestra tiempos iguales. |
+
+La coincidencia de las huellas respalda que las reproducciones generaron el mismo Gold.
+No prueba igualdad de rendimiento, porque cambiaron hardware, sistema operativo,
+versión de Go y estado del árbol de trabajo.
