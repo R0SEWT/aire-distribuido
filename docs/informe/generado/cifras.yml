@@ -430,10 +430,10 @@ cifras:
     estaciones: "14"
     regimenes: "0, 1 y 2"
   pruebas:
-    pc4: "260"
-    pc4_integracion: "24"
+    pc4: "267"
+    pc4_integracion: "25"
     paquetes_pc4: "13"
-    repo: "533"
+    repo: "541"
   pc4:
     ventana_horas: "24"
     minimo_lecturas: "18"
