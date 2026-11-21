@@ -25,5 +25,5 @@ func (c *cola) completar(lote []almacen.Prediccion) []almacen.Prediccion {
 }
 ```
 
-La cola de escritura de un almacén: encolar nunca bloquea y el lote toma lo que ya esté esperando (`api/escritor.go`, líneas 136–144 y 177–187)
+La cola de escritura de un almacén: encolar nunca bloquea y el lote toma lo que ya esté esperando (`api/escritor.go`, líneas 232–240 y 281–291)
 :::

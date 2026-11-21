@@ -17,5 +17,5 @@ default:
     return
 ```
 
-Un entrenamiento a la vez: un canal de capacidad 1 como semáforo, sin esperar (`api/entrenamientos.go`, líneas 266–278)
+Un entrenamiento a la vez: un canal de capacidad 1 como semáforo, sin esperar (`api/entrenamientos.go`, líneas 267–279)
 :::

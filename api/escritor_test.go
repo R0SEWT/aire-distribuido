@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"slices"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -275,6 +276,169 @@ func TestEscritorApagadoAcotado(t *testing.T) {
 	// Redis respondía: lo suyo se escribió todo.
 	if redis := e.estado()["redis"]; redis.Escritas != total {
 		t.Fatalf("redis = %+v; se esperaban %d escritas", redis, total)
+	}
+}
+
+// cacheAMedias guarda de verdad, pero responde con un error después de
+// guardar: es un lote que se escribió en parte.
+type cacheAMedias struct{ *memoria.Cache }
+
+func (c cacheAMedias) GuardarRegimenes(ctx context.Context, rs map[string]almacen.RegimenEstacion) (map[string]almacen.RegimenEstacion, error) {
+	guardados, _ := c.Cache.GuardarRegimenes(ctx, rs)
+	return guardados, errors.New("el lote falló a medias")
+}
+
+// El escritor avisa (alGuardar) solo de lo que la caché dice que quedó
+// guardado: ni de una lectura más antigua que la guardada, ni de más. Si el
+// lote falla pero una parte se guardó, de esa parte sí: ya es el estado.
+func TestEscritorAvisaSoloDeLoQueQuedoGuardado(t *testing.T) {
+	for nombre, cache := range map[string]almacen.Cache{"caché sana": memoria.NuevaCache(), "lote a medias": cacheAMedias{memoria.NuevaCache()}} {
+		t.Run(nombre, func(t *testing.T) {
+			e := nuevoEscritor(8, memoria.NuevasPredicciones(), cache, logMudo)
+			e.cadaRelectura = time.Hour // aquí no se prueba la relectura tras el error
+			var mu sync.Mutex
+			var avisados []almacen.RegimenEstacion
+			e.alGuardar = func(rs map[string]almacen.RegimenEstacion) {
+				mu.Lock()
+				defer mu.Unlock()
+				for estacion, r := range rs {
+					if estacion != "CA-A" {
+						t.Errorf("aviso de %s", estacion)
+					}
+					avisados = append(avisados, r)
+				}
+			}
+			parar := arrancar(e)
+			h := func(n int) time.Time { return time.Date(2026, 11, 14, n, 0, 0, 0, time.UTC) }
+			for i, p := range []almacen.Prediccion{
+				{Estacion: "CA-A", FechaHora: h(10), Regimen: 0},
+				{Estacion: "CA-A", FechaHora: h(4), Regimen: 1},  // más antigua: no es el estado
+				{Estacion: "CA-A", FechaHora: h(10), Regimen: 2}, // la misma hora, corregida: sí
+			} {
+				e.encolar(p)
+				// De a una, para que cada predicción sea su propio lote.
+				esperar := time.Now().Add(5 * time.Second)
+				for e.redis.lotes.Load() < uint64(i+1) || len(e.redis.ch) > 0 {
+					if time.Now().After(esperar) {
+						t.Fatalf("el escritor no procesó la predicción %d", i)
+					}
+					time.Sleep(time.Millisecond)
+				}
+			}
+			parar()
+			mu.Lock()
+			defer mu.Unlock()
+			if len(avisados) != 2 || avisados[0].Regimen != 0 || avisados[1].Regimen != 2 {
+				t.Fatalf("avisados = %+v; se esperaban la hora 10 y su corrección", avisados)
+			}
+		})
+	}
+}
+
+// cacheSinRespuesta es Redis cuando ejecuta el script pero su respuesta no
+// llega (un plazo vencido, la conexión cortada): el régimen queda guardado y
+// quien escribió recibe un error, sin saber qué se guardó. Con caida, además,
+// no responde las lecturas; con rota, no guarda nada.
+type cacheSinRespuesta struct {
+	*memoria.Cache
+	perder atomic.Int64 // cuántas de las próximas escrituras pierden su respuesta
+	caida  atomic.Bool  // Regimenes tampoco responde
+	rota   atomic.Bool  // las escrituras que pierden su respuesta tampoco guardan
+	leidas atomic.Int64 // idas de Regimenes que respondieron
+}
+
+func (c *cacheSinRespuesta) GuardarRegimenes(ctx context.Context, rs map[string]almacen.RegimenEstacion) (map[string]almacen.RegimenEstacion, error) {
+	if c.perder.Load() <= 0 {
+		return c.Cache.GuardarRegimenes(ctx, rs)
+	}
+	c.perder.Add(-1)
+	if !c.rota.Load() {
+		c.Cache.GuardarRegimenes(ctx, rs)
+	}
+	return nil, errors.New("i/o timeout")
+}
+
+func (c *cacheSinRespuesta) Regimenes(ctx context.Context, estaciones []string) (map[string]almacen.RegimenEstacion, error) {
+	if c.caida.Load() {
+		return nil, errors.New("sin conexión")
+	}
+	c.leidas.Add(1)
+	return c.Cache.Regimenes(ctx, estaciones)
+}
+
+// Si Redis ejecuta el script y la respuesta no llega, el estado está guardado
+// (GET /api/regimenes ya lo devuelve) pero el lote se cuenta como fallido. El
+// escritor no puede quedarse sin avisar: cuando Redis vuelve a responder le
+// pregunta qué tiene y avisa de eso. Mientras no responde, sigue intentando.
+func TestEscritorReleeTrasUnLoteQueRedisGuardoSinResponder(t *testing.T) {
+	cache := &cacheSinRespuesta{Cache: memoria.NuevaCache()}
+	e := nuevoEscritor(8, memoria.NuevasPredicciones(), cache, logMudo)
+	e.cadaRelectura = 10 * time.Millisecond
+	var mu sync.Mutex
+	var avisados []almacen.RegimenEstacion
+	e.alGuardar = func(rs map[string]almacen.RegimenEstacion) {
+		mu.Lock()
+		defer mu.Unlock()
+		for estacion, r := range rs {
+			if estacion != "CA-A" {
+				t.Errorf("aviso de %s", estacion)
+			}
+			avisados = append(avisados, r)
+		}
+	}
+	vistos := func() []almacen.RegimenEstacion {
+		mu.Lock()
+		defer mu.Unlock()
+		return slices.Clone(avisados)
+	}
+	guardado := func() almacen.RegimenEstacion {
+		r, _ := cache.Cache.Regimen(context.Background(), "CA-A")
+		return r
+	}
+	defer arrancar(e)()
+	h := func(n int) time.Time { return time.Date(2026, 11, 14, n, 0, 0, 0, time.UTC) }
+
+	// 1. La respuesta se pierde, Redis sigue ahí: el aviso llega por la relectura.
+	cache.perder.Store(1)
+	e.encolar(almacen.Prediccion{Estacion: "CA-A", FechaHora: h(10), Regimen: 1})
+	esperarHasta(t, "el aviso de la hora 10 por la relectura", func() bool { return len(vistos()) == 1 })
+	if v := vistos(); !v[0].FechaHora.Equal(h(10)) || v[0].Regimen != 1 || e.redis.fallidas.Load() != 1 || e.relecturas.Load() != 1 {
+		t.Fatalf("avisados = %+v, fallidas = %d, relecturas = %d", v, e.redis.fallidas.Load(), e.relecturas.Load())
+	}
+
+	// 2. La respuesta se pierde y Redis deja de responder un rato: no hay
+	// aviso mientras tanto, y la relectura se reintenta hasta que vuelve.
+	cache.caida.Store(true)
+	cache.perder.Store(1)
+	e.encolar(almacen.Prediccion{Estacion: "CA-A", FechaHora: h(11), Regimen: 2})
+	esperarHasta(t, "tres intentos de relectura con Redis caído", func() bool { return e.relecturasFallidas.Load() >= 3 })
+	if v := vistos(); len(v) != 1 || !guardado().FechaHora.Equal(h(11)) {
+		t.Fatalf("con Redis caído no puede haber aviso (hay %d) y el estado guardado tenía que ser la hora 11: %+v", len(v), guardado())
+	}
+	cache.caida.Store(false)
+	esperarHasta(t, "el aviso de la hora 11 cuando Redis volvió", func() bool { return len(vistos()) == 2 })
+	if v := vistos(); !v[1].FechaHora.Equal(h(11)) || v[1].Regimen != 2 {
+		t.Fatalf("avisados = %+v", v)
+	}
+
+	// 3. El lote falla de verdad (Redis no guardó): lo que se avisa es lo que
+	// Redis tiene, la hora 11 otra vez, nunca la hora 12 que no se guardó. Un
+	// aviso repetido no hace daño.
+	cache.rota.Store(true)
+	cache.perder.Store(1)
+	e.encolar(almacen.Prediccion{Estacion: "CA-A", FechaHora: h(12), Regimen: 0})
+	esperarHasta(t, "el aviso repetido tras el lote que no se guardó", func() bool { return len(vistos()) == 3 })
+	if v := vistos(); !v[2].FechaHora.Equal(h(11)) || !guardado().FechaHora.Equal(h(11)) {
+		t.Fatalf("tras un lote que no se guardó se avisó %+v; Redis tiene %+v", v[2], guardado())
+	}
+
+	// 4. Sin errores no hay relecturas: la caché no recibe lecturas de más.
+	leidas := cache.leidas.Load()
+	e.encolar(almacen.Prediccion{Estacion: "CA-A", FechaHora: h(13), Regimen: 1})
+	esperarHasta(t, "el aviso de la hora 13", func() bool { return len(vistos()) == 4 })
+	time.Sleep(5 * e.cadaRelectura)
+	if cache.leidas.Load() != leidas || len(vistos()) != 4 {
+		t.Fatalf("un lote sin error provocó una relectura (%d lecturas de más) o un aviso de más (%d)", cache.leidas.Load()-leidas, len(vistos()))
 	}
 }
 

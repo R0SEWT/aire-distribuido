@@ -18,9 +18,13 @@ import (
 	"math/rand/v2"
 	"os"
 	"reflect"
+	"strings"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
+
+	driver "github.com/redis/go-redis/v9"
 
 	"github.com/R0SEWT/aire-distribuido/almacen"
 )
@@ -192,22 +196,193 @@ func TestGuardarRegimenesPorLote(t *testing.T) {
 	for i := range 33 {
 		lote[fmt.Sprintf("CA-%02d", i)] = almacen.RegimenEstacion{FechaHora: t0, Regimen: i % 3}
 	}
-	if err := c.GuardarRegimenes(ctx, lote); err != nil {
-		t.Fatal(err)
+	if guardados, err := c.GuardarRegimenes(ctx, lote); err != nil || len(guardados) != 33 {
+		t.Fatalf("GuardarRegimenes = %d guardados, %v; se esperaban los 33", len(guardados), err)
 	}
-	if err := c.GuardarRegimenes(ctx, nil); err != nil {
-		t.Fatalf("un lote vacío no es un error: %v", err)
+	if guardados, err := c.GuardarRegimenes(ctx, nil); err != nil || len(guardados) != 0 {
+		t.Fatalf("un lote vacío no es un error: %v, %v", guardados, err)
 	}
 	if n := c.cliente.DBSize(ctx).Val(); n != 33 {
 		t.Fatalf("%d claves, se esperaban 33", n)
 	}
-	if err := c.GuardarRegimenes(ctx, map[string]almacen.RegimenEstacion{
+	guardados, err := c.GuardarRegimenes(ctx, map[string]almacen.RegimenEstacion{
 		"CA-00": {FechaHora: t0.Add(-time.Hour), Regimen: 9}, "CA-01": {FechaHora: t0.Add(time.Hour), Regimen: 9},
-	}); err != nil {
+	})
+	if err != nil {
 		t.Fatal(err)
+	}
+	// Lo que devuelve es lo que quedó guardado: CA-01, no CA-00.
+	if _, esta00 := guardados["CA-00"]; len(guardados) != 1 || esta00 || guardados["CA-01"].Regimen != 9 {
+		t.Fatalf("guardados = %+v; se esperaba solo CA-01", guardados)
 	}
 	if a, b := regimen(t, c, "CA-00"), regimen(t, c, "CA-01"); a.Regimen != 0 || b.Regimen != 9 {
 		t.Fatalf("CA-00 = %d (se esperaba 0: la más antigua no reemplaza), CA-01 = %d (se esperaba 9)", a.Regimen, b.Regimen)
+	}
+}
+
+// cuentaComandos cuenta las idas y vueltas del cliente a Redis: un comando
+// suelto es una y un pipeline entero, otra.
+type cuentaComandos struct{ idas atomic.Int64 }
+
+func (*cuentaComandos) DialHook(sig driver.DialHook) driver.DialHook { return sig }
+
+func (h *cuentaComandos) ProcessHook(sig driver.ProcessHook) driver.ProcessHook {
+	return func(ctx context.Context, cmd driver.Cmder) error {
+		h.idas.Add(1)
+		return sig(ctx, cmd)
+	}
+}
+
+func (h *cuentaComandos) ProcessPipelineHook(sig driver.ProcessPipelineHook) driver.ProcessPipelineHook {
+	return func(ctx context.Context, cmds []driver.Cmder) error {
+		h.idas.Add(1)
+		return sig(ctx, cmds)
+	}
+}
+
+// El panel pide el estado de las 33 estaciones del catálogo: es una sola ida a
+// Redis (un MGET), no una por estación. Las que no tienen régimen no vienen, y
+// cada régimen es el mismo que devuelve Regimen.
+func TestRegimenesDeTodoElCatalogoEnUnaSolaIda(t *testing.T) {
+	c := conectar(t)
+	var catalogo []string
+	lote := map[string]almacen.RegimenEstacion{}
+	inca := "mala"
+	for i := range 33 {
+		id := fmt.Sprintf("CA-%02d", i)
+		catalogo = append(catalogo, id)
+		if i%2 == 0 { // 17 estaciones con régimen
+			lote[id] = almacen.RegimenEstacion{FechaHora: t0.Add(time.Duration(i) * time.Hour), Regimen: i % 3, Alerta: i%4 == 0,
+				INCA: &inca, Media24h: almacen.Media24h{Lecturas: i % 24}, TS: t0}
+		}
+	}
+	if vacio, err := c.Regimenes(ctx, catalogo); err != nil || vacio == nil || len(vacio) != 0 {
+		t.Fatalf("Regimenes sin datos = %v, %v; se esperaba un mapa vacío", vacio, err)
+	}
+	if _, err := c.GuardarRegimenes(ctx, lote); err != nil {
+		t.Fatal(err)
+	}
+	cuenta := &cuentaComandos{}
+	c.cliente.AddHook(cuenta)
+	rs, err := c.Regimenes(ctx, catalogo)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if n := cuenta.idas.Load(); n != 1 {
+		t.Fatalf("Regimenes hizo %d idas a Redis para %d estaciones; tiene que ser una", n, len(catalogo))
+	}
+	if len(rs) != 17 {
+		t.Fatalf("%d estaciones con régimen, se esperaban 17: %v", len(rs), rs)
+	}
+	for id, r := range rs {
+		if una := regimen(t, c, id); !reflect.DeepEqual(r, una) {
+			t.Fatalf("%s: Regimenes = %+v y Regimen = %+v", id, r, una)
+		}
+	}
+	if sin, err := c.Regimenes(ctx, nil); err != nil || len(sin) != 0 {
+		t.Fatalf("Regimenes sin estaciones = %v, %v", sin, err)
+	}
+}
+
+// Una clave que alguien escribió a mano no tumba la lectura de las demás: esa
+// estación se salta y el error, que es un *almacen.RegimenesIlegibles, la
+// nombra con su clave. Sigue siendo una sola ida a Redis.
+func TestRegimenesSaltaLosValoresIlegibles(t *testing.T) {
+	c := conectar(t)
+	if _, err := c.GuardarRegimenes(ctx, map[string]almacen.RegimenEstacion{
+		"CA-A": {FechaHora: t0, Regimen: 1}, "CA-B": {FechaHora: t0, Regimen: 2}, "CA-C": {FechaHora: t0, Regimen: 0},
+	}); err != nil {
+		t.Fatal(err)
+	}
+	c.cliente.Set(ctx, claveRegimen("CA-B"), "no-es-json", 0)
+	c.cliente.Set(ctx, claveRegimen("CA-D"), `"un texto JSON, pero no un régimen"`, 0)
+	c.cliente.RPush(ctx, claveRegimen("CA-E"), "una lista, no un texto") // MGET la devuelve como nil: es una estación sin régimen
+	rs, err := c.Regimenes(ctx, []string{"CA-A", "CA-B", "CA-C", "CA-D", "CA-E", "CA-Z"})
+	var ilegibles *almacen.RegimenesIlegibles
+	if !errors.As(err, &ilegibles) {
+		t.Fatalf("Regimenes con valores ilegibles = %v; se esperaba un *almacen.RegimenesIlegibles", err)
+	}
+	if len(rs) != 2 || rs["CA-A"].Regimen != 1 || rs["CA-C"].Regimen != 0 {
+		t.Fatalf("las estaciones legibles tenían que venir igual: %+v", rs)
+	}
+	if fmt.Sprint(ilegibles.Estaciones) != "[CA-B CA-D]" || !strings.Contains(err.Error(), "estacion:CA-B:regimen") {
+		t.Fatalf("ilegibles = %v (%v); se esperaban CA-B y CA-D, con la clave de la primera", ilegibles.Estaciones, err)
+	}
+	// Sin ninguna ilegible entre las pedidas, el error es nil de verdad.
+	if rs, err := c.Regimenes(ctx, []string{"CA-A", "CA-C"}); err != nil || len(rs) != 2 {
+		t.Fatalf("Regimenes = %+v, %v", rs, err)
+	}
+	// Escribir de nuevo la estación la arregla: el script reemplaza lo ilegible.
+	if _, err := c.GuardarRegimenes(ctx, map[string]almacen.RegimenEstacion{"CA-B": {FechaHora: t0, Regimen: 2}}); err != nil {
+		t.Fatal(err)
+	}
+	if rs, err := c.Regimenes(ctx, []string{"CA-A", "CA-B", "CA-C"}); err != nil || len(rs) != 3 {
+		t.Fatalf("después de reescribir CA-B: %+v, %v", rs, err)
+	}
+}
+
+// Lo que GuardarRegimenes devuelve es lo que decide si un cambio se avisa por
+// el WebSocket: tiene que ser exactamente lo que Regimen devuelve después (las
+// fechas en hora de Lima y al segundo, como se guardan), y nada de lo que no
+// reemplazó. Una lectura de la misma hora sí reemplaza.
+func TestGuardarRegimenesDevuelveLoQueQuedoGuardado(t *testing.T) {
+	c := conectar(t)
+	inca := "mala"
+	pm := 58.3
+	nuevo := almacen.RegimenEstacion{
+		FechaHora: time.Date(2026, 11, 14, 20, 0, 0, 0, time.UTC), // las 15:00 de Lima, en otra zona
+		Regimen:   1, ExcedeECA: true, Alerta: true, INCA: &inca,
+		Media24h: almacen.Media24h{PM25: &pm, PM10: &pm, Lecturas: 24},
+		TS:       time.Date(2026, 11, 14, 15, 0, 2, 987_000_000, lima), // con milisegundos
+	}
+	guardados, err := c.GuardarRegimenes(ctx, map[string]almacen.RegimenEstacion{"CA-A": nuevo})
+	if err != nil || len(guardados) != 1 {
+		t.Fatalf("GuardarRegimenes = %+v, %v", guardados, err)
+	}
+	// Se comparan como JSON, que es como salen por la API (y time.Time no se
+	// compara con DeepEqual: la zona de lo leído es otro puntero).
+	devuelto, _ := json.Marshal(guardados["CA-A"])
+	leido, _ := json.Marshal(regimen(t, c, "CA-A"))
+	if string(devuelto) != string(leido) || !strings.Contains(string(devuelto), `"ts":"2026-11-14T15:00:02-05:00"`) ||
+		!strings.Contains(string(devuelto), `"fecha_hora":"2026-11-14T15:00:00-05:00"`) {
+		t.Fatalf("lo devuelto no es lo guardado:\n devuelto %s\n guardado %s", devuelto, leido)
+	}
+	// Una hora anterior: no reemplaza, no se devuelve y lo guardado no cambia.
+	vieja := almacen.RegimenEstacion{FechaHora: t0.Add(-time.Hour), Regimen: 2, TS: t0}
+	if guardados, err = c.GuardarRegimenes(ctx, map[string]almacen.RegimenEstacion{"CA-A": vieja}); err != nil || len(guardados) != 0 {
+		t.Fatalf("una lectura más antigua no tenía que guardarse: %+v, %v", guardados, err)
+	}
+	if leido := regimen(t, c, "CA-A"); leido.Regimen != 1 {
+		t.Fatalf("la lectura más antigua cambió el régimen: %+v", leido)
+	}
+	// La misma hora, corregida: reemplaza y se devuelve.
+	corregida := almacen.RegimenEstacion{FechaHora: t0, Regimen: 0, TS: t0}
+	if guardados, err = c.GuardarRegimenes(ctx, map[string]almacen.RegimenEstacion{"CA-A": corregida}); err != nil || guardados["CA-A"].Regimen != 0 {
+		t.Fatalf("la misma hora tenía que reemplazar: %+v, %v", guardados, err)
+	}
+	// Después de que Redis olvida el script, el lote se repite y la respuesta
+	// sigue diciendo qué se guardó.
+	if err := c.cliente.ScriptFlush(ctx).Err(); err != nil {
+		t.Fatal(err)
+	}
+	guardados, err = c.GuardarRegimenes(ctx, map[string]almacen.RegimenEstacion{
+		"CA-A": {FechaHora: t0.Add(-2 * time.Hour), Regimen: 2}, "CA-B": {FechaHora: t0, Regimen: 2},
+	})
+	if _, estaA := guardados["CA-A"]; err != nil || len(guardados) != 1 || estaA || guardados["CA-B"].Regimen != 2 {
+		t.Fatalf("tras olvidar el script: %+v, %v; se esperaba solo CA-B", guardados, err)
+	}
+}
+
+// Con Redis caído no se guardó nada: el mapa viene vacío junto con el error.
+func TestGuardarRegimenesConRedisCaidoNoDevuelveNada(t *testing.T) {
+	c, err := Conectar(Opciones{Addr: "127.0.0.1:1"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer c.Cerrar()
+	guardados, err := c.GuardarRegimenes(ctx, map[string]almacen.RegimenEstacion{"CA-A": {FechaHora: t0}})
+	if err == nil || len(guardados) != 0 {
+		t.Fatalf("GuardarRegimenes sin Redis = %+v, %v", guardados, err)
 	}
 }
 

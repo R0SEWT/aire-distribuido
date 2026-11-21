@@ -165,6 +165,42 @@ paths:
                 desconocida: {value: {error: 'estación desconocida: CA-XX-99'}}
                 sin_regimen: {value: {error: 'la estación CA-AYAS-01 todavía no tiene un régimen registrado'}}
         '503': {$ref: '#/components/responses/NoDisponible'}
+  /api/regimenes:
+    get:
+      tags: [Estaciones]
+      operationId: listarRegimenes
+      summary: Obtiene de Redis el último estado de todas las estaciones que tienen uno
+      description: |
+        Rol usuario o admin. Es GET /api/estaciones/{id}/regimen para todo el
+        catálogo en un solo pedido (y una sola ida a Redis): lo que el panel
+        necesita al abrir. Trae una entrada por estación que ya tiene una
+        predicción registrada, ordenadas por estacion; las que todavía no
+        tienen ninguna no aparecen. Con el sistema recién levantado la lista
+        está vacía: es un 200, no un 404. Si el valor guardado de una estación
+        no se puede leer, esa estación no aparece (queda en el log del
+        servidor) y las demás sí: no es un 503.
+
+        El panel se mantiene al día con el evento estacion.regimen de /ws, que
+        lleva el mismo objeto. Cómo juntar esta respuesta con los eventos, sin
+        que una pise a un evento más nuevo, está en la descripción de /ws.
+      x-roles: [usuario, admin]
+      responses:
+        '200':
+          description: El estado de cada estación que tiene uno; una lista vacía es válida
+          content:
+            application/json:
+              schema:
+                type: array
+                items: {$ref: '#/components/schemas/EstadoEstacion'}
+              example:
+                - {estacion: CA-AYAS-01, fecha_hora: '2026-11-14T15:00:00-05:00', regimen: 1, excede_eca: true,
+                   media_24h: {pm2_5: 58.3, pm10: 121.4, lecturas: 24},
+                   alerta: true, inca: mala, ts: '2026-11-14T15:00:02-05:00'}
+                - {estacion: CA-MAC-01, fecha_hora: '2026-11-14T15:00:00-05:00', regimen: 0, excede_eca: false,
+                   media_24h: {pm2_5: null, pm10: null, lecturas: 3},
+                   alerta: false, inca: null, ts: '2026-11-14T15:00:03-05:00'}
+        '401': {$ref: '#/components/responses/NoAutenticado'}
+        '503': {$ref: '#/components/responses/NoDisponible'}
   /api/modelos/activo:
     get:
       tags: [Modelos]
@@ -207,6 +243,54 @@ paths:
               example: [{nombre: H45-022, direccion: '10.11.38.69:56455', workers: 24, latencia_ms: 0.49, libre: true}]
         '401': {$ref: '#/components/responses/NoAutenticado'}
         '403': {$ref: '#/components/responses/SinPermiso'}
+  /api/cluster/eventos:
+    get:
+      tags: [Clúster]
+      operationId: listarEventosCluster
+      summary: Lista los eventos del clúster, del más reciente al más antiguo
+      description: |
+        Rol admin. Son los «logs» del clúster, lo que MongoDB guarda en
+        eventos_cluster: un nodo que entró al pool (alta), que salió (baja) o
+        que no llegó a entrar o hizo abortar una corrida (error). Los latidos
+        no se guardan.
+
+        Después de cada entrenamiento es normal ver una baja y un alta por
+        nodo: el nodo deja el pool al cerrar la corrida y vuelve a llamar a la
+        API tras su pausa entre intentos (unos 2 s).
+
+        Trae a lo sumo limite eventos (50 si no se indica; 200 como máximo).
+        Entre dos del mismo instante, primero el que se guardó último.
+      x-roles: [admin]
+      parameters:
+        - name: limite
+          in: query
+          required: false
+          description: Cuántos eventos traer, a lo sumo
+          schema: {type: integer, minimum: 1, maximum: 200, default: 50}
+          example: 50
+      responses:
+        '200':
+          description: Eventos, del más reciente al más antiguo; una lista vacía es válida
+          content:
+            application/json:
+              schema:
+                type: array
+                maxItems: 200
+                items: {$ref: '#/components/schemas/EventoCluster'}
+              example:
+                - {ts: '2026-11-19T15:30:04.512-05:00', tipo: alta, nodo: H45-022,
+                   detalle: '10.11.38.69:56455: 24 workers, latencia 0.49 ms'}
+                - {ts: '2026-11-19T15:30:02.118-05:00', tipo: baja, nodo: H45-022,
+                   detalle: '10.11.38.69:56431: entrenamiento e-20261119-1530 terminado'}
+        '400':
+          description: limite no es un entero entre 1 y 200
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Error'}
+              example: {error: limite tiene que ser un entero entre 1 y 200}
+        '401': {$ref: '#/components/responses/NoAutenticado'}
+        '403': {$ref: '#/components/responses/SinPermiso'}
+        '503': {$ref: '#/components/responses/NoDisponible'}
   /api/entrenamientos:
     post:
       tags: [Entrenamientos]
@@ -358,7 +442,7 @@ paths:
     get:
       tags: [Métricas]
       operationId: consultarMetricas
-      summary: Consulta pedidos, percentiles de latencia y estado del clúster
+      summary: Consulta pedidos, percentiles de latencia, CPU y memoria de la API y estado del clúster
       x-roles: [admin]
       responses:
         '200':
@@ -377,6 +461,8 @@ paths:
                   mongo: {escritas: 12000, descartadas: 0, fallidas: 0, lotes: 3120}
                   redis: {escritas: 12000, descartadas: 0, fallidas: 0, lotes: 3050}
                 puntos_de_control: {escritos: 44, fallidos: 0, omitidos: 0}
+                proceso_api: {cpu_usuario_s: 12.48, cpu_sistema_s: 3.105, en_marcha_s: 1824.6, nucleos: 8,
+                              heap_mb: 21.7, sistema_mb: 48.3, max_rss_mb: 63.9, goroutines: 27}
         '401': {$ref: '#/components/responses/NoAutenticado'}
         '403': {$ref: '#/components/responses/SinPermiso'}
   /openapi.yaml:
@@ -407,17 +493,53 @@ paths:
     get:
       tags: [Eventos]
       operationId: seguirEventos
-      summary: Abre un WebSocket de eventos del entrenamiento
+      summary: Abre un WebSocket con el estado de las estaciones y los eventos del entrenamiento
       description: |
         Rol usuario o admin. Solo el servidor envía. Cada trama de texto es un
         objeto JSON con el nombre del evento y sus datos (esquema EventoWS):
-        {"evento": "entrenamiento.ronda", "datos": {...}}.
+        {"evento": "estacion.regimen", "datos": {...}}.
 
-        Qué eventos ve cada rol: entrenamiento.ronda y entrenamiento.fin llegan
-        solo a los clientes con rol admin (los entrenamientos son de admin). Un
-        cliente con rol usuario se conecta igual y hoy no recibe ningún evento:
-        el WebSocket queda abierto para los eventos que sí son de todos, como
-        las alertas que consumirá la SPA.
+        Qué eventos ve cada rol: estacion.regimen llega a todos, usuario y
+        admin. entrenamiento.ronda y entrenamiento.fin llegan solo a los
+        clientes con rol admin (los entrenamientos son de admin).
+
+        estacion.regimen es el tiempo real del panel: el estado nuevo de una
+        estación (esquema EstadoEstacion, el mismo objeto de cada entrada de
+        GET /api/regimenes). Dos reglas:
+        - Sale solo cuando esa lectura pasó a ser el estado de la estación, es
+          decir, cuando la escritura en Redis reemplazó al guardado. Una
+          lectura más antigua que la guardada se predice y se responde igual,
+          pero no cambia el estado ni emite evento: el evento y
+          GET /api/regimenes dicen siempre lo mismo. Sale después de la
+          escritura, así que quien lo recibe puede pedir el GET en el acto.
+        - Va agrupado por estación: de una misma estación sale a lo sumo un
+          evento cada 250 ms. El primero sale enseguida; si en ese intervalo la
+          estación cambia varias veces (una ráfaga de lecturas), al cumplirse
+          sale solo el último estado. Los intermedios no se envían: el evento
+          es el estado, no cada lectura.
+
+        Cómo se junta con GET /api/regimenes. Para no perder cambios, el
+        cliente abre primero el WebSocket y después pide el GET; al reconectar,
+        lo vuelve a pedir. Pero el GET y los eventos viajan por conexiones
+        distintas: la respuesta del GET puede llegar después de un evento más
+        nuevo de la misma estación, y aplicarla tal cual lo pisaría con un
+        estado viejo. La regla:
+        - De una estación de la que el cliente ya recibió un evento desde que
+          abrió este WebSocket, la entrada del GET se ignora: el evento manda.
+          No se pierde nada, porque si el GET traía un estado más nuevo que
+          ese evento, su propio evento llega después.
+        - De las demás estaciones, se toma la entrada del GET.
+        - Al reconectar, la cuenta empieza de nuevo: solo valen los eventos
+          recibidos por la conexión nueva.
+        No sirve comparar el GET con el evento por sus campos: ts va al
+        segundo, y una lectura corregida de la misma hora conserva fecha_hora.
+        Dos eventos de una misma estación, en cambio, llegan siempre en orden:
+        el último recibido es el estado.
+
+        Si Redis guarda un estado y su respuesta no le llega a la API, el
+        evento no se pierde: sale en cuanto Redis vuelve a responder (hasta
+        alrededor de un segundo después). Ese caso puede repetir un evento con
+        un estado que el cliente ya tenía; aplicarlo otra vez no cambia nada.
 
         El JWT se acepta de tres maneras, en este orden:
         - Authorization: Bearer, como en el resto de la API, para un cliente
@@ -439,14 +561,24 @@ paths:
         - bearerAuth: []
       x-roles: [usuario, admin]
       x-websocket-events:
+        estacion.regimen:
+          schema: {$ref: '#/components/schemas/EventoWS'}
+          x-roles: [usuario, admin]
+          example:
+            evento: estacion.regimen
+            datos: {estacion: CA-AYAS-01, fecha_hora: '2026-11-14T15:00:00-05:00', regimen: 1, excede_eca: true,
+                    media_24h: {pm2_5: 58.3, pm10: 121.4, lecturas: 24},
+                    alerta: true, inca: mala, ts: '2026-11-14T15:00:02-05:00'}
         entrenamiento.ronda:
           schema: {$ref: '#/components/schemas/EventoWS'}
+          x-roles: [admin]
           example:
             evento: entrenamiento.ronda
             datos: {id: e-20261119-1530, iter: 1, inercia: 73075.5, ms_ronda: 0.61, ms_fusion: 0.003,
                     ms_por_nodo: {H45-022: 0.11, H45-023: 0.12}}
         entrenamiento.fin:
           schema: {$ref: '#/components/schemas/EventoWS'}
+          x-roles: [admin]
           examples:
             terminado:
               evento: entrenamiento.fin
@@ -632,6 +764,16 @@ components:
         alerta: {$ref: '#/components/schemas/Alerta'}
         inca: {$ref: '#/components/schemas/BandaINCA'}
         ts: {type: string, format: date-time}
+    EstadoEstacion:
+      description: |
+        El RegimenEstacion de una estación junto con su código. Es cada entrada de
+        GET /api/regimenes y los datos del evento estacion.regimen de /ws.
+      allOf:
+        - $ref: '#/components/schemas/RegimenEstacion'
+        - type: object
+          required: [estacion]
+          properties:
+            estacion: {type: string, minLength: 1, description: Código de la estación OEFA}
     Media24h:
       type: object
       required: [pm2_5, pm10, lecturas]
@@ -698,6 +840,18 @@ components:
         workers: {type: integer, minimum: 1}
         latencia_ms: {type: number, minimum: 0}
         libre: {type: boolean}
+    EventoCluster:
+      type: object
+      required: [ts, tipo, nodo, detalle]
+      description: Un documento de eventos_cluster. No es un evento del WebSocket.
+      properties:
+        ts: {type: string, format: date-time, description: 'Cuándo lo vio el coordinador, en la hora de Lima y al milisegundo'}
+        tipo:
+          type: string
+          enum: [alta, baja, error]
+          description: 'alta: el nodo entró al pool; baja: salió; error: no llegó a entrar o hizo abortar una corrida'
+        nodo: {type: string, description: Nombre con que el nodo se presentó}
+        detalle: {type: string, description: 'La dirección TCP del nodo y lo que pasó, en texto'}
     PedidoEntrenamiento:
       type: object
       required: [nodos, replicas, semilla]
@@ -784,7 +938,7 @@ components:
         lotes: {type: integer, minimum: 0, description: Idas y vueltas al almacén}
     Metricas:
       type: object
-      required: [endpoints, nodos_en_pool, ultimo_entrenamiento, escrituras_descartadas, escrituras_fallidas, escritura, puntos_de_control]
+      required: [endpoints, nodos_en_pool, ultimo_entrenamiento, escrituras_descartadas, escrituras_fallidas, escritura, puntos_de_control, proceso_api]
       properties:
         endpoints:
           type: object
@@ -812,6 +966,38 @@ components:
             escritos: {type: integer, minimum: 0, description: Puntos que Redis guardó}
             fallidos: {type: integer, minimum: 0, description: Escrituras que Redis rechazó o no respondió a tiempo}
             omitidos: {type: integer, minimum: 0, description: Puntos reemplazados por el de una ronda posterior antes de escribirse}
+        proceso_api: {$ref: '#/components/schemas/ProcesoAPI'}
+    ProcesoAPI:
+      type: object
+      required: [cpu_usuario_s, cpu_sistema_s, en_marcha_s, nucleos, heap_mb, sistema_mb, max_rss_mb, goroutines]
+      description: |
+        CPU y memoria del proceso de la API, que es el coordinador del clúster, medidos
+        en el momento de la consulta. No son de los nodos: el protocolo del clúster no
+        transporta el CPU de cada nodo. De un nodo se conoce lo que tardó en responder
+        cada ronda (ms_por_nodo, que incluye la red) y la latencia de su latido
+        (latencia_ms en GET /api/cluster/nodos).
+
+        El tiempo de CPU es acumulado desde que arrancó el proceso, no un porcentaje. El
+        uso de CPU entre dos consultas es
+        (Δcpu_usuario_s + Δcpu_sistema_s) / Δen_marcha_s: 1 es un núcleo ocupado todo ese
+        tiempo y el tope es nucleos. Con una sola consulta, el mismo cociente sin las
+        diferencias es el promedio desde el arranque.
+      properties:
+        cpu_usuario_s: {type: number, minimum: 0, description: Segundos de CPU en modo usuario que el proceso consumió desde que arrancó}
+        cpu_sistema_s: {type: number, minimum: 0, description: Segundos de CPU en modo núcleo que el proceso consumió desde que arrancó}
+        en_marcha_s: {type: number, minimum: 0, description: Segundos de reloj desde que arrancó el proceso}
+        nucleos: {type: integer, minimum: 1, description: 'Núcleos que el proceso puede usar a la vez (GOMAXPROCS)'}
+        heap_mb: {type: number, minimum: 0, description: Memoria viva en el heap de Go ahora}
+        sistema_mb: {type: number, minimum: 0, description: Memoria que el runtime de Go tiene pedida al sistema operativo}
+        max_rss_mb: {type: number, minimum: 0, description: 'Máximo de memoria residente del proceso desde que arrancó; no baja'}
+        goroutines: {type: integer, minimum: 1, description: Goroutines vivas ahora}
+        no_disponible:
+          type: array
+          items: {type: string, enum: [cpu_usuario_s, cpu_sistema_s, max_rss_mb]}
+          description: |
+            Los campos que esta plataforma no puede medir y quedaron en 0. Solo aparece
+            cuando hay alguno: en Windows, el tiempo de CPU y el máximo de memoria
+            residente. En Linux (la imagen de Docker) se mide todo.
     EventoRonda:
       allOf:
         - $ref: '#/components/schemas/Ronda'
@@ -841,10 +1027,13 @@ components:
       required: [evento, datos]
       description: Una trama de texto del WebSocket.
       properties:
-        evento: {type: string, enum: [entrenamiento.ronda, entrenamiento.fin]}
+        evento: {type: string, enum: [estacion.regimen, entrenamiento.ronda, entrenamiento.fin]}
         datos:
-          description: EventoRonda con entrenamiento.ronda; EventoFin o EventoError con entrenamiento.fin.
+          description: |
+            EstadoEstacion con estacion.regimen; EventoRonda con entrenamiento.ronda;
+            EventoFin o EventoError con entrenamiento.fin.
           oneOf:
+            - $ref: '#/components/schemas/EstadoEstacion'
             - $ref: '#/components/schemas/EventoRonda'
             - $ref: '#/components/schemas/EventoFin'
             - $ref: '#/components/schemas/EventoError'
