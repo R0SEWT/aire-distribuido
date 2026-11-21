@@ -1,8 +1,8 @@
-# Despliegue reproducible de la PC4 (spec §8): la API coordinadora, los nodos de
-# cómputo, MongoDB y Redis.
+# Despliegue reproducible del sistema (spec de la PC4, §8, y del frontend, §11):
+# la UI, la API coordinadora, los nodos de cómputo, MongoDB y Redis.
 #
 #   cp .env.example .env                 # y completar JWT_SECRETO y API_USUARIOS
-#   docker compose up --build            # API en http://localhost:8080/docs
+#   docker compose up --build            # UI en http://localhost:8081, API en http://localhost:8080/docs
 #   docker compose up --build --scale nodo=3
 #
 # El gold (data/gold/oefa_features.csv, o la carpeta de GOLD_DIR) no se versiona
@@ -22,7 +22,12 @@ services:
     # La API es también el coordinador del clúster: los nodos la llaman en el
     # 7070 (-nodos-addr), que no se publica al anfitrión porque solo lo usan
     # los nodos de esta red. Para entrenar necesita el mismo gold que ellos.
-    command: ["api", "-addr", ":8080", "-cola", "32768", "-nodos-addr", ":7070", "-gold", "/datos/gold/oefa_features.csv"]
+    #
+    # -jwt-duracion es lo que dura un token. No se renueva: al vencer, la UI
+    # vuelve al ingreso. Una hora por omisión; para una demo larga se sube con
+    # JWT_DURACION en .env (por ejemplo 4h).
+    command: ["api", "-addr", ":8080", "-cola", "32768", "-nodos-addr", ":7070", "-gold", "/datos/gold/oefa_features.csv",
+              "-jwt-duracion", "${JWT_DURACION:-1h}"]
     expose:
       - "7070"
     volumes:
@@ -54,6 +59,19 @@ services:
       timeout: 4s
       retries: 6
       start_period: 5s
+
+  # La UI (spec del frontend, §11): un solo Caddy que sirve la SPA ya compilada y
+  # pasa /api, /ws, /docs y /openapi.yaml a la API, con las cabeceras de
+  # seguridad de web/Caddyfile. La UI y la API quedan en el mismo origen: sin
+  # CORS. Publicado solo en localhost, como todo lo demás.
+  web:
+    build: ./web
+    image: aire-distribuido-web
+    ports:
+      - "127.0.0.1:${WEB_PORT:-8081}:80"
+    depends_on:
+      api:
+        condition: service_healthy
 
   # Un nodo de cómputo. Sin container_name ni puertos: solo abre la conexión de
   # salida hacia el coordinador, así que se escala con --scale nodo=K y cada

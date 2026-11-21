@@ -1,0 +1,89 @@
+@import 'tailwindcss';
+
+@import './fuentes.css';
+@import '@fontsource/ibm-plex-mono/latin-400.css';
+@import '@fontsource/ibm-plex-mono/latin-500.css';
+@import '@fontsource/ibm-plex-mono/latin-600.css';
+
+@import './tokens.css';
+@import './proyector.css';
+
+@layer base {
+  :root {
+    color-scheme: dark;
+  }
+
+  body {
+    @apply bg-fondo text-texto font-sans antialiased;
+    min-height: 100dvh;
+  }
+
+  /* El foco siempre se ve: la app se maneja también con teclado. */
+  :focus-visible {
+    outline: 2px solid var(--color-acento-claro);
+    outline-offset: 2px;
+  }
+
+  a {
+    @apply text-acento-claro underline-offset-2 hover:underline;
+  }
+
+  summary {
+    cursor: pointer;
+  }
+}
+
+@layer components {
+  /* Etiqueta chica en mayúsculas, la de arriba de una tarjeta o de un control. */
+  .rotulo {
+    @apply text-tenue text-xs font-semibold tracking-wider uppercase;
+  }
+
+  /* La píldora: menú, pestañas y botones secundarios. */
+  .pildora {
+    @apply border-borde bg-superficie text-texto inline-flex items-center gap-2 rounded-full border px-3.5 py-1.5 text-sm font-semibold whitespace-nowrap no-underline transition-colors;
+  }
+  .pildora:hover {
+    @apply border-tenue no-underline;
+  }
+  .pildora[aria-current='page'],
+  .pildora[aria-pressed='true'],
+  .pildora[aria-checked='true'] {
+    @apply border-acento bg-relieve;
+  }
+  .pildora:disabled {
+    @apply text-tenue cursor-not-allowed;
+  }
+
+  .boton {
+    @apply bg-boton text-boton-texto inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition-opacity;
+  }
+  .boton:hover {
+    @apply opacity-90;
+  }
+  .boton:disabled {
+    @apply cursor-not-allowed opacity-50;
+  }
+
+  .campo {
+    @apply border-borde-control bg-fondo text-texto placeholder:text-tenue w-full rounded-lg border px-3 py-2 font-mono text-sm;
+  }
+
+  /* «No mide PM por hora»: gris apagado con trama, para que no dependa del color. */
+  .trama {
+    background-image: repeating-linear-gradient(
+      135deg,
+      transparent 0 3px,
+      color-mix(in srgb, var(--color-fondo) 70%, transparent) 3px 5px
+    );
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    transition-duration: 0.001ms !important;
+  }
+}

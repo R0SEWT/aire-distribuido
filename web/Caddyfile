@@ -1,0 +1,100 @@
+# El único servidor web del sistema (spec del frontend, §10 y §11): sirve la UI
+# ya compilada (web/dist) y pasa /api, /ws, /docs y /openapi.yaml a la API. Como
+# la UI y la API quedan en el mismo origen, no hay CORS que configurar y el
+# WebSocket pasa el control de origen de la API (api/cors.go) sin tocar nada:
+# Caddy reenvía el Host tal cual llega.
+#
+# Escucha HTTP en el 80 dentro de la red de Compose, que lo publica solo en
+# localhost. No saca certificados ni expone su API de administración.
+{
+	admin off
+	auto_https off
+
+	# El token no llega al log. La UI lo manda en Sec-WebSocket-Protocol
+	# (aire.jwt, <token>), y cuando el proxy falla (la API caída) Caddy escribe
+	# el pedido entero con sus encabezados: Authorization lo tapa solo, ese no.
+	# La consulta ?token=, que la API también acepta para probar a mano, tampoco.
+	log default {
+		format filter {
+			wrap console
+			fields {
+				request>headers>Sec-Websocket-Protocol delete
+				request>uri query {
+					replace token REDACTED
+				}
+			}
+		}
+	}
+}
+
+# La política de contenido de la UI. Scripts, estilos y fuentes solo del propio
+# origen: nada en línea y nada de terceros. connect-src 'self' cubre los
+# pedidos a /api y el WebSocket de /ws, con y sin TLS. frame-ancestors 'none':
+# nadie la mete en un marco.
+(politica_ui) {
+	header Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self'; font-src 'self'; img-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
+}
+
+:80 {
+	encode zstd gzip
+
+	# En todas las respuestas, también las de la API.
+	header {
+		# El navegador no adivina el tipo de un archivo: un JSON no se ejecuta como script.
+		X-Content-Type-Options nosniff
+		# Los enlaces que salen de la app (el repositorio, la licencia) no dicen de dónde vienen.
+		Referrer-Policy no-referrer
+		-Server
+	}
+
+	# La API. reverse_proxy también pasa el WebSocket de /ws.
+	@api path /api/* /ws /openapi.yaml
+	handle @api {
+		reverse_proxy api:8080
+	}
+
+	# Swagger UI lo sirve la API y carga de un CDN, con un script en línea que lo
+	# arranca: lleva su propia política. Solo se admite esa versión de Swagger y
+	# ese script (por su hash; si cambia la página en api/rutas.go, la prueba
+	# web/pruebas/caddy.test.ts dice el hash nuevo). Swagger pone estilos en
+	# línea, y por eso style-src lleva 'unsafe-inline' aquí y solo aquí.
+	handle /docs {
+		header Content-Security-Policy "default-src 'none'; script-src https://cdn.jsdelivr.net/npm/swagger-ui-dist@5.17.14/ 'sha256-Bh/L1I8Jz3e+G6+99nT+g0tTChazroLfSG0Sz+e0ZVc='; style-src https://cdn.jsdelivr.net/npm/swagger-ui-dist@5.17.14/ 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; connect-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"
+		reverse_proxy api:8080
+	}
+
+	# Los archivos de la UI con nombre propio: lo compilado (/assets) y los datos
+	# (/datos). Existen o es un 404; aquí no hay vuelta a index.html, para que un
+	# script que ya no está no se responda con una página y un 200.
+	@archivos path /assets/* /datos/*
+	handle @archivos {
+		root * /srv
+		import politica_ui
+
+		# Vite pone un hash en el nombre de cada archivo de /assets: no cambian
+		# nunca. Solo lo que existe sale como inmutable; un 404 no.
+		@compilado {
+			path /assets/*
+			file
+			not path */
+		}
+		header @compilado Cache-Control "public, max-age=31536000, immutable"
+
+		# Los datos se regeneran con el mismo nombre: se vuelven a pedir siempre.
+		@datos path /datos/*
+		header @datos Cache-Control "no-cache"
+
+		file_server
+	}
+
+	# Todo lo demás es la UI. Es una SPA: una ruta como /cluster no es un
+	# archivo, la resuelve la página. index.html se vuelve a pedir siempre y
+	# nunca sale como inmutable.
+	handle {
+		root * /srv
+		import politica_ui
+		header Cache-Control "no-cache"
+		try_files {path} /index.html
+		file_server
+	}
+}
