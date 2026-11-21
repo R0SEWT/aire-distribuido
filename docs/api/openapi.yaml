@@ -8,8 +8,8 @@ info:
 
     Los ejemplos salen de la spec §6.5 y de reports/regimenes.json.
 servers:
-  - url: http://localhost:8080
-    description: API local o publicada por Docker Compose
+  - url: /
+    description: El mismo origen que sirve este contrato (la API local, la de Docker Compose o una desplegada)
 tags:
   - name: Autenticación
   - name: Salud
