@@ -1,0 +1,2555 @@
+{
+  "metadatos": {
+    "generado": "2026-11-21",
+    "generador": "scripts/impacto.py",
+    "fuentes": {
+      "gold": {
+        "ruta": "data/gold/oefa_features.csv",
+        "sha256": "2fdace5ad8599149c9ed2b177151881025d895a50738519d9358d537236f87f7",
+        "filas": 65873
+      },
+      "asignaciones": {
+        "ruta": "data/gold/asignaciones.csv",
+        "sha256": "9fc9e212bb55f0649729cc3f229ec99fc9d532b8b9370ea1c8e035bf9e67045f",
+        "filas": 65873
+      },
+      "silver": {
+        "ruta": "data/silver/oefa_ancho.csv",
+        "sha256": "63b707f469a63baa8d38121b0e4b7724796d53f3aa66b306b1ed44c179cf506e",
+        "filas": 236001
+      },
+      "ficha": {
+        "ruta": "reports/estaciones_ficha.csv",
+        "sha256": "edaf93b425d82be33c8dea40fb854b041972dda186bfa4ba544e9a41c5ca0eaa"
+      },
+      "poblacion": {
+        "ruta": "reports/poblacion_distritos.csv",
+        "sha256": "d125b252618156300622df530b83572558889c9a7c5eb727b3a648c9cc2254fa",
+        "que_es": "Población censada, Censos Nacionales 2017 (INEI, Directorio Nacional de Centros Poblados). La URL de cada cifra va en su fila."
+      },
+      "alerta_24h": {
+        "ruta": "reports/alerta_24h.json",
+        "sha256": "5ccb37ca84b455f815974d0bcf05848c81f98646051dc10672255fd2f16176b8"
+      },
+      "regimenes": {
+        "ruta": "reports/regimenes.json",
+        "sha256": "d45f78eaf1b2e0001b18c0a77d50f31416d6b6c7abf4b0695207eea3ca3637a9"
+      }
+    },
+    "reglas": {
+      "lectura": "Una hora de una estación con PM2.5 y PM10 (una fila del gold), con las concentraciones crudas del silver en µg/m³.",
+      "ventana": "(t − 24 h, t]",
+      "ventana_horas": 24,
+      "minimo_lecturas": 18,
+      "eca_pm2_5": 50,
+      "eca_pm10": 100,
+      "alerta": "media de 24 h de PM2.5 > 50 o de PM10 > 100 µg/m³ (ECA de 24 h, DS 003-2017-MINAM)",
+      "inca": {
+        "bandas": [
+          "buena",
+          "moderada",
+          "mala",
+          "umbral_de_cuidado"
+        ],
+        "cortes_pm10": [
+          75,
+          150,
+          250
+        ],
+        "cortes_pm2_5": [
+          12.5,
+          25,
+          125
+        ],
+        "regla": "la peor banda entre la de PM10 y la de PM2.5 (INCA, RM 181-2016-MINAM)"
+      },
+      "dia": "fecha_hora es el fin del promedio horario: el día de una lectura es el de la hora anterior (01:00 … 24:00 son un mismo día).",
+      "implementacion": "ventana/ventana.go"
+    },
+    "notas": [
+      "Solo entran las 17 estaciones con PM2.5 y PM10 por hora (las del gold). Las otras 16 de la ficha no están en ninguna cifra: una estación que no mide PM por hora no es una estación con aire limpio.",
+      "La población es la censada del distrito de cada estación y va como contexto de su fila. No se suma entre distritos: las estaciones de OEFA vigilan una actividad fiscalizada y miden cerca de ella, y vivir en el distrito no es haber respirado ese aire.",
+      "Varias estaciones son campañas de pocas semanas: sus horas sobre el ECA describen esas semanas (primera_fecha, ultima_fecha y dias_con_datos).",
+      "dias_estacion_con_datos suma los días de cada estación del grupo: dos estaciones que midieron el mismo día cuentan dos."
+    ]
+  },
+  "alcance": {
+    "estaciones_en_la_ficha": 33,
+    "estaciones_con_pm_horario": 17,
+    "estaciones_sin_pm_horario": [
+      "CA-01",
+      "CA-03",
+      "CA-CC-01",
+      "CA-RZC-01",
+      "CA-SB-01",
+      "CA-TA-01",
+      "CA-TO-01",
+      "CA-VE-01",
+      "CA-VMP-1",
+      "CA-VMP-10",
+      "CA-VMP-2",
+      "CA-VMP-2A",
+      "CA-VMP-6",
+      "CA-VMP-7",
+      "CA-VMP-8",
+      "CA-VMP-9"
+    ],
+    "distritos_con_pm_horario": 10,
+    "estaciones_sin_distrito": [
+      "CA-HUAR-01"
+    ]
+  },
+  "totales": {
+    "lecturas": 65873,
+    "horas_calculables": 64748,
+    "horas_sobre_eca": 1184,
+    "inca": {
+      "buena": 33979,
+      "moderada": 25480,
+      "mala": 5269,
+      "umbral_de_cuidado": 20
+    }
+  },
+  "estaciones": [
+    {
+      "estacion": "CA-AYAS-01",
+      "objeto_fiscalizado": "Unidad minera Antamina",
+      "tipo_actividad": "minería",
+      "departamento": "ANCASH",
+      "provincia": "HUARI",
+      "distrito": "SAN MARCOS",
+      "ubigeo": "021014",
+      "poblacion_distrito": {
+        "poblacion": 17033,
+        "anio": 2017,
+        "fuente": "https://www.inei.gob.pe/media/MenuRecursivo/publicaciones_digitales/Est/Lib1541/tomo1.pdf#page=146"
+      },
+      "primera_fecha": "2021-12-10",
+      "ultima_fecha": "2022-12-31",
+      "dias_con_datos": 318,
+      "lecturas": 7382,
+      "horas_calculables": 7188,
+      "horas_sobre_eca": 58,
+      "inca": {
+        "buena": 5632,
+        "moderada": 1423,
+        "mala": 133,
+        "umbral_de_cuidado": 0
+      },
+      "banda_mas_frecuente": "buena"
+    },
+    {
+      "estacion": "CA-CG-01",
+      "objeto_fiscalizado": "Empresa Casa Grande S.A.A | Empresa agroindustrial Casa Grande S.A.A",
+      "tipo_actividad": "agroindustria",
+      "departamento": "LA LIBERTAD",
+      "provincia": "ASCOPE",
+      "distrito": "CASA GRANDE",
+      "ubigeo": "130208",
+      "poblacion_distrito": {
+        "poblacion": 28492,
+        "anio": 2017,
+        "fuente": "https://www.inei.gob.pe/media/MenuRecursivo/publicaciones_digitales/Est/Lib1541/tomo3.pdf#page=367"
+      },
+      "primera_fecha": "2021-12-03",
+      "ultima_fecha": "2022-02-13",
+      "dias_con_datos": 46,
+      "lecturas": 1061,
+      "horas_calculables": 1027,
+      "horas_sobre_eca": 0,
+      "inca": {
+        "buena": 0,
+        "moderada": 921,
+        "mala": 106,
+        "umbral_de_cuidado": 0
+      },
+      "banda_mas_frecuente": "moderada"
+    },
+    {
+      "estacion": "CA-CG-02",
+      "objeto_fiscalizado": "Empresa Casa Grande S.A.A",
+      "tipo_actividad": "agroindustria",
+      "departamento": "LA LIBERTAD",
+      "provincia": "ASCOPE",
+      "distrito": "CASA GRANDE",
+      "ubigeo": "130208",
+      "poblacion_distrito": {
+        "poblacion": 28492,
+        "anio": 2017,
+        "fuente": "https://www.inei.gob.pe/media/MenuRecursivo/publicaciones_digitales/Est/Lib1541/tomo3.pdf#page=367"
+      },
+      "primera_fecha": "2022-02-14",
+      "ultima_fecha": "2022-12-31",
+      "dias_con_datos": 264,
+      "lecturas": 6159,
+      "horas_calculables": 6001,
+      "horas_sobre_eca": 25,
+      "inca": {
+        "buena": 349,
+        "moderada": 4276,
+        "mala": 1376,
+        "umbral_de_cuidado": 0
+      },
+      "banda_mas_frecuente": "moderada"
+    },
+    {
+      "estacion": "CA-CH-03",
+      "objeto_fiscalizado": "Zona industrial Gran Trapecio",
+      "tipo_actividad": "zona industrial",
+      "departamento": "ANCASH",
+      "provincia": "SANTA",
+      "distrito": "CHIMBOTE",
+      "ubigeo": "021801",
+      "poblacion_distrito": {
+        "poblacion": 206213,
+        "anio": 2017,
+        "fuente": "https://www.inei.gob.pe/media/MenuRecursivo/publicaciones_digitales/Est/Lib1541/tomo1.pdf#page=194"
+      },
+      "primera_fecha": "2021-11-11",
+      "ultima_fecha": "2021-12-31",
+      "dias_con_datos": 51,
+      "lecturas": 1201,
+      "horas_calculables": 1184,
+      "horas_sobre_eca": 0,
+      "inca": {
+        "buena": 50,
+        "moderada": 1122,
+        "mala": 12,
+        "umbral_de_cuidado": 0
+      },
+      "banda_mas_frecuente": "moderada"
+    },
+    {
+      "estacion": "CA-COLQ-01",
+      "objeto_fiscalizado": "Unidad Minera Colquijirca",
+      "tipo_actividad": "minería",
+      "departamento": "PASCO",
+      "provincia": "PASCO",
+      "distrito": "TINYAHUARCO",
+      "ubigeo": "190111",
+      "poblacion_distrito": {
+        "poblacion": 6755,
+        "anio": 2017,
+        "fuente": "https://www.inei.gob.pe/media/MenuRecursivo/publicaciones_digitales/Est/Lib1541/tomo4.pdf#page=216"
+      },
+      "primera_fecha": "2021-12-03",
+      "ultima_fecha": "2021-12-31",
+      "dias_con_datos": 26,
+      "lecturas": 558,
+      "horas_calculables": 518,
+      "horas_sobre_eca": 0,
+      "inca": {
+        "buena": 485,
+        "moderada": 33,
+        "mala": 0,
+        "umbral_de_cuidado": 0
+      },
+      "banda_mas_frecuente": "buena"
+    },
+    {
+      "estacion": "CA-CP-01",
+      "objeto_fiscalizado": "Corredor vial Apurímac – Cusco",
+      "tipo_actividad": "corredor vial",
+      "departamento": "CUSCO",
+      "provincia": "CHUMBIVILCAS",
+      "distrito": "CAPACMARCA",
+      "ubigeo": "080702",
+      "poblacion_distrito": {
+        "poblacion": 3866,
+        "anio": 2017,
+        "fuente": "https://www.inei.gob.pe/media/MenuRecursivo/publicaciones_digitales/Est/Lib1541/tomo2.pdf#page=323"
+      },
+      "primera_fecha": "2020-01-23",
+      "ultima_fecha": "2021-12-31",
+      "dias_con_datos": 704,
+      "lecturas": 16689,
+      "horas_calculables": 16492,
+      "horas_sobre_eca": 321,
+      "inca": {
+        "buena": 10834,
+        "moderada": 4679,
+        "mala": 979,
+        "umbral_de_cuidado": 0
+      },
+      "banda_mas_frecuente": "buena"
+    },
+    {
+      "estacion": "CA-ESP-01",
+      "objeto_fiscalizado": "Corredor vial Apurímac – Cusco, distrito y provincia de Espinar",
+      "tipo_actividad": "corredor vial",
+      "departamento": "CUSCO",
+      "provincia": "ESPINAR",
+      "distrito": "ESPINAR",
+      "ubigeo": "080801",
+      "poblacion_distrito": {
+        "poblacion": 34861,
+        "anio": 2017,
+        "fuente": "https://www.inei.gob.pe/media/MenuRecursivo/publicaciones_digitales/Est/Lib1541/tomo2.pdf#page=339"
+      },
+      "primera_fecha": "2021-11-15",
+      "ultima_fecha": "2021-12-30",
+      "dias_con_datos": 46,
+      "lecturas": 1087,
+      "horas_calculables": 1070,
+      "horas_sobre_eca": 192,
+      "inca": {
+        "buena": 676,
+        "moderada": 313,
+        "mala": 81,
+        "umbral_de_cuidado": 0
+      },
+      "banda_mas_frecuente": "buena"
+    },
+    {
+      "estacion": "CA-HU-04",
+      "objeto_fiscalizado": "Zona ladrillera de centro poblado menor Santa María de Huachipa y Nievería",
+      "tipo_actividad": "ladrilleras",
+      "departamento": "LIMA",
+      "provincia": "LIMA",
+      "distrito": "LURIGANCHO",
+      "ubigeo": "150118",
+      "poblacion_distrito": {
+        "poblacion": 240814,
+        "anio": 2017,
+        "fuente": "https://www.inei.gob.pe/media/MenuRecursivo/publicaciones_digitales/Est/Lib1541/tomo4.pdf#page=14"
+      },
+      "primera_fecha": "2021-12-10",
+      "ultima_fecha": "2021-12-20",
+      "dias_con_datos": 11,
+      "lecturas": 254,
+      "horas_calculables": 237,
+      "horas_sobre_eca": 237,
+      "inca": {
+        "buena": 0,
+        "moderada": 0,
+        "mala": 237,
+        "umbral_de_cuidado": 0
+      },
+      "banda_mas_frecuente": "mala"
+    },
+    {
+      "estacion": "CA-HU-09",
+      "objeto_fiscalizado": "Zona ladrillera de centro poblado menor Santa María de Huachipa y Nievería",
+      "tipo_actividad": "ladrilleras",
+      "departamento": "LIMA",
+      "provincia": "LIMA",
+      "distrito": "LURIGANCHO",
+      "ubigeo": "150118",
+      "poblacion_distrito": {
+        "poblacion": 240814,
+        "anio": 2017,
+        "fuente": "https://www.inei.gob.pe/media/MenuRecursivo/publicaciones_digitales/Est/Lib1541/tomo4.pdf#page=14"
+      },
+      "primera_fecha": "2021-12-14",
+      "ultima_fecha": "2021-12-31",
+      "dias_con_datos": 18,
+      "lecturas": 431,
+      "horas_calculables": 414,
+      "horas_sobre_eca": 133,
+      "inca": {
+        "buena": 0,
+        "moderada": 23,
+        "mala": 391,
+        "umbral_de_cuidado": 0
+      },
+      "banda_mas_frecuente": "mala"
+    },
+    {
+      "estacion": "CA-HUA-01",
+      "objeto_fiscalizado": "Empresa Agroaurora S.A.C",
+      "tipo_actividad": "no lo dice el nombre",
+      "departamento": "PIURA",
+      "provincia": "PAITA",
+      "distrito": "LA HUACA",
+      "ubigeo": "200505",
+      "poblacion_distrito": {
+        "poblacion": 12950,
+        "anio": 2017,
+        "fuente": "https://www.inei.gob.pe/media/MenuRecursivo/publicaciones_digitales/Est/Lib1541/tomo4.pdf#page=287"
+      },
+      "primera_fecha": "2021-12-08",
+      "ultima_fecha": "2022-12-31",
+      "dias_con_datos": 315,
+      "lecturas": 7448,
+      "horas_calculables": 7380,
+      "horas_sobre_eca": 0,
+      "inca": {
+        "buena": 5309,
+        "moderada": 2071,
+        "mala": 0,
+        "umbral_de_cuidado": 0
+      },
+      "banda_mas_frecuente": "buena"
+    },
+    {
+      "estacion": "CA-HUAR-01",
+      "objeto_fiscalizado": "Unidad Minera Colquijirca",
+      "tipo_actividad": "minería",
+      "departamento": null,
+      "provincia": null,
+      "distrito": null,
+      "ubigeo": null,
+      "poblacion_distrito": null,
+      "primera_fecha": "2021-12-05",
+      "ultima_fecha": "2021-12-16",
+      "dias_con_datos": 12,
+      "lecturas": 282,
+      "horas_calculables": 265,
+      "horas_sobre_eca": 0,
+      "inca": {
+        "buena": 258,
+        "moderada": 7,
+        "mala": 0,
+        "umbral_de_cuidado": 0
+      },
+      "banda_mas_frecuente": "buena"
+    },
+    {
+      "estacion": "CA-JUPR-01",
+      "objeto_fiscalizado": "Unidad minera Antamina",
+      "tipo_actividad": "minería",
+      "departamento": "ANCASH",
+      "provincia": "HUARI",
+      "distrito": "SAN MARCOS",
+      "ubigeo": "021014",
+      "poblacion_distrito": {
+        "poblacion": 17033,
+        "anio": 2017,
+        "fuente": "https://www.inei.gob.pe/media/MenuRecursivo/publicaciones_digitales/Est/Lib1541/tomo1.pdf#page=146"
+      },
+      "primera_fecha": "2022-05-01",
+      "ultima_fecha": "2022-12-31",
+      "dias_con_datos": 245,
+      "lecturas": 5797,
+      "horas_calculables": 5727,
+      "horas_sobre_eca": 0,
+      "inca": {
+        "buena": 4998,
+        "moderada": 690,
+        "mala": 39,
+        "umbral_de_cuidado": 0
+      },
+      "banda_mas_frecuente": "buena"
+    },
+    {
+      "estacion": "CA-MAC-01",
+      "objeto_fiscalizado": "Empresa Agroaurora S.A.C",
+      "tipo_actividad": "no lo dice el nombre",
+      "departamento": "PIURA",
+      "provincia": "PAITA",
+      "distrito": "LA HUACA",
+      "ubigeo": "200505",
+      "poblacion_distrito": {
+        "poblacion": 12950,
+        "anio": 2017,
+        "fuente": "https://www.inei.gob.pe/media/MenuRecursivo/publicaciones_digitales/Est/Lib1541/tomo4.pdf#page=287"
+      },
+      "primera_fecha": "2021-12-09",
+      "ultima_fecha": "2022-12-31",
+      "dias_con_datos": 349,
+      "lecturas": 8233,
+      "horas_calculables": 8148,
+      "horas_sobre_eca": 0,
+      "inca": {
+        "buena": 5086,
+        "moderada": 3039,
+        "mala": 23,
+        "umbral_de_cuidado": 0
+      },
+      "banda_mas_frecuente": "buena"
+    },
+    {
+      "estacion": "CA-ROM-01",
+      "objeto_fiscalizado": "Empresa Casa Grande S.A.A | Empresa agroindustrial Casa Grande S.A.A",
+      "tipo_actividad": "agroindustria",
+      "departamento": "LA LIBERTAD",
+      "provincia": "ASCOPE",
+      "distrito": "CASA GRANDE",
+      "ubigeo": "130208",
+      "poblacion_distrito": {
+        "poblacion": 28492,
+        "anio": 2017,
+        "fuente": "https://www.inei.gob.pe/media/MenuRecursivo/publicaciones_digitales/Est/Lib1541/tomo3.pdf#page=367"
+      },
+      "primera_fecha": "2021-12-03",
+      "ultima_fecha": "2022-12-31",
+      "dias_con_datos": 341,
+      "lecturas": 8049,
+      "horas_calculables": 7913,
+      "horas_sobre_eca": 0,
+      "inca": {
+        "buena": 51,
+        "moderada": 6563,
+        "mala": 1299,
+        "umbral_de_cuidado": 0
+      },
+      "banda_mas_frecuente": "moderada"
+    },
+    {
+      "estacion": "CA-RZC-02",
+      "objeto_fiscalizado": "Refinería de zinc Cajamarquilla de Nexa Resources Cajamarquilla S.A.C | Refinería de zinc Cajamarquilla",
+      "tipo_actividad": "metalurgia (refinación o fundición)",
+      "departamento": "LIMA",
+      "provincia": "LIMA",
+      "distrito": "LURIGANCHO",
+      "ubigeo": "150118",
+      "poblacion_distrito": {
+        "poblacion": 240814,
+        "anio": 2017,
+        "fuente": "https://www.inei.gob.pe/media/MenuRecursivo/publicaciones_digitales/Est/Lib1541/tomo4.pdf#page=14"
+      },
+      "primera_fecha": "2021-12-19",
+      "ultima_fecha": "2021-12-29",
+      "dias_con_datos": 11,
+      "lecturas": 245,
+      "horas_calculables": 228,
+      "horas_sobre_eca": 215,
+      "inca": {
+        "buena": 0,
+        "moderada": 0,
+        "mala": 208,
+        "umbral_de_cuidado": 20
+      },
+      "banda_mas_frecuente": "mala"
+    },
+    {
+      "estacion": "CA-SOC-01",
+      "objeto_fiscalizado": "Unidad de producción Cerro Verde S.A.A",
+      "tipo_actividad": "no lo dice el nombre",
+      "departamento": "AREQUIPA",
+      "provincia": "AREQUIPA",
+      "distrito": "SOCABAYA",
+      "ubigeo": "040122",
+      "poblacion_distrito": {
+        "poblacion": 75351,
+        "anio": 2017,
+        "fuente": "https://www.inei.gob.pe/media/MenuRecursivo/publicaciones_digitales/Est/Lib1541/tomo1.pdf#page=306"
+      },
+      "primera_fecha": "2021-12-03",
+      "ultima_fecha": "2021-12-31",
+      "dias_con_datos": 29,
+      "lecturas": 696,
+      "horas_calculables": 679,
+      "horas_sobre_eca": 3,
+      "inca": {
+        "buena": 0,
+        "moderada": 294,
+        "mala": 385,
+        "umbral_de_cuidado": 0
+      },
+      "banda_mas_frecuente": "mala"
+    },
+    {
+      "estacion": "CA-TAL-01",
+      "objeto_fiscalizado": "Unidad fiscalizable Quellaveco",
+      "tipo_actividad": "no lo dice el nombre",
+      "departamento": "MOQUEGUA",
+      "provincia": "MARISCAL NIETO",
+      "distrito": "TORATA",
+      "ubigeo": "180106",
+      "poblacion_distrito": {
+        "poblacion": 6198,
+        "anio": 2017,
+        "fuente": "https://www.inei.gob.pe/media/MenuRecursivo/publicaciones_digitales/Est/Lib1541/tomo4.pdf#page=178"
+      },
+      "primera_fecha": "2021-12-07",
+      "ultima_fecha": "2021-12-31",
+      "dias_con_datos": 14,
+      "lecturas": 301,
+      "horas_calculables": 277,
+      "horas_sobre_eca": 0,
+      "inca": {
+        "buena": 251,
+        "moderada": 26,
+        "mala": 0,
+        "umbral_de_cuidado": 0
+      },
+      "banda_mas_frecuente": "buena"
+    }
+  ],
+  "tipos_actividad": [
+    {
+      "tipo_actividad": "agroindustria",
+      "objetos_fiscalizados": [
+        "Empresa Casa Grande S.A.A",
+        "Empresa Casa Grande S.A.A | Empresa agroindustrial Casa Grande S.A.A"
+      ],
+      "distritos": [
+        {
+          "ubigeo": "130208",
+          "departamento": "LA LIBERTAD",
+          "provincia": "ASCOPE",
+          "distrito": "CASA GRANDE",
+          "poblacion": 28492,
+          "anio": 2017,
+          "fuente": "https://www.inei.gob.pe/media/MenuRecursivo/publicaciones_digitales/Est/Lib1541/tomo3.pdf#page=367"
+        }
+      ],
+      "estaciones_sin_distrito": [],
+      "estaciones": [
+        "CA-CG-01",
+        "CA-CG-02",
+        "CA-ROM-01"
+      ],
+      "primera_fecha": "2021-12-03",
+      "ultima_fecha": "2022-12-31",
+      "dias_estacion_con_datos": 651,
+      "lecturas": 15269,
+      "horas_calculables": 14941,
+      "horas_sobre_eca": 25,
+      "inca": {
+        "buena": 400,
+        "moderada": 11760,
+        "mala": 2781,
+        "umbral_de_cuidado": 0
+      },
+      "banda_mas_frecuente": "moderada"
+    },
+    {
+      "tipo_actividad": "corredor vial",
+      "objetos_fiscalizados": [
+        "Corredor vial Apurímac – Cusco",
+        "Corredor vial Apurímac – Cusco, distrito y provincia de Espinar"
+      ],
+      "distritos": [
+        {
+          "ubigeo": "080702",
+          "departamento": "CUSCO",
+          "provincia": "CHUMBIVILCAS",
+          "distrito": "CAPACMARCA",
+          "poblacion": 3866,
+          "anio": 2017,
+          "fuente": "https://www.inei.gob.pe/media/MenuRecursivo/publicaciones_digitales/Est/Lib1541/tomo2.pdf#page=323"
+        },
+        {
+          "ubigeo": "080801",
+          "departamento": "CUSCO",
+          "provincia": "ESPINAR",
+          "distrito": "ESPINAR",
+          "poblacion": 34861,
+          "anio": 2017,
+          "fuente": "https://www.inei.gob.pe/media/MenuRecursivo/publicaciones_digitales/Est/Lib1541/tomo2.pdf#page=339"
+        }
+      ],
+      "estaciones_sin_distrito": [],
+      "estaciones": [
+        "CA-CP-01",
+        "CA-ESP-01"
+      ],
+      "primera_fecha": "2020-01-23",
+      "ultima_fecha": "2021-12-31",
+      "dias_estacion_con_datos": 750,
+      "lecturas": 17776,
+      "horas_calculables": 17562,
+      "horas_sobre_eca": 513,
+      "inca": {
+        "buena": 11510,
+        "moderada": 4992,
+        "mala": 1060,
+        "umbral_de_cuidado": 0
+      },
+      "banda_mas_frecuente": "buena"
+    },
+    {
+      "tipo_actividad": "ladrilleras",
+      "objetos_fiscalizados": [
+        "Zona ladrillera de centro poblado menor Santa María de Huachipa y Nievería"
+      ],
+      "distritos": [
+        {
+          "ubigeo": "150118",
+          "departamento": "LIMA",
+          "provincia": "LIMA",
+          "distrito": "LURIGANCHO",
+          "poblacion": 240814,
+          "anio": 2017,
+          "fuente": "https://www.inei.gob.pe/media/MenuRecursivo/publicaciones_digitales/Est/Lib1541/tomo4.pdf#page=14"
+        }
+      ],
+      "estaciones_sin_distrito": [],
+      "estaciones": [
+        "CA-HU-04",
+        "CA-HU-09"
+      ],
+      "primera_fecha": "2021-12-10",
+      "ultima_fecha": "2021-12-31",
+      "dias_estacion_con_datos": 29,
+      "lecturas": 685,
+      "horas_calculables": 651,
+      "horas_sobre_eca": 370,
+      "inca": {
+        "buena": 0,
+        "moderada": 23,
+        "mala": 628,
+        "umbral_de_cuidado": 0
+      },
+      "banda_mas_frecuente": "mala"
+    },
+    {
+      "tipo_actividad": "metalurgia (refinación o fundición)",
+      "objetos_fiscalizados": [
+        "Refinería de zinc Cajamarquilla de Nexa Resources Cajamarquilla S.A.C | Refinería de zinc Cajamarquilla"
+      ],
+      "distritos": [
+        {
+          "ubigeo": "150118",
+          "departamento": "LIMA",
+          "provincia": "LIMA",
+          "distrito": "LURIGANCHO",
+          "poblacion": 240814,
+          "anio": 2017,
+          "fuente": "https://www.inei.gob.pe/media/MenuRecursivo/publicaciones_digitales/Est/Lib1541/tomo4.pdf#page=14"
+        }
+      ],
+      "estaciones_sin_distrito": [],
+      "estaciones": [
+        "CA-RZC-02"
+      ],
+      "primera_fecha": "2021-12-19",
+      "ultima_fecha": "2021-12-29",
+      "dias_estacion_con_datos": 11,
+      "lecturas": 245,
+      "horas_calculables": 228,
+      "horas_sobre_eca": 215,
+      "inca": {
+        "buena": 0,
+        "moderada": 0,
+        "mala": 208,
+        "umbral_de_cuidado": 20
+      },
+      "banda_mas_frecuente": "mala"
+    },
+    {
+      "tipo_actividad": "minería",
+      "objetos_fiscalizados": [
+        "Unidad Minera Colquijirca",
+        "Unidad minera Antamina"
+      ],
+      "distritos": [
+        {
+          "ubigeo": "021014",
+          "departamento": "ANCASH",
+          "provincia": "HUARI",
+          "distrito": "SAN MARCOS",
+          "poblacion": 17033,
+          "anio": 2017,
+          "fuente": "https://www.inei.gob.pe/media/MenuRecursivo/publicaciones_digitales/Est/Lib1541/tomo1.pdf#page=146"
+        },
+        {
+          "ubigeo": "190111",
+          "departamento": "PASCO",
+          "provincia": "PASCO",
+          "distrito": "TINYAHUARCO",
+          "poblacion": 6755,
+          "anio": 2017,
+          "fuente": "https://www.inei.gob.pe/media/MenuRecursivo/publicaciones_digitales/Est/Lib1541/tomo4.pdf#page=216"
+        }
+      ],
+      "estaciones_sin_distrito": [
+        "CA-HUAR-01"
+      ],
+      "estaciones": [
+        "CA-AYAS-01",
+        "CA-COLQ-01",
+        "CA-HUAR-01",
+        "CA-JUPR-01"
+      ],
+      "primera_fecha": "2021-12-03",
+      "ultima_fecha": "2022-12-31",
+      "dias_estacion_con_datos": 601,
+      "lecturas": 14019,
+      "horas_calculables": 13698,
+      "horas_sobre_eca": 58,
+      "inca": {
+        "buena": 11373,
+        "moderada": 2153,
+        "mala": 172,
+        "umbral_de_cuidado": 0
+      },
+      "banda_mas_frecuente": "buena"
+    },
+    {
+      "tipo_actividad": "no lo dice el nombre",
+      "objetos_fiscalizados": [
+        "Empresa Agroaurora S.A.C",
+        "Unidad de producción Cerro Verde S.A.A",
+        "Unidad fiscalizable Quellaveco"
+      ],
+      "distritos": [
+        {
+          "ubigeo": "040122",
+          "departamento": "AREQUIPA",
+          "provincia": "AREQUIPA",
+          "distrito": "SOCABAYA",
+          "poblacion": 75351,
+          "anio": 2017,
+          "fuente": "https://www.inei.gob.pe/media/MenuRecursivo/publicaciones_digitales/Est/Lib1541/tomo1.pdf#page=306"
+        },
+        {
+          "ubigeo": "180106",
+          "departamento": "MOQUEGUA",
+          "provincia": "MARISCAL NIETO",
+          "distrito": "TORATA",
+          "poblacion": 6198,
+          "anio": 2017,
+          "fuente": "https://www.inei.gob.pe/media/MenuRecursivo/publicaciones_digitales/Est/Lib1541/tomo4.pdf#page=178"
+        },
+        {
+          "ubigeo": "200505",
+          "departamento": "PIURA",
+          "provincia": "PAITA",
+          "distrito": "LA HUACA",
+          "poblacion": 12950,
+          "anio": 2017,
+          "fuente": "https://www.inei.gob.pe/media/MenuRecursivo/publicaciones_digitales/Est/Lib1541/tomo4.pdf#page=287"
+        }
+      ],
+      "estaciones_sin_distrito": [],
+      "estaciones": [
+        "CA-HUA-01",
+        "CA-MAC-01",
+        "CA-SOC-01",
+        "CA-TAL-01"
+      ],
+      "primera_fecha": "2021-12-03",
+      "ultima_fecha": "2022-12-31",
+      "dias_estacion_con_datos": 707,
+      "lecturas": 16678,
+      "horas_calculables": 16484,
+      "horas_sobre_eca": 3,
+      "inca": {
+        "buena": 10646,
+        "moderada": 5430,
+        "mala": 408,
+        "umbral_de_cuidado": 0
+      },
+      "banda_mas_frecuente": "buena"
+    },
+    {
+      "tipo_actividad": "zona industrial",
+      "objetos_fiscalizados": [
+        "Zona industrial Gran Trapecio"
+      ],
+      "distritos": [
+        {
+          "ubigeo": "021801",
+          "departamento": "ANCASH",
+          "provincia": "SANTA",
+          "distrito": "CHIMBOTE",
+          "poblacion": 206213,
+          "anio": 2017,
+          "fuente": "https://www.inei.gob.pe/media/MenuRecursivo/publicaciones_digitales/Est/Lib1541/tomo1.pdf#page=194"
+        }
+      ],
+      "estaciones_sin_distrito": [],
+      "estaciones": [
+        "CA-CH-03"
+      ],
+      "primera_fecha": "2021-11-11",
+      "ultima_fecha": "2021-12-31",
+      "dias_estacion_con_datos": 51,
+      "lecturas": 1201,
+      "horas_calculables": 1184,
+      "horas_sobre_eca": 0,
+      "inca": {
+        "buena": 50,
+        "moderada": 1122,
+        "mala": 12,
+        "umbral_de_cuidado": 0
+      },
+      "banda_mas_frecuente": "moderada"
+    }
+  ],
+  "distritos": [
+    {
+      "ubigeo": "021014",
+      "departamento": "ANCASH",
+      "provincia": "HUARI",
+      "distrito": "SAN MARCOS",
+      "poblacion": 17033,
+      "anio": 2017,
+      "fuente": "https://www.inei.gob.pe/media/MenuRecursivo/publicaciones_digitales/Est/Lib1541/tomo1.pdf#page=146",
+      "tipos_actividad": [
+        "minería"
+      ],
+      "estaciones": [
+        "CA-AYAS-01",
+        "CA-JUPR-01"
+      ],
+      "primera_fecha": "2021-12-10",
+      "ultima_fecha": "2022-12-31",
+      "dias_estacion_con_datos": 563,
+      "lecturas": 13179,
+      "horas_calculables": 12915,
+      "horas_sobre_eca": 58,
+      "inca": {
+        "buena": 10630,
+        "moderada": 2113,
+        "mala": 172,
+        "umbral_de_cuidado": 0
+      },
+      "banda_mas_frecuente": "buena"
+    },
+    {
+      "ubigeo": "021801",
+      "departamento": "ANCASH",
+      "provincia": "SANTA",
+      "distrito": "CHIMBOTE",
+      "poblacion": 206213,
+      "anio": 2017,
+      "fuente": "https://www.inei.gob.pe/media/MenuRecursivo/publicaciones_digitales/Est/Lib1541/tomo1.pdf#page=194",
+      "tipos_actividad": [
+        "zona industrial"
+      ],
+      "estaciones": [
+        "CA-CH-03"
+      ],
+      "primera_fecha": "2021-11-11",
+      "ultima_fecha": "2021-12-31",
+      "dias_estacion_con_datos": 51,
+      "lecturas": 1201,
+      "horas_calculables": 1184,
+      "horas_sobre_eca": 0,
+      "inca": {
+        "buena": 50,
+        "moderada": 1122,
+        "mala": 12,
+        "umbral_de_cuidado": 0
+      },
+      "banda_mas_frecuente": "moderada"
+    },
+    {
+      "ubigeo": "040122",
+      "departamento": "AREQUIPA",
+      "provincia": "AREQUIPA",
+      "distrito": "SOCABAYA",
+      "poblacion": 75351,
+      "anio": 2017,
+      "fuente": "https://www.inei.gob.pe/media/MenuRecursivo/publicaciones_digitales/Est/Lib1541/tomo1.pdf#page=306",
+      "tipos_actividad": [
+        "no lo dice el nombre"
+      ],
+      "estaciones": [
+        "CA-SOC-01"
+      ],
+      "primera_fecha": "2021-12-03",
+      "ultima_fecha": "2021-12-31",
+      "dias_estacion_con_datos": 29,
+      "lecturas": 696,
+      "horas_calculables": 679,
+      "horas_sobre_eca": 3,
+      "inca": {
+        "buena": 0,
+        "moderada": 294,
+        "mala": 385,
+        "umbral_de_cuidado": 0
+      },
+      "banda_mas_frecuente": "mala"
+    },
+    {
+      "ubigeo": "080702",
+      "departamento": "CUSCO",
+      "provincia": "CHUMBIVILCAS",
+      "distrito": "CAPACMARCA",
+      "poblacion": 3866,
+      "anio": 2017,
+      "fuente": "https://www.inei.gob.pe/media/MenuRecursivo/publicaciones_digitales/Est/Lib1541/tomo2.pdf#page=323",
+      "tipos_actividad": [
+        "corredor vial"
+      ],
+      "estaciones": [
+        "CA-CP-01"
+      ],
+      "primera_fecha": "2020-01-23",
+      "ultima_fecha": "2021-12-31",
+      "dias_estacion_con_datos": 704,
+      "lecturas": 16689,
+      "horas_calculables": 16492,
+      "horas_sobre_eca": 321,
+      "inca": {
+        "buena": 10834,
+        "moderada": 4679,
+        "mala": 979,
+        "umbral_de_cuidado": 0
+      },
+      "banda_mas_frecuente": "buena"
+    },
+    {
+      "ubigeo": "080801",
+      "departamento": "CUSCO",
+      "provincia": "ESPINAR",
+      "distrito": "ESPINAR",
+      "poblacion": 34861,
+      "anio": 2017,
+      "fuente": "https://www.inei.gob.pe/media/MenuRecursivo/publicaciones_digitales/Est/Lib1541/tomo2.pdf#page=339",
+      "tipos_actividad": [
+        "corredor vial"
+      ],
+      "estaciones": [
+        "CA-ESP-01"
+      ],
+      "primera_fecha": "2021-11-15",
+      "ultima_fecha": "2021-12-30",
+      "dias_estacion_con_datos": 46,
+      "lecturas": 1087,
+      "horas_calculables": 1070,
+      "horas_sobre_eca": 192,
+      "inca": {
+        "buena": 676,
+        "moderada": 313,
+        "mala": 81,
+        "umbral_de_cuidado": 0
+      },
+      "banda_mas_frecuente": "buena"
+    },
+    {
+      "ubigeo": "130208",
+      "departamento": "LA LIBERTAD",
+      "provincia": "ASCOPE",
+      "distrito": "CASA GRANDE",
+      "poblacion": 28492,
+      "anio": 2017,
+      "fuente": "https://www.inei.gob.pe/media/MenuRecursivo/publicaciones_digitales/Est/Lib1541/tomo3.pdf#page=367",
+      "tipos_actividad": [
+        "agroindustria"
+      ],
+      "estaciones": [
+        "CA-CG-01",
+        "CA-CG-02",
+        "CA-ROM-01"
+      ],
+      "primera_fecha": "2021-12-03",
+      "ultima_fecha": "2022-12-31",
+      "dias_estacion_con_datos": 651,
+      "lecturas": 15269,
+      "horas_calculables": 14941,
+      "horas_sobre_eca": 25,
+      "inca": {
+        "buena": 400,
+        "moderada": 11760,
+        "mala": 2781,
+        "umbral_de_cuidado": 0
+      },
+      "banda_mas_frecuente": "moderada"
+    },
+    {
+      "ubigeo": "150118",
+      "departamento": "LIMA",
+      "provincia": "LIMA",
+      "distrito": "LURIGANCHO",
+      "poblacion": 240814,
+      "anio": 2017,
+      "fuente": "https://www.inei.gob.pe/media/MenuRecursivo/publicaciones_digitales/Est/Lib1541/tomo4.pdf#page=14",
+      "tipos_actividad": [
+        "ladrilleras",
+        "metalurgia (refinación o fundición)"
+      ],
+      "estaciones": [
+        "CA-HU-04",
+        "CA-HU-09",
+        "CA-RZC-02"
+      ],
+      "primera_fecha": "2021-12-10",
+      "ultima_fecha": "2021-12-31",
+      "dias_estacion_con_datos": 40,
+      "lecturas": 930,
+      "horas_calculables": 879,
+      "horas_sobre_eca": 585,
+      "inca": {
+        "buena": 0,
+        "moderada": 23,
+        "mala": 836,
+        "umbral_de_cuidado": 20
+      },
+      "banda_mas_frecuente": "mala"
+    },
+    {
+      "ubigeo": "180106",
+      "departamento": "MOQUEGUA",
+      "provincia": "MARISCAL NIETO",
+      "distrito": "TORATA",
+      "poblacion": 6198,
+      "anio": 2017,
+      "fuente": "https://www.inei.gob.pe/media/MenuRecursivo/publicaciones_digitales/Est/Lib1541/tomo4.pdf#page=178",
+      "tipos_actividad": [
+        "no lo dice el nombre"
+      ],
+      "estaciones": [
+        "CA-TAL-01"
+      ],
+      "primera_fecha": "2021-12-07",
+      "ultima_fecha": "2021-12-31",
+      "dias_estacion_con_datos": 14,
+      "lecturas": 301,
+      "horas_calculables": 277,
+      "horas_sobre_eca": 0,
+      "inca": {
+        "buena": 251,
+        "moderada": 26,
+        "mala": 0,
+        "umbral_de_cuidado": 0
+      },
+      "banda_mas_frecuente": "buena"
+    },
+    {
+      "ubigeo": "190111",
+      "departamento": "PASCO",
+      "provincia": "PASCO",
+      "distrito": "TINYAHUARCO",
+      "poblacion": 6755,
+      "anio": 2017,
+      "fuente": "https://www.inei.gob.pe/media/MenuRecursivo/publicaciones_digitales/Est/Lib1541/tomo4.pdf#page=216",
+      "tipos_actividad": [
+        "minería"
+      ],
+      "estaciones": [
+        "CA-COLQ-01"
+      ],
+      "primera_fecha": "2021-12-03",
+      "ultima_fecha": "2021-12-31",
+      "dias_estacion_con_datos": 26,
+      "lecturas": 558,
+      "horas_calculables": 518,
+      "horas_sobre_eca": 0,
+      "inca": {
+        "buena": 485,
+        "moderada": 33,
+        "mala": 0,
+        "umbral_de_cuidado": 0
+      },
+      "banda_mas_frecuente": "buena"
+    },
+    {
+      "ubigeo": "200505",
+      "departamento": "PIURA",
+      "provincia": "PAITA",
+      "distrito": "LA HUACA",
+      "poblacion": 12950,
+      "anio": 2017,
+      "fuente": "https://www.inei.gob.pe/media/MenuRecursivo/publicaciones_digitales/Est/Lib1541/tomo4.pdf#page=287",
+      "tipos_actividad": [
+        "no lo dice el nombre"
+      ],
+      "estaciones": [
+        "CA-HUA-01",
+        "CA-MAC-01"
+      ],
+      "primera_fecha": "2021-12-08",
+      "ultima_fecha": "2022-12-31",
+      "dias_estacion_con_datos": 664,
+      "lecturas": 15681,
+      "horas_calculables": 15528,
+      "horas_sobre_eca": 0,
+      "inca": {
+        "buena": 10395,
+        "moderada": 5110,
+        "mala": 23,
+        "umbral_de_cuidado": 0
+      },
+      "banda_mas_frecuente": "buena"
+    },
+    {
+      "ubigeo": null,
+      "departamento": null,
+      "provincia": null,
+      "distrito": null,
+      "poblacion": null,
+      "anio": null,
+      "fuente": null,
+      "nota": "La fuente no trae el distrito de estas estaciones.",
+      "tipos_actividad": [
+        "minería"
+      ],
+      "estaciones": [
+        "CA-HUAR-01"
+      ],
+      "primera_fecha": "2021-12-05",
+      "ultima_fecha": "2021-12-16",
+      "dias_estacion_con_datos": 12,
+      "lecturas": 282,
+      "horas_calculables": 265,
+      "horas_sobre_eca": 0,
+      "inca": {
+        "buena": 258,
+        "moderada": 7,
+        "mala": 0,
+        "umbral_de_cuidado": 0
+      },
+      "banda_mas_frecuente": "buena"
+    }
+  ],
+  "poblacion_distritos": [
+    {
+      "ubigeo": "021014",
+      "departamento": "ANCASH",
+      "provincia": "HUARI",
+      "distrito": "SAN MARCOS",
+      "poblacion": 17033,
+      "anio": 2017,
+      "fuente": "https://www.inei.gob.pe/media/MenuRecursivo/publicaciones_digitales/Est/Lib1541/tomo1.pdf#page=146",
+      "estaciones": [
+        "CA-AYAS-01",
+        "CA-JUPR-01"
+      ],
+      "estaciones_con_pm_horario": [
+        "CA-AYAS-01",
+        "CA-JUPR-01"
+      ]
+    },
+    {
+      "ubigeo": "021801",
+      "departamento": "ANCASH",
+      "provincia": "SANTA",
+      "distrito": "CHIMBOTE",
+      "poblacion": 206213,
+      "anio": 2017,
+      "fuente": "https://www.inei.gob.pe/media/MenuRecursivo/publicaciones_digitales/Est/Lib1541/tomo1.pdf#page=194",
+      "estaciones": [
+        "CA-01",
+        "CA-03",
+        "CA-CH-03"
+      ],
+      "estaciones_con_pm_horario": [
+        "CA-CH-03"
+      ]
+    },
+    {
+      "ubigeo": "040122",
+      "departamento": "AREQUIPA",
+      "provincia": "AREQUIPA",
+      "distrito": "SOCABAYA",
+      "poblacion": 75351,
+      "anio": 2017,
+      "fuente": "https://www.inei.gob.pe/media/MenuRecursivo/publicaciones_digitales/Est/Lib1541/tomo1.pdf#page=306",
+      "estaciones": [
+        "CA-SOC-01"
+      ],
+      "estaciones_con_pm_horario": [
+        "CA-SOC-01"
+      ]
+    },
+    {
+      "ubigeo": "070106",
+      "departamento": "CALLAO",
+      "provincia": "CALLAO",
+      "distrito": "VENTANILLA",
+      "poblacion": 315600,
+      "anio": 2017,
+      "fuente": "https://www.inei.gob.pe/media/MenuRecursivo/publicaciones_digitales/Est/Lib1541/tomo2.pdf#page=263",
+      "estaciones": [
+        "CA-VMP-10",
+        "CA-VMP-2",
+        "CA-VMP-2A",
+        "CA-VMP-6"
+      ],
+      "estaciones_con_pm_horario": []
+    },
+    {
+      "ubigeo": "070107",
+      "departamento": "CALLAO",
+      "provincia": "CALLAO",
+      "distrito": "MI PERU",
+      "poblacion": 45297,
+      "anio": 2017,
+      "fuente": "https://www.inei.gob.pe/media/MenuRecursivo/publicaciones_digitales/Est/Lib1541/tomo2.pdf#page=263",
+      "estaciones": [
+        "CA-VMP-1",
+        "CA-VMP-7",
+        "CA-VMP-8",
+        "CA-VMP-9"
+      ],
+      "estaciones_con_pm_horario": []
+    },
+    {
+      "ubigeo": "080702",
+      "departamento": "CUSCO",
+      "provincia": "CHUMBIVILCAS",
+      "distrito": "CAPACMARCA",
+      "poblacion": 3866,
+      "anio": 2017,
+      "fuente": "https://www.inei.gob.pe/media/MenuRecursivo/publicaciones_digitales/Est/Lib1541/tomo2.pdf#page=323",
+      "estaciones": [
+        "CA-CP-01"
+      ],
+      "estaciones_con_pm_horario": [
+        "CA-CP-01"
+      ]
+    },
+    {
+      "ubigeo": "080708",
+      "departamento": "CUSCO",
+      "provincia": "CHUMBIVILCAS",
+      "distrito": "VELILLE",
+      "poblacion": 9143,
+      "anio": 2017,
+      "fuente": "https://www.inei.gob.pe/media/MenuRecursivo/publicaciones_digitales/Est/Lib1541/tomo2.pdf#page=335",
+      "estaciones": [
+        "CA-VE-01"
+      ],
+      "estaciones_con_pm_horario": []
+    },
+    {
+      "ubigeo": "080801",
+      "departamento": "CUSCO",
+      "provincia": "ESPINAR",
+      "distrito": "ESPINAR",
+      "poblacion": 34861,
+      "anio": 2017,
+      "fuente": "https://www.inei.gob.pe/media/MenuRecursivo/publicaciones_digitales/Est/Lib1541/tomo2.pdf#page=339",
+      "estaciones": [
+        "CA-ESP-01"
+      ],
+      "estaciones_con_pm_horario": [
+        "CA-ESP-01"
+      ]
+    },
+    {
+      "ubigeo": "120801",
+      "departamento": "JUNIN",
+      "provincia": "YAULI",
+      "distrito": "LA OROYA",
+      "poblacion": 14021,
+      "anio": 2017,
+      "fuente": "https://www.inei.gob.pe/media/MenuRecursivo/publicaciones_digitales/Est/Lib1541/tomo3.pdf#page=337",
+      "estaciones": [
+        "CA-CC-01"
+      ],
+      "estaciones_con_pm_horario": []
+    },
+    {
+      "ubigeo": "130208",
+      "departamento": "LA LIBERTAD",
+      "provincia": "ASCOPE",
+      "distrito": "CASA GRANDE",
+      "poblacion": 28492,
+      "anio": 2017,
+      "fuente": "https://www.inei.gob.pe/media/MenuRecursivo/publicaciones_digitales/Est/Lib1541/tomo3.pdf#page=367",
+      "estaciones": [
+        "CA-CG-01",
+        "CA-CG-02",
+        "CA-ROM-01"
+      ],
+      "estaciones_con_pm_horario": [
+        "CA-CG-01",
+        "CA-CG-02",
+        "CA-ROM-01"
+      ]
+    },
+    {
+      "ubigeo": "150118",
+      "departamento": "LIMA",
+      "provincia": "LIMA",
+      "distrito": "LURIGANCHO",
+      "poblacion": 240814,
+      "anio": 2017,
+      "fuente": "https://www.inei.gob.pe/media/MenuRecursivo/publicaciones_digitales/Est/Lib1541/tomo4.pdf#page=14",
+      "estaciones": [
+        "CA-HU-04",
+        "CA-HU-09",
+        "CA-RZC-01",
+        "CA-RZC-02"
+      ],
+      "estaciones_con_pm_horario": [
+        "CA-HU-04",
+        "CA-HU-09",
+        "CA-RZC-02"
+      ]
+    },
+    {
+      "ubigeo": "180106",
+      "departamento": "MOQUEGUA",
+      "provincia": "MARISCAL NIETO",
+      "distrito": "TORATA",
+      "poblacion": 6198,
+      "anio": 2017,
+      "fuente": "https://www.inei.gob.pe/media/MenuRecursivo/publicaciones_digitales/Est/Lib1541/tomo4.pdf#page=178",
+      "estaciones": [
+        "CA-TAL-01",
+        "CA-TO-01"
+      ],
+      "estaciones_con_pm_horario": [
+        "CA-TAL-01"
+      ]
+    },
+    {
+      "ubigeo": "190109",
+      "departamento": "PASCO",
+      "provincia": "PASCO",
+      "distrito": "SIMON BOLIVAR",
+      "poblacion": 12663,
+      "anio": 2017,
+      "fuente": "https://www.inei.gob.pe/media/MenuRecursivo/publicaciones_digitales/Est/Lib1541/tomo4.pdf#page=210",
+      "estaciones": [
+        "CA-SB-01"
+      ],
+      "estaciones_con_pm_horario": []
+    },
+    {
+      "ubigeo": "190111",
+      "departamento": "PASCO",
+      "provincia": "PASCO",
+      "distrito": "TINYAHUARCO",
+      "poblacion": 6755,
+      "anio": 2017,
+      "fuente": "https://www.inei.gob.pe/media/MenuRecursivo/publicaciones_digitales/Est/Lib1541/tomo4.pdf#page=216",
+      "estaciones": [
+        "CA-COLQ-01"
+      ],
+      "estaciones_con_pm_horario": [
+        "CA-COLQ-01"
+      ]
+    },
+    {
+      "ubigeo": "200505",
+      "departamento": "PIURA",
+      "provincia": "PAITA",
+      "distrito": "LA HUACA",
+      "poblacion": 12950,
+      "anio": 2017,
+      "fuente": "https://www.inei.gob.pe/media/MenuRecursivo/publicaciones_digitales/Est/Lib1541/tomo4.pdf#page=287",
+      "estaciones": [
+        "CA-HUA-01",
+        "CA-MAC-01"
+      ],
+      "estaciones_con_pm_horario": [
+        "CA-HUA-01",
+        "CA-MAC-01"
+      ]
+    },
+    {
+      "ubigeo": "200701",
+      "departamento": "PIURA",
+      "provincia": "TALARA",
+      "distrito": "PARIÑAS",
+      "poblacion": 98309,
+      "anio": 2017,
+      "fuente": "https://www.inei.gob.pe/media/MenuRecursivo/publicaciones_digitales/Est/Lib1541/tomo4.pdf#page=293",
+      "estaciones": [
+        "CA-TA-01"
+      ],
+      "estaciones_con_pm_horario": []
+    }
+  ],
+  "senales": {
+    "nota": "Qué acertaría cada señal si se usara como alerta, sobre las horas con media de 24 h calculable. horas: en cuántas estaba encendida; aciertos: en cuántas de esas la media de 24 h superaba el ECA; precision = aciertos / horas; cobertura = aciertos / horas_sobre_eca. La alerta del sistema sale de la media de 24 h, que es la norma misma.",
+    "horas_calculables": 64748,
+    "horas_sobre_eca": 1184,
+    "regimen_alto": {
+      "regimen": 1,
+      "horas": 1497,
+      "aciertos": 524,
+      "precision": 0.3500334001336005,
+      "cobertura": 0.44256756756756754
+    },
+    "lectura_horaria": {
+      "horas": 3011,
+      "aciertos": 649,
+      "precision": 0.21554300896712056,
+      "cobertura": 0.5481418918918919
+    }
+  },
+  "anticipacion": {
+    "definicion": {
+      "episodio": "Un episodio empieza en la hora t de una estación si su media de 24 h en t es calculable (18 lecturas o más) y supera el ECA, y en las 24 horas anteriores, [t − 24 h, t), esa estación no tuvo ninguna hora con media calculable sobre el ECA. Las horas sobre el ECA que siguen son del mismo episodio mientras no pasen 24 horas seguidas sin ninguna: dos subidas separadas por menos de 24 horas comparten lecturas en su ventana y cuentan como una.",
+      "ventana_de_busqueda": "Las señales se buscan en (t − 24 h, t], las mismas horas que entran en la media de 24 h en t. Una lectura anterior no forma parte de esa media.",
+      "horas_antes_lectura_horaria": "t menos la hora de la primera lectura de esa ventana con PM2.5 > 50 o PM10 > 100 µg/m³. Siempre existe: una media sobre el umbral exige al menos una lectura sobre el umbral.",
+      "horas_antes_regimen": "t menos la hora de la primera lectura de esa ventana asignada al régimen que excede el ECA; null si ninguna lo fue.",
+      "horas_seguidas": "Cuántas horas seguidas, justo antes de t (t − 1, t − 2, …), la señal estuvo encendida sin interrupción; una hora apagada o sin lectura corta la cuenta. 0 si en t − 1 no lo estaba. Es la cota baja de la anticipación: las señales se encienden y se apagan, y horas_antes cuenta desde la primera vez.",
+      "tope_horas": 23,
+      "en_el_tope": "Episodios en que la señal ya estaba encendida en la primera hora de la ventana: la anticipación medida es 23 horas y no puede ser mayor por construcción.",
+      "media_previa_calculable": "true si la hora t − 1 tenía media calculable (el cruce se ve). false si la media aparece ya sobre el ECA al juntar 18 lecturas, al empezar una campaña o después de un hueco: ahí la anticipación es en parte un efecto del mínimo de lecturas.",
+      "sin_senal_previa": "Episodios en que ninguna de las dos señales se encendió antes de t.",
+      "con_senal_previa": "Episodios en que la señal se encendió al menos una hora antes de t.",
+      "cruces_hacia_arriba": "Horas con media calculable sobre el ECA cuya hora calculable anterior no lo superaba (o que son la primera calculable de la estación). Son más que los episodios porque las subidas seguidas se cuentan como un solo episodio.",
+      "cuartiles": "Interpolación lineal entre los valores vecinos; con un solo episodio, ese valor."
+    },
+    "lo_que_no_es": "Es una medida descriptiva sobre las mismas lecturas con que se entrenó el modelo: no hay partición temporal ni reentrenamiento sin fugas, que era el diseño completo anunciado en la PC3. No es un pronóstico ni dice cuánto antes avisaría el sistema con datos nuevos. horas_antes cuenta desde la primera vez que la señal se enciende dentro de la ventana, no desde que queda encendida (eso es horas_seguidas, la cota baja), y tiene un tope de 23 horas por construcción. Tampoco descuenta las veces que la señal suena sin que la media cruce el ECA: eso lo mide la precisión, en «senales».",
+    "regimen_que_excede": 1,
+    "cruces_hacia_arriba": 44,
+    "total": {
+      "episodios": 30,
+      "con_media_previa": 28,
+      "sin_media_previa": 2,
+      "sin_senal_previa": 0,
+      "horas_sobre_eca": 1184,
+      "lectura_horaria": {
+        "con_senal": 30,
+        "sin_senal": 0,
+        "con_senal_previa": 30,
+        "en_el_tope": 6,
+        "horas_antes": {
+          "n": 30,
+          "minimo": 4,
+          "q1": 16.25,
+          "mediana": 20.0,
+          "q3": 22.0,
+          "maximo": 23
+        },
+        "horas_seguidas": {
+          "n": 30,
+          "minimo": 0,
+          "q1": 0.0,
+          "mediana": 1.0,
+          "q3": 3.75,
+          "maximo": 16
+        }
+      },
+      "regimen": {
+        "con_senal": 30,
+        "sin_senal": 0,
+        "con_senal_previa": 30,
+        "en_el_tope": 3,
+        "horas_antes": {
+          "n": 30,
+          "minimo": 3,
+          "q1": 9.5,
+          "mediana": 18.0,
+          "q3": 20.0,
+          "maximo": 23
+        },
+        "horas_seguidas": {
+          "n": 30,
+          "minimo": 0,
+          "q1": 0.0,
+          "mediana": 0.5,
+          "q3": 3.0,
+          "maximo": 15
+        }
+      }
+    },
+    "solo_con_media_previa": {
+      "episodios": 28,
+      "con_media_previa": 28,
+      "sin_media_previa": 0,
+      "sin_senal_previa": 0,
+      "horas_sobre_eca": 732,
+      "lectura_horaria": {
+        "con_senal": 28,
+        "sin_senal": 0,
+        "con_senal_previa": 28,
+        "en_el_tope": 6,
+        "horas_antes": {
+          "n": 28,
+          "minimo": 4,
+          "q1": 16.25,
+          "mediana": 20.5,
+          "q3": 22.0,
+          "maximo": 23
+        },
+        "horas_seguidas": {
+          "n": 28,
+          "minimo": 0,
+          "q1": 0.0,
+          "mediana": 1.0,
+          "q3": 3.0,
+          "maximo": 9
+        }
+      },
+      "regimen": {
+        "con_senal": 28,
+        "sin_senal": 0,
+        "con_senal_previa": 28,
+        "en_el_tope": 3,
+        "horas_antes": {
+          "n": 28,
+          "minimo": 3,
+          "q1": 9.0,
+          "mediana": 19.0,
+          "q3": 20.5,
+          "maximo": 23
+        },
+        "horas_seguidas": {
+          "n": 28,
+          "minimo": 0,
+          "q1": 0.0,
+          "mediana": 0.0,
+          "q3": 2.25,
+          "maximo": 6
+        }
+      }
+    },
+    "por_estacion": [
+      {
+        "estacion": "CA-AYAS-01",
+        "cruces_hacia_arriba": 3,
+        "episodios": 3,
+        "con_media_previa": 3,
+        "sin_media_previa": 0,
+        "sin_senal_previa": 0,
+        "horas_sobre_eca": 58,
+        "lectura_horaria": {
+          "con_senal": 3,
+          "sin_senal": 0,
+          "con_senal_previa": 3,
+          "en_el_tope": 0,
+          "horas_antes": {
+            "n": 3,
+            "minimo": 6,
+            "q1": 9.5,
+            "mediana": 13.0,
+            "q3": 13.5,
+            "maximo": 14
+          },
+          "horas_seguidas": {
+            "n": 3,
+            "minimo": 0,
+            "q1": 2.0,
+            "mediana": 4.0,
+            "q3": 5.0,
+            "maximo": 6
+          }
+        },
+        "regimen": {
+          "con_senal": 3,
+          "sin_senal": 0,
+          "con_senal_previa": 3,
+          "en_el_tope": 0,
+          "horas_antes": {
+            "n": 3,
+            "minimo": 4,
+            "q1": 4.5,
+            "mediana": 5.0,
+            "q3": 9.5,
+            "maximo": 14
+          },
+          "horas_seguidas": {
+            "n": 3,
+            "minimo": 0,
+            "q1": 0.0,
+            "mediana": 0.0,
+            "q3": 2.0,
+            "maximo": 4
+          }
+        }
+      },
+      {
+        "estacion": "CA-CG-01",
+        "cruces_hacia_arriba": 0,
+        "episodios": 0,
+        "con_media_previa": 0,
+        "sin_media_previa": 0,
+        "sin_senal_previa": 0,
+        "horas_sobre_eca": 0,
+        "lectura_horaria": {
+          "con_senal": 0,
+          "sin_senal": 0,
+          "con_senal_previa": 0,
+          "en_el_tope": 0,
+          "horas_antes": null,
+          "horas_seguidas": null
+        },
+        "regimen": {
+          "con_senal": 0,
+          "sin_senal": 0,
+          "con_senal_previa": 0,
+          "en_el_tope": 0,
+          "horas_antes": null,
+          "horas_seguidas": null
+        }
+      },
+      {
+        "estacion": "CA-CG-02",
+        "cruces_hacia_arriba": 3,
+        "episodios": 2,
+        "con_media_previa": 2,
+        "sin_media_previa": 0,
+        "sin_senal_previa": 0,
+        "horas_sobre_eca": 25,
+        "lectura_horaria": {
+          "con_senal": 2,
+          "sin_senal": 0,
+          "con_senal_previa": 2,
+          "en_el_tope": 0,
+          "horas_antes": {
+            "n": 2,
+            "minimo": 12,
+            "q1": 13.75,
+            "mediana": 15.5,
+            "q3": 17.25,
+            "maximo": 19
+          },
+          "horas_seguidas": {
+            "n": 2,
+            "minimo": 3,
+            "q1": 4.25,
+            "mediana": 5.5,
+            "q3": 6.75,
+            "maximo": 8
+          }
+        },
+        "regimen": {
+          "con_senal": 2,
+          "sin_senal": 0,
+          "con_senal_previa": 2,
+          "en_el_tope": 0,
+          "horas_antes": {
+            "n": 2,
+            "minimo": 3,
+            "q1": 7.0,
+            "mediana": 11.0,
+            "q3": 15.0,
+            "maximo": 19
+          },
+          "horas_seguidas": {
+            "n": 2,
+            "minimo": 2,
+            "q1": 2.25,
+            "mediana": 2.5,
+            "q3": 2.75,
+            "maximo": 3
+          }
+        }
+      },
+      {
+        "estacion": "CA-CH-03",
+        "cruces_hacia_arriba": 0,
+        "episodios": 0,
+        "con_media_previa": 0,
+        "sin_media_previa": 0,
+        "sin_senal_previa": 0,
+        "horas_sobre_eca": 0,
+        "lectura_horaria": {
+          "con_senal": 0,
+          "sin_senal": 0,
+          "con_senal_previa": 0,
+          "en_el_tope": 0,
+          "horas_antes": null,
+          "horas_seguidas": null
+        },
+        "regimen": {
+          "con_senal": 0,
+          "sin_senal": 0,
+          "con_senal_previa": 0,
+          "en_el_tope": 0,
+          "horas_antes": null,
+          "horas_seguidas": null
+        }
+      },
+      {
+        "estacion": "CA-COLQ-01",
+        "cruces_hacia_arriba": 0,
+        "episodios": 0,
+        "con_media_previa": 0,
+        "sin_media_previa": 0,
+        "sin_senal_previa": 0,
+        "horas_sobre_eca": 0,
+        "lectura_horaria": {
+          "con_senal": 0,
+          "sin_senal": 0,
+          "con_senal_previa": 0,
+          "en_el_tope": 0,
+          "horas_antes": null,
+          "horas_seguidas": null
+        },
+        "regimen": {
+          "con_senal": 0,
+          "sin_senal": 0,
+          "con_senal_previa": 0,
+          "en_el_tope": 0,
+          "horas_antes": null,
+          "horas_seguidas": null
+        }
+      },
+      {
+        "estacion": "CA-CP-01",
+        "cruces_hacia_arriba": 22,
+        "episodios": 14,
+        "con_media_previa": 14,
+        "sin_media_previa": 0,
+        "sin_senal_previa": 0,
+        "horas_sobre_eca": 321,
+        "lectura_horaria": {
+          "con_senal": 14,
+          "sin_senal": 0,
+          "con_senal_previa": 14,
+          "en_el_tope": 3,
+          "horas_antes": {
+            "n": 14,
+            "minimo": 4,
+            "q1": 18.25,
+            "mediana": 21.5,
+            "q3": 22.0,
+            "maximo": 23
+          },
+          "horas_seguidas": {
+            "n": 14,
+            "minimo": 0,
+            "q1": 0.0,
+            "mediana": 1.0,
+            "q3": 1.0,
+            "maximo": 5
+          }
+        },
+        "regimen": {
+          "con_senal": 14,
+          "sin_senal": 0,
+          "con_senal_previa": 14,
+          "en_el_tope": 1,
+          "horas_antes": {
+            "n": 14,
+            "minimo": 4,
+            "q1": 17.0,
+            "mediana": 20.0,
+            "q3": 22.0,
+            "maximo": 23
+          },
+          "horas_seguidas": {
+            "n": 14,
+            "minimo": 0,
+            "q1": 0.0,
+            "mediana": 0.0,
+            "q3": 1.0,
+            "maximo": 4
+          }
+        }
+      },
+      {
+        "estacion": "CA-ESP-01",
+        "cruces_hacia_arriba": 6,
+        "episodios": 5,
+        "con_media_previa": 5,
+        "sin_media_previa": 0,
+        "sin_senal_previa": 0,
+        "horas_sobre_eca": 192,
+        "lectura_horaria": {
+          "con_senal": 5,
+          "sin_senal": 0,
+          "con_senal_previa": 5,
+          "en_el_tope": 1,
+          "horas_antes": {
+            "n": 5,
+            "minimo": 9,
+            "q1": 18.0,
+            "mediana": 21.0,
+            "q3": 21.0,
+            "maximo": 23
+          },
+          "horas_seguidas": {
+            "n": 5,
+            "minimo": 0,
+            "q1": 0.0,
+            "mediana": 0.0,
+            "q3": 3.0,
+            "maximo": 9
+          }
+        },
+        "regimen": {
+          "con_senal": 5,
+          "sin_senal": 0,
+          "con_senal_previa": 5,
+          "en_el_tope": 0,
+          "horas_antes": {
+            "n": 5,
+            "minimo": 9,
+            "q1": 11.0,
+            "mediana": 17.0,
+            "q3": 19.0,
+            "maximo": 20
+          },
+          "horas_seguidas": {
+            "n": 5,
+            "minimo": 0,
+            "q1": 0.0,
+            "mediana": 0.0,
+            "q3": 3.0,
+            "maximo": 6
+          }
+        }
+      },
+      {
+        "estacion": "CA-HU-04",
+        "cruces_hacia_arriba": 1,
+        "episodios": 1,
+        "con_media_previa": 0,
+        "sin_media_previa": 1,
+        "sin_senal_previa": 0,
+        "horas_sobre_eca": 237,
+        "lectura_horaria": {
+          "con_senal": 1,
+          "sin_senal": 0,
+          "con_senal_previa": 1,
+          "en_el_tope": 0,
+          "horas_antes": {
+            "n": 1,
+            "minimo": 17,
+            "q1": 17.0,
+            "mediana": 17.0,
+            "q3": 17.0,
+            "maximo": 17
+          },
+          "horas_seguidas": {
+            "n": 1,
+            "minimo": 10,
+            "q1": 10.0,
+            "mediana": 10.0,
+            "q3": 10.0,
+            "maximo": 10
+          }
+        },
+        "regimen": {
+          "con_senal": 1,
+          "sin_senal": 0,
+          "con_senal_previa": 1,
+          "en_el_tope": 0,
+          "horas_antes": {
+            "n": 1,
+            "minimo": 17,
+            "q1": 17.0,
+            "mediana": 17.0,
+            "q3": 17.0,
+            "maximo": 17
+          },
+          "horas_seguidas": {
+            "n": 1,
+            "minimo": 10,
+            "q1": 10.0,
+            "mediana": 10.0,
+            "q3": 10.0,
+            "maximo": 10
+          }
+        }
+      },
+      {
+        "estacion": "CA-HU-09",
+        "cruces_hacia_arriba": 6,
+        "episodios": 3,
+        "con_media_previa": 3,
+        "sin_media_previa": 0,
+        "sin_senal_previa": 0,
+        "horas_sobre_eca": 133,
+        "lectura_horaria": {
+          "con_senal": 3,
+          "sin_senal": 0,
+          "con_senal_previa": 3,
+          "en_el_tope": 2,
+          "horas_antes": {
+            "n": 3,
+            "minimo": 20,
+            "q1": 21.5,
+            "mediana": 23.0,
+            "q3": 23.0,
+            "maximo": 23
+          },
+          "horas_seguidas": {
+            "n": 3,
+            "minimo": 0,
+            "q1": 1.5,
+            "mediana": 3.0,
+            "q3": 3.0,
+            "maximo": 3
+          }
+        },
+        "regimen": {
+          "con_senal": 3,
+          "sin_senal": 0,
+          "con_senal_previa": 3,
+          "en_el_tope": 2,
+          "horas_antes": {
+            "n": 3,
+            "minimo": 19,
+            "q1": 21.0,
+            "mediana": 23.0,
+            "q3": 23.0,
+            "maximo": 23
+          },
+          "horas_seguidas": {
+            "n": 3,
+            "minimo": 0,
+            "q1": 1.5,
+            "mediana": 3.0,
+            "q3": 3.0,
+            "maximo": 3
+          }
+        }
+      },
+      {
+        "estacion": "CA-HUA-01",
+        "cruces_hacia_arriba": 0,
+        "episodios": 0,
+        "con_media_previa": 0,
+        "sin_media_previa": 0,
+        "sin_senal_previa": 0,
+        "horas_sobre_eca": 0,
+        "lectura_horaria": {
+          "con_senal": 0,
+          "sin_senal": 0,
+          "con_senal_previa": 0,
+          "en_el_tope": 0,
+          "horas_antes": null,
+          "horas_seguidas": null
+        },
+        "regimen": {
+          "con_senal": 0,
+          "sin_senal": 0,
+          "con_senal_previa": 0,
+          "en_el_tope": 0,
+          "horas_antes": null,
+          "horas_seguidas": null
+        }
+      },
+      {
+        "estacion": "CA-HUAR-01",
+        "cruces_hacia_arriba": 0,
+        "episodios": 0,
+        "con_media_previa": 0,
+        "sin_media_previa": 0,
+        "sin_senal_previa": 0,
+        "horas_sobre_eca": 0,
+        "lectura_horaria": {
+          "con_senal": 0,
+          "sin_senal": 0,
+          "con_senal_previa": 0,
+          "en_el_tope": 0,
+          "horas_antes": null,
+          "horas_seguidas": null
+        },
+        "regimen": {
+          "con_senal": 0,
+          "sin_senal": 0,
+          "con_senal_previa": 0,
+          "en_el_tope": 0,
+          "horas_antes": null,
+          "horas_seguidas": null
+        }
+      },
+      {
+        "estacion": "CA-JUPR-01",
+        "cruces_hacia_arriba": 0,
+        "episodios": 0,
+        "con_media_previa": 0,
+        "sin_media_previa": 0,
+        "sin_senal_previa": 0,
+        "horas_sobre_eca": 0,
+        "lectura_horaria": {
+          "con_senal": 0,
+          "sin_senal": 0,
+          "con_senal_previa": 0,
+          "en_el_tope": 0,
+          "horas_antes": null,
+          "horas_seguidas": null
+        },
+        "regimen": {
+          "con_senal": 0,
+          "sin_senal": 0,
+          "con_senal_previa": 0,
+          "en_el_tope": 0,
+          "horas_antes": null,
+          "horas_seguidas": null
+        }
+      },
+      {
+        "estacion": "CA-MAC-01",
+        "cruces_hacia_arriba": 0,
+        "episodios": 0,
+        "con_media_previa": 0,
+        "sin_media_previa": 0,
+        "sin_senal_previa": 0,
+        "horas_sobre_eca": 0,
+        "lectura_horaria": {
+          "con_senal": 0,
+          "sin_senal": 0,
+          "con_senal_previa": 0,
+          "en_el_tope": 0,
+          "horas_antes": null,
+          "horas_seguidas": null
+        },
+        "regimen": {
+          "con_senal": 0,
+          "sin_senal": 0,
+          "con_senal_previa": 0,
+          "en_el_tope": 0,
+          "horas_antes": null,
+          "horas_seguidas": null
+        }
+      },
+      {
+        "estacion": "CA-ROM-01",
+        "cruces_hacia_arriba": 0,
+        "episodios": 0,
+        "con_media_previa": 0,
+        "sin_media_previa": 0,
+        "sin_senal_previa": 0,
+        "horas_sobre_eca": 0,
+        "lectura_horaria": {
+          "con_senal": 0,
+          "sin_senal": 0,
+          "con_senal_previa": 0,
+          "en_el_tope": 0,
+          "horas_antes": null,
+          "horas_seguidas": null
+        },
+        "regimen": {
+          "con_senal": 0,
+          "sin_senal": 0,
+          "con_senal_previa": 0,
+          "en_el_tope": 0,
+          "horas_antes": null,
+          "horas_seguidas": null
+        }
+      },
+      {
+        "estacion": "CA-RZC-02",
+        "cruces_hacia_arriba": 2,
+        "episodios": 1,
+        "con_media_previa": 0,
+        "sin_media_previa": 1,
+        "sin_senal_previa": 0,
+        "horas_sobre_eca": 215,
+        "lectura_horaria": {
+          "con_senal": 1,
+          "sin_senal": 0,
+          "con_senal_previa": 1,
+          "en_el_tope": 0,
+          "horas_antes": {
+            "n": 1,
+            "minimo": 16,
+            "q1": 16.0,
+            "mediana": 16.0,
+            "q3": 16.0,
+            "maximo": 16
+          },
+          "horas_seguidas": {
+            "n": 1,
+            "minimo": 16,
+            "q1": 16.0,
+            "mediana": 16.0,
+            "q3": 16.0,
+            "maximo": 16
+          }
+        },
+        "regimen": {
+          "con_senal": 1,
+          "sin_senal": 0,
+          "con_senal_previa": 1,
+          "en_el_tope": 0,
+          "horas_antes": {
+            "n": 1,
+            "minimo": 15,
+            "q1": 15.0,
+            "mediana": 15.0,
+            "q3": 15.0,
+            "maximo": 15
+          },
+          "horas_seguidas": {
+            "n": 1,
+            "minimo": 15,
+            "q1": 15.0,
+            "mediana": 15.0,
+            "q3": 15.0,
+            "maximo": 15
+          }
+        }
+      },
+      {
+        "estacion": "CA-SOC-01",
+        "cruces_hacia_arriba": 1,
+        "episodios": 1,
+        "con_media_previa": 1,
+        "sin_media_previa": 0,
+        "sin_senal_previa": 0,
+        "horas_sobre_eca": 3,
+        "lectura_horaria": {
+          "con_senal": 1,
+          "sin_senal": 0,
+          "con_senal_previa": 1,
+          "en_el_tope": 0,
+          "horas_antes": {
+            "n": 1,
+            "minimo": 21,
+            "q1": 21.0,
+            "mediana": 21.0,
+            "q3": 21.0,
+            "maximo": 21
+          },
+          "horas_seguidas": {
+            "n": 1,
+            "minimo": 4,
+            "q1": 4.0,
+            "mediana": 4.0,
+            "q3": 4.0,
+            "maximo": 4
+          }
+        },
+        "regimen": {
+          "con_senal": 1,
+          "sin_senal": 0,
+          "con_senal_previa": 1,
+          "en_el_tope": 0,
+          "horas_antes": {
+            "n": 1,
+            "minimo": 6,
+            "q1": 6.0,
+            "mediana": 6.0,
+            "q3": 6.0,
+            "maximo": 6
+          },
+          "horas_seguidas": {
+            "n": 1,
+            "minimo": 1,
+            "q1": 1.0,
+            "mediana": 1.0,
+            "q3": 1.0,
+            "maximo": 1
+          }
+        }
+      },
+      {
+        "estacion": "CA-TAL-01",
+        "cruces_hacia_arriba": 0,
+        "episodios": 0,
+        "con_media_previa": 0,
+        "sin_media_previa": 0,
+        "sin_senal_previa": 0,
+        "horas_sobre_eca": 0,
+        "lectura_horaria": {
+          "con_senal": 0,
+          "sin_senal": 0,
+          "con_senal_previa": 0,
+          "en_el_tope": 0,
+          "horas_antes": null,
+          "horas_seguidas": null
+        },
+        "regimen": {
+          "con_senal": 0,
+          "sin_senal": 0,
+          "con_senal_previa": 0,
+          "en_el_tope": 0,
+          "horas_antes": null,
+          "horas_seguidas": null
+        }
+      }
+    ],
+    "episodios": [
+      {
+        "estacion": "CA-AYAS-01",
+        "inicio": "2022-06-29T08:00:00-05:00",
+        "fin": "2022-06-29T22:00:00-05:00",
+        "horas_sobre_eca": 15,
+        "media_previa_calculable": true,
+        "horas_antes_lectura_horaria": 14,
+        "horas_antes_regimen": 14,
+        "horas_seguidas_lectura_horaria": 0,
+        "horas_seguidas_regimen": 0
+      },
+      {
+        "estacion": "CA-AYAS-01",
+        "inicio": "2022-07-01T09:00:00-05:00",
+        "fin": "2022-07-02T07:00:00-05:00",
+        "horas_sobre_eca": 23,
+        "media_previa_calculable": true,
+        "horas_antes_lectura_horaria": 13,
+        "horas_antes_regimen": 4,
+        "horas_seguidas_lectura_horaria": 4,
+        "horas_seguidas_regimen": 4
+      },
+      {
+        "estacion": "CA-AYAS-01",
+        "inicio": "2022-09-12T01:00:00-05:00",
+        "fin": "2022-09-12T20:00:00-05:00",
+        "horas_sobre_eca": 20,
+        "media_previa_calculable": true,
+        "horas_antes_lectura_horaria": 6,
+        "horas_antes_regimen": 5,
+        "horas_seguidas_lectura_horaria": 6,
+        "horas_seguidas_regimen": 0
+      },
+      {
+        "estacion": "CA-CG-02",
+        "inicio": "2022-02-22T04:00:00-05:00",
+        "fin": "2022-02-22T18:00:00-05:00",
+        "horas_sobre_eca": 12,
+        "media_previa_calculable": true,
+        "horas_antes_lectura_horaria": 19,
+        "horas_antes_regimen": 19,
+        "horas_seguidas_lectura_horaria": 8,
+        "horas_seguidas_regimen": 2
+      },
+      {
+        "estacion": "CA-CG-02",
+        "inicio": "2022-03-08T09:00:00-05:00",
+        "fin": "2022-03-08T21:00:00-05:00",
+        "horas_sobre_eca": 13,
+        "media_previa_calculable": true,
+        "horas_antes_lectura_horaria": 12,
+        "horas_antes_regimen": 3,
+        "horas_seguidas_lectura_horaria": 3,
+        "horas_seguidas_regimen": 3
+      },
+      {
+        "estacion": "CA-CP-01",
+        "inicio": "2020-02-13T01:00:00-05:00",
+        "fin": "2020-02-13T21:00:00-05:00",
+        "horas_sobre_eca": 21,
+        "media_previa_calculable": true,
+        "horas_antes_lectura_horaria": 4,
+        "horas_antes_regimen": 4,
+        "horas_seguidas_lectura_horaria": 1,
+        "horas_seguidas_regimen": 1
+      },
+      {
+        "estacion": "CA-CP-01",
+        "inicio": "2020-03-22T01:00:00-05:00",
+        "fin": "2020-03-22T20:00:00-05:00",
+        "horas_sobre_eca": 20,
+        "media_previa_calculable": true,
+        "horas_antes_lectura_horaria": 23,
+        "horas_antes_regimen": 4,
+        "horas_seguidas_lectura_horaria": 1,
+        "horas_seguidas_regimen": 0
+      },
+      {
+        "estacion": "CA-CP-01",
+        "inicio": "2020-06-30T16:00:00-05:00",
+        "fin": "2020-07-03T21:00:00-05:00",
+        "horas_sobre_eca": 71,
+        "media_previa_calculable": true,
+        "horas_antes_lectura_horaria": 9,
+        "horas_antes_regimen": 9,
+        "horas_seguidas_lectura_horaria": 1,
+        "horas_seguidas_regimen": 1
+      },
+      {
+        "estacion": "CA-CP-01",
+        "inicio": "2020-08-28T11:00:00-05:00",
+        "fin": "2020-08-28T11:00:00-05:00",
+        "horas_sobre_eca": 1,
+        "media_previa_calculable": true,
+        "horas_antes_lectura_horaria": 23,
+        "horas_antes_regimen": 23,
+        "horas_seguidas_lectura_horaria": 1,
+        "horas_seguidas_regimen": 1
+      },
+      {
+        "estacion": "CA-CP-01",
+        "inicio": "2020-08-29T13:00:00-05:00",
+        "fin": "2020-08-29T14:00:00-05:00",
+        "horas_sobre_eca": 2,
+        "media_previa_calculable": true,
+        "horas_antes_lectura_horaria": 22,
+        "horas_antes_regimen": 22,
+        "horas_seguidas_lectura_horaria": 5,
+        "horas_seguidas_regimen": 4
+      },
+      {
+        "estacion": "CA-CP-01",
+        "inicio": "2020-09-05T15:00:00-05:00",
+        "fin": "2020-09-07T09:00:00-05:00",
+        "horas_sobre_eca": 43,
+        "media_previa_calculable": true,
+        "horas_antes_lectura_horaria": 22,
+        "horas_antes_regimen": 22,
+        "horas_seguidas_lectura_horaria": 1,
+        "horas_seguidas_regimen": 0
+      },
+      {
+        "estacion": "CA-CP-01",
+        "inicio": "2020-09-11T03:00:00-05:00",
+        "fin": "2020-09-11T09:00:00-05:00",
+        "horas_sobre_eca": 7,
+        "media_previa_calculable": true,
+        "horas_antes_lectura_horaria": 20,
+        "horas_antes_regimen": 20,
+        "horas_seguidas_lectura_horaria": 0,
+        "horas_seguidas_regimen": 0
+      },
+      {
+        "estacion": "CA-CP-01",
+        "inicio": "2020-09-23T06:00:00-05:00",
+        "fin": "2020-09-29T05:00:00-05:00",
+        "horas_sobre_eca": 121,
+        "media_previa_calculable": true,
+        "horas_antes_lectura_horaria": 23,
+        "horas_antes_regimen": 20,
+        "horas_seguidas_lectura_horaria": 0,
+        "horas_seguidas_regimen": 0
+      },
+      {
+        "estacion": "CA-CP-01",
+        "inicio": "2020-11-19T01:00:00-05:00",
+        "fin": "2020-11-19T11:00:00-05:00",
+        "horas_sobre_eca": 11,
+        "media_previa_calculable": true,
+        "horas_antes_lectura_horaria": 18,
+        "horas_antes_regimen": 17,
+        "horas_seguidas_lectura_horaria": 0,
+        "horas_seguidas_regimen": 0
+      },
+      {
+        "estacion": "CA-CP-01",
+        "inicio": "2020-11-22T09:00:00-05:00",
+        "fin": "2020-11-22T12:00:00-05:00",
+        "horas_sobre_eca": 4,
+        "media_previa_calculable": true,
+        "horas_antes_lectura_horaria": 22,
+        "horas_antes_regimen": 22,
+        "horas_seguidas_lectura_horaria": 0,
+        "horas_seguidas_regimen": 0
+      },
+      {
+        "estacion": "CA-CP-01",
+        "inicio": "2020-11-24T03:00:00-05:00",
+        "fin": "2020-11-24T06:00:00-05:00",
+        "horas_sobre_eca": 4,
+        "media_previa_calculable": true,
+        "horas_antes_lectura_horaria": 21,
+        "horas_antes_regimen": 20,
+        "horas_seguidas_lectura_horaria": 0,
+        "horas_seguidas_regimen": 0
+      },
+      {
+        "estacion": "CA-CP-01",
+        "inicio": "2020-11-25T11:00:00-05:00",
+        "fin": "2020-11-26T01:00:00-05:00",
+        "horas_sobre_eca": 3,
+        "media_previa_calculable": true,
+        "horas_antes_lectura_horaria": 22,
+        "horas_antes_regimen": 22,
+        "horas_seguidas_lectura_horaria": 1,
+        "horas_seguidas_regimen": 0
+      },
+      {
+        "estacion": "CA-CP-01",
+        "inicio": "2021-08-20T15:00:00-05:00",
+        "fin": "2021-08-20T20:00:00-05:00",
+        "horas_sobre_eca": 6,
+        "media_previa_calculable": true,
+        "horas_antes_lectura_horaria": 19,
+        "horas_antes_regimen": 19,
+        "horas_seguidas_lectura_horaria": 0,
+        "horas_seguidas_regimen": 0
+      },
+      {
+        "estacion": "CA-CP-01",
+        "inicio": "2021-12-18T09:00:00-05:00",
+        "fin": "2021-12-18T15:00:00-05:00",
+        "horas_sobre_eca": 7,
+        "media_previa_calculable": true,
+        "horas_antes_lectura_horaria": 17,
+        "horas_antes_regimen": 17,
+        "horas_seguidas_lectura_horaria": 2,
+        "horas_seguidas_regimen": 1
+      },
+      {
+        "estacion": "CA-ESP-01",
+        "inicio": "2021-11-17T05:00:00-05:00",
+        "fin": "2021-11-18T16:00:00-05:00",
+        "horas_sobre_eca": 36,
+        "media_previa_calculable": true,
+        "horas_antes_lectura_horaria": 23,
+        "horas_antes_regimen": 11,
+        "horas_seguidas_lectura_horaria": 0,
+        "horas_seguidas_regimen": 0
+      },
+      {
+        "estacion": "CA-ESP-01",
+        "inicio": "2021-12-11T19:00:00-05:00",
+        "fin": "2021-12-14T08:00:00-05:00",
+        "horas_sobre_eca": 62,
+        "media_previa_calculable": true,
+        "horas_antes_lectura_horaria": 9,
+        "horas_antes_regimen": 9,
+        "horas_seguidas_lectura_horaria": 9,
+        "horas_seguidas_regimen": 6
+      },
+      {
+        "estacion": "CA-ESP-01",
+        "inicio": "2021-12-18T08:00:00-05:00",
+        "fin": "2021-12-19T07:00:00-05:00",
+        "horas_sobre_eca": 24,
+        "media_previa_calculable": true,
+        "horas_antes_lectura_horaria": 21,
+        "horas_antes_regimen": 19,
+        "horas_seguidas_lectura_horaria": 0,
+        "horas_seguidas_regimen": 0
+      },
+      {
+        "estacion": "CA-ESP-01",
+        "inicio": "2021-12-21T07:00:00-05:00",
+        "fin": "2021-12-24T00:00:00-05:00",
+        "horas_sobre_eca": 49,
+        "media_previa_calculable": true,
+        "horas_antes_lectura_horaria": 18,
+        "horas_antes_regimen": 17,
+        "horas_seguidas_lectura_horaria": 0,
+        "horas_seguidas_regimen": 0
+      },
+      {
+        "estacion": "CA-ESP-01",
+        "inicio": "2021-12-28T11:00:00-05:00",
+        "fin": "2021-12-29T07:00:00-05:00",
+        "horas_sobre_eca": 21,
+        "media_previa_calculable": true,
+        "horas_antes_lectura_horaria": 21,
+        "horas_antes_regimen": 20,
+        "horas_seguidas_lectura_horaria": 3,
+        "horas_seguidas_regimen": 3
+      },
+      {
+        "estacion": "CA-HU-04",
+        "inicio": "2021-12-10T18:00:00-05:00",
+        "fin": "2021-12-20T14:00:00-05:00",
+        "horas_sobre_eca": 237,
+        "media_previa_calculable": false,
+        "horas_antes_lectura_horaria": 17,
+        "horas_antes_regimen": 17,
+        "horas_seguidas_lectura_horaria": 10,
+        "horas_seguidas_regimen": 10
+      },
+      {
+        "estacion": "CA-HU-09",
+        "inicio": "2021-12-15T23:00:00-05:00",
+        "fin": "2021-12-19T01:00:00-05:00",
+        "horas_sobre_eca": 64,
+        "media_previa_calculable": true,
+        "horas_antes_lectura_horaria": 20,
+        "horas_antes_regimen": 19,
+        "horas_seguidas_lectura_horaria": 0,
+        "horas_seguidas_regimen": 0
+      },
+      {
+        "estacion": "CA-HU-09",
+        "inicio": "2021-12-21T06:00:00-05:00",
+        "fin": "2021-12-23T08:00:00-05:00",
+        "horas_sobre_eca": 51,
+        "media_previa_calculable": true,
+        "horas_antes_lectura_horaria": 23,
+        "horas_antes_regimen": 23,
+        "horas_seguidas_lectura_horaria": 3,
+        "horas_seguidas_regimen": 3
+      },
+      {
+        "estacion": "CA-HU-09",
+        "inicio": "2021-12-31T07:00:00-05:00",
+        "fin": "2022-01-01T00:00:00-05:00",
+        "horas_sobre_eca": 18,
+        "media_previa_calculable": true,
+        "horas_antes_lectura_horaria": 23,
+        "horas_antes_regimen": 23,
+        "horas_seguidas_lectura_horaria": 3,
+        "horas_seguidas_regimen": 3
+      },
+      {
+        "estacion": "CA-RZC-02",
+        "inicio": "2021-12-20T12:00:00-05:00",
+        "fin": "2021-12-30T00:00:00-05:00",
+        "horas_sobre_eca": 215,
+        "media_previa_calculable": false,
+        "horas_antes_lectura_horaria": 16,
+        "horas_antes_regimen": 15,
+        "horas_seguidas_lectura_horaria": 16,
+        "horas_seguidas_regimen": 15
+      },
+      {
+        "estacion": "CA-SOC-01",
+        "inicio": "2021-12-31T07:00:00-05:00",
+        "fin": "2021-12-31T09:00:00-05:00",
+        "horas_sobre_eca": 3,
+        "media_previa_calculable": true,
+        "horas_antes_lectura_horaria": 21,
+        "horas_antes_regimen": 6,
+        "horas_seguidas_lectura_horaria": 4,
+        "horas_seguidas_regimen": 1
+      }
+    ]
+  }
+}
