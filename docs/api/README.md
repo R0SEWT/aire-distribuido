@@ -57,8 +57,16 @@ los `admin`.
   una estación cambia. Sale solo si la lectura pasó a ser el estado de la estación (la escritura en
   Redis reemplazó al guardado): una lectura más antigua no emite nada, así que el evento y el GET
   dicen siempre lo mismo. Va agrupado por estación, a lo sumo uno cada 250 ms con el último estado:
-  una ráfaga de miles de predicciones no llena el búfer de los clientes. El cliente abre primero el
-  WebSocket y después pide el GET.
+  una ráfaga de miles de predicciones no llena el búfer de los clientes. Si el valor guardado de una
+  estación no se puede leer, el GET la salta (queda en el log) y responde 200 con las demás.
+- **Juntar el GET con los eventos**: el cliente abre primero el WebSocket y después pide el GET (al
+  reconectar, otra vez). Como viajan por conexiones distintas, la respuesta del GET puede llegar
+  después de un evento más nuevo de la misma estación. La regla: de una estación de la que el
+  cliente ya recibió un evento desde que abrió ese WebSocket, la entrada del GET se ignora (si el GET
+  traía algo más nuevo, su evento llega después); de las demás, se toma la del GET. Comparar por
+  `ts` no sirve: va al segundo, y una corrección de la misma hora conserva `fecha_hora`. Si Redis
+  guarda un estado y su respuesta se pierde, la API lo relee cuando Redis vuelve y emite el evento
+  igual; por eso un evento puede repetir un estado ya recibido.
 - **WebSocket**: cada trama es `{"evento": "estacion.regimen" | "entrenamiento.ronda" |
   "entrenamiento.fin", "datos": {…}}`; los de entrenamiento, con los datos de §6.4. El JWT va en `Authorization`, en `Sec-WebSocket-Protocol`
   (`aire.jwt` seguido del token: lo recomendado para el navegador, que no deja poner encabezados,

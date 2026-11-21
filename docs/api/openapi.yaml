@@ -176,10 +176,13 @@ paths:
         necesita al abrir. Trae una entrada por estación que ya tiene una
         predicción registrada, ordenadas por estacion; las que todavía no
         tienen ninguna no aparecen. Con el sistema recién levantado la lista
-        está vacía: es un 200, no un 404.
+        está vacía: es un 200, no un 404. Si el valor guardado de una estación
+        no se puede leer, esa estación no aparece (queda en el log del
+        servidor) y las demás sí: no es un 503.
 
-        Después de este pedido, el panel se mantiene al día con el evento
-        estacion.regimen de /ws, que lleva el mismo objeto.
+        El panel se mantiene al día con el evento estacion.regimen de /ws, que
+        lleva el mismo objeto. Cómo juntar esta respuesta con los eventos, sin
+        que una pise a un evento más nuevo, está en la descripción de /ws.
       x-roles: [usuario, admin]
       responses:
         '200':
@@ -515,8 +518,28 @@ paths:
           sale solo el último estado. Los intermedios no se envían: el evento
           es el estado, no cada lectura.
 
-        Para no perder cambios, el cliente abre primero el WebSocket y después
-        pide GET /api/regimenes; al reconectar, lo vuelve a pedir.
+        Cómo se junta con GET /api/regimenes. Para no perder cambios, el
+        cliente abre primero el WebSocket y después pide el GET; al reconectar,
+        lo vuelve a pedir. Pero el GET y los eventos viajan por conexiones
+        distintas: la respuesta del GET puede llegar después de un evento más
+        nuevo de la misma estación, y aplicarla tal cual lo pisaría con un
+        estado viejo. La regla:
+        - De una estación de la que el cliente ya recibió un evento desde que
+          abrió este WebSocket, la entrada del GET se ignora: el evento manda.
+          No se pierde nada, porque si el GET traía un estado más nuevo que
+          ese evento, su propio evento llega después.
+        - De las demás estaciones, se toma la entrada del GET.
+        - Al reconectar, la cuenta empieza de nuevo: solo valen los eventos
+          recibidos por la conexión nueva.
+        No sirve comparar el GET con el evento por sus campos: ts va al
+        segundo, y una lectura corregida de la misma hora conserva fecha_hora.
+        Dos eventos de una misma estación, en cambio, llegan siempre en orden:
+        el último recibido es el estado.
+
+        Si Redis guarda un estado y su respuesta no le llega a la API, el
+        evento no se pierde: sale en cuanto Redis vuelve a responder (hasta
+        alrededor de un segundo después). Ese caso puede repetir un evento con
+        un estado que el cliente ya tenía; aplicarlo otra vez no cambia nada.
 
         El JWT se acepta de tres maneras, en este orden:
         - Authorization: Bearer, como en el resto de la API, para un cliente
