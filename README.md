@@ -345,7 +345,8 @@ con las cabeceras de seguridad de [`web/Caddyfile`](web/Caddyfile). Se entra con
 una demo).
 
 Para desarrollar, Vite sirve la UI en <http://localhost:5173> y pasa esas mismas rutas a la API
-local (la del paso 5 o la del Compose, en el 8080; otra, con `API_URL`):
+local (la del paso 5 o la del Compose, en el 8080; otra, con `API_URL`). El gestor de paquetes es
+pnpm, no npm: el lockfile es `web/pnpm-lock.yaml`.
 
 ```bash
 cd web
@@ -357,8 +358,11 @@ pnpm tipos        # regenera src/api/contrato.d.ts desde docs/api/openapi.yaml
 ```
 
 Los tipos de la API se generan del contrato y se versionan: después de cambiar
-`docs/api/openapi.yaml` se corre `pnpm tipos`. Cada pantalla vive en su archivo de
-`web/src/pantallas/`; el diseño de todo está en
+`docs/api/openapi.yaml` se corre `pnpm tipos`. Los datos estáticos de la UI (`impacto.json`,
+`series.json` y `peru.geojson`) están en `web/public/datos/`, los escriben `scripts/impacto.py` y
+`scripts/mapa_peru.py`, y su [`README.md`](web/public/datos/README.md) dice de dónde sale cada uno.
+Cada pantalla vive en su archivo de `web/src/pantallas/` y [`web/README.md`](web/README.md) explica
+cómo construirla; el diseño de todo está en
 [`docs/specs/2026-11-21-frontend-tb2-design.md`](docs/specs/2026-11-21-frontend-tb2-design.md).
 
 <p align="right">(<a href="#inicio">volver arriba</a>)</p>
