@@ -134,7 +134,8 @@ func TestMetricasPublicanElCPUYLaMemoriaDelProcesoDeLaAPI(t *testing.T) {
 	dos := procesoAPI(t, e, admin)
 	cpu := (dos["cpu_usuario_s"] + dos["cpu_sistema_s"]) - (uno["cpu_usuario_s"] + uno["cpu_sistema_s"])
 	reloj := dos["en_marcha_s"] - uno["en_marcha_s"]
-	if reloj < 0.15 || cpu < 0.05 || dos["max_rss_mb"] < uno["max_rss_mb"] {
+	// Los dos vienen redondeados al milisegundo: de ahí el margen sobre los 150 ms.
+	if reloj < 0.14 || cpu < 0.05 || dos["max_rss_mb"] < uno["max_rss_mb"] {
 		t.Fatalf("entre dos consultas: %.3f s de CPU en %.3f s de reloj (RSS máximo de %.1f a %.1f MB)", cpu, reloj, uno["max_rss_mb"], dos["max_rss_mb"])
 	}
 	// El uso que calcularía el panel: entre nada y todos los núcleos.
