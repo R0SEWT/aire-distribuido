@@ -113,16 +113,23 @@ func (c *Cache) Cerrar() error { return c.cliente.Close() }
 // GuardarRegimen guarda el régimen de una sola estación, con la regla de
 // GuardarRegimenes.
 func (c *Cache) GuardarRegimen(ctx context.Context, estacion string, r almacen.RegimenEstacion) error {
-	return c.GuardarRegimenes(ctx, map[string]almacen.RegimenEstacion{estacion: r})
+	_, err := c.GuardarRegimenes(ctx, map[string]almacen.RegimenEstacion{estacion: r})
+	return err
 }
 
 // GuardarRegimenes manda un guionRegimen por estación en un solo pipeline: una
-// ida y vuelta para todo el lote. Cada script es atómico por su cuenta.
-func (c *Cache) GuardarRegimenes(ctx context.Context, rs map[string]almacen.RegimenEstacion) error {
+// ida y vuelta para todo el lote. Cada script es atómico por su cuenta, y lo
+// que responde (1 si escribió, 0 si conservó el guardado) es lo que dice qué
+// regímenes quedaron guardados: se devuelven esos, con las fechas tal como se
+// escribieron (hora de Lima, al segundo), que es como las devuelve Regimen.
+func (c *Cache) GuardarRegimenes(ctx context.Context, rs map[string]almacen.RegimenEstacion) (map[string]almacen.RegimenEstacion, error) {
+	guardados := make(map[string]almacen.RegimenEstacion, len(rs))
 	if len(rs) == 0 {
-		return nil
+		return guardados, nil
 	}
 	type pedido struct {
+		estacion     string
+		regimen      almacen.RegimenEstacion
 		clave        string
 		valor, fecha string
 	}
@@ -131,35 +138,92 @@ func (c *Cache) GuardarRegimenes(ctx context.Context, rs map[string]almacen.Regi
 		r.FechaHora, r.TS = enLima(r.FechaHora), enLima(r.TS)
 		valor, err := json.Marshal(r)
 		if err != nil {
-			return fmt.Errorf("redis: régimen de %s: %w", estacion, err)
+			return guardados, fmt.Errorf("redis: régimen de %s: %w", estacion, err)
 		}
-		pedidos = append(pedidos, pedido{claveRegimen(estacion), string(valor), r.FechaHora.Format(time.RFC3339)})
+		pedidos = append(pedidos, pedido{estacion, r, claveRegimen(estacion), string(valor), r.FechaHora.Format(time.RFC3339)})
 	}
-	enviar := func() error {
-		_, err := c.cliente.Pipelined(ctx, func(p driver.Pipeliner) error {
+	enviar := func() ([]driver.Cmder, error) {
+		return c.cliente.Pipelined(ctx, func(p driver.Pipeliner) error {
 			for _, pe := range pedidos {
 				guionRegimen.EvalSha(ctx, p, []string{pe.clave}, pe.valor, pe.fecha)
 			}
 			return nil
 		})
-		return err
 	}
-	err := enviar()
+	respuestas, err := enviar()
 	// Redis no conoce el script (es la primera vez, o se reinició): se carga y
 	// se repite el lote entero. Repetir es seguro: volver a escribir el mismo
-	// régimen no cambia nada.
+	// régimen no cambia nada, y el script responde otra vez que escribió.
 	if driver.HasErrorPrefix(err, "NOSCRIPT") {
 		if err := guionRegimen.Load(ctx, c.cliente).Err(); err != nil {
-			return err
+			return guardados, err
 		}
-		err = enviar()
+		respuestas, err = enviar()
 	}
-	return err
+	// Las respuestas vienen en el orden de los pedidos. Con un error en el
+	// lote, cuentan las de los scripts que sí respondieron.
+	for i, resp := range respuestas {
+		if i >= len(pedidos) {
+			break
+		}
+		if cmd, ok := resp.(*driver.Cmd); ok {
+			if escribio, errCmd := cmd.Int(); errCmd == nil && escribio == 1 {
+				guardados[pedidos[i].estacion] = pedidos[i].regimen
+			}
+		}
+	}
+	return guardados, err
 }
 
 func (c *Cache) Regimen(ctx context.Context, estacion string) (almacen.RegimenEstacion, error) {
 	var r almacen.RegimenEstacion
 	return r, c.leer(ctx, claveRegimen(estacion), &r)
+}
+
+// Regimenes pide todas las claves con un solo MGET: una ida y vuelta para el
+// catálogo entero. Una clave que no existe llega como nil y no entra al mapa.
+// Una cuyo valor no es un régimen legible tampoco entra, y no tumba a las
+// demás: se devuelve el mapa con las que sí y un *almacen.RegimenesIlegibles.
+func (c *Cache) Regimenes(ctx context.Context, estaciones []string) (map[string]almacen.RegimenEstacion, error) {
+	rs := make(map[string]almacen.RegimenEstacion, len(estaciones))
+	if len(estaciones) == 0 {
+		return rs, nil
+	}
+	claves := make([]string, len(estaciones))
+	for i, estacion := range estaciones {
+		claves[i] = claveRegimen(estacion)
+	}
+	valores, err := c.cliente.MGet(ctx, claves...).Result()
+	if err != nil {
+		return nil, err
+	}
+	var ilegibles *almacen.RegimenesIlegibles
+	saltar := func(i int, causa error) {
+		if ilegibles == nil {
+			ilegibles = &almacen.RegimenesIlegibles{Causa: fmt.Errorf("redis: %s: %w", claves[i], causa)}
+		}
+		ilegibles.Estaciones = append(ilegibles.Estaciones, estaciones[i])
+	}
+	for i, v := range valores {
+		if v == nil {
+			continue
+		}
+		texto, ok := v.(string)
+		if !ok {
+			saltar(i, errors.New("el valor no es un texto"))
+			continue
+		}
+		var r almacen.RegimenEstacion
+		if err := json.Unmarshal([]byte(texto), &r); err != nil {
+			saltar(i, err)
+			continue
+		}
+		rs[estaciones[i]] = r
+	}
+	if ilegibles != nil {
+		return rs, ilegibles // no un nil con tipo: solo si hubo alguno
+	}
+	return rs, nil
 }
 
 // GuardarModeloActivo escribe modelo:activo. creado se guarda en la hora de

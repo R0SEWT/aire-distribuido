@@ -37,6 +37,10 @@ type entorno struct {
 	cache *memoria.Cache
 	ent   *memoria.Entrenamientos
 	ev    *memoria.Eventos
+	// parar apaga lo que corre en segundo plano (Escribir y Coordinar) y
+	// espera a que termine. Lo llama la limpieza de la prueba; se puede llamar
+	// antes, más de una vez.
+	parar func()
 }
 
 // nuevoEntorno arma la API como cmd/api, con el modelo sembrado desde
@@ -91,7 +95,8 @@ func nuevoEntorno(t *testing.T, cambiar ...func(*Config)) *entorno {
 	listo, coordinado := make(chan struct{}), make(chan struct{})
 	go func() { e.srv.Escribir(ctx); close(listo) }()
 	go func() { e.srv.Coordinar(ctx); close(coordinado) }()
-	t.Cleanup(func() { cancel(); <-listo; <-coordinado })
+	e.parar = sync.OnceFunc(func() { cancel(); <-listo; <-coordinado })
+	t.Cleanup(e.parar)
 	return e
 }
 

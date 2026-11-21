@@ -8,15 +8,17 @@
 | `POST /api/predicciones` | Asigna una lectura al régimen más cercano del modelo activo | usuario o admin |
 | `GET /api/estaciones` | Lista las estaciones almacenadas en MongoDB | usuario o admin |
 | `GET /api/estaciones/{id}/regimen` | Obtiene de Redis el último régimen registrado de una estación | usuario o admin |
+| `GET /api/regimenes` | Obtiene de Redis el último estado de todas las estaciones que tienen uno | usuario o admin |
 | `GET /api/modelos/activo` | Consulta el modelo activo y sus regímenes en unidades originales | usuario o admin |
 | `GET /api/cluster/nodos` | Lista nodos, workers, latencia y disponibilidad del pool | admin |
+| `GET /api/cluster/eventos` | Lista los eventos del clúster, del más reciente al más antiguo | admin |
 | `POST /api/entrenamientos` | Inicia un entrenamiento distribuido de forma asíncrona | admin |
 | `GET /api/entrenamientos` | Lista el historial de entrenamientos, sin las rondas | admin |
 | `GET /api/entrenamientos/{id}` | Consulta un entrenamiento con sus rondas o el error de aborto | admin |
-| `GET /api/metricas` | Consulta pedidos, percentiles de latencia y estado del clúster | admin |
+| `GET /api/metricas` | Consulta pedidos, percentiles de latencia, CPU y memoria de la API y estado del clúster | admin |
 | `GET /openapi.yaml` | Sirve este contrato OpenAPI sin transformación | libre |
 | `GET /docs` | Muestra Swagger UI con el contrato de /openapi.yaml | libre |
-| `GET /ws` | Abre un WebSocket de eventos del entrenamiento | usuario o admin |
+| `GET /ws` | Abre un WebSocket con el estado de las estaciones y los eventos del entrenamiento | usuario o admin |
 
 Rutas de la API: el contrato OpenAPI, que la API sirve en `/openapi.yaml` y Swagger UI muestra en `/docs`
 :::

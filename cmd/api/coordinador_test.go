@@ -302,6 +302,48 @@ func TestElCoordinadorDePuntaAPunta(t *testing.T) {
 	if m := pedir(t, "GET", base+"/api/metricas", admin, ""); m["ultimo_entrenamiento"] != det3["id"] || m["nodos_en_pool"] == nil {
 		t.Fatalf("métricas = %v", m)
 	}
+	// Los «logs» del clúster: las altas de los tres nodos y, por cada
+	// entrenamiento, la baja de los que se llevó; el más reciente primero.
+	esperarLibres(3) // los tres volvieron: sus altas ya pasaron
+	var eventos []struct{ TS, Tipo, Nodo, Detalle string }
+	altas, bajas := map[string]int{}, 0
+	limite := time.Now().Add(5 * time.Second)
+	for {
+		r, _ := http.NewRequest("GET", base+"/api/cluster/eventos?limite=200", nil)
+		r.Header.Set("Authorization", "Bearer "+admin)
+		resp, err := http.DefaultClient.Do(r)
+		if err != nil || resp.StatusCode != http.StatusOK {
+			t.Fatalf("GET /api/cluster/eventos: %v, %v", resp, err)
+		}
+		eventos = nil
+		json.NewDecoder(resp.Body).Decode(&eventos)
+		resp.Body.Close()
+		altas, bajas = map[string]int{}, 0
+		for _, e := range eventos {
+			switch {
+			case e.Tipo == "alta":
+				altas[e.Nodo]++
+			case e.Tipo == "baja" && strings.Contains(e.Detalle, "terminado"):
+				bajas++
+			}
+		}
+		// Los eventos se guardan en segundo plano: se espera a que estén los
+		// del segundo entrenamiento (1 + 3 bajas y, de vuelta, 3 + 1 + 3 altas).
+		if (bajas == 4 && len(altas) == 3 && altas["nodo-1"]+altas["nodo-2"]+altas["nodo-3"] == 7) || time.Now().After(limite) {
+			break
+		}
+		time.Sleep(5 * time.Millisecond)
+	}
+	if bajas != 4 || altas["nodo-1"]+altas["nodo-2"]+altas["nodo-3"] != 7 {
+		t.Fatalf("eventos del clúster: %d bajas por entrenamiento terminado y altas %v: %+v", bajas, altas, eventos)
+	}
+	for i := 1; i < len(eventos); i++ {
+		antes, err1 := time.Parse(time.RFC3339, eventos[i-1].TS)
+		este, err2 := time.Parse(time.RFC3339, eventos[i].TS)
+		if err1 != nil || err2 != nil || este.After(antes) || !strings.HasSuffix(eventos[i].TS, "-05:00") {
+			t.Fatalf("los eventos no vienen del más reciente al más antiguo, en hora de Lima: %s antes que %s", eventos[i-1].TS, eventos[i].TS)
+		}
+	}
 	// CORS quedó configurado desde la variable de entorno.
 	pre, _ := http.NewRequest("OPTIONS", base+"/api/entrenamientos", nil)
 	pre.Header.Set("Origin", "http://localhost:5173")
