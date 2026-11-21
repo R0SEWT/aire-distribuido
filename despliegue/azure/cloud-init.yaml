@@ -1,0 +1,22 @@
+#cloud-config
+# Deja lista una Ubuntu de 1 GiB de RAM para correr el Compose: Docker, 2 GiB de swap y el repo.
+# Se pasa a «az vm create» con --custom-data (README.md de esta carpeta).
+package_update: true
+packages:
+  - docker.io
+  - docker-compose-v2
+  - git
+swap:
+  filename: /swapfile
+  size: 2G
+  maxsize: 2G
+write_files:
+  - path: /etc/sysctl.d/60-aire.conf
+    content: |
+      vm.swappiness=10
+runcmd:
+  - sysctl --system
+  - usermod -aG docker azureuser
+  - systemctl enable --now docker
+  - sudo -u azureuser git clone --branch develop https://github.com/R0SEWT/aire-distribuido.git /home/azureuser/aire-distribuido
+  - sudo -u azureuser mkdir -p /home/azureuser/aire-distribuido/data/gold
