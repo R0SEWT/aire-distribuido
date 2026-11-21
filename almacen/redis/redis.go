@@ -182,6 +182,8 @@ func (c *Cache) Regimen(ctx context.Context, estacion string) (almacen.RegimenEs
 
 // Regimenes pide todas las claves con un solo MGET: una ida y vuelta para el
 // catálogo entero. Una clave que no existe llega como nil y no entra al mapa.
+// Una cuyo valor no es un régimen legible tampoco entra, y no tumba a las
+// demás: se devuelve el mapa con las que sí y un *almacen.RegimenesIlegibles.
 func (c *Cache) Regimenes(ctx context.Context, estaciones []string) (map[string]almacen.RegimenEstacion, error) {
 	rs := make(map[string]almacen.RegimenEstacion, len(estaciones))
 	if len(estaciones) == 0 {
@@ -195,19 +197,31 @@ func (c *Cache) Regimenes(ctx context.Context, estaciones []string) (map[string]
 	if err != nil {
 		return nil, err
 	}
+	var ilegibles *almacen.RegimenesIlegibles
+	saltar := func(i int, causa error) {
+		if ilegibles == nil {
+			ilegibles = &almacen.RegimenesIlegibles{Causa: fmt.Errorf("redis: %s: %w", claves[i], causa)}
+		}
+		ilegibles.Estaciones = append(ilegibles.Estaciones, estaciones[i])
+	}
 	for i, v := range valores {
 		if v == nil {
 			continue
 		}
 		texto, ok := v.(string)
 		if !ok {
-			return nil, fmt.Errorf("redis: %s: el valor no es un texto", claves[i])
+			saltar(i, errors.New("el valor no es un texto"))
+			continue
 		}
 		var r almacen.RegimenEstacion
 		if err := json.Unmarshal([]byte(texto), &r); err != nil {
-			return nil, fmt.Errorf("redis: %s: %w", claves[i], err)
+			saltar(i, err)
+			continue
 		}
 		rs[estaciones[i]] = r
+	}
+	if ilegibles != nil {
+		return rs, ilegibles // no un nil con tipo: solo si hubo alguno
 	}
 	return rs, nil
 }

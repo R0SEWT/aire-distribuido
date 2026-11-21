@@ -320,10 +320,19 @@ func nuevoEstadoEstacion(estacion string, r almacen.RegimenEstacion) estadoEstac
 // El estado de todas las estaciones que tienen uno, en un solo pedido y una
 // sola ida a la caché: se piden las claves de todo el catálogo a la vez. Sin
 // esta ruta, el panel tendría que hacer un pedido por estación, casi todos 404
-// con el sistema recién levantado.
+// con el sistema recién levantado. Si el valor guardado de una estación no se
+// puede leer, esa estación se salta (queda en el log) y la respuesta es 200
+// con las demás.
 func (s *Servidor) listarRegimenes(w http.ResponseWriter, r *http.Request) {
 	rs, err := s.cache.Regimenes(r.Context(), s.idsCatalogo)
-	if err != nil {
+	var ilegibles *almacen.RegimenesIlegibles
+	switch {
+	case errors.As(err, &ilegibles):
+		// Redis respondió; el valor de alguna clave no se puede leer. Esa
+		// estación no aparece y las demás sí: una clave rota no deja al panel
+		// sin ninguna.
+		s.log.Error("regímenes guardados que no se pueden leer: esas estaciones se saltan", "estaciones", ilegibles.Estaciones, "err", ilegibles.Causa)
+	case err != nil:
 		s.log.Error("regímenes de las estaciones", "err", err)
 		escribirError(w, http.StatusServiceUnavailable, "Redis no disponible")
 		return

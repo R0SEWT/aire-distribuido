@@ -301,12 +301,23 @@ func (s *Servidor) Coordinar(ctx context.Context) {
 }
 
 // difundirRegimen manda al hub el evento estacion.regimen: el estado nuevo de
-// una estación, para todos los roles del WebSocket. Si el hub lo descarta (no
-// corre, o ya se apagó) no pasa nada: el estado está en la caché y quien se
-// conecte lo pide con GET /api/regimenes.
-func (s *Servidor) difundirRegimen(estado estadoEstacion) {
-	if err := s.hub.Difundir(eventoRegimen, estado, rolesEventosEstacion...); err != nil && !errors.Is(err, errHubCerrado) {
-		s.log.Warn("evento no difundido", "evento", eventoRegimen, "estacion", estado.Estacion, "err", err)
+// una estación, para todos los roles del WebSocket. Devuelve false si el hub
+// no lo aceptó porque su canal de difusión está lleno: quien llama (los
+// avisos) lo conserva y lo reintenta, para que el último estado de la estación
+// no se pierda. Si el hub ya se apagó, o el estado no se puede codificar, no
+// hay nada que reintentar: devuelve true. El estado sigue en la caché y quien
+// se conecte lo pide con GET /api/regimenes.
+func (s *Servidor) difundirRegimen(estado estadoEstacion) bool {
+	err := s.hub.Difundir(eventoRegimen, estado, rolesEventosEstacion...)
+	switch {
+	case err == nil, errors.Is(err, errHubCerrado):
+		return true
+	case errors.Is(err, errDifusionLlena):
+		s.log.Warn("evento no difundido: se reintenta", "evento", eventoRegimen, "estacion", estado.Estacion, "err", err)
+		return false
+	default:
+		s.log.Error("evento no difundido", "evento", eventoRegimen, "estacion", estado.Estacion, "err", err)
+		return true
 	}
 }
 

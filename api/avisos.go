@@ -34,29 +34,43 @@ const cadaAvisoPorOmision = 250 * time.Millisecond
 // solo el último. El evento es el estado de la estación, no cada lectura: los
 // intermedios no hacen falta.
 //
+// El intervalo se cuenta desde que el aviso anterior de la estación terminó
+// de salir (no desde que se decidió mandarlo): entre dos avisos de una misma
+// estación pasa, como mínimo, el intervalo entero.
+//
+// Un aviso solo se da por emitido si el hub lo aceptó. Si lo rechaza (su
+// canal de difusión está lleno), el estado vuelve a quedar pendiente y se
+// reintenta en la pasada siguiente, un intervalo después, salvo que entre
+// tanto llegue uno más nuevo de esa estación, que lo pisa: el último estado
+// de una estación no se pierde.
+//
 // anotar nunca bloquea ni depende de que la goroutine esté corriendo: guarda
 // en un mapa con candado, que no crece más allá de una entrada por estación,
 // y deja una señal en un canal de un solo lugar.
 type avisosRegimen struct {
-	cada     time.Duration
-	difundir func(estadoEstacion)
-	hay      chan struct{} // hay pendientes nuevos; con búfer de 1
+	cada time.Duration
+	// difundir manda un aviso y dice si quedó aceptado; false es «todavía
+	// no»: se reintenta.
+	difundir func(estadoEstacion) bool
+	ahora    func() time.Time // el reloj; las pruebas lo cambian
+	hay      chan struct{}    // hay pendientes nuevos; con búfer de 1
 
 	mu         sync.Mutex
 	pendientes map[string]almacen.RegimenEstacion
 
 	// Lo que entró y lo que pasó con ello: recibidos = emitidos + agrupados +
 	// los que siguen pendientes.
-	recibidos atomic.Uint64 // estados que la caché guardó
-	emitidos  atomic.Uint64 // eventos difundidos
-	agrupados atomic.Uint64 // estados que otro posterior de su estación pisó antes de salir
+	recibidos  atomic.Uint64 // estados que la caché guardó
+	emitidos   atomic.Uint64 // eventos que el hub aceptó
+	agrupados  atomic.Uint64 // estados que otro posterior de su estación pisó antes de salir
+	rechazados atomic.Uint64 // intentos que el hub no aceptó (se reintentan)
 }
 
-func nuevosAvisosRegimen(cada time.Duration, difundir func(estadoEstacion)) *avisosRegimen {
+func nuevosAvisosRegimen(cada time.Duration, difundir func(estadoEstacion) bool) *avisosRegimen {
 	if cada <= 0 {
 		cada = cadaAvisoPorOmision
 	}
-	return &avisosRegimen{cada: cada, difundir: difundir, hay: make(chan struct{}, 1),
+	return &avisosRegimen{cada: cada, difundir: difundir, ahora: time.Now, hay: make(chan struct{}, 1),
 		pendientes: map[string]almacen.RegimenEstacion{}}
 }
 
@@ -91,52 +105,78 @@ func (a *avisosRegimen) alDia() bool {
 // que quedó pendiente, sin esperar su intervalo, para que el último estado de
 // cada estación salga antes de que el hub despida a los clientes.
 func (a *avisosRegimen) correr(ctx context.Context) {
-	ultimo := map[string]time.Time{} // cuándo salió el último aviso de cada estación
+	ultimo := map[string]time.Time{} // cuándo terminó de salir el último aviso de cada estación
 	reloj := time.NewTimer(time.Hour)
 	reloj.Stop()
 	defer reloj.Stop()
 	for {
 		select {
 		case <-ctx.Done():
-			a.emitir(func(string) bool { return true })
+			a.pasada(ultimo, true)
 			return
 		case <-a.hay:
 		case <-reloj.C:
 		}
-		ahora := time.Now()
-		var proximo time.Time // el vencimiento más cercano entre los que siguen pendientes
-		a.emitir(func(estacion string) bool {
-			vence := ultimo[estacion].Add(a.cada)
-			if !vence.After(ahora) {
-				ultimo[estacion] = ahora
-				return true
-			}
-			if proximo.IsZero() || vence.Before(proximo) {
-				proximo = vence
-			}
-			return false
-		})
-		if !proximo.IsZero() {
-			reloj.Reset(time.Until(proximo))
+		if proximo := a.pasada(ultimo, false); !proximo.IsZero() {
+			reloj.Reset(proximo.Sub(a.ahora()))
 		}
 	}
 }
 
-// emitir saca del mapa los pendientes de las estaciones que toca dice que ya
-// pueden avisar y los difunde, en orden de estación.
-func (a *avisosRegimen) emitir(toca func(estacion string) bool) {
+// pasada mira los pendientes una vez: difunde, en orden de estación, los de
+// las estaciones cuyo intervalo ya se cumplió (todos, si esTodo) y devuelve
+// cuándo hay que volver a mirar: el vencimiento más cercano entre los que
+// siguen pendientes, o el tiempo cero si no queda ninguno. ultimo es de quien
+// llama: cuándo terminó de salir el último aviso de cada estación.
+func (a *avisosRegimen) pasada(ultimo map[string]time.Time, esTodo bool) (proximo time.Time) {
+	antes := func(t time.Time) {
+		if proximo.IsZero() || t.Before(proximo) {
+			proximo = t
+		}
+	}
+	ahora := a.ahora()
 	var listos []estadoEstacion
 	a.mu.Lock()
 	for estacion, r := range a.pendientes {
-		if toca(estacion) {
+		if vence := ultimo[estacion].Add(a.cada); esTodo || !vence.After(ahora) {
 			listos = append(listos, nuevoEstadoEstacion(estacion, r))
 			delete(a.pendientes, estacion)
+		} else {
+			antes(vence)
 		}
 	}
 	a.mu.Unlock()
-	slices.SortFunc(listos, func(x, y estadoEstacion) int { return strings.Compare(x.Estacion, y.Estacion) })
-	for _, estado := range listos {
-		a.difundir(estado)
-		a.emitidos.Add(1)
+	if len(listos) == 0 {
+		return proximo
 	}
+	slices.SortFunc(listos, func(x, y estadoEstacion) int { return strings.Compare(x.Estacion, y.Estacion) })
+	var devueltos []estadoEstacion
+	for _, estado := range listos {
+		if a.difundir(estado) {
+			a.emitidos.Add(1)
+		} else {
+			a.rechazados.Add(1)
+			devueltos = append(devueltos, estado)
+		}
+	}
+	// El intervalo de cada estación corre desde ahora, que es después de que
+	// su aviso salió: el siguiente no puede salir antes de un intervalo
+	// entero. Una estación rechazada espera lo mismo para su reintento.
+	despues := a.ahora()
+	for _, estado := range listos {
+		ultimo[estado.Estacion] = despues
+	}
+	if len(devueltos) > 0 {
+		a.mu.Lock()
+		for _, estado := range devueltos {
+			if _, hayMasNuevo := a.pendientes[estado.Estacion]; hayMasNuevo {
+				a.agrupados.Add(1) // mientras se intentaba llegó otro: ese es el estado
+			} else {
+				a.pendientes[estado.Estacion] = estado.RegimenEstacion
+			}
+		}
+		a.mu.Unlock()
+		antes(despues.Add(a.cada))
+	}
+	return proximo
 }

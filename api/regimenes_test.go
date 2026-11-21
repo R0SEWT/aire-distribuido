@@ -4,8 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"log/slog"
 	"net/http/httptest"
 	"slices"
+	"strings"
 	"sync/atomic"
 	"testing"
 
@@ -147,4 +149,46 @@ func TestRegimenesEsUnaSolaIdaALaCacheY503SiNoResponde(t *testing.T) {
 	}
 	cache.falla.Store(true)
 	mensajeDeError(t, e.pedir(t, "GET", "/api/regimenes", tok, ""), 503, "Redis no disponible")
+}
+
+// cacheConIlegible es Redis con el valor de una estación que no se puede leer:
+// devuelve las demás y el error que la nombra, como almacen/redis.
+type cacheConIlegible struct {
+	*memoria.Cache
+	ilegible string
+}
+
+func (c cacheConIlegible) Regimenes(ctx context.Context, estaciones []string) (map[string]almacen.RegimenEstacion, error) {
+	rs, _ := c.Cache.Regimenes(ctx, estaciones)
+	if !slices.Contains(estaciones, c.ilegible) {
+		return rs, nil
+	}
+	delete(rs, c.ilegible)
+	return rs, &almacen.RegimenesIlegibles{Estaciones: []string{c.ilegible},
+		Causa: errors.New("redis: estacion:" + c.ilegible + ":regimen: invalid character 'o' in literal null")}
+}
+
+// Una clave ilegible en Redis (alguien la escribió a mano) no deja al panel
+// sin ninguna estación: esa se salta, queda en el log con su clave, y la
+// respuesta es 200 con las demás. Redis está sano: no es un 503.
+func TestRegimenesSaltaUnaEstacionIlegibleYRespondeLasDemas(t *testing.T) {
+	var log strings.Builder
+	e := nuevoEntorno(t, func(c *Config) {
+		c.Cache = cacheConIlegible{memoria.NuevaCache(), "CA-MAC-01"}
+		c.Log = slog.New(slog.NewTextHandler(&escritorSeguro{b: &log}, nil))
+	})
+	tok := e.token(t, "demo", "demo")
+	for _, estacion := range []string{"CA-AYAS-01", "CA-MAC-01", "CA-HU-04"} {
+		objeto(t, e.pedir(t, "POST", "/api/predicciones", tok, lecturaJSON(estacion, 1, 5, 9)), 200)
+	}
+	e.esperarEscritas(t, 3)
+	w := e.pedir(t, "GET", "/api/regimenes", tok, "")
+	l := lista(t, w, 200)
+	if len(l) != 2 || l[0]["estacion"] != "CA-AYAS-01" || l[1]["estacion"] != "CA-HU-04" {
+		t.Fatalf("se esperaban CA-AYAS-01 y CA-HU-04, sin la ilegible: %s", w.Body)
+	}
+	e.parar() // para leer el log sin carreras
+	if !strings.Contains(log.String(), "estacion:CA-MAC-01:regimen") || !strings.Contains(log.String(), "level=ERROR") {
+		t.Fatalf("la clave ilegible no quedó en el log: %q", log.String())
+	}
 }

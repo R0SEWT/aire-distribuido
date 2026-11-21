@@ -176,7 +176,12 @@ func (h *Hub) Correr(ctx context.Context) {
 	}
 }
 
-var errHubCerrado = errors.New("websocket: el hub ya no atiende")
+// Lo que Difundir devuelve cuando no aceptó el evento. Con errDifusionLlena
+// vale la pena reintentar más tarde; con errHubCerrado, no.
+var (
+	errHubCerrado    = errors.New("websocket: el hub ya no atiende")
+	errDifusionLlena = errors.New("websocket: el canal de difusión está lleno; el evento se descartó")
+)
 
 // Difundir manda un evento a los clientes conectados: una trama de texto con
 // {"evento": evento, "datos": datos} (esquema EventoWS del contrato). Si se
@@ -185,7 +190,9 @@ var errHubCerrado = errors.New("websocket: el hub ya no atiende")
 // Nunca bloquea a quien llama: el evento entra al canal de difusión, que tiene
 // búfer, y el hub lo reparte. El hub no espera a ningún cliente, así que ese
 // búfer solo se llena si el hub no está corriendo; en ese caso el evento se
-// descarta y se cuenta, como hace la cola de escritura de las predicciones.
+// descarta y se cuenta, como hace la cola de escritura de las predicciones, y
+// Difundir devuelve errDifusionLlena: quien no puede perder el evento (los
+// avisos de régimen) lo reintenta.
 // Los eventos que manda una misma goroutine llegan a cada cliente en ese orden.
 func (h *Hub) Difundir(evento string, datos any, roles ...string) error {
 	cuerpo, err := codificar(struct {
@@ -206,7 +213,7 @@ func (h *Hub) Difundir(evento string, datos any, roles ...string) error {
 		return nil
 	default:
 		h.descartados.Add(1)
-		return errors.New("websocket: el canal de difusión está lleno; el evento se descartó")
+		return errDifusionLlena
 	}
 }
 

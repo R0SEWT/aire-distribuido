@@ -282,11 +282,42 @@ func TestRegimenesDeTodoElCatalogoEnUnaSolaIda(t *testing.T) {
 	if sin, err := c.Regimenes(ctx, nil); err != nil || len(sin) != 0 {
 		t.Fatalf("Regimenes sin estaciones = %v, %v", sin, err)
 	}
-	// Una clave que alguien escribió a mano no se disimula: es un error que
-	// nombra la clave, como en Regimen.
-	c.cliente.Set(ctx, claveRegimen("CA-01"), "no es JSON", 0)
-	if _, err := c.Regimenes(ctx, catalogo); err == nil || !strings.Contains(err.Error(), "estacion:CA-01:regimen") {
-		t.Fatalf("Regimenes con un valor ilegible = %v", err)
+}
+
+// Una clave que alguien escribió a mano no tumba la lectura de las demás: esa
+// estación se salta y el error, que es un *almacen.RegimenesIlegibles, la
+// nombra con su clave. Sigue siendo una sola ida a Redis.
+func TestRegimenesSaltaLosValoresIlegibles(t *testing.T) {
+	c := conectar(t)
+	if _, err := c.GuardarRegimenes(ctx, map[string]almacen.RegimenEstacion{
+		"CA-A": {FechaHora: t0, Regimen: 1}, "CA-B": {FechaHora: t0, Regimen: 2}, "CA-C": {FechaHora: t0, Regimen: 0},
+	}); err != nil {
+		t.Fatal(err)
+	}
+	c.cliente.Set(ctx, claveRegimen("CA-B"), "no-es-json", 0)
+	c.cliente.Set(ctx, claveRegimen("CA-D"), `"un texto JSON, pero no un régimen"`, 0)
+	c.cliente.RPush(ctx, claveRegimen("CA-E"), "una lista, no un texto") // MGET la devuelve como nil: es una estación sin régimen
+	rs, err := c.Regimenes(ctx, []string{"CA-A", "CA-B", "CA-C", "CA-D", "CA-E", "CA-Z"})
+	var ilegibles *almacen.RegimenesIlegibles
+	if !errors.As(err, &ilegibles) {
+		t.Fatalf("Regimenes con valores ilegibles = %v; se esperaba un *almacen.RegimenesIlegibles", err)
+	}
+	if len(rs) != 2 || rs["CA-A"].Regimen != 1 || rs["CA-C"].Regimen != 0 {
+		t.Fatalf("las estaciones legibles tenían que venir igual: %+v", rs)
+	}
+	if fmt.Sprint(ilegibles.Estaciones) != "[CA-B CA-D]" || !strings.Contains(err.Error(), "estacion:CA-B:regimen") {
+		t.Fatalf("ilegibles = %v (%v); se esperaban CA-B y CA-D, con la clave de la primera", ilegibles.Estaciones, err)
+	}
+	// Sin ninguna ilegible entre las pedidas, el error es nil de verdad.
+	if rs, err := c.Regimenes(ctx, []string{"CA-A", "CA-C"}); err != nil || len(rs) != 2 {
+		t.Fatalf("Regimenes = %+v, %v", rs, err)
+	}
+	// Escribir de nuevo la estación la arregla: el script reemplaza lo ilegible.
+	if _, err := c.GuardarRegimenes(ctx, map[string]almacen.RegimenEstacion{"CA-B": {FechaHora: t0, Regimen: 2}}); err != nil {
+		t.Fatal(err)
+	}
+	if rs, err := c.Regimenes(ctx, []string{"CA-A", "CA-B", "CA-C"}); err != nil || len(rs) != 3 {
+		t.Fatalf("después de reescribir CA-B: %+v, %v", rs, err)
 	}
 }
 

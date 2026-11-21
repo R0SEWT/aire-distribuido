@@ -29,6 +29,8 @@ package almacen
 import (
 	"context"
 	"errors"
+	"fmt"
+	"strings"
 	"time"
 )
 
@@ -130,8 +132,28 @@ type Cache interface {
 	// uno (la clave del mapa es el id de la estación), en una sola ida y vuelta
 	// por más estaciones que sean. Una estación sin régimen no está en el mapa:
 	// un mapa vacío es válido.
+	//
+	// Un valor guardado que no se puede leer no invalida a los demás: esa
+	// estación se salta y el error es un *RegimenesIlegibles que la nombra,
+	// junto con el mapa de las que sí se leyeron. Cualquier otro error es que
+	// la caché no respondió, y el mapa no vale.
 	Regimenes(ctx context.Context, estaciones []string) (map[string]RegimenEstacion, error)
 }
+
+// RegimenesIlegibles es el error de Cache.Regimenes cuando el valor guardado de
+// alguna estación no se pudo leer (alguien escribió la clave a mano, o quedó
+// de otra versión). No es que la caché no responda: el mapa que lo acompaña
+// trae las demás estaciones y sirve. Se reconoce con errors.As.
+type RegimenesIlegibles struct {
+	Estaciones []string // las que se saltaron, en el orden en que se pidieron
+	Causa      error    // por qué no se pudo leer la primera, con su clave
+}
+
+func (e *RegimenesIlegibles) Error() string {
+	return fmt.Sprintf("%d regímenes guardados no se pueden leer (%s): %v", len(e.Estaciones), strings.Join(e.Estaciones, ", "), e.Causa)
+}
+
+func (e *RegimenesIlegibles) Unwrap() error { return e.Causa }
 
 // Pinger dice si un almacén responde. Es lo que GET /api/salud informa como
 // mongo y redis.
