@@ -439,7 +439,7 @@ paths:
     get:
       tags: [Métricas]
       operationId: consultarMetricas
-      summary: Consulta pedidos, percentiles de latencia y estado del clúster
+      summary: Consulta pedidos, percentiles de latencia, CPU y memoria de la API y estado del clúster
       x-roles: [admin]
       responses:
         '200':
@@ -458,6 +458,8 @@ paths:
                   mongo: {escritas: 12000, descartadas: 0, fallidas: 0, lotes: 3120}
                   redis: {escritas: 12000, descartadas: 0, fallidas: 0, lotes: 3050}
                 puntos_de_control: {escritos: 44, fallidos: 0, omitidos: 0}
+                proceso_api: {cpu_usuario_s: 12.48, cpu_sistema_s: 3.105, en_marcha_s: 1824.6, nucleos: 8,
+                              heap_mb: 21.7, sistema_mb: 48.3, max_rss_mb: 63.9, goroutines: 27}
         '401': {$ref: '#/components/responses/NoAutenticado'}
         '403': {$ref: '#/components/responses/SinPermiso'}
   /openapi.yaml:
@@ -913,7 +915,7 @@ components:
         lotes: {type: integer, minimum: 0, description: Idas y vueltas al almacén}
     Metricas:
       type: object
-      required: [endpoints, nodos_en_pool, ultimo_entrenamiento, escrituras_descartadas, escrituras_fallidas, escritura, puntos_de_control]
+      required: [endpoints, nodos_en_pool, ultimo_entrenamiento, escrituras_descartadas, escrituras_fallidas, escritura, puntos_de_control, proceso_api]
       properties:
         endpoints:
           type: object
@@ -941,6 +943,38 @@ components:
             escritos: {type: integer, minimum: 0, description: Puntos que Redis guardó}
             fallidos: {type: integer, minimum: 0, description: Escrituras que Redis rechazó o no respondió a tiempo}
             omitidos: {type: integer, minimum: 0, description: Puntos reemplazados por el de una ronda posterior antes de escribirse}
+        proceso_api: {$ref: '#/components/schemas/ProcesoAPI'}
+    ProcesoAPI:
+      type: object
+      required: [cpu_usuario_s, cpu_sistema_s, en_marcha_s, nucleos, heap_mb, sistema_mb, max_rss_mb, goroutines]
+      description: |
+        CPU y memoria del proceso de la API, que es el coordinador del clúster, medidos
+        en el momento de la consulta. No son de los nodos: el protocolo del clúster no
+        transporta el CPU de cada nodo. De un nodo se conoce lo que tardó en responder
+        cada ronda (ms_por_nodo, que incluye la red) y la latencia de su latido
+        (latencia_ms en GET /api/cluster/nodos).
+
+        El tiempo de CPU es acumulado desde que arrancó el proceso, no un porcentaje. El
+        uso de CPU entre dos consultas es
+        (Δcpu_usuario_s + Δcpu_sistema_s) / Δen_marcha_s: 1 es un núcleo ocupado todo ese
+        tiempo y el tope es nucleos. Con una sola consulta, el mismo cociente sin las
+        diferencias es el promedio desde el arranque.
+      properties:
+        cpu_usuario_s: {type: number, minimum: 0, description: Segundos de CPU en modo usuario que el proceso consumió desde que arrancó}
+        cpu_sistema_s: {type: number, minimum: 0, description: Segundos de CPU en modo núcleo que el proceso consumió desde que arrancó}
+        en_marcha_s: {type: number, minimum: 0, description: Segundos de reloj desde que arrancó el proceso}
+        nucleos: {type: integer, minimum: 1, description: 'Núcleos que el proceso puede usar a la vez (GOMAXPROCS)'}
+        heap_mb: {type: number, minimum: 0, description: Memoria viva en el heap de Go ahora}
+        sistema_mb: {type: number, minimum: 0, description: Memoria que el runtime de Go tiene pedida al sistema operativo}
+        max_rss_mb: {type: number, minimum: 0, description: 'Máximo de memoria residente del proceso desde que arrancó; no baja'}
+        goroutines: {type: integer, minimum: 1, description: Goroutines vivas ahora}
+        no_disponible:
+          type: array
+          items: {type: string, enum: [cpu_usuario_s, cpu_sistema_s, max_rss_mb]}
+          description: |
+            Los campos que esta plataforma no puede medir y quedaron en 0. Solo aparece
+            cuando hay alguno: en Windows, el tiempo de CPU y el máximo de memoria
+            residente. En Linux (la imagen de Docker) se mide todo.
     EventoRonda:
       allOf:
         - $ref: '#/components/schemas/Ronda'

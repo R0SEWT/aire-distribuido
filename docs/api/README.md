@@ -1,7 +1,8 @@
 # Contrato de la API
 
-[`openapi.yaml`](openapi.yaml) es el contrato de la API de la PC4: las 13 rutas de la spec §6.1,
-con los ejemplos de §6.5. La API lo sirve tal cual en `/openapi.yaml` y Swagger UI lo muestra en
+[`openapi.yaml`](openapi.yaml) es el contrato de la API: las rutas de la spec de la PC4 (§6.1, con
+los ejemplos de §6.5) y las que sumó el frontend del TB2 (spec del frontend, §6: `GET /api/regimenes`,
+`GET /api/cluster/eventos`, el evento `estacion.regimen` y `proceso_api` en las métricas). La API lo sirve tal cual en `/openapi.yaml` y Swagger UI lo muestra en
 `/docs`. Se revisa importándolo en [Swagger Editor](https://editor.swagger.io/) (**File → Import
 file**).
 
@@ -10,7 +11,8 @@ file**).
 ## Acceso
 
 Libres: token, salud, `/openapi.yaml` y `/docs`. Con rol `usuario` o `admin`: predicciones,
-estaciones, modelo activo y `/ws`. Solo `admin`: nodos del clúster, entrenamientos y métricas;
+estaciones y su estado, modelo activo y `/ws`. Solo `admin`: nodos y eventos del clúster,
+entrenamientos y métricas;
 un `usuario` recibe 403. `x-roles` deja el rol escrito en cada operación. Por `/ws`, el estado de
 las estaciones (`estacion.regimen`) llega a los dos roles y los eventos de un entrenamiento, solo a
 los `admin`.
@@ -39,6 +41,13 @@ los `admin`.
   goroutine por almacén la escribe por lotes. `/api/metricas` cuenta lo que no llegó:
   `escrituras_descartadas` (una cola llena) y `escrituras_fallidas` (el almacén rechazó el lote), y
   en `escritura` el detalle de cada almacén. `/api/salud` informa si cada base responde.
+- **CPU y memoria**: `/api/metricas` trae en `proceso_api` el CPU y la memoria del proceso de la
+  API, que es el coordinador. No son de los nodos: el protocolo del clúster no transporta su CPU, y
+  de ellos se conoce `ms_por_nodo` y `latencia_ms`. El tiempo de CPU es acumulado; el uso entre dos
+  consultas es `Δ(cpu_usuario_s + cpu_sistema_s) / Δen_marcha_s`, con tope en `nucleos`.
+- **Eventos del clúster**: `GET /api/cluster/eventos?limite=N` (admin) devuelve las altas, las bajas
+  y los errores de los nodos, del más reciente al más antiguo: 50 por omisión y 200 como máximo.
+  Después de cada entrenamiento hay una baja y un alta por nodo.
 - **Reinicios**: `ultimo_entrenamiento` se recupera del almacén al arrancar, y un entrenamiento que
   estaba `en_curso` cuando la API murió queda `abortado` con `error` «la API se reinició mientras el
   entrenamiento estaba en curso». `puntos_de_control` cuenta los puntos de control por ronda.

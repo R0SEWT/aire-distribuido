@@ -1,11 +1,15 @@
 package api
 
 import (
+	"math"
 	"net/http"
 	"net/http/httptest"
+	"runtime"
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/R0SEWT/aire-distribuido/kmeans"
 )
 
 func TestHistogramaPercentiles(t *testing.T) {
@@ -72,5 +76,69 @@ func TestMedirCuentaCadaPedidoPorRuta(t *testing.T) {
 	res := m.Resumen()
 	if len(res) != 1 || res["GET /x"].Pedidos != 400 {
 		t.Fatalf("Resumen = %+v; se esperaban 400 pedidos en GET /x y nada de la ruta sin pedidos", res)
+	}
+}
+
+// Los campos obligatorios del esquema ProcesoAPI del contrato.
+var camposProcesoAPI = []string{"cpu_usuario_s", "cpu_sistema_s", "en_marcha_s", "nucleos", "heap_mb", "sistema_mb", "max_rss_mb", "goroutines"}
+
+// procesoAPI pide /api/metricas y devuelve su proceso_api, comprobando que
+// traiga los campos del contrato y nada más.
+func procesoAPI(t *testing.T, e *entorno, admin string) map[string]float64 {
+	t.Helper()
+	m := objeto(t, e.pedir(t, "GET", "/api/metricas", admin, ""), 200, "proceso_api", "endpoints", "escritura", "puntos_de_control")
+	crudo, ok := m["proceso_api"].(map[string]any)
+	if !ok {
+		t.Fatalf("proceso_api = %v", m["proceso_api"])
+	}
+	p := map[string]float64{}
+	for _, c := range camposProcesoAPI {
+		v, ok := crudo[c].(float64)
+		if !ok || v < 0 {
+			t.Fatalf("proceso_api.%s = %v; tiene que ser un número no negativo", c, crudo[c])
+		}
+		p[c] = v
+	}
+	_, hayNoDisponible := crudo["no_disponible"]
+	if extras := len(crudo) - len(camposProcesoAPI); extras != 0 && !(extras == 1 && hayNoDisponible) {
+		t.Fatalf("proceso_api trae campos que el contrato no nombra: %v", crudo)
+	}
+	return p
+}
+
+// /api/metricas publica el CPU y la memoria del proceso de la API: tiempo de
+// CPU acumulado, que crece cuando el proceso trabaja, y con el que quien
+// consulta calcula el uso entre dos lecturas.
+func TestMetricasPublicanElCPUYLaMemoriaDelProcesoDeLaAPI(t *testing.T) {
+	e := nuevoEntorno(t)
+	admin := e.token(t, "admin", "clave-admin")
+	uno := procesoAPI(t, e, admin)
+	if uno["nucleos"] != float64(runtime.GOMAXPROCS(0)) || uno["goroutines"] < 1 || uno["en_marcha_s"] <= 0 ||
+		uno["heap_mb"] <= 0 || uno["sistema_mb"] < uno["heap_mb"] {
+		t.Fatalf("proceso_api = %v", uno)
+	}
+	if len(kmeans.MedirRecursos().NoDisponible) > 0 {
+		t.Skip("esta plataforma no mide el tiempo de CPU ni el RSS máximo (recursos_otros.go)")
+	}
+	if uno["max_rss_mb"] <= 0 || uno["cpu_usuario_s"]+uno["cpu_sistema_s"] <= 0 {
+		t.Fatalf("sin CPU ni RSS medidos: %v", uno)
+	}
+	// 150 ms con un núcleo ocupado: el CPU acumulado tiene que notarlo.
+	x := 0.0
+	for limite := time.Now().Add(150 * time.Millisecond); time.Now().Before(limite); {
+		for i := range 10000 {
+			x += math.Sqrt(float64(i))
+		}
+	}
+	_ = x
+	dos := procesoAPI(t, e, admin)
+	cpu := (dos["cpu_usuario_s"] + dos["cpu_sistema_s"]) - (uno["cpu_usuario_s"] + uno["cpu_sistema_s"])
+	reloj := dos["en_marcha_s"] - uno["en_marcha_s"]
+	if reloj < 0.15 || cpu < 0.05 || dos["max_rss_mb"] < uno["max_rss_mb"] {
+		t.Fatalf("entre dos consultas: %.3f s de CPU en %.3f s de reloj (RSS máximo de %.1f a %.1f MB)", cpu, reloj, uno["max_rss_mb"], dos["max_rss_mb"])
+	}
+	// El uso que calcularía el panel: entre nada y todos los núcleos.
+	if uso := cpu / reloj; uso <= 0 || uso > dos["nucleos"]*1.5 {
+		t.Fatalf("uso de CPU = %.2f núcleos, con %v disponibles", uso, dos["nucleos"])
 	}
 }

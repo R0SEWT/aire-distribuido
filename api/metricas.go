@@ -3,10 +3,13 @@ package api
 import (
 	"math"
 	"net/http"
+	"runtime"
 	"strconv"
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/R0SEWT/aire-distribuido/kmeans"
 )
 
 // Cubetas del histograma de latencias: 16 por octava a partir de 1 µs, hasta
@@ -118,3 +121,47 @@ func (m *Metricas) Resumen() map[string]resumenRuta {
 	}
 	return res
 }
+
+// arranqueProceso es cuándo arrancó el proceso, con el margen de la
+// inicialización de los paquetes: es contra lo que se compara el tiempo de CPU
+// que el sistema operativo acumula desde el arranque.
+var arranqueProceso = time.Now()
+
+// estadoProceso es lo que /api/metricas publica en proceso_api (ProcesoAPI en
+// el contrato): el CPU y la memoria de ESTE proceso, la API, que es el
+// coordinador del clúster. No son de los nodos: el protocolo no transporta su
+// CPU, y de ellos solo se conoce el tiempo de respuesta por ronda. Por eso los
+// campos llevan el nombre de lo que son.
+//
+// El tiempo de CPU es el acumulado que da el sistema operativo, no un
+// porcentaje: el uso entre dos consultas lo calcula quien consulta, como
+// Δ(cpu_usuario_s + cpu_sistema_s) / Δen_marcha_s. Así la ruta no guarda
+// estado ni depende de cada cuánto la llaman.
+type estadoProceso struct {
+	CPUUsuarioS  float64  `json:"cpu_usuario_s"`
+	CPUSistemaS  float64  `json:"cpu_sistema_s"`
+	EnMarchaS    float64  `json:"en_marcha_s"`
+	Nucleos      int      `json:"nucleos"`
+	HeapMB       float64  `json:"heap_mb"`
+	SistemaMB    float64  `json:"sistema_mb"`
+	MaxRSSMB     float64  `json:"max_rss_mb"`
+	Goroutines   int      `json:"goroutines"`
+	NoDisponible []string `json:"no_disponible,omitempty"`
+}
+
+// medirProceso toma la foto con kmeans.MedirRecursos, lo mismo que usan
+// cmd/entrenar y cmd/benchmark para sus informes. Cuesta una lectura de las
+// estadísticas del runtime (decenas de microsegundos): es por consulta de un
+// admin, no por pedido.
+func medirProceso() estadoProceso {
+	r := kmeans.MedirRecursos()
+	return estadoProceso{
+		CPUUsuarioS: milesimas(r.CPUUsuarioS), CPUSistemaS: milesimas(r.CPUSistemaS),
+		EnMarchaS: milesimas(time.Since(arranqueProceso).Seconds()), Nucleos: runtime.GOMAXPROCS(0),
+		HeapMB: milesimas(r.HeapMB), SistemaMB: milesimas(r.SistemaMB), MaxRSSMB: milesimas(r.MaxRSSMB),
+		Goroutines: runtime.NumGoroutine(), NoDisponible: r.NoDisponible,
+	}
+}
+
+// milesimas redondea a tres decimales: milisegundos de CPU y kilobytes.
+func milesimas(v float64) float64 { return math.Round(v*1000) / 1000 }
