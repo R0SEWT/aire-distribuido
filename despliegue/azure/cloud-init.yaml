@@ -1,6 +1,8 @@
 #cloud-config
 # Deja lista una Ubuntu de 1 GiB de RAM para correr el Compose: Docker, 2 GiB de swap y el repo.
-# Se pasa a «az vm create» con --custom-data (README.md de esta carpeta).
+# Se pasa a "az vm create" con --custom-data (README.md de esta carpeta).
+# Solo ASCII en este archivo: Azure altera los caracteres con tilde del custom-data y
+# cloud-init descarta el archivo entero sin avisar ("empty cloud config").
 package_update: true
 packages:
   - docker.io
