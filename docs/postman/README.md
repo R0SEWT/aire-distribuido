@@ -136,8 +136,9 @@ El Runner se ejecutó contra la API real de Rody (`72efc400`), con MongoDB, Redi
 nodos en Docker, en `http://127.0.0.1:18082`. Pasaron las 78 iteraciones, 82 peticiones
 y 714 aserciones, sin fallos. El resumen y los hashes de gold y silver están en
 `evidencias/j3-runner-real.json`. La ejecución adicional por CLI está en
-`../informe/capturas/pc4/newman-runner-csv.txt`; su máximo HTTP fue 18 ms, frente a
+`../informe/capturas/pc4/newman-runner-csv-julio.txt`; su máximo HTTP fue 18 ms, frente a
 7 ms en la primera ejecución. Son corridas distintas, ambas con límite de 100 ms.
+La salida previa de Rody se conserva intacta en `newman-runner-csv.txt`.
 
 Esto valida J3 en el entorno local con la API real. No acredita experimentos en los
 equipos físicos del laboratorio ni reemplaza la captura del Runner en Postman.
