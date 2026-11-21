@@ -131,6 +131,18 @@ func (c *Cache) Regimen(_ context.Context, estacion string) (almacen.RegimenEsta
 	return r, nil
 }
 
+func (c *Cache) Regimenes(_ context.Context, estaciones []string) (map[string]almacen.RegimenEstacion, error) {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	rs := make(map[string]almacen.RegimenEstacion, len(estaciones))
+	for _, estacion := range estaciones {
+		if r, ok := c.regimenes[estacion]; ok {
+			rs[estacion] = r
+		}
+	}
+	return rs, nil
+}
+
 func (c *Cache) Ping(context.Context) error { return nil }
 
 func (c *Cache) GuardarModeloActivo(_ context.Context, m almacen.Modelo) error {

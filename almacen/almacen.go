@@ -119,6 +119,11 @@ type Cache interface {
 	GuardarRegimenes(ctx context.Context, rs map[string]RegimenEstacion) error
 	// Regimen devuelve el último régimen de una estación o ErrNoEncontrado.
 	Regimen(ctx context.Context, estacion string) (RegimenEstacion, error)
+	// Regimenes devuelve el último régimen de las estaciones pedidas que tienen
+	// uno (la clave del mapa es el id de la estación), en una sola ida y vuelta
+	// por más estaciones que sean. Una estación sin régimen no está en el mapa:
+	// un mapa vacío es válido.
+	Regimenes(ctx context.Context, estaciones []string) (map[string]RegimenEstacion, error)
 }
 
 // Pinger dice si un almacén responde. Es lo que GET /api/salud informa como

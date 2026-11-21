@@ -18,9 +18,13 @@ import (
 	"math/rand/v2"
 	"os"
 	"reflect"
+	"strings"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
+
+	driver "github.com/redis/go-redis/v9"
 
 	"github.com/R0SEWT/aire-distribuido/almacen"
 )
@@ -208,6 +212,76 @@ func TestGuardarRegimenesPorLote(t *testing.T) {
 	}
 	if a, b := regimen(t, c, "CA-00"), regimen(t, c, "CA-01"); a.Regimen != 0 || b.Regimen != 9 {
 		t.Fatalf("CA-00 = %d (se esperaba 0: la más antigua no reemplaza), CA-01 = %d (se esperaba 9)", a.Regimen, b.Regimen)
+	}
+}
+
+// cuentaComandos cuenta las idas y vueltas del cliente a Redis: un comando
+// suelto es una y un pipeline entero, otra.
+type cuentaComandos struct{ idas atomic.Int64 }
+
+func (*cuentaComandos) DialHook(sig driver.DialHook) driver.DialHook { return sig }
+
+func (h *cuentaComandos) ProcessHook(sig driver.ProcessHook) driver.ProcessHook {
+	return func(ctx context.Context, cmd driver.Cmder) error {
+		h.idas.Add(1)
+		return sig(ctx, cmd)
+	}
+}
+
+func (h *cuentaComandos) ProcessPipelineHook(sig driver.ProcessPipelineHook) driver.ProcessPipelineHook {
+	return func(ctx context.Context, cmds []driver.Cmder) error {
+		h.idas.Add(1)
+		return sig(ctx, cmds)
+	}
+}
+
+// El panel pide el estado de las 33 estaciones del catálogo: es una sola ida a
+// Redis (un MGET), no una por estación. Las que no tienen régimen no vienen, y
+// cada régimen es el mismo que devuelve Regimen.
+func TestRegimenesDeTodoElCatalogoEnUnaSolaIda(t *testing.T) {
+	c := conectar(t)
+	var catalogo []string
+	lote := map[string]almacen.RegimenEstacion{}
+	inca := "mala"
+	for i := range 33 {
+		id := fmt.Sprintf("CA-%02d", i)
+		catalogo = append(catalogo, id)
+		if i%2 == 0 { // 17 estaciones con régimen
+			lote[id] = almacen.RegimenEstacion{FechaHora: t0.Add(time.Duration(i) * time.Hour), Regimen: i % 3, Alerta: i%4 == 0,
+				INCA: &inca, Media24h: almacen.Media24h{Lecturas: i % 24}, TS: t0}
+		}
+	}
+	if vacio, err := c.Regimenes(ctx, catalogo); err != nil || vacio == nil || len(vacio) != 0 {
+		t.Fatalf("Regimenes sin datos = %v, %v; se esperaba un mapa vacío", vacio, err)
+	}
+	if err := c.GuardarRegimenes(ctx, lote); err != nil {
+		t.Fatal(err)
+	}
+	cuenta := &cuentaComandos{}
+	c.cliente.AddHook(cuenta)
+	rs, err := c.Regimenes(ctx, catalogo)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if n := cuenta.idas.Load(); n != 1 {
+		t.Fatalf("Regimenes hizo %d idas a Redis para %d estaciones; tiene que ser una", n, len(catalogo))
+	}
+	if len(rs) != 17 {
+		t.Fatalf("%d estaciones con régimen, se esperaban 17: %v", len(rs), rs)
+	}
+	for id, r := range rs {
+		if una := regimen(t, c, id); !reflect.DeepEqual(r, una) {
+			t.Fatalf("%s: Regimenes = %+v y Regimen = %+v", id, r, una)
+		}
+	}
+	if sin, err := c.Regimenes(ctx, nil); err != nil || len(sin) != 0 {
+		t.Fatalf("Regimenes sin estaciones = %v, %v", sin, err)
+	}
+	// Una clave que alguien escribió a mano no se disimula: es un error que
+	// nombra la clave, como en Regimen.
+	c.cliente.Set(ctx, claveRegimen("CA-01"), "no es JSON", 0)
+	if _, err := c.Regimenes(ctx, catalogo); err == nil || !strings.Contains(err.Error(), "estacion:CA-01:regimen") {
+		t.Fatalf("Regimenes con un valor ilegible = %v", err)
 	}
 }
 

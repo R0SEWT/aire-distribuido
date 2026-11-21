@@ -165,6 +165,39 @@ paths:
                 desconocida: {value: {error: 'estación desconocida: CA-XX-99'}}
                 sin_regimen: {value: {error: 'la estación CA-AYAS-01 todavía no tiene un régimen registrado'}}
         '503': {$ref: '#/components/responses/NoDisponible'}
+  /api/regimenes:
+    get:
+      tags: [Estaciones]
+      operationId: listarRegimenes
+      summary: Obtiene de Redis el último estado de todas las estaciones que tienen uno
+      description: |
+        Rol usuario o admin. Es GET /api/estaciones/{id}/regimen para todo el
+        catálogo en un solo pedido (y una sola ida a Redis): lo que el panel
+        necesita al abrir. Trae una entrada por estación que ya tiene una
+        predicción registrada, ordenadas por estacion; las que todavía no
+        tienen ninguna no aparecen. Con el sistema recién levantado la lista
+        está vacía: es un 200, no un 404.
+
+        Después de este pedido, el panel se mantiene al día con el evento
+        estacion.regimen de /ws, que lleva el mismo objeto.
+      x-roles: [usuario, admin]
+      responses:
+        '200':
+          description: El estado de cada estación que tiene uno; una lista vacía es válida
+          content:
+            application/json:
+              schema:
+                type: array
+                items: {$ref: '#/components/schemas/EstadoEstacion'}
+              example:
+                - {estacion: CA-AYAS-01, fecha_hora: '2026-11-14T15:00:00-05:00', regimen: 1, excede_eca: true,
+                   media_24h: {pm2_5: 58.3, pm10: 121.4, lecturas: 24},
+                   alerta: true, inca: mala, ts: '2026-11-14T15:00:02-05:00'}
+                - {estacion: CA-MAC-01, fecha_hora: '2026-11-14T15:00:00-05:00', regimen: 0, excede_eca: false,
+                   media_24h: {pm2_5: null, pm10: null, lecturas: 3},
+                   alerta: false, inca: null, ts: '2026-11-14T15:00:03-05:00'}
+        '401': {$ref: '#/components/responses/NoAutenticado'}
+        '503': {$ref: '#/components/responses/NoDisponible'}
   /api/modelos/activo:
     get:
       tags: [Modelos]
@@ -632,6 +665,16 @@ components:
         alerta: {$ref: '#/components/schemas/Alerta'}
         inca: {$ref: '#/components/schemas/BandaINCA'}
         ts: {type: string, format: date-time}
+    EstadoEstacion:
+      description: |
+        El RegimenEstacion de una estación junto con su código. Es cada entrada de
+        GET /api/regimenes y los datos del evento estacion.regimen de /ws.
+      allOf:
+        - $ref: '#/components/schemas/RegimenEstacion'
+        - type: object
+          required: [estacion]
+          properties:
+            estacion: {type: string, minLength: 1, description: Código de la estación OEFA}
     Media24h:
       type: object
       required: [pm2_5, pm10, lecturas]

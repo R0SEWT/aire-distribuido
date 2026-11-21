@@ -85,6 +85,28 @@ func TestCacheGuardaElRegimenMasReciente(t *testing.T) {
 	}
 }
 
+// Regimenes trae de una vez las estaciones pedidas que tienen régimen; las
+// que no, no están en el mapa.
+func TestCacheRegimenesDeVariasEstaciones(t *testing.T) {
+	c := NuevaCache()
+	if rs, err := c.Regimenes(ctx, []string{"CA-A", "CA-B"}); err != nil || rs == nil || len(rs) != 0 {
+		t.Fatalf("Regimenes sin datos = %v, %v; se esperaba un mapa vacío", rs, err)
+	}
+	t0 := time.Date(2026, 11, 14, 15, 0, 0, 0, time.UTC)
+	if err := c.GuardarRegimenes(ctx, map[string]almacen.RegimenEstacion{
+		"CA-A": {FechaHora: t0, Regimen: 1}, "CA-B": {FechaHora: t0, Regimen: 2}, "CA-C": {FechaHora: t0, Regimen: 0},
+	}); err != nil {
+		t.Fatal(err)
+	}
+	rs, err := c.Regimenes(ctx, []string{"CA-A", "CA-C", "CA-Z"})
+	if err != nil || len(rs) != 2 || rs["CA-A"].Regimen != 1 || rs["CA-C"].Regimen != 0 {
+		t.Fatalf("Regimenes = %+v, %v; se esperaban CA-A y CA-C", rs, err)
+	}
+	if rs, err := c.Regimenes(ctx, nil); err != nil || len(rs) != 0 {
+		t.Fatalf("Regimenes sin estaciones = %v, %v", rs, err)
+	}
+}
+
 func TestPrediccionesGuarda(t *testing.T) {
 	p := NuevasPredicciones()
 	for i := range 3 {

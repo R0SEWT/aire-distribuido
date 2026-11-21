@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"maps"
 	"net"
 	"net/http"
 	"slices"
@@ -89,6 +90,7 @@ type Servidor struct {
 	firmador     *Firmador
 	usuarios     map[string]Usuario
 	catalogo     map[string]bool
+	idsCatalogo  []string // los códigos del catálogo, ordenados
 	estaciones   almacen.Estaciones
 	cache        almacen.Cache
 	modelos      almacenesDeModelo
@@ -142,26 +144,28 @@ func Nuevo(cfg Config) (*Servidor, error) {
 	for _, e := range cfg.Catalogo {
 		catalogo[e.ID] = true
 	}
+	idsCatalogo := slices.Sorted(maps.Keys(catalogo))
 	s := &Servidor{
-		firmador:   cfg.Firmador,
-		usuarios:   cfg.Usuarios,
-		catalogo:   catalogo,
-		estaciones: cfg.Estaciones,
-		cache:      cfg.Cache,
-		modelos:    almacenesDeModelo{cfg.Modelos, cfg.CacheModelo},
-		mongo:      cfg.Mongo,
-		redis:      cfg.Redis,
-		openapi:    cfg.OpenAPI,
-		log:        log,
-		metricas:   NuevasMetricas(),
-		ventanas:   ventana.Nuevas(),
-		escritor:   nuevoEscritor(cfg.TamCola, cfg.Predicciones, cfg.Cache, log),
-		mux:        http.NewServeMux(),
-		ahora:      time.Now,
-		cors:       nuevoCORS(cfg.OrigenesCORS),
-		hub:        nuevoHub(opcionesHubPorOmision(), log),
-		eventos:    cfg.Eventos,
-		cronica:    make(chan almacen.EventoCluster, tamCronica),
+		firmador:    cfg.Firmador,
+		usuarios:    cfg.Usuarios,
+		catalogo:    catalogo,
+		idsCatalogo: idsCatalogo,
+		estaciones:  cfg.Estaciones,
+		cache:       cfg.Cache,
+		modelos:     almacenesDeModelo{cfg.Modelos, cfg.CacheModelo},
+		mongo:       cfg.Mongo,
+		redis:       cfg.Redis,
+		openapi:     cfg.OpenAPI,
+		log:         log,
+		metricas:    NuevasMetricas(),
+		ventanas:    ventana.Nuevas(),
+		escritor:    nuevoEscritor(cfg.TamCola, cfg.Predicciones, cfg.Cache, log),
+		mux:         http.NewServeMux(),
+		ahora:       time.Now,
+		cors:        nuevoCORS(cfg.OrigenesCORS),
+		hub:         nuevoHub(opcionesHubPorOmision(), log),
+		eventos:     cfg.Eventos,
+		cronica:     make(chan almacen.EventoCluster, tamCronica),
 	}
 	s.modelo.Store(cfg.Modelo)
 	s.puntos = cfg.Puntos
@@ -179,6 +183,7 @@ func Nuevo(cfg Config) (*Servidor, error) {
 	s.ruta("POST /api/predicciones", cualquiera, s.predecir)
 	s.ruta("GET /api/estaciones", cualquiera, s.listarEstaciones)
 	s.ruta("GET /api/estaciones/{id}/regimen", cualquiera, s.regimenEstacion)
+	s.ruta("GET /api/regimenes", cualquiera, s.listarRegimenes)
 	s.ruta("GET /api/modelos/activo", cualquiera, s.modeloActivo)
 	s.ruta("GET /api/metricas", []string{RolAdmin}, s.consultarMetricas)
 	s.ruta("GET /api/cluster/nodos", []string{RolAdmin}, s.listarNodos)

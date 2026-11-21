@@ -162,6 +162,38 @@ func (c *Cache) Regimen(ctx context.Context, estacion string) (almacen.RegimenEs
 	return r, c.leer(ctx, claveRegimen(estacion), &r)
 }
 
+// Regimenes pide todas las claves con un solo MGET: una ida y vuelta para el
+// catálogo entero. Una clave que no existe llega como nil y no entra al mapa.
+func (c *Cache) Regimenes(ctx context.Context, estaciones []string) (map[string]almacen.RegimenEstacion, error) {
+	rs := make(map[string]almacen.RegimenEstacion, len(estaciones))
+	if len(estaciones) == 0 {
+		return rs, nil
+	}
+	claves := make([]string, len(estaciones))
+	for i, estacion := range estaciones {
+		claves[i] = claveRegimen(estacion)
+	}
+	valores, err := c.cliente.MGet(ctx, claves...).Result()
+	if err != nil {
+		return nil, err
+	}
+	for i, v := range valores {
+		if v == nil {
+			continue
+		}
+		texto, ok := v.(string)
+		if !ok {
+			return nil, fmt.Errorf("redis: %s: el valor no es un texto", claves[i])
+		}
+		var r almacen.RegimenEstacion
+		if err := json.Unmarshal([]byte(texto), &r); err != nil {
+			return nil, fmt.Errorf("redis: %s: %w", claves[i], err)
+		}
+		rs[estaciones[i]] = r
+	}
+	return rs, nil
+}
+
 // GuardarModeloActivo escribe modelo:activo. creado se guarda en la hora de
 // Lima, con sus nanosegundos.
 func (c *Cache) GuardarModeloActivo(ctx context.Context, m almacen.Modelo) error {

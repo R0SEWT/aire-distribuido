@@ -302,6 +302,41 @@ func (s *Servidor) regimenEstacion(w http.ResponseWriter, r *http.Request) {
 	s.responder(w, r, http.StatusOK, reg)
 }
 
+// estadoEstacion es el esquema EstadoEstacion del contrato: el régimen de una
+// estación con su código. Es cada entrada de GET /api/regimenes y los datos
+// del evento estacion.regimen del WebSocket.
+type estadoEstacion struct {
+	Estacion string `json:"estacion"`
+	almacen.RegimenEstacion
+}
+
+func nuevoEstadoEstacion(estacion string, r almacen.RegimenEstacion) estadoEstacion {
+	r.FechaHora, r.TS = enLima(r.FechaHora), enLima(r.TS)
+	return estadoEstacion{estacion, r}
+}
+
+// GET /api/regimenes
+//
+// El estado de todas las estaciones que tienen uno, en un solo pedido y una
+// sola ida a la caché: se piden las claves de todo el catálogo a la vez. Sin
+// esta ruta, el panel tendría que hacer un pedido por estación, casi todos 404
+// con el sistema recién levantado.
+func (s *Servidor) listarRegimenes(w http.ResponseWriter, r *http.Request) {
+	rs, err := s.cache.Regimenes(r.Context(), s.idsCatalogo)
+	if err != nil {
+		s.log.Error("regímenes de las estaciones", "err", err)
+		escribirError(w, http.StatusServiceUnavailable, "Redis no disponible")
+		return
+	}
+	estados := make([]estadoEstacion, 0, len(rs))
+	for _, id := range s.idsCatalogo { // en el orden del catálogo: por código
+		if reg, ok := rs[id]; ok {
+			estados = append(estados, nuevoEstadoEstacion(id, reg))
+		}
+	}
+	s.responder(w, r, http.StatusOK, estados)
+}
+
 // GET /api/modelos/activo
 func (s *Servidor) modeloActivo(w http.ResponseWriter, r *http.Request) {
 	m := s.modelo.Load()
