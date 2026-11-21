@@ -105,6 +105,37 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/regimenes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Obtiene de Redis el último estado de todas las estaciones que tienen uno
+         * @description Rol usuario o admin. Es GET /api/estaciones/{id}/regimen para todo el
+         *     catálogo en un solo pedido (y una sola ida a Redis): lo que el panel
+         *     necesita al abrir. Trae una entrada por estación que ya tiene una
+         *     predicción registrada, ordenadas por estacion; las que todavía no
+         *     tienen ninguna no aparecen. Con el sistema recién levantado la lista
+         *     está vacía: es un 200, no un 404. Si el valor guardado de una estación
+         *     no se puede leer, esa estación no aparece (queda en el log del
+         *     servidor) y las demás sí: no es un 503.
+         *
+         *     El panel se mantiene al día con el evento estacion.regimen de /ws, que
+         *     lleva el mismo objeto. Cómo juntar esta respuesta con los eventos, sin
+         *     que una pise a un evento más nuevo, está en la descripción de /ws.
+         */
+        get: operations["listarRegimenes"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/modelos/activo": {
         parameters: {
             query?: never;
@@ -134,6 +165,36 @@ export interface paths {
         };
         /** Lista nodos, workers, latencia y disponibilidad del pool */
         get: operations["listarNodos"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/cluster/eventos": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Lista los eventos del clúster, del más reciente al más antiguo
+         * @description Rol admin. Son los «logs» del clúster, lo que MongoDB guarda en
+         *     eventos_cluster: un nodo que entró al pool (alta), que salió (baja) o
+         *     que no llegó a entrar o hizo abortar una corrida (error). Los latidos
+         *     no se guardan.
+         *
+         *     Después de cada entrenamiento es normal ver una baja y un alta por
+         *     nodo: el nodo deja el pool al cerrar la corrida y vuelve a llamar a la
+         *     API tras su pausa entre intentos (unos 2 s).
+         *
+         *     Trae a lo sumo limite eventos (50 si no se indica; 200 como máximo).
+         *     Entre dos del mismo instante, primero el que se guardó último.
+         */
+        get: operations["listarEventosCluster"];
         put?: never;
         post?: never;
         delete?: never;
@@ -215,7 +276,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Consulta pedidos, percentiles de latencia y estado del clúster */
+        /** Consulta pedidos, percentiles de latencia, CPU y memoria de la API y estado del clúster */
         get: operations["consultarMetricas"];
         put?: never;
         post?: never;
@@ -267,16 +328,52 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Abre un WebSocket de eventos del entrenamiento
+         * Abre un WebSocket con el estado de las estaciones y los eventos del entrenamiento
          * @description Rol usuario o admin. Solo el servidor envía. Cada trama de texto es un
          *     objeto JSON con el nombre del evento y sus datos (esquema EventoWS):
-         *     {"evento": "entrenamiento.ronda", "datos": {...}}.
+         *     {"evento": "estacion.regimen", "datos": {...}}.
          *
-         *     Qué eventos ve cada rol: entrenamiento.ronda y entrenamiento.fin llegan
-         *     solo a los clientes con rol admin (los entrenamientos son de admin). Un
-         *     cliente con rol usuario se conecta igual y hoy no recibe ningún evento:
-         *     el WebSocket queda abierto para los eventos que sí son de todos, como
-         *     las alertas que consumirá la SPA.
+         *     Qué eventos ve cada rol: estacion.regimen llega a todos, usuario y
+         *     admin. entrenamiento.ronda y entrenamiento.fin llegan solo a los
+         *     clientes con rol admin (los entrenamientos son de admin).
+         *
+         *     estacion.regimen es el tiempo real del panel: el estado nuevo de una
+         *     estación (esquema EstadoEstacion, el mismo objeto de cada entrada de
+         *     GET /api/regimenes). Dos reglas:
+         *     - Sale solo cuando esa lectura pasó a ser el estado de la estación, es
+         *       decir, cuando la escritura en Redis reemplazó al guardado. Una
+         *       lectura más antigua que la guardada se predice y se responde igual,
+         *       pero no cambia el estado ni emite evento: el evento y
+         *       GET /api/regimenes dicen siempre lo mismo. Sale después de la
+         *       escritura, así que quien lo recibe puede pedir el GET en el acto.
+         *     - Va agrupado por estación: de una misma estación sale a lo sumo un
+         *       evento cada 250 ms. El primero sale enseguida; si en ese intervalo la
+         *       estación cambia varias veces (una ráfaga de lecturas), al cumplirse
+         *       sale solo el último estado. Los intermedios no se envían: el evento
+         *       es el estado, no cada lectura.
+         *
+         *     Cómo se junta con GET /api/regimenes. Para no perder cambios, el
+         *     cliente abre primero el WebSocket y después pide el GET; al reconectar,
+         *     lo vuelve a pedir. Pero el GET y los eventos viajan por conexiones
+         *     distintas: la respuesta del GET puede llegar después de un evento más
+         *     nuevo de la misma estación, y aplicarla tal cual lo pisaría con un
+         *     estado viejo. La regla:
+         *     - De una estación de la que el cliente ya recibió un evento desde que
+         *       abrió este WebSocket, la entrada del GET se ignora: el evento manda.
+         *       No se pierde nada, porque si el GET traía un estado más nuevo que
+         *       ese evento, su propio evento llega después.
+         *     - De las demás estaciones, se toma la entrada del GET.
+         *     - Al reconectar, la cuenta empieza de nuevo: solo valen los eventos
+         *       recibidos por la conexión nueva.
+         *     No sirve comparar el GET con el evento por sus campos: ts va al
+         *     segundo, y una lectura corregida de la misma hora conserva fecha_hora.
+         *     Dos eventos de una misma estación, en cambio, llegan siempre en orden:
+         *     el último recibido es el estado.
+         *
+         *     Si Redis guarda un estado y su respuesta no le llega a la API, el
+         *     evento no se pierde: sale en cuanto Redis vuelve a responder (hasta
+         *     alrededor de un segundo después). Ese caso puede repetir un evento con
+         *     un estado que el cliente ya tenía; aplicarlo otra vez no cambia nada.
          *
          *     El JWT se acepta de tres maneras, en este orden:
          *     - Authorization: Bearer, como en el resto de la API, para un cliente
@@ -402,6 +499,14 @@ export interface components {
             ts: string;
         };
         /**
+         * @description El RegimenEstacion de una estación junto con su código. Es cada entrada de
+         *     GET /api/regimenes y los datos del evento estacion.regimen de /ws.
+         */
+        EstadoEstacion: components["schemas"]["RegimenEstacion"] & {
+            /** @description Código de la estación OEFA */
+            estacion: string;
+        };
+        /**
          * @description Media de las lecturas de la estación con fecha_hora en (t − 24 h, t], donde t es la
          *     fecha_hora de la lectura, truncada a la hora. La API lleva en memoria, por estación,
          *     las 72 lecturas horarias más cercanas a la última recibida: una fecha lejana no
@@ -449,6 +554,23 @@ export interface components {
             workers: number;
             latencia_ms: number;
             libre: boolean;
+        };
+        /** @description Un documento de eventos_cluster. No es un evento del WebSocket. */
+        EventoCluster: {
+            /**
+             * Format: date-time
+             * @description Cuándo lo vio el coordinador, en la hora de Lima y al milisegundo
+             */
+            ts: string;
+            /**
+             * @description alta: el nodo entró al pool; baja: salió; error: no llegó a entrar o hizo abortar una corrida
+             * @enum {string}
+             */
+            tipo: "alta" | "baja" | "error";
+            /** @description Nombre con que el nodo se presentó */
+            nodo: string;
+            /** @description La dirección TCP del nodo y lo que pasó, en texto */
+            detalle: string;
         };
         PedidoEntrenamiento: {
             nodos: number;
@@ -555,6 +677,44 @@ export interface components {
                 /** @description Puntos reemplazados por el de una ronda posterior antes de escribirse */
                 omitidos: number;
             };
+            proceso_api: components["schemas"]["ProcesoAPI"];
+        };
+        /**
+         * @description CPU y memoria del proceso de la API, que es el coordinador del clúster, medidos
+         *     en el momento de la consulta. No son de los nodos: el protocolo del clúster no
+         *     transporta el CPU de cada nodo. De un nodo se conoce lo que tardó en responder
+         *     cada ronda (ms_por_nodo, que incluye la red) y la latencia de su latido
+         *     (latencia_ms en GET /api/cluster/nodos).
+         *
+         *     El tiempo de CPU es acumulado desde que arrancó el proceso, no un porcentaje. El
+         *     uso de CPU entre dos consultas es
+         *     (Δcpu_usuario_s + Δcpu_sistema_s) / Δen_marcha_s: 1 es un núcleo ocupado todo ese
+         *     tiempo y el tope es nucleos. Con una sola consulta, el mismo cociente sin las
+         *     diferencias es el promedio desde el arranque.
+         */
+        ProcesoAPI: {
+            /** @description Segundos de CPU en modo usuario que el proceso consumió desde que arrancó */
+            cpu_usuario_s: number;
+            /** @description Segundos de CPU en modo núcleo que el proceso consumió desde que arrancó */
+            cpu_sistema_s: number;
+            /** @description Segundos de reloj desde que arrancó el proceso */
+            en_marcha_s: number;
+            /** @description Núcleos que el proceso puede usar a la vez (GOMAXPROCS) */
+            nucleos: number;
+            /** @description Memoria viva en el heap de Go ahora */
+            heap_mb: number;
+            /** @description Memoria que el runtime de Go tiene pedida al sistema operativo */
+            sistema_mb: number;
+            /** @description Máximo de memoria residente del proceso desde que arrancó; no baja */
+            max_rss_mb: number;
+            /** @description Goroutines vivas ahora */
+            goroutines: number;
+            /**
+             * @description Los campos que esta plataforma no puede medir y quedaron en 0. Solo aparece
+             *     cuando hay alguno: en Windows, el tiempo de CPU y el máximo de memoria
+             *     residente. En Linux (la imagen de Docker) se mide todo.
+             */
+            no_disponible?: ("cpu_usuario_s" | "cpu_sistema_s" | "max_rss_mb")[];
         };
         EventoRonda: components["schemas"]["Ronda"] & {
             id: string;
@@ -577,9 +737,12 @@ export interface components {
         /** @description Una trama de texto del WebSocket. */
         EventoWS: {
             /** @enum {string} */
-            evento: "entrenamiento.ronda" | "entrenamiento.fin";
-            /** @description EventoRonda con entrenamiento.ronda; EventoFin o EventoError con entrenamiento.fin. */
-            datos: components["schemas"]["EventoRonda"] | components["schemas"]["EventoFin"] | components["schemas"]["EventoError"];
+            evento: "estacion.regimen" | "entrenamiento.ronda" | "entrenamiento.fin";
+            /**
+             * @description EstadoEstacion con estacion.regimen; EventoRonda con entrenamiento.ronda;
+             *     EventoFin o EventoError con entrenamiento.fin.
+             */
+            datos: components["schemas"]["EstadoEstacion"] | components["schemas"]["EventoRonda"] | components["schemas"]["EventoFin"] | components["schemas"]["EventoError"];
         };
     };
     responses: {
@@ -915,6 +1078,60 @@ export interface operations {
             503: components["responses"]["NoDisponible"];
         };
     };
+    listarRegimenes: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description El estado de cada estación que tiene uno; una lista vacía es válida */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example [
+                     *       {
+                     *         "estacion": "CA-AYAS-01",
+                     *         "fecha_hora": "2026-11-14T15:00:00-05:00",
+                     *         "regimen": 1,
+                     *         "excede_eca": true,
+                     *         "media_24h": {
+                     *           "pm2_5": 58.3,
+                     *           "pm10": 121.4,
+                     *           "lecturas": 24
+                     *         },
+                     *         "alerta": true,
+                     *         "inca": "mala",
+                     *         "ts": "2026-11-14T15:00:02-05:00"
+                     *       },
+                     *       {
+                     *         "estacion": "CA-MAC-01",
+                     *         "fecha_hora": "2026-11-14T15:00:00-05:00",
+                     *         "regimen": 0,
+                     *         "excede_eca": false,
+                     *         "media_24h": {
+                     *           "pm2_5": null,
+                     *           "pm10": null,
+                     *           "lecturas": 3
+                     *         },
+                     *         "alerta": false,
+                     *         "inca": null,
+                     *         "ts": "2026-11-14T15:00:03-05:00"
+                     *       }
+                     *     ]
+                     */
+                    "application/json": components["schemas"]["EstadoEstacion"][];
+                };
+            };
+            401: components["responses"]["NoAutenticado"];
+            503: components["responses"]["NoDisponible"];
+        };
+    };
     consultarModeloActivo: {
         parameters: {
             query?: never;
@@ -1003,6 +1220,65 @@ export interface operations {
             };
             401: components["responses"]["NoAutenticado"];
             403: components["responses"]["SinPermiso"];
+        };
+    };
+    listarEventosCluster: {
+        parameters: {
+            query?: {
+                /**
+                 * @description Cuántos eventos traer, a lo sumo
+                 * @example 50
+                 */
+                limite?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Eventos, del más reciente al más antiguo; una lista vacía es válida */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example [
+                     *       {
+                     *         "ts": "2026-11-19T15:30:04.512-05:00",
+                     *         "tipo": "alta",
+                     *         "nodo": "H45-022",
+                     *         "detalle": "10.11.38.69:56455: 24 workers, latencia 0.49 ms"
+                     *       },
+                     *       {
+                     *         "ts": "2026-11-19T15:30:02.118-05:00",
+                     *         "tipo": "baja",
+                     *         "nodo": "H45-022",
+                     *         "detalle": "10.11.38.69:56431: entrenamiento e-20261119-1530 terminado"
+                     *       }
+                     *     ]
+                     */
+                    "application/json": components["schemas"]["EventoCluster"][];
+                };
+            };
+            /** @description limite no es un entero entre 1 y 200 */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": "limite tiene que ser un entero entre 1 y 200"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            401: components["responses"]["NoAutenticado"];
+            403: components["responses"]["SinPermiso"];
+            503: components["responses"]["NoDisponible"];
         };
     };
     listarEntrenamientos: {
@@ -1216,6 +1492,16 @@ export interface operations {
                      *         "escritos": 44,
                      *         "fallidos": 0,
                      *         "omitidos": 0
+                     *       },
+                     *       "proceso_api": {
+                     *         "cpu_usuario_s": 12.48,
+                     *         "cpu_sistema_s": 3.105,
+                     *         "en_marcha_s": 1824.6,
+                     *         "nucleos": 8,
+                     *         "heap_mb": 21.7,
+                     *         "sistema_mb": 48.3,
+                     *         "max_rss_mb": 63.9,
+                     *         "goroutines": 27
                      *       }
                      *     }
                      */

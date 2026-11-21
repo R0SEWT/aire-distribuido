@@ -106,6 +106,7 @@ export const claves = {
   regimen: (estacion: string) => ['regimenes', estacion] as const,
   modeloActivo: ['modelos', 'activo'] as const,
   nodos: ['cluster', 'nodos'] as const,
+  eventosCluster: ['cluster', 'eventos'] as const,
   entrenamientos: ['entrenamientos'] as const,
   entrenamiento: (id: string) => ['entrenamientos', id] as const,
   metricas: ['metricas'] as const,

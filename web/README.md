@@ -114,9 +114,7 @@ que llegó último. De ahí sale lo demás:
   (mientras estuvo caído se perdieron otros) y se vuelven a pedir todas las consultas marcadas `EN_VIVO`.
 - **El orden al entrar**: no hay que abrir el WebSocket antes de pedir. La primera conexión también refresca.
 
-`GET /api/regimenes` y el esquema `EstadoEstacion` llegan con la PR de la API. Cuando estén en `develop`:
-`pnpm tipos`, y en `src/api/eventos.ts` el tipo de `'estacion.regimen'` pasa a ser `Esquemas['EstadoEstacion']`.
-Hasta entonces `api.GET('/api/regimenes')` no compila.
+Los tipos de `GET /api/regimenes` y de `EstadoEstacion` salen del contrato: si el contrato cambia, `pnpm tipos`.
 
 ### Otros eventos
 
