@@ -3,6 +3,7 @@ package memoria
 import (
 	"context"
 	"errors"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -80,6 +81,47 @@ func TestEntrenamientosCicloDeVida(t *testing.T) {
 	}
 	if vacia, err := NuevosEntrenamientos().Listar(ctx); err != nil || vacia == nil || len(vacia) != 0 {
 		t.Errorf("la lista vacía es válida y no es nil: %v, %v", vacia, err)
+	}
+}
+
+// Recientes es lo que GET /api/cluster/eventos lee: del más reciente al más
+// antiguo por TS, sin importar el orden en que se guardaron, y a lo sumo n.
+func TestEventosRecientes(t *testing.T) {
+	ctx := context.Background()
+	ev := NuevosEventos()
+	if vacia, err := ev.Recientes(ctx, 10); err != nil || vacia == nil || len(vacia) != 0 {
+		t.Fatalf("Recientes sin eventos = %#v, %v; se esperaba una lista vacía", vacia, err)
+	}
+	t0 := time.Date(2026, 11, 19, 20, 0, 0, 0, time.UTC)
+	for _, e := range []almacen.EventoCluster{
+		{TS: t0.Add(time.Second), Tipo: "error", Nodo: "b", Detalle: "no respondió la ronda 7"},
+		{TS: t0, Tipo: "alta", Nodo: "a", Detalle: "24 workers"}, // el más antiguo, guardado después
+		{TS: t0.Add(time.Second), Tipo: "baja", Nodo: "b"},       // el mismo instante que el error
+		{TS: t0.Add(2 * time.Second), Tipo: "alta", Nodo: "b"},
+	} {
+		ev.Guardar(ctx, e)
+	}
+	tipos := func(lista []almacen.EventoCluster) string {
+		var s []string
+		for _, e := range lista {
+			s = append(s, e.Tipo+" "+e.Nodo)
+		}
+		return strings.Join(s, ", ")
+	}
+	todos, err := ev.Recientes(ctx, 10)
+	if got := tipos(todos); err != nil || got != "alta b, baja b, error b, alta a" {
+		t.Fatalf("Recientes(10) = %s, %v", got, err)
+	}
+	if dos, _ := ev.Recientes(ctx, 2); tipos(dos) != "alta b, baja b" {
+		t.Fatalf("Recientes(2) = %s", tipos(dos))
+	}
+	if ninguno, err := ev.Recientes(ctx, 0); err != nil || ninguno == nil || len(ninguno) != 0 {
+		t.Fatalf("Recientes(0) = %#v, %v", ninguno, err)
+	}
+	// Lo devuelto es una copia: cambiarla no cambia lo guardado.
+	todos[0].Nodo = "otro"
+	if de, _ := ev.Recientes(ctx, 1); de[0].Nodo != "b" || len(ev.Todos()) != 4 {
+		t.Fatalf("Recientes devolvió la lista guardada, no una copia: %+v", de)
 	}
 }
 

@@ -114,4 +114,8 @@ type EventoCluster struct {
 // Eventos es la colección eventos_cluster.
 type Eventos interface {
 	Guardar(ctx context.Context, e EventoCluster) error
+	// Recientes devuelve a lo sumo n eventos, del más reciente al más antiguo
+	// por TS; entre dos del mismo TS, primero el que se guardó último. Con n
+	// menor que 1, o sin eventos, devuelve una lista vacía.
+	Recientes(ctx context.Context, n int) ([]EventoCluster, error)
 }

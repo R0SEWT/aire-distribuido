@@ -414,10 +414,10 @@ cifras:
     lotes_redis: "31 793"
     por_lote_mongo: "3,5"
   api:
-    rutas: "14"
+    rutas: "16"
     libres: "4"
-    admin: "5"
-    usuario: "5"
+    admin: "6"
+    usuario: "6"
   datos:
     colecciones: "5"
     claves: "3"
@@ -430,10 +430,10 @@ cifras:
     estaciones: "14"
     regimenes: "0, 1 y 2"
   pruebas:
-    pc4: "241"
-    pc4_integracion: "20"
+    pc4: "267"
+    pc4_integracion: "25"
     paquetes_pc4: "13"
-    repo: "510"
+    repo: "541"
   pc4:
     ventana_horas: "24"
     minimo_lecturas: "18"

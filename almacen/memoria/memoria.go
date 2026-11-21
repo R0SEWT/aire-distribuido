@@ -104,21 +104,24 @@ func NuevaCache() *Cache {
 // GuardarRegimen guarda el régimen de una sola estación, con la regla de
 // GuardarRegimenes.
 func (c *Cache) GuardarRegimen(ctx context.Context, estacion string, r almacen.RegimenEstacion) error {
-	return c.GuardarRegimenes(ctx, map[string]almacen.RegimenEstacion{estacion: r})
+	_, err := c.GuardarRegimenes(ctx, map[string]almacen.RegimenEstacion{estacion: r})
+	return err
 }
 
 // GuardarRegimenes no reemplaza un régimen de una fecha_hora posterior:
-// compara y escribe con el mismo lock.
-func (c *Cache) GuardarRegimenes(_ context.Context, rs map[string]almacen.RegimenEstacion) error {
+// compara y escribe con el mismo lock. Devuelve los que guardó.
+func (c *Cache) GuardarRegimenes(_ context.Context, rs map[string]almacen.RegimenEstacion) (map[string]almacen.RegimenEstacion, error) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
+	guardados := make(map[string]almacen.RegimenEstacion, len(rs))
 	for estacion, r := range rs {
 		if guardado, ok := c.regimenes[estacion]; ok && guardado.FechaHora.After(r.FechaHora) {
 			continue
 		}
 		c.regimenes[estacion] = r
+		guardados[estacion] = r
 	}
-	return nil
+	return guardados, nil
 }
 
 func (c *Cache) Regimen(_ context.Context, estacion string) (almacen.RegimenEstacion, error) {
@@ -129,6 +132,18 @@ func (c *Cache) Regimen(_ context.Context, estacion string) (almacen.RegimenEsta
 		return almacen.RegimenEstacion{}, almacen.ErrNoEncontrado
 	}
 	return r, nil
+}
+
+func (c *Cache) Regimenes(_ context.Context, estaciones []string) (map[string]almacen.RegimenEstacion, error) {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	rs := make(map[string]almacen.RegimenEstacion, len(estaciones))
+	for _, estacion := range estaciones {
+		if r, ok := c.regimenes[estacion]; ok {
+			rs[estacion] = r
+		}
+	}
+	return rs, nil
 }
 
 func (c *Cache) Ping(context.Context) error { return nil }

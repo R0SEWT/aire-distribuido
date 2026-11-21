@@ -176,7 +176,12 @@ func (h *Hub) Correr(ctx context.Context) {
 	}
 }
 
-var errHubCerrado = errors.New("websocket: el hub ya no atiende")
+// Lo que Difundir devuelve cuando no aceptó el evento. Con errDifusionLlena
+// vale la pena reintentar más tarde; con errHubCerrado, no.
+var (
+	errHubCerrado    = errors.New("websocket: el hub ya no atiende")
+	errDifusionLlena = errors.New("websocket: el canal de difusión está lleno; el evento se descartó")
+)
 
 // Difundir manda un evento a los clientes conectados: una trama de texto con
 // {"evento": evento, "datos": datos} (esquema EventoWS del contrato). Si se
@@ -185,7 +190,9 @@ var errHubCerrado = errors.New("websocket: el hub ya no atiende")
 // Nunca bloquea a quien llama: el evento entra al canal de difusión, que tiene
 // búfer, y el hub lo reparte. El hub no espera a ningún cliente, así que ese
 // búfer solo se llena si el hub no está corriendo; en ese caso el evento se
-// descarta y se cuenta, como hace la cola de escritura de las predicciones.
+// descarta y se cuenta, como hace la cola de escritura de las predicciones, y
+// Difundir devuelve errDifusionLlena: quien no puede perder el evento (los
+// avisos de régimen) lo reintenta.
 // Los eventos que manda una misma goroutine llegan a cada cliente en ese orden.
 func (h *Hub) Difundir(evento string, datos any, roles ...string) error {
 	cuerpo, err := codificar(struct {
@@ -206,7 +213,7 @@ func (h *Hub) Difundir(evento string, datos any, roles ...string) error {
 		return nil
 	default:
 		h.descartados.Add(1)
-		return errors.New("websocket: el canal de difusión está lleno; el evento se descartó")
+		return errDifusionLlena
 	}
 }
 
@@ -399,16 +406,20 @@ func (h *Hub) escribir(c *clienteWS, saludo []byte) {
 	}
 }
 
-// Quién puede abrir el WebSocket y quién recibe cada evento (spec §6.1 y
-// §6.4). Lo abren usuario y admin. Los dos eventos que existen hoy son de
-// entrenamientos, que son cosa de admin (las rutas de /api/entrenamientos lo
-// son): el hub se los reparte solo a los clientes admin. Un usuario común
-// conectado hoy no recibe nada; el WebSocket queda abierto para los eventos
-// que sí son de todos, como las alertas de la SPA.
+// Quién puede abrir el WebSocket y quién recibe cada evento (spec de la PC4,
+// §6.1 y §6.4; spec del frontend, §6). Lo abren usuario y admin. El estado de
+// una estación (estacion.regimen, avisos.go) es de todos: es el tiempo real
+// del panel. Los eventos de los entrenamientos son cosa de admin (las rutas de
+// /api/entrenamientos lo son): el hub se los reparte solo a los clientes admin.
 var (
 	rolesWS                   = []string{RolUsuario, RolAdmin}
+	rolesEventosEstacion      = rolesWS
 	rolesEventosEntrenamiento = []string{RolAdmin}
 )
+
+// eventoRegimen es el nombre del evento con el estado nuevo de una estación;
+// sus datos son un estadoEstacion (esquema EstadoEstacion del contrato).
+const eventoRegimen = "estacion.regimen"
 
 // subprotocoloJWT es el subprotocolo con que un navegador manda su token sin
 // ponerlo en la URL: new WebSocket(url, ["aire.jwt", token]) llega como
