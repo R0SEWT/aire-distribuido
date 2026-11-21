@@ -27,12 +27,16 @@ export function AvisoVencimiento() {
   if (falta > AVISO_MS || falta <= 0) return null
   const minutos = Math.ceil(falta / 60_000)
   return (
-    <div role="alert" className="border-aviso bg-relieve border-b">
+    // role="status" y no "alert": no interrumpe. La cuenta de minutos cambia
+    // cada minuto y va fuera de lo que se anuncia (aria-hidden): un lector de
+    // pantalla oye el aviso una vez, con la hora a la que se cierra.
+    <div role="status" className="border-aviso bg-relieve border-b">
       <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 px-6 py-2.5 text-sm">
         <p className="text-texto">
           <strong className="text-aviso font-semibold">La sesión está por vencer.</strong> Se cierra a las{' '}
-          <span className="font-mono">{hora(sesion.expira)}</span> (en {minutos === 1 ? 'menos de 1 minuto' : `${minutos} minutos`})
-          y no se renueva sola.
+          <span className="font-mono">{hora(sesion.expira)}</span>
+          <span aria-hidden="true"> (en {minutos === 1 ? 'menos de 1 minuto' : `${minutos} minutos`})</span> y no se
+          renueva sola.
         </p>
         <button type="button" className="pildora" onClick={salir}>
           Volver a ingresar ahora

@@ -18,7 +18,8 @@ export const TEXTO: Record<Tono, string> = {
   buena: 'text-inca-buena',
   moderada: 'text-inca-moderada',
   mala: 'text-inca-mala',
-  alerta: 'text-inca-cuidado',
+  // El rojo de la banda no da contraste de texto sobre una tarjeta: el texto usa uno más claro.
+  alerta: 'text-falla',
 }
 
 export const BORDE: Record<Tono, string> = {

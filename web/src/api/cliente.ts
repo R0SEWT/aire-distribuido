@@ -12,7 +12,7 @@ import { QueryClient } from '@tanstack/react-query'
 import createClient, { type Middleware } from 'openapi-fetch'
 import { cerrarSesion, sesionActual } from '../sesion/almacen'
 import type { paths } from './contrato'
-import { convieneReintentar, errorDeExcepcion, errorDeRespuesta, esCancelacion } from './errores'
+import { convieneReintentar, errorDeFetch, errorDeRespuesta, esCancelacion } from './errores'
 
 const ENCABEZADO_TOKEN = 'Authorization'
 
@@ -59,10 +59,29 @@ export async function pedir<T>(pedido: Promise<Resultado<T>>, opciones: { ingres
     resultado = await pedido
   } catch (e) {
     if (esCancelacion(e)) throw e
-    throw errorDeExcepcion(e)
+    throw errorDeFetch(e)
   }
   if (resultado.response.ok) return resultado.data as T
   throw errorDeRespuesta(resultado.response.status, resultado.error, !opciones.ingreso)
+}
+
+/**
+ * Comprueba con la API que el token de la sesión sigue valiendo, con un pedido
+ * autenticado barato. No devuelve nada: si la API responde 401, la sesión se
+ * cierra como con cualquier otro pedido y la UI vuelve al ingreso; si la API no
+ * responde, no se sabe y no pasa nada.
+ *
+ * Lo usa el WebSocket: el navegador no dice por qué falló un apretón de manos
+ * (un 401 y una API apagada se ven igual), así que tras varios fallos se
+ * pregunta por HTTP.
+ */
+export async function validarSesion(): Promise<void> {
+  if (!sesionActual()) return
+  try {
+    await pedir(api.GET('/api/modelos/activo'))
+  } catch {
+    // El 401 ya cerró la sesión en el middleware. Lo demás no dice nada del token.
+  }
 }
 
 /** La caché de TanStack Query de toda la app. Los eventos del WebSocket la actualizan. */

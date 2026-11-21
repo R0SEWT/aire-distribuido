@@ -56,7 +56,7 @@
   }
 
   .boton {
-    @apply bg-acento inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold text-white transition-opacity;
+    @apply bg-boton text-boton-texto inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition-opacity;
   }
   .boton:hover {
     @apply opacity-90;
@@ -66,7 +66,7 @@
   }
 
   .campo {
-    @apply border-borde bg-fondo text-texto placeholder:text-tenue w-full rounded-lg border px-3 py-2 font-mono text-sm;
+    @apply border-borde-control bg-fondo text-texto placeholder:text-tenue w-full rounded-lg border px-3 py-2 font-mono text-sm;
   }
 
   /* «No mide PM por hora»: gris apagado con trama, para que no dependa del color. */

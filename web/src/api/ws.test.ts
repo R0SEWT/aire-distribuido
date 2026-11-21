@@ -4,9 +4,10 @@ import { ConexionWS, urlWS, type EstadoWS } from './ws'
 
 const HORA = 3_600_000
 
-function preparar(opciones: { expiraEn?: number } = {}) {
+function preparar(opciones: { expiraEn?: number; alFallarApreton?: (fallos: number) => void } = {}) {
   const fabrica = fabricaDeEnchufes()
   const conexion = new ConexionWS({
+    alFallarApreton: opciones.alFallarApreton,
     url: 'ws://localhost/ws',
     token: 'el-token',
     expira: Date.now() + (opciones.expiraEn ?? HORA),
@@ -237,6 +238,84 @@ describe('la conexión de tiempo real', () => {
     vi.advanceTimersByTime(HORA)
 
     expect(fabrica.creados).toHaveLength(1)
+  })
+
+  describe('cuando el apretón de manos falla', () => {
+    // El navegador da 1006 tanto si la API está apagada como si respondió 401
+    // porque ya no acepta el token (cambió su secreto): no se distinguen.
+    function fallarApretones(fabrica: ReturnType<typeof fabricaDeEnchufes>, veces: number) {
+      for (let i = 0; i < veces; i++) {
+        fabrica.ultimo().cerrarDesdeElServidor(1006) // se cerró sin llegar a abrirse
+        vi.advanceTimersByTime(30_000)
+      }
+    }
+
+    it('al tercer fallo seguido avisa, para que se compruebe la sesión; y sigue reintentando', () => {
+      const alFallarApreton = vi.fn()
+      const { conexion, fabrica } = preparar({ alFallarApreton })
+      conexion.conectar()
+
+      fallarApretones(fabrica, 2)
+      expect(alFallarApreton).not.toHaveBeenCalled()
+
+      fallarApretones(fabrica, 1)
+      expect(alFallarApreton).toHaveBeenCalledExactlyOnceWith(3)
+      expect(conexion.estado).toBe('reconectando')
+      expect(fabrica.creados).toHaveLength(4)
+    })
+
+    it('si sigue fallando, vuelve a avisar cada tres', () => {
+      const alFallarApreton = vi.fn()
+      const { conexion, fabrica } = preparar({ alFallarApreton })
+      conexion.conectar()
+
+      fallarApretones(fabrica, 7)
+
+      expect(alFallarApreton.mock.calls).toEqual([[3], [6]])
+    })
+
+    it('también cuenta si ya había conectado antes: la API pudo reiniciarse con otro secreto', () => {
+      const alFallarApreton = vi.fn()
+      const { conexion, fabrica } = preparar({ alFallarApreton })
+      conexion.conectar()
+      fabrica.ultimo().abrir()
+      fabrica.ultimo().cerrarDesdeElServidor(1006) // una caída con la conexión abierta: no es un apretón fallido
+      vi.advanceTimersByTime(30_000)
+      expect(alFallarApreton).not.toHaveBeenCalled()
+
+      fallarApretones(fabrica, 3)
+
+      expect(alFallarApreton).toHaveBeenCalledExactlyOnceWith(3)
+    })
+
+    it('una conexión que abre pone la cuenta en cero', () => {
+      const alFallarApreton = vi.fn()
+      const { conexion, fabrica } = preparar({ alFallarApreton })
+      conexion.conectar()
+      fallarApretones(fabrica, 2)
+
+      fabrica.ultimo().abrir()
+      fabrica.ultimo().cerrarDesdeElServidor(1006)
+      vi.advanceTimersByTime(30_000)
+      fallarApretones(fabrica, 2)
+
+      expect(alFallarApreton).not.toHaveBeenCalled()
+    })
+
+    it('si el aviso lanza, la conexión sigue reintentando', () => {
+      vi.spyOn(console, 'error').mockImplementation(() => {})
+      const { conexion, fabrica } = preparar({
+        alFallarApreton: () => {
+          throw new Error('se rompió')
+        },
+      })
+      conexion.conectar()
+
+      fallarApretones(fabrica, 3)
+
+      expect(conexion.estado).toBe('reconectando')
+      expect(fabrica.creados).toHaveLength(4)
+    })
   })
 
   it('arma la URL de /ws en el mismo origen: ws con http y wss con https', () => {

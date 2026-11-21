@@ -19,9 +19,9 @@ export type TipoError =
   | 'pedido_invalido'
   /** 409: choca con algo en curso (ya hay un entrenamiento). */
   | 'conflicto'
-  /** 502, 503 y 504: la API, o un almacén del que depende, no está disponible. */
+  /** 503 con las palabras de la API: está en marcha, pero un almacén del que depende no responde. */
   | 'no_disponible'
-  /** No llegó ninguna respuesta: la API está apagada o no hay red. */
+  /** La API no contestó: no hay red, está apagada, o el proxy respondió por ella (502, 504). */
   | 'sin_respuesta'
   | 'inesperado'
 
@@ -50,7 +50,7 @@ const TITULOS: Record<TipoError, string> = {
   conflicto: 'No se puede hacer ahora',
   no_disponible: 'El servicio no está disponible',
   sin_respuesta: 'La API no responde',
-  inesperado: 'Algo falló al hablar con la API',
+  inesperado: 'Algo falló',
 }
 
 /** El texto de {"error": "…"}, si el cuerpo tiene esa forma. */
@@ -62,7 +62,7 @@ export function textoDeError(cuerpo: unknown): string | null {
   return null
 }
 
-function tipoDeEstado(estado: number, conSesion: boolean): TipoError {
+function tipoDeEstado(estado: number, conSesion: boolean, conPalabras: boolean): TipoError {
   switch (estado) {
     case 400:
     case 422:
@@ -75,10 +75,13 @@ function tipoDeEstado(estado: number, conSesion: boolean): TipoError {
       return 'no_encontrado'
     case 409:
       return 'conflicto'
-    case 502: // el proxy (Caddy o Vite) no llegó a la API
-    case 503:
+    case 502: // el proxy (Caddy o Vite) no llegó a la API: está apagada
     case 504:
-      return 'no_disponible'
+      return 'sin_respuesta'
+    case 503:
+      // La API dice 503 con sus palabras cuando un almacén no responde o se
+      // está apagando. Un 503 sin ellas es del proxy: la API no contestó.
+      return conPalabras ? 'no_disponible' : 'sin_respuesta'
     default:
       return 'inesperado'
   }
@@ -89,15 +92,41 @@ function tipoDeEstado(estado: number, conSesion: boolean): TipoError {
  * un 401 significa cosas distintas al ingresar y con la sesión iniciada.
  */
 export function errorDeRespuesta(estado: number, cuerpo: unknown, conSesion: boolean): ErrorApi {
-  return new ErrorApi(tipoDeEstado(estado, conSesion), estado, textoDeError(cuerpo))
+  const palabras = textoDeError(cuerpo)
+  return new ErrorApi(tipoDeEstado(estado, conSesion, palabras !== null), estado, palabras)
 }
 
-/** Traduce lo que lanza fetch cuando no hay respuesta, o cualquier otra excepción. */
+/**
+ * Traduce lo que lanza fetch cuando no llega ninguna respuesta (la API apagada,
+ * sin red): un TypeError. Solo lo usa pedir(), que es quien llama a fetch.
+ */
+export function errorDeFetch(e: unknown): ErrorApi {
+  if (e instanceof TypeError) return new ErrorApi('sin_respuesta', null, null)
+  return errorDeExcepcion(e)
+}
+
+/**
+ * Cualquier excepción como ErrorApi. Lo que no viene de la API es un error
+ * inesperado: un TypeError que llega hasta aquí no es la red (eso ya lo
+ * tradujo pedir()), es un error del programa, y repetirlo no lo arregla.
+ */
 export function errorDeExcepcion(e: unknown): ErrorApi {
   if (e instanceof ErrorApi) return e
-  // fetch lanza TypeError cuando no pudo conectar (API apagada, sin red, CORS).
-  if (e instanceof TypeError) return new ErrorApi('sin_respuesta', null, null)
   return new ErrorApi('inesperado', null, e instanceof Error && e.message !== '' ? e.message : null)
+}
+
+/**
+ * Si el error es un trozo de la app que no se pudo descargar: la pantalla se
+ * carga recién al visitarla, y si la app se actualizó mientras la pestaña
+ * estaba abierta, ese archivo ya no existe. Se arregla recargando la página.
+ */
+export function esFalloDeCarga(e: unknown): boolean {
+  return (
+    e instanceof Error &&
+    /dynamically imported module|importing a module script failed|unable to preload css|failed to load module script/i.test(
+      e.message,
+    )
+  )
 }
 
 /** Si la excepción es un pedido cancelado a propósito (TanStack Query al desmontar). */
@@ -123,6 +152,20 @@ const EXPLICACIONES: Partial<Record<TipoError, string>> = {
   no_disponible: 'La API está en marcha, pero algo de lo que depende no responde.',
 }
 
+function sePuedeReintentar(error: ErrorApi): boolean {
+  switch (error.tipo) {
+    case 'no_disponible':
+    case 'sin_respuesta':
+    case 'conflicto':
+      return true
+    case 'inesperado':
+      // Un 500 de la API puede salir bien a la segunda; un error del programa, no.
+      return error.estado !== null
+    default:
+      return false
+  }
+}
+
 /** Cómo se muestra un error, sea o no de la API: título, detalle y si se ofrece reintentar. */
 export function presentarError(e: unknown): ErrorPresentado {
   const error = errorDeExcepcion(e)
@@ -132,12 +175,11 @@ export function presentarError(e: unknown): ErrorPresentado {
     estado,
     titulo: TITULOS[error.tipo],
     detalle: error.detalle ?? EXPLICACIONES[error.tipo] ?? null,
-    reintentable: ['no_disponible', 'sin_respuesta', 'inesperado', 'conflicto'].includes(error.tipo),
+    reintentable: sePuedeReintentar(error),
   }
 }
 
 /** Si vale la pena que TanStack Query repita el pedido solo. */
 export function convieneReintentar(e: unknown): boolean {
-  const tipo = errorDeExcepcion(e).tipo
-  return tipo === 'no_disponible' || tipo === 'sin_respuesta'
+  return e instanceof ErrorApi && (e.tipo === 'no_disponible' || e.tipo === 'sin_respuesta')
 }

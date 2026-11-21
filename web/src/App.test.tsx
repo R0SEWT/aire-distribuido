@@ -3,12 +3,15 @@
 
 import { act, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { useQuery } from '@tanstack/react-query'
-import { MemoryRouter } from 'react-router'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { Link, MemoryRouter, Route, Routes } from 'react-router'
+import { lazy } from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { api, crearClienteDeConsultas, pedir } from './api/cliente'
+import { api, claves, crearClienteDeConsultas, pedir } from './api/cliente'
+import { EN_VIVO, pedirRegimenes, type EstadoEstacion } from './api/enVivo'
 import { useEvento } from './api/tiempoReal'
 import { Proveedores, Rutas } from './App'
+import { Armazon } from './armazon/Armazon'
 import { fabricaDeEnchufes, SALUD_OK, simularApi, tokenDe } from './pruebas/dobles'
 import { abrirSesion, cerrarSesion, recargarSesion, sesionActual, type Rol } from './sesion/almacen'
 
@@ -262,6 +265,52 @@ describe('la app', () => {
       expect(screen.queryByText('La sesión venció.')).not.toBeInTheDocument()
     })
 
+    it('quien entra después de un «Salir» no aterriza en la pantalla del anterior', async () => {
+      simularApi({
+        'GET /api/salud': SALUD_OK,
+        'POST /api/auth/token': { estado: 200, cuerpo: tokenDe('usuario') },
+      })
+      sesionDe('admin')
+      montar('/cluster')
+      await screen.findByRole('heading', { name: 'Clúster' })
+
+      await userEvent.click(screen.getByRole('button', { name: 'Salir' }))
+      await screen.findByRole('form', { name: 'Ingreso' })
+      await ingresarComo('demo', 'una-clave')
+
+      expect(await screen.findByRole('heading', { name: 'Panel' })).toBeInTheDocument()
+      expect(screen.queryByText('Esta pantalla es solo para administradores')).not.toBeInTheDocument()
+    })
+
+    it('si la sesión venció, quien vuelve a entrar sí regresa a donde estaba', async () => {
+      simularApi({
+        'GET /api/salud': SALUD_OK,
+        'POST /api/auth/token': { estado: 200, cuerpo: tokenDe('admin') },
+      })
+      sesionDe('admin')
+      montar('/cluster')
+      await screen.findByRole('heading', { name: 'Clúster' })
+
+      act(() => cerrarSesion('vencida'))
+      await screen.findByRole('form', { name: 'Ingreso' })
+      await ingresarComo('ana', 'otra-clave')
+
+      expect(await screen.findByRole('heading', { name: 'Clúster' })).toBeInTheDocument()
+    })
+
+    it('si el rol que entra no puede ver la pantalla que se había pedido, va al panel', async () => {
+      simularApi({
+        'GET /api/salud': SALUD_OK,
+        'POST /api/auth/token': { estado: 200, cuerpo: tokenDe('usuario') },
+      })
+      montar('/entrenamiento') // sin sesión: la guarda recuerda /entrenamiento
+
+      await ingresarComo('demo', 'una-clave')
+
+      expect(await screen.findByRole('heading', { name: 'Panel' })).toBeInTheDocument()
+      expect(screen.queryByText('Esta pantalla es solo para administradores')).not.toBeInTheDocument()
+    })
+
     it('un 401 de la API en cualquier pedido vuelve al ingreso y avisa que la sesión venció', async () => {
       simularApi({
         'GET /api/salud': SALUD_OK,
@@ -303,8 +352,27 @@ describe('la app', () => {
 
       act(() => void vi.advanceTimersByTime(6 * 60_000))
 
-      expect(await screen.findByText('La sesión está por vencer.')).toBeInTheDocument()
+      const aviso = (await screen.findByText('La sesión está por vencer.')).closest('[role]')!
       expect(screen.getByRole('button', { name: 'Volver a ingresar ahora' })).toBeInTheDocument()
+      // No interrumpe ni se vuelve a anunciar cada minuto: es un «status», y la
+      // cuenta de minutos, que es lo que cambia, queda fuera de lo que se anuncia.
+      expect(aviso).toHaveAttribute('role', 'status')
+      expect(within(aviso as HTMLElement).getByText(/en 4 minutos/)).toHaveAttribute('aria-hidden', 'true')
+      const anunciado = [...aviso.querySelectorAll('p')].map((p) => {
+        const copia = p.cloneNode(true) as HTMLElement
+        copia.querySelectorAll('[aria-hidden="true"]').forEach((e) => e.remove())
+        return copia.textContent
+      })
+
+      act(() => void vi.advanceTimersByTime(60_000))
+
+      expect(await screen.findByText(/en 3 minutos/)).toBeInTheDocument()
+      const despues = [...aviso.querySelectorAll('p')].map((p) => {
+        const copia = p.cloneNode(true) as HTMLElement
+        copia.querySelectorAll('[aria-hidden="true"]').forEach((e) => e.remove())
+        return copia.textContent
+      })
+      expect(despues).toEqual(anunciado)
     })
   })
 
@@ -380,6 +448,135 @@ describe('la app', () => {
       expect(enchufes.creados).toHaveLength(2)
     })
 
+    it('un token que la API ya no acepta no queda reintentando: al tercer apretón fallido se comprueba la sesión y vuelve al ingreso', async () => {
+      vi.useFakeTimers({ shouldAdvanceTime: true })
+      const fetch = simularApi({
+        'GET /api/salud': SALUD_OK,
+        // La API se reinició con otro JWT_SECRETO: el token de la pestaña ya no vale.
+        'GET /api/modelos/activo': { estado: 401, cuerpo: { error: 'token ausente, inválido o expirado' } },
+      })
+      sesionDe('usuario')
+      const { enchufes } = montar('/')
+      await screen.findByText('Tiempo real: conectando…')
+
+      // El 401 del apretón de manos llega al navegador como un cierre 1006, igual que una API apagada.
+      for (let i = 0; i < 3; i++) {
+        act(() => enchufes.ultimo().cerrarDesdeElServidor(1006))
+        act(() => void vi.advanceTimersByTime(30_000))
+      }
+
+      expect(await screen.findByRole('form', { name: 'Ingreso' })).toBeInTheDocument()
+      expect(screen.getByText('La sesión venció.')).toBeInTheDocument()
+      expect(fetch.mock.calls.filter((c) => c[0].url.endsWith('/api/modelos/activo'))).toHaveLength(1)
+      const creados = enchufes.creados.length
+      act(() => void vi.advanceTimersByTime(120_000))
+      expect(enchufes.creados).toHaveLength(creados) // dejó de reintentar
+    })
+
+    it('si la API solo está apagada, el apretón fallido no saca de la sesión: sigue reintentando', async () => {
+      vi.useFakeTimers({ shouldAdvanceTime: true })
+      simularApi({ 'GET /api/salud': SALUD_OK, 'GET /api/modelos/activo': { estado: 502 } })
+      sesionDe('usuario')
+      const { enchufes } = montar('/')
+      await screen.findByText('Tiempo real: conectando…')
+
+      for (let i = 0; i < 4; i++) {
+        act(() => enchufes.ultimo().cerrarDesdeElServidor(1006))
+        act(() => void vi.advanceTimersByTime(30_000))
+      }
+
+      expect(await screen.findByText('Tiempo real: reconectando…')).toBeInTheDocument()
+      expect(sesionActual()).not.toBeNull()
+      expect(enchufes.creados).toHaveLength(5)
+    })
+
+    describe('la caché en vivo', () => {
+      const estadoDe = (estacion: string, hora: number, alerta = false): EstadoEstacion => ({
+        estacion,
+        fecha_hora: `2021-12-13T${hora}:00:00-05:00`,
+        regimen: alerta ? 1 : 0,
+        excede_eca: alerta,
+        media_24h: { pm2_5: 10, pm10: alerta ? 121.4 : 20, lecturas: 24 },
+        alerta,
+        inca: alerta ? 'mala' : 'buena',
+        ts: `2021-12-13T${hora}:00:02-05:00`,
+      })
+
+      // Lo que haría el Panel: leer la lista de la caché, marcada en vivo. No se suscribe a nada.
+      function Lista({ pedirLista }: { pedirLista: () => Promise<EstadoEstacion[]> }) {
+        const consultas = useQueryClient()
+        const lista = useQuery({
+          queryKey: claves.regimenes,
+          meta: EN_VIVO,
+          queryFn: () => pedirRegimenes(consultas, pedirLista),
+        })
+        return (
+          <ul aria-label="Estados">
+            {lista.data?.map((e) => (
+              <li key={e.estacion}>
+                {e.estacion} {e.alerta ? 'en alerta' : 'sin alerta'}
+              </li>
+            ))}
+          </ul>
+        )
+      }
+      const filas = () => within(screen.getByRole('list', { name: 'Estados' })).queryAllByRole('listitem').map((f) => f.textContent)
+
+      it('el evento estacion.regimen actualiza la lista sin que la pantalla se suscriba', async () => {
+        simularApi({ 'GET /api/salud': SALUD_OK })
+        sesionDe('usuario')
+        const pedirLista = vi.fn(async () => [estadoDe('CA-A', 14), estadoDe('CA-B', 14)])
+        const { enchufes } = montar('/', <Lista pedirLista={pedirLista} />)
+        await waitFor(() => expect(filas()).toEqual(['CA-A sin alerta', 'CA-B sin alerta']))
+        act(() => enchufes.ultimo().abrir())
+        await waitFor(() => expect(pedirLista).toHaveBeenCalledTimes(2)) // al conectar se refresca
+
+        act(() => enchufes.ultimo().recibir({ evento: 'estacion.regimen', datos: estadoDe('CA-B', 15, true) }))
+
+        await waitFor(() => expect(filas()).toEqual(['CA-A sin alerta', 'CA-B en alerta']))
+        expect(pedirLista).toHaveBeenCalledTimes(2) // el evento no vuelve a pedir la lista
+      })
+
+      it('al volver de un corte se vuelve a pedir lo marcado en vivo: lo que cambió sin conexión aparece', async () => {
+        vi.useFakeTimers({ shouldAdvanceTime: true })
+        simularApi({ 'GET /api/salud': SALUD_OK })
+        sesionDe('usuario')
+        let enLaApi = [estadoDe('CA-A', 14)]
+        const pedirLista = vi.fn(async () => enLaApi)
+        const { enchufes } = montar('/', <Lista pedirLista={pedirLista} />)
+        act(() => enchufes.ultimo().abrir())
+        await waitFor(() => expect(filas()).toEqual(['CA-A sin alerta']))
+        const antes = pedirLista.mock.calls.length
+
+        act(() => enchufes.ultimo().cerrarDesdeElServidor(1006))
+        enLaApi = [estadoDe('CA-A', 15, true)] // cambió mientras no había WebSocket: ese evento se perdió
+        act(() => void vi.advanceTimersByTime(1_000))
+        expect(pedirLista).toHaveBeenCalledTimes(antes) // reconectando todavía no pide nada
+        act(() => enchufes.ultimo().abrir())
+
+        await waitFor(() => expect(filas()).toEqual(['CA-A en alerta']))
+        expect(pedirLista).toHaveBeenCalledTimes(antes + 1)
+      })
+
+      it('un evento que llega mientras el GET viaja no se pierde cuando llega la respuesta', async () => {
+        simularApi({ 'GET /api/salud': SALUD_OK })
+        sesionDe('usuario')
+        let responder!: (lista: EstadoEstacion[]) => void
+        const pedirLista = vi.fn(() => new Promise<EstadoEstacion[]>((r) => (responder = r)))
+        const { enchufes } = montar('/', <Lista pedirLista={pedirLista} />)
+        await waitFor(() => expect(pedirLista).toHaveBeenCalled())
+        // El WebSocket conecta con el primer GET todavía en viaje: TanStack Query
+        // no lo cancela (aún no hay datos), así que es ese mismo pedido el que sigue.
+        act(() => enchufes.ultimo().abrir())
+
+        act(() => enchufes.ultimo().recibir({ evento: 'estacion.regimen', datos: estadoDe('CA-B', 15, true) }))
+        await act(async () => responder([estadoDe('CA-A', 14), estadoDe('CA-B', 14)])) // la foto de antes del evento
+
+        await waitFor(() => expect(filas()).toEqual(['CA-A sin alerta', 'CA-B en alerta']))
+        expect(pedirLista).toHaveBeenCalledOnce()
+      })
+    })
+
     it('al salir cierra el WebSocket', async () => {
       simularApi({ 'GET /api/salud': SALUD_OK })
       sesionDe('usuario')
@@ -425,6 +622,111 @@ describe('la app', () => {
       await userEvent.click(boton)
       expect(document.documentElement).not.toHaveAttribute('data-modo')
       expect(localStorage.getItem('aire.modo')).toBeNull()
+    })
+
+    describe('si una pantalla falla', () => {
+      // El armazón con una pantalla que se puede romper y otra sana, como las monta App.tsx.
+      function montarCon(pantalla: React.ReactNode) {
+        const enchufes = fabricaDeEnchufes()
+        return render(
+          <Proveedores consultas={crearClienteDeConsultas()} tiempoReal={{ crearEnchufe: enchufes.crearEnchufe }}>
+            <MemoryRouter initialEntries={['/simulacion']}>
+              <Routes>
+                <Route element={<Armazon />}>
+                  <Route path="/simulacion" element={pantalla} />
+                  <Route path="/" element={<h1>Panel sano</h1>} />
+                </Route>
+              </Routes>
+            </MemoryRouter>
+          </Proveedores>,
+        )
+      }
+
+      it('al dibujarse, se dice en su lugar y la barra y el menú siguen ahí; navegar limpia el error', async () => {
+        vi.spyOn(console, 'error').mockImplementation(() => {})
+        simularApi({ 'GET /api/salud': SALUD_OK })
+        sesionDe('usuario')
+        function Rota(): never {
+          throw new Error('media_24h es undefined')
+        }
+
+        montarCon(<Rota />)
+
+        const alerta = await screen.findByRole('alert')
+        expect(within(alerta).getByText('Esta pantalla falló')).toBeInTheDocument()
+        expect(within(alerta).getByText('media_24h es undefined')).toBeInTheDocument()
+        expect(menu()).toEqual(['Panel', 'Estación', 'Simulación', 'Impacto'])
+        expect(screen.getByRole('button', { name: 'Salir' })).toBeInTheDocument()
+        expect(screen.getByRole('contentinfo')).toBeInTheDocument()
+
+        await userEvent.click(within(screen.getByRole('navigation', { name: 'Pantallas' })).getByRole('link', { name: 'Panel' }))
+
+        expect(await screen.findByRole('heading', { name: 'Panel sano' })).toBeInTheDocument()
+        expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+      })
+
+      it('porque su archivo ya no se puede descargar, ofrece recargar la página y no queda en blanco', async () => {
+        vi.spyOn(console, 'error').mockImplementation(() => {})
+        simularApi({ 'GET /api/salud': SALUD_OK })
+        sesionDe('usuario')
+        // Lo que lanza React.lazy cuando el import() falla (la imagen se reconstruyó con la pestaña abierta).
+        const Perezosa = lazy<React.ComponentType>(() =>
+          Promise.reject(
+            new TypeError('Failed to fetch dynamically imported module: http://localhost:8081/assets/Simulacion-4OOULP5B.js'),
+          ),
+        )
+
+        montarCon(<Perezosa />)
+
+        const alerta = await screen.findByRole('alert')
+        expect(within(alerta).getByText('Esta pantalla no se pudo cargar')).toBeInTheDocument()
+        expect(within(alerta).getByRole('button', { name: 'Recargar la página' })).toBeInTheDocument()
+        expect(within(alerta).queryByRole('button', { name: 'Reintentar' })).not.toBeInTheDocument()
+        expect(menu()).toEqual(['Panel', 'Estación', 'Simulación', 'Impacto'])
+      })
+    })
+
+    it('el título del documento sigue a la pantalla', async () => {
+      simularApi({ 'GET /api/salud': SALUD_OK, 'POST /api/auth/token': { estado: 200, cuerpo: tokenDe('admin') } })
+      montar('/ingreso')
+      await screen.findByRole('form', { name: 'Ingreso' })
+      expect(document.title).toBe('Ingreso · Aire distribuido')
+
+      await ingresarComo('ana', 'otra-clave')
+      await screen.findByRole('heading', { name: 'Panel' })
+      expect(document.title).toBe('Panel · Aire distribuido')
+
+      await userEvent.click(screen.getByRole('link', { name: 'Clúster' }))
+      await screen.findByRole('heading', { name: 'Clúster' })
+      expect(document.title).toBe('Clúster · Aire distribuido')
+    })
+
+    it.each([
+      ['/estacion/CA-AYAS-01', 'Estación · Aire distribuido'],
+      ['/muestrario', 'Muestrario de componentes · Aire distribuido'],
+      ['/no-existe', 'No existe · Aire distribuido'],
+    ])('el título de %s es «%s»', async (ruta, titulo) => {
+      simularApi({ 'GET /api/salud': SALUD_OK })
+      sesionDe('usuario')
+
+      montar(ruta)
+
+      await waitFor(() => expect(document.title).toBe(titulo))
+    })
+
+    it('al navegar, el foco pasa al contenido; al cargar la página, no', async () => {
+      simularApi({ 'GET /api/salud': SALUD_OK })
+      sesionDe('usuario')
+      montar('/', <Link to="/impacto">ir a impacto por fuera del menú</Link>)
+      await screen.findByRole('heading', { name: 'Panel' })
+      const contenido = screen.getByRole('main')
+      expect(contenido).not.toHaveFocus()
+
+      await userEvent.click(within(screen.getByRole('navigation', { name: 'Pantallas' })).getByRole('link', { name: 'Simulación' }))
+      await screen.findByRole('heading', { name: 'Simulación' })
+
+      expect(contenido).toHaveFocus()
+      expect(contenido).toHaveAttribute('tabindex', '-1')
     })
 
     it('la pantalla en la que se está queda marcada en el menú', async () => {

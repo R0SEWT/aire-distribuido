@@ -6,7 +6,8 @@ import { ErrorApi, errorDeExcepcion, presentarError } from '../api/errores'
 import { BotonProyector } from '../armazon/BotonProyector'
 import { EstadoApi } from '../armazon/Indicadores'
 import { Marca } from '../armazon/Marca'
-import { RUTAS } from '../armazon/menu'
+import { puedeEntrar, RUTAS } from '../armazon/menu'
+import { useTitulo } from '../armazon/titulo'
 import { Pie } from '../armazon/Pie'
 import type { DesdeDonde } from '../sesion/guardas'
 import { useSesion } from '../sesion/useSesion'
@@ -19,11 +20,14 @@ export default function Ingreso() {
   const [enviando, setEnviando] = useState(false)
   const [error, setError] = useState<ErrorApi | null>(null)
   const campoClave = useRef<HTMLInputElement>(null)
+  useTitulo('Ingreso')
 
   if (sesion) {
-    // Ya hay sesión: a donde iba cuando la guarda lo mandó aquí, o al panel.
+    // Ya hay sesión: a donde iba cuando la guarda lo mandó aquí, si su rol
+    // puede verlo; si no, al panel.
     const desde = (ubicacion.state as DesdeDonde | null)?.desde
-    return <Navigate to={desde && desde !== RUTAS.ingreso ? desde : RUTAS.panel} replace />
+    const vuelve = desde !== undefined && desde !== RUTAS.ingreso && puedeEntrar(desde, sesion.rol)
+    return <Navigate to={vuelve ? desde : RUTAS.panel} replace />
   }
 
   async function enviar(e?: FormEvent) {

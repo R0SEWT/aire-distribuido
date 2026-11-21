@@ -8,6 +8,7 @@
 
 import { createContext, useContext, useEffect, useMemo, useRef } from 'react'
 import { cerrarSesion } from '../sesion/almacen'
+import { validarSesion } from './cliente'
 import type { EventosWS, NombreEvento } from './eventos'
 import { ConexionWS, urlWS, type EstadoWS, type OpcionesWS } from './ws'
 
@@ -37,7 +38,15 @@ export class EnlaceTiempoReal {
 
   /** Abre la conexión de una sesión. Devuelve cómo cerrarla. */
   usar(token: string, expira: number): () => void {
-    const conexion = new ConexionWS({ url: urlWS(), ...this.opciones, token, expira })
+    const conexion = new ConexionWS({
+      url: urlWS(),
+      // Tres apretones fallidos seguidos: ¿la API está apagada, o ya no acepta
+      // este token? Si responde 401, validarSesion cierra la sesión.
+      alFallarApreton: () => void validarSesion(),
+      ...this.opciones,
+      token,
+      expira,
+    })
     const dejar = conexion.alCambiar((estado) => {
       this.poner({ estado, conexion })
       // El servidor dio el token por vencido: la sesión se cierra y la UI vuelve al ingreso.

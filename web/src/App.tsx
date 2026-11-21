@@ -13,6 +13,7 @@ import { TiempoRealProveedor } from './api/TiempoRealProveedor'
 import type { OpcionesWS } from './api/ws'
 import { Armazon } from './armazon/Armazon'
 import { RUTAS } from './armazon/menu'
+import { Barrera } from './componentes/Barrera'
 import Ingreso from './pantallas/Ingreso'
 import { RequiereRol, RequiereSesion } from './sesion/guardas'
 import { SOLO_ADMIN } from './sesion/roles'
@@ -101,10 +102,15 @@ export function Proveedores({ consultas, tiempoReal, children }: Props & { child
 
 export function App() {
   return (
-    <Proveedores>
-      <BrowserRouter>
-        <Rutas />
-      </BrowserRouter>
-    </Proveedores>
+    // La última red: si falla algo fuera de una pantalla (el armazón, el
+    // ingreso, un proveedor), se dice y se ofrece recargar en vez de dejar la
+    // página en blanco. Los errores de una pantalla los ataja el armazón.
+    <Barrera alcance="aplicacion">
+      <Proveedores>
+        <BrowserRouter>
+          <Rutas />
+        </BrowserRouter>
+      </Proveedores>
+    </Barrera>
   )
 }

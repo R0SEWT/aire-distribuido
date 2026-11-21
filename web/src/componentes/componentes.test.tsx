@@ -1,10 +1,11 @@
 import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
-import { errorDeRespuesta } from '../api/errores'
+import { errorDeFetch, errorDeRespuesta } from '../api/errores'
 import {
   Banda,
   BANDAS,
+  Barrera,
   Cifra,
   Desplegable,
   EnConstruccion,
@@ -134,7 +135,7 @@ describe('Etiqueta', () => {
   it('lleva su texto y el color del tono', () => {
     render(<Etiqueta tono="alerta">En alerta</Etiqueta>)
 
-    expect(screen.getByText('En alerta')).toHaveClass('text-inca-cuidado', 'border-inca-cuidado')
+    expect(screen.getByText('En alerta')).toHaveClass('text-falla', 'border-inca-cuidado')
   })
 })
 
@@ -265,10 +266,18 @@ describe('EstadoDeError', () => {
   })
 
   it('si la API no responde lo dice, no se queda en blanco', () => {
-    render(<EstadoDeError error={new TypeError('Failed to fetch')} alReintentar={vi.fn()} />)
+    render(<EstadoDeError error={errorDeFetch(new TypeError('Failed to fetch'))} alReintentar={vi.fn()} />)
 
     expect(screen.getByText('La API no responde')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Reintentar' })).toBeInTheDocument()
+  })
+
+  it('un error del programa se dice como tal y no ofrece reintentar', () => {
+    render(<EstadoDeError error={new TypeError('x is not a function')} alReintentar={vi.fn()} />)
+
+    expect(screen.getByText('Algo falló')).toBeInTheDocument()
+    expect(screen.getByText('x is not a function')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Reintentar' })).not.toBeInTheDocument()
   })
 })
 
@@ -305,5 +314,76 @@ describe('formato', () => {
   it('escribe las fechas en la hora de Lima, esté donde esté el navegador', () => {
     expect(fechaHora('2021-12-13T20:00:00Z')).toMatch(/13 dic.* 2021.* 15:00/)
     expect(fechaHora('no es una fecha')).toBe('—')
+  })
+})
+
+describe('Barrera', () => {
+  function Rompe({ error }: { error: Error | null }): never | string {
+    if (error) throw error
+    return 'pantalla dibujada'
+  }
+
+  it('si lo de adentro lanza, lo dice en vez de dejar la página en blanco, y reintentar lo vuelve a dibujar', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    let error: Error | null = new Error('se rompió al dibujar')
+    function Pantalla() {
+      return <Rompe error={error} />
+    }
+    render(
+      <Barrera alcance="pantalla">
+        <Pantalla />
+      </Barrera>,
+    )
+
+    const alerta = screen.getByRole('alert')
+    expect(within(alerta).getByText('Esta pantalla falló')).toBeInTheDocument()
+    expect(within(alerta).getByText('se rompió al dibujar')).toBeInTheDocument()
+
+    error = null
+    await userEvent.click(within(alerta).getByRole('button', { name: 'Reintentar' }))
+
+    expect(screen.getByText('pantalla dibujada')).toBeInTheDocument()
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+  })
+
+  it('un trozo de la app que no se pudo descargar ofrece recargar la página, no reintentar', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    const recargar = vi.fn()
+    const fallo = new TypeError('Failed to fetch dynamically imported module: http://localhost:8081/assets/Panel-abc.js')
+    render(
+      <Barrera alcance="pantalla" recargar={recargar}>
+        <Rompe error={fallo} />
+      </Barrera>,
+    )
+
+    expect(screen.getByText('Esta pantalla no se pudo cargar')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Reintentar' })).not.toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Recargar la página' }))
+    expect(recargar).toHaveBeenCalledOnce()
+  })
+
+  it('en la raíz dice que la aplicación falló y ofrece recargar', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    const recargar = vi.fn()
+    render(
+      <Barrera alcance="aplicacion" recargar={recargar}>
+        <Rompe error={new Error('proveedor roto')} />
+      </Barrera>,
+    )
+
+    expect(screen.getByText('La aplicación falló')).toBeInTheDocument()
+    expect(screen.getByText('proveedor roto')).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Recargar la página' }))
+    expect(recargar).toHaveBeenCalledOnce()
+  })
+
+  it('sin errores no se nota', () => {
+    render(
+      <Barrera alcance="pantalla">
+        <Rompe error={null} />
+      </Barrera>,
+    )
+
+    expect(screen.getByText('pantalla dibujada')).toBeInTheDocument()
   })
 })

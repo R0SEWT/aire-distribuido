@@ -14,8 +14,16 @@
   --color-suave: #d9dfe9;
   --color-tenue: #b4bdcc;
 
+  --color-borde-control: #a3aec2;
+
   --color-acento: #3d8bea;
   --color-acento-claro: #8fbdf5;
+
+  /* Claro con texto oscuro: más contraste que el botón del modo normal. */
+  --color-boton: #8fbdf5;
+  --color-boton-texto: #05070a;
+
+  --color-falla: #ff8a82;
 
   --color-inca-buena: #2fcf95;
   --color-inca-moderada: #f2c84b;

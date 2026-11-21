@@ -15,10 +15,12 @@ export interface DesdeDonde {
 
 /** Sin sesión, al ingreso. Con sesión, las rutas de adentro. */
 export function RequiereSesion() {
-  const { sesion } = useSesion()
+  const { sesion, motivo } = useSesion()
   const ubicacion = useLocation()
   if (!sesion) {
-    const estado: DesdeDonde = { desde: ubicacion.pathname + ubicacion.search }
+    // Se recuerda dónde estaba solo si la sesión faltaba o venció: quien salió
+    // a propósito no deja su pantalla a quien entre después.
+    const estado: DesdeDonde = motivo === 'salir' ? {} : { desde: ubicacion.pathname + ubicacion.search }
     return <Navigate to="/ingreso" replace state={estado} />
   }
   return <Outlet />

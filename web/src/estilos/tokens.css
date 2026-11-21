@@ -20,9 +20,16 @@
   --color-suave: #aab3c2;
   --color-tenue: #8791a3;
 
-  /* Acento: bordes, foco y botones. El claro es para texto y enlaces sobre fondo oscuro. */
+  /* El borde de un control donde se escribe: tiene que verse contra su fondo (3:1 o más). */
+  --color-borde-control: #6b7688;
+
+  /* Acento: bordes y foco. El claro es para texto y enlaces sobre fondo oscuro. */
   --color-acento: #2a78d6;
   --color-acento-claro: #6ea8ef;
+
+  /* El botón principal. Su texto contra su fondo da 4.5:1 o más (el acento con blanco no llega). */
+  --color-boton: #2468c0;
+  --color-boton-texto: #ffffff;
 
   /* Bandas INCA (RM 181-2016-MINAM) y los dos estados sin banda. */
   --color-inca-buena: #1baf7a;
@@ -35,5 +42,5 @@
   /* Estado de la API y de la conexión de tiempo real. */
   --color-ok: #1baf7a;
   --color-aviso: #e0b43a;
-  --color-falla: #e5534b;
+  --color-falla: #f0716a; /* también es texto («En alerta»): 4.5:1 o más sobre las tres capas */
 }
