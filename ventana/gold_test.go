@@ -2,9 +2,11 @@ package ventana
 
 import (
 	"encoding/csv"
+	"encoding/json"
 	"errors"
 	"io"
 	"os"
+	"reflect"
 	"strconv"
 	"testing"
 
@@ -16,6 +18,12 @@ import (
 // (18 lecturas o más), cuántas superan el ECA, y cuánto acertarían el régimen
 // alto o la lectura horaria si se usaran como alerta. Se salta con -short o
 // sin el gold (no se versiona).
+//
+// Esas cifras quedan en reports/alerta_24h.json, que es de donde las toma el
+// informe (docs/informe/tablas.py). La prueba comprueba que el archivo diga lo
+// que la ventana calcula hoy; se regenera con
+//
+//	go test ./ventana -run LaVentanaSobreElGold -actualizar
 func TestLaVentanaSobreElGold(t *testing.T) {
 	if testing.Short() {
 		t.Skip("-short: no se lee el gold completo")
@@ -78,6 +86,90 @@ func TestLaVentanaSobreElGold(t *testing.T) {
 	if calculables != 64748 || sobreECA != 1184 {
 		t.Fatalf("%d horas calculables y %d sobre el ECA; el análisis del equipo dio 64 748 y 1 184", calculables, sobreECA)
 	}
+
+	sha, err := kmeans.Sha256Archivo(rutaGold)
+	if err != nil {
+		t.Fatal(err)
+	}
+	rep := reporteAlerta{
+		Nota: "Qué acertaría cada señal si se usara como alerta, sobre las horas del gold con media de 24 h calculable. " +
+			"Lo escribe TestLaVentanaSobreElGold (go test ./ventana -run LaVentanaSobreElGold -actualizar).",
+		Gold:             goldAlerta{Sha256: sha, Filas: g.Datos.N},
+		VentanaHoras:     int(Duracion.Hours()),
+		MinimoLecturas:   MinimoLecturas,
+		ECAPM25:          kmeans.ECAPM25,
+		ECAPM10:          kmeans.ECAPM10,
+		HorasCalculables: calculables,
+		HorasSobreECA:    sobreECA,
+		INCA:             bandas,
+		LecturaHoraria:   senalAlerta{Horas: horariaSi, Aciertos: horariaAcierta},
+	}
+	if regimen != nil {
+		rep.RegimenAlto = &senalAlerta{Regimen: new(int), Horas: altoSi, Aciertos: altoAcierta}
+		*rep.RegimenAlto.Regimen = alto
+	}
+	if *actualizar {
+		if regimen == nil {
+			t.Fatalf("-actualizar necesita %s para medir el régimen alto", rutaAsign)
+		}
+		b, err := json.MarshalIndent(rep, "", "  ")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(rutaReporteAlerta, append(b, '\n'), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		t.Logf("escrito %s", rutaReporteAlerta)
+		return
+	}
+	b, err := os.ReadFile(rutaReporteAlerta)
+	if err != nil {
+		t.Fatalf("falta el reporte de la alerta (se genera con -actualizar): %v", err)
+	}
+	var guardado reporteAlerta
+	if err := json.Unmarshal(b, &guardado); err != nil {
+		t.Fatalf("%s: %v", rutaReporteAlerta, err)
+	}
+	if regimen == nil {
+		guardado.RegimenAlto = nil // sin las asignaciones no hay con qué compararlo
+	}
+	if !reflect.DeepEqual(guardado, rep) {
+		t.Fatalf("%s no es lo que la ventana calcula sobre el gold: guardado %+v, calculado %+v (regenerar con -actualizar)",
+			rutaReporteAlerta, guardado, rep)
+	}
+}
+
+const rutaReporteAlerta = "../reports/alerta_24h.json"
+
+// reporteAlerta es reports/alerta_24h.json: las cifras con que el equipo
+// decidió que la alerta saliera de la media de 24 h y no del régimen.
+type reporteAlerta struct {
+	Nota             string         `json:"nota"`
+	Gold             goldAlerta     `json:"gold"`
+	VentanaHoras     int            `json:"ventana_horas"`
+	MinimoLecturas   int            `json:"minimo_lecturas"`
+	ECAPM25          float64        `json:"eca_pm2_5"`
+	ECAPM10          float64        `json:"eca_pm10"`
+	HorasCalculables int            `json:"horas_calculables"`
+	HorasSobreECA    int            `json:"horas_sobre_eca"`
+	INCA             map[string]int `json:"inca"`
+	// RegimenAlto y LecturaHoraria: en cuántas horas calculables la señal
+	// estaba encendida (Horas) y en cuántas de esas la media de 24 h superaba
+	// el ECA (Aciertos). Precisión = Aciertos / Horas; recall = Aciertos /
+	// HorasSobreECA.
+	RegimenAlto    *senalAlerta `json:"regimen_alto"`
+	LecturaHoraria senalAlerta  `json:"lectura_horaria"`
+}
+
+type goldAlerta struct {
+	Sha256 string `json:"sha256"`
+	Filas  int    `json:"filas"`
+}
+
+type senalAlerta struct {
+	Regimen  *int `json:"regimen,omitempty"`
+	Horas    int  `json:"horas"`
+	Aciertos int  `json:"aciertos"`
 }
 
 func leerRegimenes(t *testing.T, ruta string, n int) []int {

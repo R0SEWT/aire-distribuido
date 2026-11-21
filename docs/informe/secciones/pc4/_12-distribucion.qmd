@@ -1,0 +1,404 @@
+<!-- f.6) PC4 · Distribución: clúster de nodos, justificación de la topología y funcionamiento en Go. -->
+
+## Distribución: el clúster de nodos {#sec-distribucion}
+
+La PC3 dejó diseñado el K-Means distribuido y probado su protocolo (@sec-distribuido). En la PC4 ese
+diseño corre: hay un nodo de cómputo, un coordinador, un reparto de la tabla, el bucle de Lloyd con
+una barrera de red por iteración y un pool de nodos dentro de la API. La regla del diseño se
+mantuvo: **los chunks de una máquina pasan a ser nodos, el `WaitGroup` pasa a ser una barrera a
+través de la red y el canal pasa a ser una conexión TCP**; el algoritmo, su contrato numérico y la
+suma en un orden fijo no cambian. La @tbl-repo-pc4 dice qué código es nuevo.
+
+::: {#tbl-repo-pc4 tbl-colwidths="[26,74]"}
+| Ruta | Contenido |
+|:---|:---|
+| `cluster/` | El K-Means sobre el clúster: el nodo, la espera de nodos, el reparto en rangos, Lloyd con la barrera de red y el pool de nodos de la API |
+| `cmd/nodo/` | El nodo de cómputo: llama al coordinador, carga su rango del gold y responde cada ronda |
+| `cmd/distribuido/` | Coordinador de línea de comandos: espera N nodos, corre el K-Means y lo compara con el de una sola máquina |
+| `cmd/smoke/` | Coordinador de prueba: mide la barrera con rondas de latido |
+| `api/`, `cmd/api/` | La API REST, el coordinador de entrenamientos, el WebSocket y el arranque (@sec-api) |
+| `modelo/`, `ventana/` | El modelo activo que predice y la media de 24 horas de cada estación |
+| `almacen/` | Lo que se guarda, detrás de interfaces: en memoria, en MongoDB y en Redis (@sec-bases) |
+| `docker-compose.yml`, `docs/datos/` | El despliegue y el seed de MongoDB |
+| `docs/api/`, `docs/postman/` | El contrato OpenAPI y las pruebas de Postman |
+| `lab/` | Lo que se corre en el laboratorio: el paquete del nodo para Windows y los experimentos de GPU |
+
+Lo que el Entregable 2 agrega al repositorio (la @tbl-repo tiene lo del Entregable 1)
+:::
+
+### Topología en estrella y por qué {#sec-topologia}
+
+El clúster es una estrella: un **coordinador** y $K$ **nodos de cómputo**, cada uno conectado solo
+al coordinador. El enunciado pide que la API haga «de coordinador del clúster, enviando tareas a los
+nodos de cómputo y unificando resultados»; la estrella es esa frase dibujada. Tres razones la
+sostienen:
+
+1. **La barrera necesita todos los parciales en un solo lugar** para recalcular los centroides. Ese
+   lugar es el coordinador, y en una estrella cada ronda cuesta dos mensajes por nodo: la ida y la
+   vuelta.
+2. **Una reducción en anillo o en árbol no gana nada con mensajes tan chicos.** Las versiones de
+   K-Means para memoria distribuida reducen en árbol [@dhillon2000], y eso conviene cuando lo que se
+   reduce es grande. Aquí cada nodo recibe $k \cdot D$ centroides y devuelve $k \cdot D$ sumas, $k$
+   conteos y la inercia: con la receta de este trabajo ($k$ = {{< meta cifras.pc4.k >}},
+   $D$ = {{< meta cifras.pc4.features >}}) son {{< meta cifras.pc4.numeros_por_ronda >}} números por
+   nodo y ronda. El costo es la latencia, no el ancho de banda, y un anillo de $K$ nodos encadena
+   $2(K - 1)$ saltos por ronda contra los 2 de la estrella.
+3. **Es la topología a la que puede entrar cualquier equipo.** El nodo abre la conexión y el
+   coordinador nunca llama a un nodo. Un PC del laboratorio, sin permisos de administrador y con el
+   firewall de fábrica, no acepta conexiones entrantes, pero sí puede abrir una de salida; lo mismo
+   un contenedor que escala con `--scale` sin publicar puertos.
+
+El precio es conocido: el coordinador es un punto único de falla y todo el tráfico pasa por su
+enlace. Con mensajes de este tamaño lo segundo no pesa; lo primero se acepta, y si el coordinador
+cae se relanza la corrida.
+
+La justificación no es solo de pizarra. El clúster se probó el {{< meta cifras.smoke.fecha >}} con
+los PC del laboratorio como nodos y el coordinador en la laptop: `nodo.exe` es un solo ejecutable
+que no se instala ni pide administrador, porque solo abre la conexión de salida. La @tbl-smoke mide
+lo que la estrella paga en cada iteración: una ronda que le habla a todos los nodos a la vez y
+espera al último.
+
+{{< include generado/tablas/smoke_lab.md >}}
+
+Con {{< meta cifras.smoke.nodos >}} nodos, la barrera de una ronda mide
+{{< meta cifras.smoke.p50 >}} ms de mediana y {{< meta cifras.smoke.max >}} ms en el peor de los
+{{< meta cifras.smoke.rondas >}} casos; con {{< meta cifras.smoke.nodos_menor >}},
+{{< meta cifras.smoke.p50_menor >}} ms. La ida y vuelta a cada nodo está entre
+{{< meta cifras.smoke.latido_p50_min >}} y {{< meta cifras.smoke.latido_p50_max >}} ms: los nodos
+rinden parejo y la barrera, que espera al más lento, queda apenas por encima del latido de uno solo.
+Ese medio milisegundo es la cifra con la que hay que comparar el cómputo que se reparte: una
+iteración del K-Means sobre todo el gold cuesta {{< meta cifras.benchmark_kmeans.ms_iter_seq >}} ms en
+secuencial y {{< meta cifras.benchmark_kmeans.ms_iter_w >}} ms con
+{{< meta cifras.benchmark_kmeans.w >}} workers en una sola máquina (@tbl-bench-kmeans). Con una
+tabla de {{< meta cifras.pc4.filas_gold >}} filas, la red cuesta tanto como el cálculo: distribuir
+por datos empieza a pagar con tablas más grandes, que es para lo que existen las réplicas virtuales
+de la @sec-reparto.
+
+### El protocolo en el cable
+
+El protocolo es el de la PC3 (@tbl-protocolo y @fig-secuencia), versión
+{{< meta cifras.pc4.version_protocolo >}}, y **no cambió ningún mensaje**: lo que la PC4 necesitó de
+más se resolvió del lado del coordinador. Cada mensaje es un objeto JSON en una línea terminada en
+salto de línea, de a lo sumo {{< meta cifras.pc4.max_linea_mib >}} MiB, y cada extremo lo valida al
+enviarlo y al recibirlo. Una sesión tiene cuatro momentos:
+
+1. **`HOLA`.** El nodo abre la conexión y se presenta con la versión del protocolo, su nombre y sus
+   workers. Otra versión se rechaza con un `ERROR` que dice qué hacer.
+2. **`CARGAR` y `LISTO`.** El coordinador le manda su rango de filas y la **huella** del gold (el
+   sha256 del archivo). El nodo calcula el sha256 de su copia y, solo si coincide, carga el rango
+   en memoria y responde `LISTO` con las filas que tiene. Un rango solo significa algo si todos
+   tienen la misma tabla en el mismo orden: un nodo con otro gold sumaría otras filas y nadie lo
+   notaría.
+3. **`ITERAR` y `PARCIAL`**, una vez por iteración: los centroides de ida, y las sumas, los
+   conteos y la inercia del rango de vuelta, las dos con el número de ronda.
+4. **`FIN`.** El nodo libera su partición, la conexión se cierra y el nodo vuelve a llamar solo:
+   queda listo para la corrida siguiente.
+
+`PING` y `PONG` miden la latencia y comprueban que un nodo sigue vivo fuera de las rondas, y un
+`ERROR`, en cualquier sentido, aborta lo que se estaba haciendo con un texto legible. Se mantuvo el
+texto y no un formato binario por tres motivos: el volumen por ronda es mínimo, las líneas se pueden
+leer con `nc` o `tcpdump` durante una demostración y `encoding/json` escribe cada `float64` con la
+representación más corta que se vuelve a leer como el mismo valor, así que la ida y vuelta por el
+cable no cambia ningún bit y el texto no rompe el determinismo de la fusión.
+
+### Reparto de la tabla en rangos {#sec-reparto}
+
+El coordinador parte las filas en $K$ rangos contiguos, uno por nodo, en orden (@lst-repartir). Los
+tamaños difieren a lo sumo en una fila, y el orden de los rangos es también el de la fusión.
+
+{{< include generado/tablas/frag_repartir.md >}}
+
+Los rangos son contiguos porque así un rango se describe con dos números y el nodo lee un tramo
+continuo del archivo. Eso no sesga el modelo (la fusión suma todas las filas, estén donde estén) ni
+desbalancea el cómputo: el costo por fila es el mismo en cualquier fila, así que la carga depende
+solo de cuántas filas tiene cada nodo. Repartir en proporción a los workers que cada nodo declara
+no se hizo: un núcleo de un equipo no vale lo mismo que el de otro.
+
+**Réplicas virtuales.** Para medir el clúster con más datos sin escribir un CSV enorme, el
+coordinador puede repartir una tabla de $r \cdot N$ filas en la que la fila $i$ es la fila
+$i \bmod N$ del gold. El `CARGAR` pide entonces filas más allá del final del archivo y el nodo arma
+su rango repitiendo filas; la huella sigue siendo la del gold real y ningún mensaje cambia de forma.
+Con $r$ réplicas, las sumas y los conteos se multiplican por $r$, así que los centroides son los
+mismos salvo redondeo (lo comprueba `TestReplicasVirtualesDanLosMismosCentroides`). Como el nodo
+copia sus filas a memoria, cada nodo tiene un tope de {{< meta cifras.pc4.max_filas_nodo >}} filas
+por `CARGAR`; un rango mayor lo responde con `ERROR` sin reservar nada, y el coordinador rechaza
+antes de esperar a nadie un pedido de réplicas que pasaría ese tope.
+
+### La barrera de una ronda, con plazo
+
+Una iteración distribuida es una **ronda**: el coordinador manda `ITERAR` a todos los nodos a la
+vez y espera el `PARCIAL` de cada uno. Es el patrón *fan-out/fan-in* con una barrera, y está en
+`protocolo.Ronda` (@lst-ronda): una goroutine por nodo, un `sync.WaitGroup` que las espera a todas
+y un arreglo donde cada goroutine escribe solo su posición, de modo que no hace falta ningún
+`Mutex`.
+
+{{< include generado/tablas/frag_ronda.md >}}
+
+Tres decisiones hacen que esa barrera sea correcta y no solo rápida:
+
+- **Un mismo instante límite para todos.** El plazo de la ronda
+  ({{< meta cifras.pc4.plazo_ronda_s >}} segundos por omisión) se convierte en un instante absoluto
+  que se aplica a la lectura y a la escritura de cada conexión. La ronda vuelve cuando todos
+  respondieron o, como muy tarde, en ese instante: sin plazo, un nodo caído bloquearía la barrera
+  para siempre.
+- **Los parciales vuelven en el orden de los nodos, no en el de llegada.** `parciales[i]` es el del
+  nodo `i`, haya respondido primero o último.
+- **Cada parcial se comprueba antes de aceptarlo**: su forma ($k$ conteos y $k \cdot D$ sumas) y la
+  conservación, es decir, que sus conteos sumen exactamente las filas de su rango.
+
+Mientras espera, cada goroutine puede encontrarse con mensajes que no son el que busca (@lst-esperar).
+Un `PONG` suelto se ignora. Un `PARCIAL` de una ronda anterior es un **rezagado** de una ronda que
+abortó: se descarta y se cuenta. Para reconocerlo, el número de ronda crece durante toda la vida de
+la conexión, también entre corridas. Un `PARCIAL` de una ronda que nunca se envió es una violación
+del protocolo.
+
+{{< include generado/tablas/frag_esperar.md >}}
+
+### Lloyd sobre el clúster y la fusión en orden de nodo
+
+El bucle completo está en `cluster.LloydCtx` (@lst-lloyd). Cada iteración es una ronda, la fusión
+de los parciales **en orden de nodo** y `kmeans.CerrarIteracion`, que actualiza los centroides y
+decide si se detiene: es la misma función que cierra cada iteración del K-Means secuencial y del
+paralelo de la PC3, así que el criterio de parada no es una copia que pueda desviarse. Al converger
+hace una pasada más con los centroides finales, para que la inercia publicada sea la del modelo
+publicado.
+
+{{< include generado/tablas/frag_lloyd.md >}}
+
+El gancho `AlRonda` es lo único que la API necesitó agregar al bucle: al cerrar cada iteración
+recibe la inercia, lo que tardó la barrera, lo que tardó la fusión, lo que tardó cada nodo y una
+copia de los centroides. Con eso la API guarda la ronda, la avisa por WebSocket y escribe el punto
+de control (@sec-coordinador).
+
+Del otro lado, el nodo hace con su rango lo mismo que un worker hacía con su chunk, y con el mismo
+código (@lst-nodo-iterar): `kmeans.ParcialesPorChunks` parte el rango en chunks de
+{{< meta cifras.pc4.chunk >}} filas, los reparte en su propio pool de workers y los fusiona en orden
+de chunk. Hay entonces **dos niveles de paralelismo**: entre nodos, por la red, y dentro de cada
+nodo, entre sus núcleos.
+
+{{< include generado/tablas/frag_nodo_iterar.md >}}
+
+### Determinismo: bit a bit con un nodo, con tolerancia entre varios {#sec-determinismo}
+
+La suma en coma flotante no es asociativa, y por eso todo el diseño suma en un orden fijo. Las
+consecuencias son dos, y las dos se comprobaron:
+
+- **Con un nodo, el modelo distribuido es el de `cmd/entrenar` bit a bit.** El nodo suma sus chunks
+  en el mismo orden que el K-Means de una máquina, y el cable no cambia ningún bit.
+- **Con varios nodos, coincide dentro de una tolerancia.** Fusionar por nodo es otro árbol de suma
+  que fusionar por chunk: las mismas filas van a los mismos clusters, pero los centroides difieren
+  en los últimos bits. Dos corridas con los mismos nodos y los mismos rangos sí dan el mismo
+  resultado bit a bit, aunque los nodos respondan en otro orden.
+
+La tolerancia es {{< meta cifras.pc4.tolerancia >}} sobre la mayor diferencia entre centroides, en
+el espacio estandarizado. No es un número cómodo sino el que separa dos efectos: reasociar la suma
+mueve un centroide en el orden de 10⁻¹⁶, y que una sola fila cambie de cluster lo mueve en más de
+10⁻⁵ aun en el cluster más grande. Dentro de la tolerancia hay redondeo; fuera, otra asignación.
+
+La @tbl-distribuido tiene las corridas de `cmd/distribuido` que hay en `reports/`, cada una
+comparada con el modelo de la PC3 (`reports/kmeans.json`): mismo gold, misma semilla y mismos
+centroides iniciales.
+
+{{< include generado/tablas/kmeans_distribuido.md >}}
+
+Todas convergen en las mismas {{< meta cifras.distribuido.iteraciones >}} iteraciones que el modelo
+de una máquina. Con {{< meta cifras.distribuido.bit_a_bit_con >}} nodo la diferencia es cero; con
+hasta {{< meta cifras.distribuido.nodos_max >}}, a lo sumo
+{{< meta cifras.distribuido.dif_max >}}, seis órdenes de magnitud por debajo de la tolerancia. La
+última fila reparte {{< meta cifras.distribuido.replicas_max >}} réplicas del gold
+({{< meta cifras.distribuido.filas_max >}} filas) y llega a los mismos centroides. Los tiempos de esa
+tabla **no miden un clúster**: los nodos comparten la máquina del coordinador. Sirven para ver la
+forma del costo: la fusión y la actualización, que es lo que el coordinador hace en serie, son
+milésimas de milisegundo, y la ronda es todo lo demás.
+
+Las mismas propiedades están fijadas por pruebas que corren con `go test -race` en cada cambio:
+`TestLloydConUnNodoEsElConcurrenteBitABit` y
+`TestLloydConVariosNodosCoincideConToleranciaYEsDeterminista` en `cluster/`,
+`TestUnNodoDaElModeloDeEntrenarBitABit` en `cmd/distribuido/` y, por la API,
+`TestEntrenamientoConUnNodoEsBitABit` y `TestConElGoldRealYUnNodoElModeloEsElDeKmeansJSONBitABit`.
+
+### Qué pasa si un nodo cae {#sec-fallas}
+
+La decisión se tomó en la PC3 y se implementó tal cual: **si un nodo cae, responde `ERROR` o no
+responde dentro del plazo, la ronda se aborta con un error que lo nombra y no hay modelo.** Una
+fusión con menos nodos sumaría menos filas: sería otro modelo, y publicarlo como si fuera el bueno
+es peor que no publicar nada. En concreto:
+
+- La ronda devuelve un error que nombra a cada nodo que falló y distingue el motivo: plazo vencido
+  (nodo lento o caído), error informado por el nodo o violación del protocolo.
+- El coordinador avisa a los demás nodos con un `ERROR` que trae el motivo (lo ven en su ventana) y
+  cierra las conexiones. Los nodos vuelven a llamar solos a los
+  {{< meta cifras.pc4.espera_nodo_s >}} segundos, así que basta relanzar la corrida.
+- Las rondas que sí terminaron no se pierden: quedan con sus tiempos y sus inercias. Por la API, el
+  entrenamiento queda `abortado` con el error, sus rondas siguen en MongoDB y en Redis queda el
+  punto de control de la última ronda completa (@sec-bases).
+- Si lo que se detiene es el coordinador, la corrida se cancela sin esperar al plazo: cierra las
+  conexiones, que es lo único que destraba una lectura en curso.
+
+Lo prueban `TestUnNodoCaidoAbortaLaCorridaConUnErrorQueLoNombra`,
+`TestUnNodoQueNoRespondeVenceElPlazoDeLaRonda` y `TestCargarRechazaUnNodoConOtroGold` en `cluster/`,
+y `TestNodoQueSeCaeAMitadDeLaCorridaConservaLasRondasHechas` en `api/`.
+
+Hay un caso que el plazo no cubre: un nodo que responde a tiempo con parciales bien formados pero de
+otras filas. El coordinador no ve las filas de los nodos, solo comprueba la forma de cada parcial y
+que sus conteos sumen su rango. Por eso la API compara cada corrida con el K-Means secuencial sobre
+su propia copia del gold y solo activa el modelo si la diferencia no pasa de la tolerancia
+(`TestUnNodoQueMienteNoActivaElModelo`).
+
+**Lo que no se implementó:** reasignar el rango del nodo caído a otro y repetir la iteración, y
+reanudar una corrida desde su punto de control. Las dos quedaron descritas como extensiones.
+
+### El pool de nodos del coordinador
+
+`cmd/distribuido` espera a sus nodos, corre y termina. La API vive más que una corrida, así que
+tiene un **pool** (`cluster.Pool`): una goroutine acepta nodos todo el tiempo en el puerto
+{{< meta cifras.pc4.puerto_nodos >}} y les toma el pulso cada
+{{< meta cifras.pc4.latido_s >}} segundos con un `PING`; el que no responde en
+{{< meta cifras.pc4.plazo_latido_s >}} segundos sale del pool. Un entrenamiento **se lleva** $K$
+nodos libres (@lst-pool-tomar): antes les toma el pulso otra vez, para no entregar uno que se apagó
+desde el último latido, y los devuelve ordenados por nombre, que es el orden de los rangos y el de
+la fusión. Al terminar o abortar cierra esas conexiones y los nodos vuelven a entrar solos.
+
+{{< include generado/tablas/frag_pool_tomar.md >}}
+
+Una conexión con un nodo la usa una sola goroutine a la vez: un `PING` durante una ronda competiría
+con ella por el mismo decodificador. Por eso el latido corre **solo sobre los nodos libres**, y el
+pool tiene dos candados que siempre se toman en el mismo orden: `uso`, que tiene quien les habla a
+los nodos libres (el latido, el alta de un nodo y `Tomar` se excluyen entre sí), y `mu`, que protege
+los mapas y lo toman las consultas, que así nunca esperan a la red. Cada alta, baja y error del
+pool es un evento que termina en la colección `eventos_cluster`.
+
+### Lo que se midió y lo que no
+
+Lo medido sobre equipos reales del laboratorio es la barrera (@tbl-smoke): el costo fijo que la
+topología paga por ronda. Lo medido del K-Means distribuido completo (@tbl-distribuido) viene de
+corridas en una sola máquina, que prueban el protocolo de punta a punta y el determinismo, y de las
+corridas con contenedores de la @sec-evidencias-pc4. **No se midió** el K-Means distribuido sobre
+los PC del laboratorio: ni el escalamiento con 1, 2, 4 y 8 equipos, ni las réplicas virtuales sobre
+la red del aula, ni la comparación con un solo equipo del mismo hardware, ni un nodo que se apaga a
+mitad de una corrida real. Los comandos y el paquete del nodo para Windows están en `lab/`; lo que
+falta es la sesión.
+
+Con lo que hay, la lectura es la de la @sec-topologia: sobre {{< meta cifras.pc4.filas_gold >}}
+filas, una ronda por la red del laboratorio cuesta lo mismo que calcular la iteración entera en una
+máquina, así que este clúster no puede ganarle en tiempo a un solo equipo con esta tabla. Lo que el
+entregable demuestra es que el modelo se entrena repartido sin dejar de ser el mismo modelo, y
+cuánto cuesta coordinarlo.
+
+### Experimento de laboratorio: entrenamiento distribuido en 20 GPU {#sec-gpu}
+
+::: {.callout-important title="Un experimento aparte, no el sistema entregado"}
+Lo que sigue es un experimento de laboratorio y hay que leerlo con tres aclaraciones. **Las
+corridas usaron datos sintéticos**: miden el clúster, no dicen nada del aire. **Los nodos son
+Python con PyTorch** y hablan una versión 2 del protocolo: quedan fuera del sistema de la PC4, que
+es íntegramente Go. Y **el código del experimento no está en la rama que se entrega**: está en la
+solicitud de cambios #52 del repositorio, sin fusionar; aquí solo están sus resultados y sus
+evidencias.
+:::
+
+La pregunta que quedó abierta arriba es cuándo conviene de verdad repartir. Con el K-Means sobre el
+gold la respuesta es «con esta tabla, no»; hacía falta una carga en la que el cómputo de cada nodo
+pesara mucho más que la red. El {{< meta cifras.mapa.fecha >}} se probó una: entrenar una red
+convolucional de {{< meta cifras.mapa.parametros_millones >}} millones de parámetros
+({{< meta cifras.mapa.parametros >}}) en {{< meta cifras.mapa.nodos >}} equipos del laboratorio D56,
+cada uno con una {{< meta cifras.mapa.gpu >}} de {{< meta cifras.mapa.vram_gb >}} GB. La red es
+parte de una línea de trabajo para el entregable final (estimar el material particulado donde no hay
+estación), de la que este informe no presenta ningún resultado sobre datos reales.
+
+Lo que importa aquí es la coordinación, y esa parte **sí es Go**: el coordinador reparte los datos
+entre los nodos, sincroniza cada ronda con la misma barrera con plazo del K-Means y promedia los
+pesos en orden de nodo. El esquema es *local SGD*, el promedio de pesos que usa el aprendizaje
+federado [@mcmahan2017]: en vez de sincronizar el gradiente en cada lote,
+cada nodo entrena $H$ pasos con su parte de los datos y devuelve sus pesos; el coordinador espera a
+los {{< meta cifras.mapa.nodos >}}, promedia ponderando por las muestras de cada uno y reparte el
+promedio para la ronda siguiente. Cada copia de los pesos son {{< meta cifras.mapa.mb_por_nodo >}} MB,
+así que por ronda cruzan el enlace del coordinador {{< meta cifras.mapa.mb_por_ronda >}} MB entre la
+ida y la vuelta. El protocolo es el mismo, extendido para que un mensaje pueda llevar una carga
+binaria después de su línea de JSON.
+
+{{< include generado/tablas/mapa_gpu.md >}}
+
+Las dos corridas de la @tbl-mapa-gpu solo difieren en $H$, y muestran lo mismo que el K-Means desde
+el otro lado:
+
+- **Con $H$ = {{< meta cifras.mapa.h_menor >}}, la red se lleva el
+  {{< meta cifras.mapa.pct_red_menor >}} de cada ronda.** Los nodos calculan
+  {{< meta cifras.mapa.computo_s_menor >}} segundos y la barrera dura
+  {{< meta cifras.mapa.barrera_s_menor >}}: los otros {{< meta cifras.mapa.red_s_menor >}} segundos
+  son mandar y recibir los pesos por un solo cable. El clúster rinde
+  {{< meta cifras.mapa.veces_menor >}} veces lo que un nodo solo, con
+  {{< meta cifras.mapa.nodos >}} nodos.
+- **Con $H$ = {{< meta cifras.mapa.h_mayor >}}, la red baja al
+  {{< meta cifras.mapa.pct_red_mayor >}}** y el clúster rinde
+  {{< meta cifras.mapa.veces_mayor >}} veces lo que un nodo. Sincronizar menos seguido es lo que
+  hace que repartir pague: el costo de la barrera es casi fijo y se diluye en más cómputo.
+- **Los {{< meta cifras.mapa.nodos >}} equipos rinden parejo**: entre el más rápido y el más lento
+  hay un {{< meta cifras.mapa.dispersion_computo >}} de diferencia en el cómputo por ronda, así que
+  con partes iguales ninguno frena la barrera. El promedio de los pesos, que es lo que el
+  coordinador hace en serie, tarda unos {{< meta cifras.mapa.promedio_ms >}} ms.
+
+Las pérdidas que registran los JSON no se interpretan: con datos sintéticos solo confirman que los
+nodos entrenaron. Las evidencias de la sesión son los registros del coordinador y del servidor de
+datos (`docs/informe/capturas/mapa/`, de donde sale el @lst-mapa-log) y las fotos del aula
+(@fig-mapa-aula, @fig-mapa-nodo y @fig-mapa-coordinador).
+
+::: {#lst-mapa-log}
+```text
+19:58:59 tarea mapa-20261114-195859: 7972354 parámetros, manifiesto
+         http://10.11.97.211:8090/mapa-sint168/manifiesto.json con 168 días
+         (huella sha256:c15063627d7c…), 10 rondas de 200 pasos
+19:58:59 espero 21 nodos (protocolo v2) durante 25m0s
+         (Ctrl+C empieza con los que hayan llegado)
+19:59:00 [1/21] D56-027-gpu desde 10.11.98.225:57185
+         (1 workers, GPU NVIDIA RTX A1000 de 8 GB)
+19:59:00 [2/21] D56-14-gpu desde 10.11.97.212:62008
+         (1 workers, GPU NVIDIA RTX A1000 de 8 GB)
+…
+19:59:01 [20/21] D56-12-gpu desde 10.11.97.210:62416
+         (1 workers, GPU NVIDIA RTX A1000 de 8 GB)
+19:59:27 Ctrl+C: entreno con los 20 de 21 nodos que llegaron
+19:59:49 los 20 nodos tienen sus días (21.9 s); empieza el local SGD
+20:00:17 ronda 1/10: pérdida 0.11636 · validación 0.187728 · 16000 muestras
+         · barrera 28.3 s · promedio 106 ms · 1275.6 MB
+20:00:45 ronda 2/10: pérdida 0.0462034 · validación 0.0828054 · 16000 muestras
+         · barrera 27.8 s · promedio 125 ms · 1275.6 MB
+```
+
+Registro del coordinador en Go durante la corrida con $H$ = 200 (extracto de `docs/informe/capturas/mapa/lab_d56_20gpus_h200_coordinador.txt`; las líneas largas están partidas)
+:::
+
+![El aula D56 durante el experimento, con `nvidia-smi` abierto en los equipos](capturas/mapa/lab_d56_aula_nvidia_smi.jpg){#fig-mapa-aula width=12cm}
+
+![Un nodo (D56-11) durante la corrida con $H$ = 200: recibe su tarea, entrena cada ronda y vuelve a llamar cuando el coordinador termina](capturas/mapa/lab_d56_nodo_d56-11_entrenando.jpg){#fig-mapa-nodo width=12cm}
+
+![El coordinador corriendo en un equipo del aula, con los 20 nodos presentándose. Es una corrida posterior de esa misma sesión, cuyo resultado no está en `reports/`](capturas/mapa/lab_d56_coordinador_20_nodos.jpg){#fig-mapa-coordinador width=12cm}
+
+**El K-Means en GPU.** En esa línea de experimentos hubo antes uno más chico, que sí está en el
+repositorio (`lab/gpu/`): el mismo K-Means del gold en la GPU de
+{{< meta cifras.gpu.equipos >}} equipos del laboratorio ({{< meta cifras.gpu.dispositivo >}}),
+también en Python y también fuera del sistema. Responde si la GPU da el mismo modelo que Go
+(@tbl-gpu). En `float64` y sumando con un producto de matrices, los centroides coinciden con los de
+Go hasta {{< meta cifras.gpu.dif_fp64 >}} y la corrida se repite bit a bit; con la suma atómica de
+la GPU, donde miles de hilos suman en el orden en que llegan, deja de ser repetible; y en `float32`
+la diferencia sube a {{< meta cifras.gpu.dif_fp32 >}}. Es el mismo problema del orden de la suma
+que el sistema resuelve fusionando en orden de chunk y de nodo, visto en otro hardware.
+
+{{< include generado/tablas/kmeans_gpu.md >}}
+
+### Lo que cambió respecto del diseño de la PC3
+
+El informe de la PC3 anunció varias cosas para este entregable. La @tbl-cambios-pc3 dice qué pasó
+con cada una.
+
+::: {#tbl-cambios-pc3 tbl-colwidths="[38,62]"}
+| Lo que la PC3 anunció | Lo que se hizo |
+|:---|:---|
+| El listener TCP, el reparto de rangos y el bucle de Lloyd sobre el protocolo | Hecho: `cluster/`, `cmd/nodo` y `cmd/distribuido`, y dentro de la API |
+| Medir la barrera y el costo de coordinar | La barrera se midió en el laboratorio (@tbl-smoke). El K-Means completo, solo en una máquina y en contenedores |
+| Nodos heterogéneos por VPN: otra máquina del grupo, un teléfono y una sesión de Colab | No se hizo. Los nodos reales fueron los PC del laboratorio, que tampoco aceptan conexiones entrantes: la razón del diseño es la misma |
+| El protocolo de la barrera modelado en Promela y verificado con Spin | No se hizo: quedó fuera del alcance de este entregable. La barrera está cubierta por pruebas con `-race`, que verifican la implementación y no todos los entrelazados del algoritmo |
+| Paralelismo por semillas repartido entre nodos, como línea base sin barrera | No se hizo. Entre goroutines de una máquina sigue disponible (@tbl-semillas) |
+| Timeout por iteración y error claro; reasignar el rango queda como extensión | Hecho como se decidió; la reasignación sigue sin implementarse |
+
+Lo anunciado en el informe de la PC3 para la PC4 y lo que se hizo
+:::

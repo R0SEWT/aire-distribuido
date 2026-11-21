@@ -1,0 +1,28 @@
+{
+  "nota": "Qué acertaría cada señal si se usara como alerta, sobre las horas del gold con media de 24 h calculable. Lo escribe TestLaVentanaSobreElGold (go test ./ventana -run LaVentanaSobreElGold -actualizar).",
+  "gold": {
+    "sha256": "2fdace5ad8599149c9ed2b177151881025d895a50738519d9358d537236f87f7",
+    "filas": 65873
+  },
+  "ventana_horas": 24,
+  "minimo_lecturas": 18,
+  "eca_pm2_5": 50,
+  "eca_pm10": 100,
+  "horas_calculables": 64748,
+  "horas_sobre_eca": 1184,
+  "inca": {
+    "buena": 33979,
+    "mala": 5269,
+    "moderada": 25480,
+    "umbral_de_cuidado": 20
+  },
+  "regimen_alto": {
+    "regimen": 1,
+    "horas": 1497,
+    "aciertos": 524
+  },
+  "lectura_horaria": {
+    "horas": 3011,
+    "aciertos": 649
+  }
+}

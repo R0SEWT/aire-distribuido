@@ -1,0 +1,76 @@
+19:58:59 escuchando en 10.11.97.211:7071; los nodos pueden llamar a:
+19:58:59     10.11.97.211:7071
+19:58:59 tarea mapa-20261114-195859: 7972354 parámetros, manifiesto http://10.11.97.211:8090/mapa-sint168/manifiesto.json con 168 días (huella sha256:c15063627d7c…), 10 rondas de 200 pasos
+19:58:59 espero 21 nodos (protocolo v2) durante 25m0s (Ctrl+C empieza con los que hayan llegado)
+19:59:00 [1/21] D56-027-gpu desde 10.11.98.225:57185 (1 workers, GPU NVIDIA RTX A1000 de 8 GB)
+19:59:00 [2/21] D56-14-gpu desde 10.11.97.212:62008 (1 workers, GPU NVIDIA RTX A1000 de 8 GB)
+19:59:00 [3/21] D56-18-gpu desde 10.11.97.216:53049 (1 workers, GPU NVIDIA RTX A1000 de 8 GB)
+19:59:00 [4/21] D56-19-gpu desde 10.11.97.217:54330 (1 workers, GPU NVIDIA RTX A1000 de 8 GB)
+19:59:00 [5/21] D56-005-gpu desde 10.11.98.203:56005 (1 workers, GPU NVIDIA RTX A1000 de 8 GB)
+19:59:00 [6/21] D56-02-gpu desde 10.11.97.200:53714 (1 workers, GPU NVIDIA RTX A1000 de 8 GB)
+19:59:00 [7/21] D56-004-gpu desde 10.11.98.202:59506 (1 workers, GPU NVIDIA RTX A1000 de 8 GB)
+19:59:00 [8/21] D56-15-gpu desde 10.11.97.213:63091 (1 workers, GPU NVIDIA RTX A1000 de 8 GB)
+19:59:00 [9/21] D56-06-gpu desde 10.11.97.204:56928 (1 workers, GPU NVIDIA RTX A1000 de 8 GB)
+19:59:00 [10/21] D56-07-gpu desde 10.11.97.205:62521 (1 workers, GPU NVIDIA RTX A1000 de 8 GB)
+19:59:00 [11/21] D56-10-gpu desde 10.11.97.208:55247 (1 workers, GPU NVIDIA RTX A1000 de 8 GB)
+19:59:00 [12/21] D56-01-gpu desde 10.11.97.199:64316 (1 workers, GPU NVIDIA RTX A1000 de 8 GB)
+19:59:00 [13/21] D56-03-gpu desde 10.11.97.201:63637 (1 workers, GPU NVIDIA RTX A1000 de 8 GB)
+19:59:00 [14/21] D56-08-gpu desde 10.11.97.206:59018 (1 workers, GPU NVIDIA RTX A1000 de 8 GB)
+19:59:00 [15/21] D56-17-gpu desde 10.11.97.215:63337 (1 workers, GPU NVIDIA RTX A1000 de 8 GB)
+19:59:00 [16/21] D56-20-gpu desde 10.11.97.218:63694 (1 workers, GPU NVIDIA RTX A1000 de 8 GB)
+19:59:00 [17/21] D56-16-gpu desde 10.11.97.214:52055 (1 workers, GPU NVIDIA RTX A1000 de 8 GB)
+19:59:00 [18/21] D56-21-gpu desde 10.11.97.219:64479 (1 workers, GPU NVIDIA RTX A1000 de 8 GB)
+19:59:00 [19/21] D56-11-gpu desde 10.11.97.209:58473 (1 workers, GPU NVIDIA RTX A1000 de 8 GB)
+19:59:01 [20/21] D56-12-gpu desde 10.11.97.210:62416 (1 workers, GPU NVIDIA RTX A1000 de 8 GB)
+19:59:27 dejo de esperar con 20 de 21 nodos: interrupt signal received
+19:59:27 Ctrl+C: entreno con los 20 de 21 nodos que llegaron
+19:59:49 los 20 nodos tienen sus días (21.9 s); empieza el local SGD
+20:00:17 ronda 1/10: pérdida 0.11636 · validación 0.187728 · 16000 muestras · barrera 28.3 s · promedio 106 ms · 1275.6 MB
+20:00:45 ronda 2/10: pérdida 0.0462034 · validación 0.0828054 · 16000 muestras · barrera 27.8 s · promedio 125 ms · 1275.6 MB
+20:01:13 ronda 3/10: pérdida 0.0403348 · validación 0.0888402 · 16000 muestras · barrera 27.9 s · promedio 107 ms · 1275.6 MB
+20:01:41 ronda 4/10: pérdida 0.0390462 · validación 0.0929033 · 16000 muestras · barrera 27.9 s · promedio 106 ms · 1275.6 MB
+20:02:09 ronda 5/10: pérdida 0.0382395 · validación 0.0874045 · 16000 muestras · barrera 28.0 s · promedio 108 ms · 1275.6 MB
+20:02:38 ronda 6/10: pérdida 0.0376992 · validación 0.0923457 · 16000 muestras · barrera 27.9 s · promedio 104 ms · 1275.6 MB
+20:03:06 ronda 7/10: pérdida 0.037015 · validación 0.0930103 · 16000 muestras · barrera 28.0 s · promedio 103 ms · 1275.6 MB
+20:03:34 ronda 8/10: pérdida 0.0368526 · validación 0.090962 · 16000 muestras · barrera 28.0 s · promedio 104 ms · 1275.6 MB
+20:04:02 ronda 9/10: pérdida 0.0362492 · validación 0.0936437 · 16000 muestras · barrera 28.0 s · promedio 104 ms · 1275.6 MB
+20:04:30 ronda 10/10: pérdida 0.0357624 · validación 0.0926386 · 16000 muestras · barrera 28.0 s · promedio 107 ms · 1275.6 MB
+
+tarea       mapa-20261114-195859 · completa
+manifiesto  http://10.11.97.211:8090/mapa-sint168/manifiesto.json · 168 días · huella sha256:c15063627d7c…
+modelo      7972354 parámetros (31.9 MB) · 10 rondas de 200 pasos · validación SIN-01,SIN-02
+nodos       20 de 21 · bloques de 7 días barajados con la semilla 42
+            D56-004-gpu    10.11.98.202:59506     NVIDIA RTX A1000      14 días      336 muestras  tarea 21.9 s
+            D56-005-gpu    10.11.98.203:56005     NVIDIA RTX A1000      14 días      313 muestras  tarea 21.9 s
+            D56-01-gpu     10.11.97.199:64316     NVIDIA RTX A1000      14 días      336 muestras  tarea 21.8 s
+            D56-02-gpu     10.11.97.200:53714     NVIDIA RTX A1000      14 días      336 muestras  tarea 18.9 s
+            D56-027-gpu    10.11.98.225:57185     NVIDIA RTX A1000       7 días      168 muestras  tarea 1.3 s
+            D56-03-gpu     10.11.97.201:63637     NVIDIA RTX A1000       7 días      168 muestras  tarea 18.3 s
+            D56-06-gpu     10.11.97.204:56928     NVIDIA RTX A1000       7 días      168 muestras  tarea 1.3 s
+            D56-07-gpu     10.11.97.205:62521     NVIDIA RTX A1000       7 días      168 muestras  tarea 18.0 s
+            D56-08-gpu     10.11.97.206:59018     NVIDIA RTX A1000       7 días      168 muestras  tarea 18.7 s
+            D56-10-gpu     10.11.97.208:55247     NVIDIA RTX A1000       7 días      168 muestras  tarea 18.0 s
+            D56-11-gpu     10.11.97.209:58473     NVIDIA RTX A1000       7 días      168 muestras  tarea 16.2 s
+            D56-12-gpu     10.11.97.210:62416     NVIDIA RTX A1000       7 días      168 muestras  tarea 18.9 s
+            D56-14-gpu     10.11.97.212:62008     NVIDIA RTX A1000       7 días      168 muestras  tarea 18.0 s
+            D56-15-gpu     10.11.97.213:63091     NVIDIA RTX A1000       7 días      168 muestras  tarea 18.8 s
+            D56-16-gpu     10.11.97.214:52055     NVIDIA RTX A1000       7 días      168 muestras  tarea 1.3 s
+            D56-17-gpu     10.11.97.215:63337     NVIDIA RTX A1000       7 días      168 muestras  tarea 18.8 s
+            D56-18-gpu     10.11.97.216:53049     NVIDIA RTX A1000       7 días      168 muestras  tarea 18.1 s
+            D56-19-gpu     10.11.97.217:54330     NVIDIA RTX A1000       7 días      168 muestras  tarea 18.1 s
+            D56-20-gpu     10.11.97.218:63694     NVIDIA RTX A1000       7 días      168 muestras  tarea 1.3 s
+            D56-21-gpu     10.11.97.219:64479     NVIDIA RTX A1000       7 días      168 muestras  tarea 18.0 s
+ronda   1   pérdida 0.11636 · validación 0.187728 · barrera 28.29 s · promedio 105.6 ms
+ronda   2   pérdida 0.0462034 · validación 0.0828054 · barrera 27.81 s · promedio 124.9 ms
+ronda   3   pérdida 0.0403348 · validación 0.0888402 · barrera 27.88 s · promedio 106.8 ms
+ronda   4   pérdida 0.0390462 · validación 0.0929033 · barrera 27.90 s · promedio 105.6 ms
+ronda   5   pérdida 0.0382395 · validación 0.0874045 · barrera 27.97 s · promedio 107.9 ms
+ronda   6   pérdida 0.0376992 · validación 0.0923457 · barrera 27.94 s · promedio 103.6 ms
+ronda   7   pérdida 0.037015 · validación 0.0930103 · barrera 28.00 s · promedio 103.4 ms
+ronda   8   pérdida 0.0368526 · validación 0.090962 · barrera 27.98 s · promedio 103.6 ms
+ronda   9   pérdida 0.0362492 · validación 0.0936437 · barrera 27.96 s · promedio 103.7 ms
+ronda  10   pérdida 0.0357624 · validación 0.0926386 · barrera 28.02 s · promedio 107.1 ms
+pesos       pesos_final_20_a64.bin (ronda 10, sha256 bc54f925fa28…)
+→ mapa_gpu_20_a64.json
+
+[exited with code 0]

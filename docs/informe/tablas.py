@@ -59,6 +59,14 @@ COMANDOS = {
     "regimenes.json": "cmd/entrenar",
     "codo.json": "cmd/entrenar -codo",
     "benchmark_kmeans.json": "cmd/benchmark",
+    # PC4: se leen de reports/ y del repositorio, sin copia en generado/.
+    "reports/smoke_lab_*.json": "cmd/smoke",
+    "reports/kmeans_distribuido_*.json": "cmd/distribuido",
+    "reports/kmeans_gpu/*.json": "lab/gpu/kmeans_gpu.py",
+    "reports/mapa/lab_d56_*.json": "cmd/mapa-coord (PR #52)",
+    "reports/alerta_24h.json": "go test ./ventana -run LaVentanaSobreElGold -actualizar",
+    "reports/api_latencia.json": "cmd/carga",
+    "docs/postman/lecturas_prueba.csv": "docs/postman/generar_lecturas.py",
 }
 
 # Reglas de descarte en el orden de la cascada de Go (datos/doc.go, «Reglas»): cada fila descartada
@@ -165,6 +173,24 @@ def tiempo(x) -> str:
     return decimal(x, d)
 
 
+SUPERINDICES = str.maketrans("-0123456789", "⁻⁰¹²³⁴⁵⁶⁷⁸⁹")
+
+
+def cientifica(x, d=1) -> str:
+    """1.33e-15 → «1,3 × 10⁻¹⁵»; con d = 0, «10⁻⁹» si la mantisa es 1. El cero exacto es «0»."""
+    if vacio(x):
+        return "—"
+    x = float(x)
+    if x == 0:
+        return "0"
+    e = math.floor(math.log10(abs(x)))
+    m = x / 10 ** e
+    if round(m, d) >= 10:
+        m, e = m / 10, e + 1
+    potencia = "10" + str(e).translate(SUPERINDICES)
+    return potencia if d == 0 and round(m) == 1 else f"{decimal(m, d)} × {potencia}"
+
+
 def karp_flatt(speedup, p) -> float | None:
     """Fracción serial experimental de Karp y Flatt: e = (1/S − 1/p) / (1 − 1/p)."""
     if not speedup or p is None or p <= 1:
@@ -243,16 +269,25 @@ def markdown(df: pd.DataFrame, alineacion: str | None = None) -> str:
 
 
 # --------------------------------------------------------------------------- salida
+LISTAS = ("placeholders", "sinteticos", "desactualizadas", "faltantes", "problemas")
+
+
 class Informe:
     def __init__(self, entrada: Path, salida: Path, reports: Path):
         self.entrada, self.salida, self.reports = entrada, salida, reports
         self.datos: dict[str, dict] = {}
         self.cifras: dict[str, dict] = {}
-        self.placeholders: list[str] = []
-        self.sinteticos: list[str] = []
-        self.desactualizadas: list[str] = []
-        self.faltantes: list[str] = []
-        self.problemas: list[str] = []
+        # Lo que falta o no cuadra se anota por entregable: lo de la PC4 (ámbito "pc4") no cambia el
+        # estado ni el código de salida del informe de la PC3. main() cambia el ámbito antes de los
+        # métodos de la PC4; las cinco listas de abajo son las del ámbito en curso.
+        self.ambito = "pc3"
+        self._listas = {a: {n: [] for n in LISTAS} for a in ("pc3", "pc4")}
+
+    placeholders = property(lambda self: self._listas[self.ambito]["placeholders"])
+    sinteticos = property(lambda self: self._listas[self.ambito]["sinteticos"])
+    desactualizadas = property(lambda self: self._listas[self.ambito]["desactualizadas"])
+    faltantes = property(lambda self: self._listas[self.ambito]["faltantes"])
+    problemas = property(lambda self: self._listas[self.ambito]["problemas"])
 
     def leer(self, nombre_json: str) -> dict | None:
         ruta = self.entrada / nombre_json
@@ -1481,15 +1516,16 @@ class Informe:
             return []
         return sorted({l[3:] for l in r.stdout.splitlines() if l.strip()})
 
-    def fragmentos(self) -> None:
+    def fragmentos(self, lista: list | None = None) -> None:
         import re
+        lista = self.FRAGMENTOS if lista is None else lista
         # Los fragmentos se leen del árbol de trabajo y el zip de la entrega es un commit (git archive): un
         # archivo con cambios sin commitear daría un fragmento que no está en el código entregado.
-        sucios = self.sin_commitear(sorted({f[2] for f in self.FRAGMENTOS}))
+        sucios = self.sin_commitear(sorted({f[2] for f in lista}))
         if sucios:
             self.desactualizadas.append("código con cambios sin commitear (" + ", ".join(sucios) + "): sus "
                                         "fragmentos no serían los del commit que se entrega")
-        for archivo, ident, ruta, tramos_def, titulo in self.FRAGMENTOS:
+        for archivo, ident, ruta, tramos_def, titulo in lista:
             fuente = RAIZ / ruta
             if not fuente.exists():
                 self.faltantes.append(ruta)
@@ -1509,6 +1545,12 @@ class Informe:
                     elif t[0] == "rango":
                         a = buscar(t[1])
                         tramos.append((a, buscar(t[2], a)))
+                    elif t[0] == "funcion":   # el comentario de documentación y el cuerpo entero
+                        f = buscar(t[1])
+                        c = f
+                        while c > 0 and lineas[c - 1].startswith("//"):
+                            c -= 1
+                        tramos.append((c, self.bloque_go(lineas, f)))
                     else:   # firma: el comentario de documentación y la línea de la firma
                         f = buscar(t[1])
                         c = f
@@ -1528,7 +1570,8 @@ class Informe:
             n = sum(b - a + 1 for a, b in tramos)
             if n > 30:
                 self.problema(ruta, f"el fragmento «{ident}» tiene {n} líneas: ¿cambió el código?")
-            cuerpo = "```go\n" + "\n".join(codigo).rstrip() + "\n```"
+            lenguaje = "lua" if ruta.endswith("redis.go") and "guion" in archivo else "go"
+            cuerpo = f"```{lenguaje}\n" + "\n".join(codigo).rstrip() + "\n```"
             texto = [f"<!-- Generado por tablas.py desde {ruta}. No editar a mano. -->", "",
                      f"::: {{#{ident}}}", cuerpo, "",
                      f"{titulo} (`{ruta}`, líneas {' y '.join(rangos)})", ":::", ""]
@@ -1689,27 +1732,963 @@ class Informe:
         }.items()}
 
     # ----------------------------------------------------------------------- estado y cifras
-    def cerrar(self, estricto: bool, final: bool) -> int:
+    # ======================================================================= PC4
+    # Lo del Entregable 2 se lee directo de reports/ y del repositorio (el contrato, los ejemplos de
+    # datos, el seed, el código): no se copia a generado/. Todo lo que falte o no cuadre queda en el
+    # ámbito "pc4" (ver __init__) y sale en generado/tablas/_estado_pc4.md.
+    PENDIENTE = "[PENDIENTE]"
+
+    def leer_reports(self, relativa: str) -> dict | None:
+        ruta = self.reports / relativa
+        if not ruta.exists():
+            self.faltantes.append(f"reports/{relativa}")
+            return None
+        return json.loads(ruta.read_text(encoding="utf-8"))
+
+    def pendientes(self, grupo: str, claves: list[str]) -> None:
+        """Cifras de un archivo que todavía no existe: la prosa las muestra como [PENDIENTE], a la vista."""
+        self.cifras[grupo] = {k: self.PENDIENTE for k in claves}
+
+    def gold_del_modelo(self) -> str | None:
+        return ((self.datos.get("kmeans.json") or {}).get("gold") or {}).get("sha256")
+
+    # ----------------------------------------------------------------------- distribución
+    def smoke(self) -> None:
+        """reports/smoke_lab_N.json (cmd/smoke): la barrera de una ronda con N nodos del laboratorio."""
+        o = "reports/smoke_lab_*.json"
+        titulo = "La barrera de una ronda medida en el laboratorio: rondas de latido con todos los nodos a la vez"
+        claves = ["nodos", "nodos_lista", "rondas", "workers", "fecha", "p50", "p95", "max", "latido_p50_min",
+                  "latido_p50_max", "equipos", "p50_menor", "nodos_menor"]
+        rutas = sorted(self.reports.glob("smoke_lab_*.json"))
+        if not rutas:
+            self.faltantes.append(o)
+            self.tabla("smoke_lab.md", o, None, "tbl-smoke", titulo)
+            self.pendientes("smoke", claves)
+            return
+        corridas = []
+        for ruta in rutas:
+            d = json.loads(ruta.read_text(encoding="utf-8"))
+            nombre_json = f"reports/{ruta.name}"
+            nodos, b = d.get("nodos", []), d.get("barrera", {})
+            self.comprobar(nombre_json, bool(d.get("ok")), "el smoke test no terminó bien (ok = false)")
+            self.comprobar(nombre_json, d.get("nodos_conectados") == d.get("nodos_esperados") == len(nodos),
+                           "los nodos conectados no son los esperados")
+            self.comprobar(nombre_json, b.get("n") == d.get("rondas") and all(n["latido"]["n"] == d.get("rondas") for n in nodos),
+                           "no todos los nodos respondieron todas las rondas")
+            # La barrera de una ronda espera al último PONG: ningún percentil suyo puede ser menor que
+            # el del latido de un nodo.
+            self.comprobar(nombre_json, all(b.get(q, 0) >= n["latido"][q] - 1e-9 for n in nodos for q in ("p50_ms", "p95_ms", "max_ms")),
+                           "la barrera es menor que el latido de algún nodo")
+            self.comprobar(nombre_json, len({n["nodo"] for n in nodos}) == len(nodos), "hay nombres de nodo repetidos")
+            corridas.append((len(nodos), d))
+        corridas.sort(key=lambda c: c[0])
+        self.comprobar(o, len({n for n, _ in corridas}) == len(corridas), "hay dos corridas con el mismo número de nodos")
+
+        def latidos(d):
+            ps = [n["latido"]["p50_ms"] for n in d["nodos"]]
+            return f"{tiempo(min(ps))}–{tiempo(max(ps))}"
+
+        t = pd.DataFrame([(
+            entero(n), entero(d["rondas"]), tiempo(d["barrera"]["p50_ms"]), tiempo(d["barrera"]["p95_ms"]),
+            tiempo(d["barrera"]["max_ms"]), latidos(d), lista([x["workers"] for x in d["nodos"]]), fecha(d.get("fecha")),
+        ) for n, d in corridas], columns=["Nodos", "Rondas", "Barrera p50 (ms)", "Barrera p95 (ms)", "Barrera máx. (ms)",
+                                           "Latido p50 por nodo (ms)", "Workers por nodo", "Fecha"])
+        n_max, mayor = corridas[-1]
+        n_min, menor = corridas[0]
+        equipos = sorted({x["nodo"] for _, d in corridas for x in d["nodos"]})
+        redes = sorted({".".join(x["direccion"].split(".")[:3]) for _, d in corridas for x in d["nodos"]})
+        self.tabla("smoke_lab.md", o, mayor, "tbl-smoke", titulo, markdown(t, "rrrrrrrl"), anchos=[10, 10, 12, 12, 12, 16, 12, 16],
+                   fuente="Fuente: " + ", ".join(f"`reports/{r.name}`" for r in rutas) + ", escritos por `cmd/smoke`.",
+                   nota="Cada ronda manda un `PING` a todos los nodos a la vez (`protocolo.Latido`) y espera el último `PONG`: es la "
+                        "barrera de una iteración sin el cómputo del nodo. «Latido p50 por nodo» es el menor y el mayor entre los "
+                        f"nodos de la corrida. Nodos: los equipos {', '.join(f'`{e}`' for e in equipos)} del laboratorio "
+                        f"(red {', '.join(r + '.0/24' for r in redes)}), con el coordinador en la laptop de desarrollo.")
+        ps = [x["latido"]["p50_ms"] for x in mayor["nodos"]]
+        self.cifras["smoke"] = {
+            "nodos": entero(n_max), "nodos_lista": lista([n for n, _ in corridas]), "rondas": entero(mayor["rondas"]),
+            "workers": lista([x["workers"] for x in mayor["nodos"]]), "fecha": fecha(mayor.get("fecha")),
+            "p50": tiempo(mayor["barrera"]["p50_ms"]), "p95": tiempo(mayor["barrera"]["p95_ms"]),
+            "max": tiempo(mayor["barrera"]["max_ms"]), "latido_p50_min": tiempo(min(ps)), "latido_p50_max": tiempo(max(ps)),
+            "equipos": entero(len(equipos)), "p50_menor": tiempo(menor["barrera"]["p50_ms"]), "nodos_menor": entero(n_min),
+        }
+
+    @staticmethod
+    def es_loopback(d: dict) -> bool:
+        return all(str(n.get("direccion", "")).startswith(("127.", "[::1]", "localhost")) for n in d.get("nodos", []))
+
+    def distribuido(self) -> None:
+        """reports/kmeans_distribuido_*.json (cmd/distribuido): el K-Means sobre el clúster frente a cmd/entrenar."""
+        o = "reports/kmeans_distribuido_*.json"
+        titulo = "K-Means distribuido frente al de una sola máquina: mismo gold, misma semilla y mismo arranque"
+        claves = ["corridas", "nodos_lista", "nodos_max", "iteraciones", "dif_max", "bit_a_bit_con", "tolerancia", "fecha",
+                  "ronda_p50_1", "ronda_p50_max", "fusion_p50_max", "replicas_max", "filas_max", "ronda_p50_replicas",
+                  "nodos_replicas", "workers", "lab"]
+        rutas = sorted(self.reports.glob("kmeans_distribuido_*.json"))
+        if not rutas:
+            self.faltantes.append(o)
+            self.tabla("kmeans_distribuido.md", o, None, "tbl-distribuido", titulo)
+            self.pendientes("distribuido", claves)
+            return
+        filas = []
+        for ruta in rutas:
+            d = json.loads(ruta.read_text(encoding="utf-8"))
+            nj = f"reports/{ruta.name}"
+            nodos, g, ref = d.get("nodos", []), d.get("gold", {}), d.get("referencia") or {}
+            self.revisar_entrada(nj, g.get("ruta"))
+            self.comprobar(nj, len(nodos) == d.get("nodos_esperados"), "corrió con menos nodos de los esperados")
+            self.comprobar(nj, d.get("huella") == "sha256:" + str(g.get("sha256")), "la huella no es el sha256 del gold")
+            if self.gold_del_modelo():
+                self.comprobar(nj, g.get("sha256") == self.gold_del_modelo(), "no es el gold de kmeans.json")
+            # Los rangos cubren la tabla en orden, sin huecos ni solapes (cluster.Repartir).
+            desde = 0
+            for n in nodos:
+                self.comprobar(nj, n["rango"]["desde"] == desde and n["filas"] == n["rango"]["hasta"] - n["rango"]["desde"],
+                               f"el rango de {n['nodo']} no continúa al anterior")
+                desde = n["rango"]["hasta"]
+            self.comprobar(nj, desde == g.get("filas_tabla") == g.get("replicas", 1) * g.get("n", 0),
+                           "los rangos no cubren la tabla (réplicas × filas del gold)")
+            tams = [n["filas"] for n in nodos] or [0]
+            self.comprobar(nj, max(tams) - min(tams) <= 1, "los rangos difieren en más de una fila")
+            self.comprobar(nj, len(d.get("ms_ronda_por_iteracion", [])) == d.get("iteraciones"),
+                           "no hay un tiempo de ronda por iteración")
+            self.comprobar(nj, sum(d.get("tamanos", [])) == g.get("filas_tabla"), "los tamaños de los clusters no suman la tabla")
+            self.comprobar(nj, bool(ref.get("comparable")), "no se pudo comparar con reports/kmeans.json")
+            self.comprobar(nj, bool(ref.get("mismas_iteraciones")) and bool(ref.get("dentro_de_tolerancia")),
+                           "el modelo distribuido NO coincide con el de cmd/entrenar dentro de la tolerancia")
+            if len(nodos) == 1 and g.get("replicas", 1) == 1:
+                self.comprobar(nj, bool(ref.get("bit_a_bit")), "con un nodo el modelo no es el de cmd/entrenar bit a bit")
+            filas.append((d, ruta.name))
+        filas.sort(key=lambda f: (not self.es_loopback(f[0]), f[0]["gold"].get("replicas", 1), len(f[0]["nodos"])))
+
+        def frente(ref):
+            if ref.get("bit_a_bit"):
+                return "bit a bit"
+            return f"dentro de {cientifica(ref.get('tolerancia'), 0)}" if ref.get("dentro_de_tolerancia") else "FUERA DE TOLERANCIA"
+
+        t = pd.DataFrame([(
+            "loopback" if self.es_loopback(d) else "laboratorio", entero(len(d["nodos"])), entero(d["gold"].get("replicas", 1)),
+            entero(d["gold"]["filas_tabla"]), entero(d["iteraciones"]), frente(d.get("referencia") or {}),
+            cientifica((d.get("referencia") or {}).get("dif_max_centroides")), tiempo(d["ms_ronda"]["p50"]),
+            tiempo(d["ms_fusion"]["p50"]), tiempo(d["ms"]["lloyd"]),
+        ) for d, _ in filas], columns=["Dónde", "Nodos", "Réplicas", "Filas", "Iter.", "Frente a `cmd/entrenar`",
+                                       "Dif. máx. de centroides", "Ronda p50 (ms)", "Fusión p50 (ms)", "Lloyd (ms)"])
+        locales = [d for d, _ in filas if self.es_loopback(d)]
+        lab = [d for d, _ in filas if not self.es_loopback(d)]
+        nota = ("«Iter.» son las iteraciones hasta converger. «Frente a `cmd/entrenar`» compara los centroides con `reports/kmeans.json`: bit a bit, o la mayor diferencia "
+                "absoluta en el espacio estandarizado. «Ronda» es la barrera de red de una iteración (del primer `ITERAR` al último "
+                "`PARCIAL`) y «Fusión», lo que el coordinador hace después. ")
+        if locales:
+            m = locales[0].get("metadatos") or {}
+            nota += (f"Las corridas «loopback» ({fecha(m.get('momento'))}, commit `{str(m.get('commit'))[:7]}`) tienen el coordinador "
+                     f"y todos los nodos en la laptop de desarrollo ({m.get('cpus_logicas')} CPU lógicas), con "
+                     f"{lista([n['workers'] for d in locales for n in d['nodos']])} workers por nodo: comprueban el protocolo de punta "
+                     "a punta y el determinismo, no el rendimiento de un clúster. ")
+        if not lab:
+            nota += ("En `reports/` no hay corridas del K-Means distribuido sobre los equipos del laboratorio: allí se midió la "
+                     "barrera con el smoke test (@tbl-smoke).")
+        self.tabla("kmeans_distribuido.md", o, filas[0][0], "tbl-distribuido", titulo, markdown(t, "lrrrrlrrrr"),
+                   anchos=[11, 9, 11, 10, 7, 14, 12, 9, 9, 8],
+                   fuente="Fuente: " + ", ".join(f"`reports/{n}`" for _, n in filas) + ", escritos por `cmd/distribuido`.", nota=nota)
+        base = [d for d in (locales or lab) if d["gold"].get("replicas", 1) == 1]
+        con_r = [d for d in (locales or lab) if d["gold"].get("replicas", 1) > 1]
+        uno = next((d for d in base if len(d["nodos"]) == 1), None)
+        mas = max(base, key=lambda d: len(d["nodos"]), default=None)
+        rep = max(con_r, key=lambda d: d["gold"]["replicas"], default=None)
+        todas = [d for d, _ in filas]
+        self.cifras["distribuido"] = {
+            "corridas": entero(len(filas)),
+            "nodos_lista": lista([len(d["nodos"]) for d in todas]),
+            "nodos_max": entero(max(len(d["nodos"]) for d in todas)),
+            "iteraciones": lista([d["iteraciones"] for d in todas]),
+            "dif_max": cientifica(max((d.get("referencia") or {}).get("dif_max_centroides", 0) for d in todas)),
+            "bit_a_bit_con": lista([len(d["nodos"]) for d in todas if (d.get("referencia") or {}).get("bit_a_bit")]),
+            "tolerancia": cientifica((todas[0].get("referencia") or {}).get("tolerancia"), 0),
+            "fecha": fecha((todas[0].get("metadatos") or {}).get("momento")),
+            "ronda_p50_1": tiempo(uno["ms_ronda"]["p50"]) if uno else "—",
+            "ronda_p50_max": tiempo(mas["ms_ronda"]["p50"]) if mas else "—",
+            "fusion_p50_max": tiempo(mas["ms_fusion"]["p50"]) if mas else "—",
+            "replicas_max": entero(rep["gold"]["replicas"]) if rep else "—",
+            "filas_max": entero(rep["gold"]["filas_tabla"]) if rep else "—",
+            "ronda_p50_replicas": tiempo(rep["ms_ronda"]["p50"]) if rep else "—",
+            "nodos_replicas": entero(len(rep["nodos"])) if rep else "—",
+            "workers": lista([n["workers"] for d in (locales or lab) for n in d["nodos"]]),
+            "lab": "sí" if lab else "no",
+        }
+
+    def gpu(self) -> None:
+        """reports/kmeans_gpu/*.json (lab/gpu/kmeans_gpu.py): el mismo K-Means en la GPU de los PC del laboratorio."""
+        o = "reports/kmeans_gpu/*.json"
+        titulo = "El mismo K-Means en la GPU de los equipos del laboratorio (experimento aparte, no es parte del sistema)"
+        claves = ["equipos", "dispositivo", "dif_fp64", "dif_fp32", "ms_iter_1", "ms_iter_max", "replicas_max", "filas_max"]
+        rutas = sorted((self.reports / "kmeans_gpu").glob("*.json"))
+        if not rutas:
+            self.faltantes.append(o)
+            self.tabla("kmeans_gpu.md", o, None, "tbl-gpu", titulo)
+            self.pendientes("gpu", claves)
+            return
+        ds = [json.loads(r.read_text(encoding="utf-8")) for r in rutas]
+        modelo = self.datos.get("kmeans.json") or {}
+        for d in ds:
+            nj = f"reports/kmeans_gpu/kmeans_gpu_{d.get('equipo')}.json"
+            self.comprobar(nj, bool(d.get("mismo_gold_que_go")), "no corrió con el gold de Go")
+            if modelo:
+                self.comprobar(nj, d.get("go", {}).get("iteraciones") == modelo.get("iteraciones")
+                               and d.get("go", {}).get("inercia") == modelo.get("inercia"), "su referencia no es reports/kmeans.json")
+        replicas = sorted({v["replicas"] for d in ds for v in d["velocidad"]})
+        r_max = replicas[-1]
+
+        def rango(xs, fmt=tiempo):
+            xs = list(xs)
+            return fmt(min(xs)) if fmt(min(xs)) == fmt(max(xs)) else f"{fmt(min(xs))}–{fmt(max(xs))}"
+
+        def velocidad(prec, suma, r):
+            return [v["ms_por_iteracion"] for d in ds for v in d["velocidad"]
+                    if (v["precision"], v["suma"], v["replicas"]) == (prec, suma, r)]
+
+        filas = []
+        configs = sorted({(c["precision"], c["suma"]) for d in ds for c in d["convergencia"]}, key=lambda c: (c[0] != "float64", c[1] != "matmul"))
+        for prec, suma in configs:
+            cs = [c for d in ds for c in d["convergencia"] if (c["precision"], c["suma"]) == (prec, suma)]
+            filas.append((prec, "producto de matrices" if suma == "matmul" else "suma atómica", lista([c["iteraciones"] for c in cs]),
+                          cientifica(max(c["dif_max_centroides_go"] for c in cs)),
+                          "sí" if all(c["repetible_bit_a_bit"] for c in cs) else "no",
+                          rango(velocidad(prec, suma, 1)), rango(velocidad(prec, suma, r_max))))
+        t = pd.DataFrame(filas, columns=["Precisión", "Suma por cluster", "Iteraciones", "Dif. máx. de centroides frente a Go",
+                                         "Repetible bit a bit", "ms por iteración, ×1", f"ms por iteración, ×{entero(r_max)}"])
+        equipos = sorted(d["equipo"] for d in ds)
+        self.tabla("kmeans_gpu.md", o, ds[0], "tbl-gpu", titulo, markdown(t, "llrrlrr"), anchos=[13, 16, 13, 18, 12, 14, 14],
+                   fuente="Fuente: " + ", ".join(f"`reports/kmeans_gpu/{r.name}`" for r in rutas) + ", escritos por `lab/gpu/kmeans_gpu.py`.",
+                   nota=f"Equipos {', '.join(f'`{e}`' for e in equipos)}, cada uno con una {ds[0].get('dispositivo')} "
+                        f"(PyTorch {ds[0].get('torch')}). Lloyd desde el mismo arranque que `cmd/entrenar` (semilla "
+                        f"{modelo.get('semilla', '¿?')}), comparado con `reports/kmeans.json`. Los tiempos son el menor y el mayor entre "
+                        f"los equipos; ×{entero(r_max)} es el gold repetido {entero(r_max)} veces "
+                        f"({entero(max(v['filas'] for d in ds for v in d['velocidad']))} filas).")
+
+        def dif(prec):
+            return cientifica(max(c["dif_max_centroides_go"] for d in ds for c in d["convergencia"] if c["precision"] == prec))
+
+        self.cifras["gpu"] = {
+            "equipos": entero(len(ds)), "dispositivo": str(ds[0].get("dispositivo")), "dif_fp64": dif("float64"), "dif_fp32": dif("float32"),
+            "ms_iter_1": rango(velocidad("float64", "matmul", 1)), "ms_iter_max": rango(velocidad("float64", "matmul", r_max)),
+            "replicas_max": entero(r_max), "filas_max": entero(max(v["filas"] for d in ds for v in d["velocidad"])),
+        }
+
+    def mapa_gpu(self) -> None:
+        """reports/mapa/lab_d56_*.json (cmd/mapa-coord, PR #52): local SGD en las GPU del laboratorio D56.
+
+        Las corridas usan DATOS SINTÉTICOS a propósito (miden el clúster, no el aire): no se anotan como
+        «sintéticos» del informe, que es la guarda contra entregar la muestra como si fueran los datos;
+        la tabla y la prosa lo dicen a la vista.
+        """
+        from statistics import median
+        o = "reports/mapa/lab_d56_*.json"
+        titulo = ("Experimento de laboratorio, fuera del sistema y con DATOS SINTÉTICOS: una red convolucional entrenada con local SGD "
+                  "en las GPU del laboratorio, con el coordinador en Go")
+        claves = ["corridas", "nodos", "gpu", "vram_gb", "parametros", "parametros_millones", "mb_por_ronda", "mb_por_nodo", "fecha",
+                  "dias", "lote", "promedio_ms", "h_menor", "h_mayor", "rondas_menor", "rondas_mayor", "barrera_s_menor",
+                  "barrera_s_mayor", "computo_s_menor", "computo_s_mayor", "red_s_menor", "red_s_mayor", "pct_red_menor",
+                  "pct_red_mayor", "muestras_s_menor", "muestras_s_mayor", "veces_menor", "veces_mayor", "dispersion_computo",
+                  "total_min_menor", "total_min_mayor"]
+        rutas = sorted((self.reports / "mapa").glob("lab_d56_*.json"))
+        if not rutas:
+            self.faltantes.append(o)
+            self.tabla("mapa_gpu.md", o, None, "tbl-mapa-gpu", titulo)
+            self.pendientes("mapa", claves)
+            return
+        corridas = []
+        for ruta in rutas:
+            d = json.loads(ruta.read_text(encoding="utf-8"))
+            nj = f"reports/mapa/{ruta.name}"
+            nodos, rondas, n_par, lote = d["nodos"], d["rondas"], d["parametros"], d["hiper"]["lote"]
+            self.comprobar(nj, d.get("estado") == "completa" and len(rondas) == d.get("rondas_pedidas"), "la corrida no terminó todas sus rondas")
+            self.comprobar(nj, all(len(r["nodos"]) == len(nodos) for r in rondas), "alguna ronda no tiene a todos los nodos")
+            # Por ronda cruzan la red un PESOS y un LOCAL por nodo, de n parámetros float32 cada uno.
+            self.comprobar(nj, all(r["bytes"] == 2 * len(nodos) * n_par * 4 for r in rondas), "los bytes por ronda no son 2 × nodos × parámetros × 4")
+            self.comprobar(nj, all(r["muestras"] == len(nodos) * d["pasos"] * lote for r in rondas), "las muestras por ronda no son nodos × pasos × lote")
+            self.comprobar(nj, all(x.get("rezagados", 0) == 0 for x in nodos), "hubo mensajes rezagados")
+            self.comprobar(nj, "sint" in str(d["manifiesto"].get("fuente", "")) or "sintetico" in ruta.name,
+                           "no está marcada como corrida con datos sintéticos: revisar cómo se presenta en el informe")
+            # Medianas sin la primera ronda (carga los datos en la GPU y calienta) cuando hay más de una.
+            rs = rondas[1:] if len(rondas) > 1 else rondas
+            barrera = median(r["ms_barrera"] for r in rs) / 1000
+            computo = median(max(x["ms_computo"] for x in r["nodos"]) for r in rs) / 1000
+            red = median(r["ms_barrera"] - max(x["ms_computo"] for x in r["nodos"]) for r in rs) / 1000
+            ritmo = median(r["muestras"] / ((r["ms_barrera"] + r["ms_promedio"]) / 1000) for r in rs)
+            # Lo que rinde un nodo mientras calcula: sus muestras de la ronda sobre su propio cómputo.
+            ritmo_nodo = median(x["muestras"] / (x["ms_computo"] / 1000) for r in rs for x in r["nodos"])
+            cs = [median(x["ms_computo"] for r in rs for x in r["nodos"] if x["nodo"] == n["nodo"]) for n in nodos]
+            corridas.append({"d": d, "h": d["pasos"], "rondas": len(rondas), "nodos": len(nodos), "barrera": barrera, "computo": computo,
+                             "red": red, "ritmo": ritmo, "veces": ritmo / ritmo_nodo, "promedio": median(r["ms_promedio"] for r in rs),
+                             "dispersion": (max(cs) - min(cs)) / min(cs), "perdida": (rondas[0]["perdida"], rondas[-1]["perdida"])})
+        corridas.sort(key=lambda c: c["h"])
+        d0 = corridas[0]["d"]
+        self.comprobar(o, len({(c["nodos"], c["d"]["parametros"], c["d"]["manifiesto"]["huella"]) for c in corridas}) == 1,
+                       "las corridas no son comparables (otros nodos, otra red u otros datos)")
+        t = pd.DataFrame([(
+            entero(c["nodos"]), entero(c["h"]), entero(c["rondas"]), entero(c["d"]["rondas"][0]["muestras"]), decimal(c["barrera"], 1),
+            decimal(c["computo"], 1), f"{decimal(c['red'], 1)} ({pct(c['red'] / c['barrera'], 1)})", entero(c["ritmo"]),
+            f"{decimal(c['veces'], 1)}×", decimal(c["d"]["ms"]["total"] / 60000, 1),
+        ) for c in corridas], columns=["Nodos", "H (pasos por ronda)", "Rondas", "Muestras por ronda", "Barrera (s)",
+                                       "Cómputo (s)", "Red y espera (s)", "Muestras por s",
+                                       "Frente a un nodo", "Total (min)"])
+        gpus = sorted({x["gpu"] for c in corridas for x in c["d"]["nodos"]})
+        self.tabla("mapa_gpu.md", o, d0, "tbl-mapa-gpu", titulo, markdown(t, "rrrrrrrrrr"), anchos=[9, 10, 10, 11, 10, 10, 12, 11, 9, 8],
+                   fuente="Fuente: " + ", ".join(f"`reports/mapa/{r.name}`" for r in rutas) + f", escritos por `cmd/mapa-coord` "
+                          f"({fecha(d0['metadatos'].get('momento'))}); el código está en la PR #52, sin fusionar.",
+                   nota=f"**Datos sintéticos** de tamaño nacional ({entero(d0['manifiesto']['dias'])} días): las corridas miden el clúster, no "
+                        f"el aire. Nodos: {entero(corridas[0]['nodos'])} equipos del laboratorio D56, cada uno con una {', '.join(gpus)}, "
+                        f"que entrenan en Python con PyTorch una red de {entero(d0['parametros'])} parámetros (lote {d0['hiper']['lote']}). "
+                        "Por ronda, cada nodo recibe los pesos (`PESOS`), entrena H pasos con sus datos y los devuelve (`LOCAL`); el coordinador "
+                        "espera a todos (la barrera) y promedia en orden de nodo. Barrera, cómputo y red son medianas por ronda, sin la primera. "
+                        "«Cómputo» es el del nodo más lento de la ronda; «Red y espera», la barrera menos ese cómputo, con su porcentaje "
+                        "sobre la barrera. «Frente a un nodo» divide las muestras por segundo del clúster entre las de un nodo mientras calcula (sus muestras sobre su propio "
+                        "cómputo).")
+        a, b = corridas[0], corridas[-1]
+        self.cifras["mapa"] = {
+            "corridas": entero(len(corridas)), "nodos": entero(a["nodos"]), "gpu": ", ".join(gpus),
+            "vram_gb": lista([x["vram_gb"] for x in d0["nodos"]]), "parametros": entero(d0["parametros"]),
+            "parametros_millones": decimal(d0["parametros"] / 1e6, 1), "mb_por_ronda": decimal(d0["rondas"][0]["bytes"] / 1e6, 0),
+            "mb_por_nodo": decimal(d0["parametros"] * 4 / 1e6, 0), "fecha": fecha(d0["metadatos"].get("momento")),
+            "dias": entero(d0["manifiesto"]["dias"]), "lote": entero(d0["hiper"]["lote"]), "promedio_ms": decimal(a["promedio"], 0),
+            "h_menor": entero(a["h"]), "h_mayor": entero(b["h"]), "rondas_menor": entero(a["rondas"]), "rondas_mayor": entero(b["rondas"]),
+            "barrera_s_menor": decimal(a["barrera"], 1), "barrera_s_mayor": decimal(b["barrera"], 1),
+            "computo_s_menor": decimal(a["computo"], 1), "computo_s_mayor": decimal(b["computo"], 1),
+            "red_s_menor": decimal(a["red"], 1), "red_s_mayor": decimal(b["red"], 1),
+            "pct_red_menor": pct(a["red"] / a["barrera"], 0), "pct_red_mayor": pct(b["red"] / b["barrera"], 1),
+            "muestras_s_menor": entero(a["ritmo"]), "muestras_s_mayor": entero(b["ritmo"]),
+            "veces_menor": decimal(a["veces"], 1), "veces_mayor": decimal(b["veces"], 1),
+            "dispersion_computo": pct(a["dispersion"], 1),
+            "total_min_menor": decimal(a["d"]["ms"]["total"] / 60000, 1), "total_min_mayor": decimal(b["d"]["ms"]["total"] / 60000, 1),
+        }
+
+    # Salidas en texto de corridas reales (docs/informe/capturas/pc4/*.txt, de la sesión de evidencias):
+    # (archivo .md, id, .txt, tramos, título). Un tramo es ("orden", patrón, n): el bloque que empieza en la
+    # línea «$ …» que cumple el patrón, hasta n líneas; o ("cola", n): las últimas n líneas. Con "tabla" al
+    # final, la salida es una tabla de columnas alineadas más ancha que la página: se le quita un espacio
+    # a cada separación de columnas, en todas las filas por igual, hasta que quepa.
+    SALIDAS = [
+        ("salida_compose", "lst-salida-compose", "compose-ps.txt", [("orden", r"compose .* ps", 10, "tabla"), ("orden", r"api/salud", 8)],
+         "`docker compose up --scale nodo=3`: los servicios sanos, los tres nodos y el seed terminado"),
+        ("salida_nodos", "lst-salida-nodos", "entrenamiento.txt", [("orden", r"api/cluster/nodos", 9)],
+         "`GET /api/cluster/nodos`: los nodos del pool tal como los ve el coordinador (primeras líneas)"),
+        ("salida_entrenamiento", "lst-salida-entrenamiento", "entrenamiento.txt",
+         [("orden", r"-X POST localhost:8080/api/entrenamientos", 4), ("orden", r"api/entrenamientos/e-", 28)],
+         "Un entrenamiento distribuido por la API: el 202 con el id y el detalle al terminar (primeras líneas)"),
+        ("salida_carga", "lst-salida-carga", "carga.txt", [("cola", 22, "tabla")],
+         "`cmd/carga`: latencia de la predicción con 1, 4, 16 y 64 clientes a la vez"),
+        ("salida_newman", "lst-salida-newman", "newman-coleccion.txt", [("cola", 20)],
+         "`newman` sobre las carpetas 1 a 3 de la colección de Postman: resumen de la corrida"),
+        ("salida_newman_csv", "lst-salida-newman-csv", "newman-runner-csv.txt", [("cola", 20)],
+         "`newman` con los datos de prueba (`lecturas_prueba.csv`): resumen de la corrida"),
+        ("salida_mongo", "lst-salida-mongo", "mongo.txt",
+         [("orden", r"countDocuments", 7), ("orden", r"db\.predicciones\.find", 21)],
+         "MongoDB después de las pruebas: documentos por colección y la última predicción de una estación"),
+        ("salida_mongo_modelos", "lst-salida-mongo-modelos", "mongo.txt", [("orden", r"db\.modelos\.find\(\{\}", 28)],
+         "MongoDB: los modelos guardados y cuál está activo"),
+        ("salida_redis", "lst-salida-redis", "redis.txt",
+         [("orden", r"--scan --pattern modelo", 3), ("orden", r"--scan --pattern entrenamiento", 5),
+          ("orden", r"GET estacion:CA-HU-04", 3), ("orden", r"GET entrenamiento:", 3)],
+         "Redis después de las pruebas: las claves, el estado de una estación y un punto de control"),
+        ("salida_metricas", "lst-salida-metricas", "metricas.txt", [("orden", r"api/metricas", 26)],
+         "`GET /api/metricas`: percentiles por ruta medidos dentro del servidor (primeras líneas)"),
+    ]
+
+    def salidas(self) -> None:
+        import re
+        carpeta = AQUI / "capturas" / "pc4"
+        ancho = 86
+
+        def juntar(bloque):
+            """Estrecha una tabla de texto: cada tramo de dos o más espacios pierde uno, en todas las filas."""
+            for _ in range(8):
+                # Solo cuentan las filas de la tabla (las que tienen columnas separadas por espacios).
+                if max((len(l) for l in bloque if not l.startswith("$ ") and re.search(r"\S {2,}\S", l)), default=0) <= ancho:
+                    break
+                nuevo = [l if l.startswith("$ ") else re.sub(r" {2,}", lambda m: m.group(0)[1:], l) for l in bloque]
+                if nuevo == bloque:
+                    break
+                bloque = nuevo
+            return bloque
+
+        for archivo, ident, txt, tramos, titulo in self.SALIDAS:
+            ruta, destino = carpeta / txt, self.salida / f"{archivo}.md"
+            origen = f"docs/informe/capturas/pc4/{txt}"
+            if not ruta.exists():
+                self.faltantes.append(origen)
+                destino.write_text("\n".join([
+                    f"<!-- Generado por tablas.py desde {origen}. No editar a mano. -->", "",
+                    "::: {.callout-warning title=\"PENDIENTE\"}",
+                    f"Falta `{origen}`: la salida en texto de la corrida real, que llega con las evidencias de la PC4.", ":::", "",
+                    f"::: {{#{ident}}}", "```text", "(salida pendiente)", "```", "", titulo, ":::", ""]), encoding="utf-8")
+                continue
+            lineas = ruta.read_text(encoding="utf-8").splitlines()
+            cuerpo = []
+            for t in tramos:
+                if t[0] == "cola":
+                    bloque = [l for l in lineas if l.strip()][-t[1]:]
+                else:
+                    ini = next((i for i, l in enumerate(lineas) if l.startswith("$ ") and re.search(t[1], l)), None)
+                    if ini is None:
+                        self.problema(origen, f"no se encontró la orden «{t[1]}»: ¿cambió la salida?")
+                        continue
+                    fin = next((i for i in range(ini + 1, len(lineas)) if lineas[i].startswith("$ ")), len(lineas))
+                    bloque = [l for l in lineas[ini:fin] if l.strip()]
+                    if len(bloque) > t[2]:
+                        bloque = bloque[:t[2]] + ["…"]
+                if t[-1] == "tabla":
+                    bloque = juntar(bloque)
+                # Una línea más ancha que la página se parte con «\» al final, como en la terminal.
+                for l in bloque:
+                    while len(l) > ancho:
+                        corte = l.rfind(" ", 0, ancho)
+                        corte = corte if corte > ancho // 2 else ancho
+                        cuerpo.append(l[:corte] + " \\")
+                        l = "    " + l[corte:].lstrip()
+                    cuerpo.append(l)
+                cuerpo.append("")
+            destino.write_text("\n".join([
+                f"<!-- Generado por tablas.py desde {origen}. No editar a mano. -->", "",
+                f"::: {{#{ident}}}", "```text", "\n".join(cuerpo).rstrip(), "```", "",
+                f"{titulo} (salida real, `{origen}`)", ":::", ""]), encoding="utf-8")
+
+    # ----------------------------------------------------------------------- API
+    def alerta(self) -> None:
+        """reports/alerta_24h.json (go test ./ventana -actualizar): por qué la alerta sale de la media de 24 h."""
+        o = "reports/alerta_24h.json"
+        titulo = "Qué acertaría cada señal como alerta, sobre las horas del gold con media de 24 horas calculable"
+        claves = ["horas_calculables", "horas_sobre_eca", "pct_sobre_eca", "regimen_horas", "regimen_precision", "regimen_recall",
+                  "horaria_horas", "horaria_precision", "horaria_recall", "minimo_lecturas", "ventana_horas", "eca_pm2_5", "eca_pm10",
+                  "inca_buena", "inca_moderada", "inca_mala", "inca_umbral"]
+        d = self.leer_reports("alerta_24h.json")
+        if d is None:
+            self.tabla("alerta_24h.md", o, None, "tbl-alerta", titulo)
+            self.pendientes("alerta", claves)
+            return
+        calc, sobre = d["horas_calculables"], d["horas_sobre_eca"]
+        alto, hor = d.get("regimen_alto") or {}, d["lectura_horaria"]
+        if self.gold_del_modelo():
+            self.comprobar(o, d["gold"]["sha256"] == self.gold_del_modelo(), "no se calculó sobre el gold de kmeans.json")
+        self.comprobar(o, sum(d["inca"].values()) == calc, "las bandas del INCA no suman las horas calculables")
+        self.comprobar(o, 0 < sobre <= calc <= d["gold"]["filas"], "horas sobre el ECA, calculables y del gold fuera de orden")
+        for nombre_s, s_ in (("régimen alto", alto), ("lectura horaria", hor)):
+            self.comprobar(o, bool(s_) and 0 < s_["aciertos"] <= min(s_["horas"], sobre), f"los aciertos de «{nombre_s}» no cuadran")
+        regs = self.datos.get("regimenes.json") or {}
+        exceden = [r.get("cluster", r.get("regimen")) for r in regs.get("regimenes", []) if r.get("eca") == "excede"]
+        if exceden and alto:
+            self.comprobar(o, exceden == [alto.get("regimen")], "el régimen alto no es el que excede el ECA en regimenes.json")
+
+        def fila(nombre_s, s_):
+            return (nombre_s, entero(s_["horas"]), entero(s_["aciertos"]), pct(s_["aciertos"] / s_["horas"], 0), pct(s_["aciertos"] / sobre, 0))
+
+        t = pd.DataFrame([
+            fila("La lectura cae en el régimen alto del K-Means", alto) if alto else ("El régimen alto", "—", "—", "—", "—"),
+            fila("La lectura horaria supera el umbral del ECA", hor),
+            ("La media de 24 h de la estación supera el ECA (la regla de la API)", entero(sobre), entero(sobre), "100 %", "100 %"),
+        ], columns=["Señal", "Horas con la señal", "De esas, con la media de 24 h sobre el ECA", "Precisión", "Recall"])
+        self.tabla("alerta_24h.md", o, d, "tbl-alerta", titulo, markdown(t, "lrrrr"), anchos=[40, 14, 22, 12, 12],
+                   fuente="Fuente: `reports/alerta_24h.json`, escrito por `go test ./ventana -run LaVentanaSobreElGold -actualizar`.",
+                   nota=f"De las {entero(d['gold']['filas'])} horas del gold, {entero(calc)} tienen al menos {d['minimo_lecturas']} "
+                        f"lecturas de su estación en las {d['ventana_horas']} horas que terminan en ella; en {entero(sobre)} "
+                        f"({pct(sobre / calc)}) esa media supera el ECA (PM2,5 > {decimal(d['eca_pm2_5'], 0)} o PM10 > "
+                        f"{decimal(d['eca_pm10'], 0)} µg/m³). Precisión: de las horas con la señal, cuántas tienen la media sobre el "
+                        "ECA. Recall: de las horas con la media sobre el ECA, cuántas tienen la señal. La última fila es la regla "
+                        "misma, no una medición.")
+        self.cifras["alerta"] = {
+            "horas_calculables": entero(calc), "horas_sobre_eca": entero(sobre), "pct_sobre_eca": pct(sobre / calc),
+            "regimen_horas": entero(alto.get("horas")), "regimen_precision": pct(alto["aciertos"] / alto["horas"], 0) if alto else "—",
+            "regimen_recall": pct(alto["aciertos"] / sobre, 0) if alto else "—",
+            "horaria_horas": entero(hor["horas"]), "horaria_precision": pct(hor["aciertos"] / hor["horas"], 0),
+            "horaria_recall": pct(hor["aciertos"] / sobre, 0),
+            "minimo_lecturas": entero(d["minimo_lecturas"]), "ventana_horas": entero(d["ventana_horas"]),
+            "eca_pm2_5": decimal(d["eca_pm2_5"], 0), "eca_pm10": decimal(d["eca_pm10"], 0),
+            "inca_buena": entero(d["inca"].get("buena", 0)), "inca_moderada": entero(d["inca"].get("moderada", 0)),
+            "inca_mala": entero(d["inca"].get("mala", 0)), "inca_umbral": entero(d["inca"].get("umbral_de_cuidado", 0)),
+        }
+
+    def api_latencia(self) -> None:
+        """reports/api_latencia.json (cmd/carga): latencia de POST /api/predicciones por nivel de concurrencia."""
+        o = "reports/api_latencia.json"
+        titulo = "Latencia de `POST /api/predicciones` medida del lado del cliente, por nivel de concurrencia"
+        claves = ["clientes_lista", "clientes_max", "pedidos_por_nivel", "pedidos_total", "limite_ms", "p50_1", "p99_1", "p50_max",
+                  "p95_max", "p99_max", "p99_peor", "max_peor", "clientes_peor", "errores", "sobre_el_limite", "pedidos_por_s_max",
+                  "lecturas", "cumple", "fecha", "escrituras_aceptadas", "escrituras_descartadas", "escrituras_fallidas",
+                  "escritas_mongo", "escritas_redis", "lotes_mongo", "lotes_redis", "por_lote_mongo"]
+        d = self.leer_reports("api_latencia.json")
+        if d is None:
+            self.tabla("api_latencia.md", o, None, "tbl-api-latencia", titulo)
+            self.pendientes("api_latencia", claves)
+            return
+        par, niveles = d.get("parametros", {}), sorted(d.get("niveles", []), key=lambda n: n["clientes"])
+        limite = par.get("limite_ms", 100)
+        self.comprobar(o, bool(niveles), "no trae ningún nivel de concurrencia")
+        if not niveles:
+            self.tabla("api_latencia.md", o, None, "tbl-api-latencia", titulo)
+            self.pendientes("api_latencia", claves)
+            return
+        for n in niveles:
+            c = n["clientes"]
+            self.comprobar(o, n["p50_ms"] <= n["p95_ms"] <= n["p99_ms"] <= n["max_ms"], f"los percentiles con {c} clientes no están en orden")
+            self.comprobar(o, n.get("errores", 0) == 0, f"hubo {n.get('errores')} pedidos con error con {c} clientes")
+            self.comprobar(o, n.get("respuestas_distintas", 0) == 0, f"{n.get('respuestas_distintas')} respuestas con otro régimen con {c} clientes")
+            self.comprobar(o, n["p99_ms"] < limite, f"el p99 con {c} clientes ({tiempo(n['p99_ms'])} ms) no baja de {limite} ms")
+        self.comprobar(o, bool(d.get("cumple")) == all(n.get("cumple") for n in niveles), "«cumple» no es el de todos los niveles")
+        if par.get("ruta"):
+            self.comprobar(o, "/api/predicciones" in str(par["ruta"]), "no midió POST /api/predicciones")
+        # Lo que la API escribió en cada almacén durante la corrida (GET /api/metricas antes y después): la
+        # predicción responde antes de escribir, así que la latencia sola no dice si los registros llegaron.
+        esc = d.get("escrituras") or {}
+        almacenes = {a: esc.get(a) or {} for a in ("mongo", "redis")}
+        self.comprobar(o, bool(esc.get("medido")), "no trae el bloque de escrituras (lo escrito en cada almacén durante la corrida)")
+        if esc.get("medido"):
+            aceptadas = esc.get("predicciones_aceptadas", 0)
+            self.comprobar(o, aceptadas == sum(n["pedidos"] for n in niveles) + par.get("calentamiento", 0) * len(niveles),
+                           "las predicciones aceptadas no son los pedidos medidos más los de calentamiento")
+            for a, x in almacenes.items():
+                self.comprobar(o, x.get("escritas", 0) + x.get("descartadas", 0) + x.get("fallidas", 0) == aceptadas,
+                               f"en {a}, escritas + descartadas + fallidas no suman las predicciones aceptadas")
+        t = pd.DataFrame([(
+            entero(n["clientes"]), entero(n["pedidos"]), entero(n.get("errores", 0)), tiempo(n["p50_ms"]), tiempo(n["p95_ms"]),
+            tiempo(n["p99_ms"]), tiempo(n["max_ms"]), entero(n.get("pedidos_por_segundo")), entero(n.get("sobre_el_limite", 0)),
+        ) for n in niveles], columns=["Clientes a la vez", "Pedidos", "Errores", "p50 (ms)", "p95 (ms)", "p99 (ms)", "Máx. (ms)",
+                                       "Pedidos por segundo", f"Pedidos de {limite} ms o más"])
+        m = d.get("metadatos") or {}
+        self.tabla("api_latencia.md", o, d, "tbl-api-latencia", titulo, markdown(t, "rrrrrrrrr"), anchos=[11, 11, 11, 10, 10, 10, 10, 13, 14],
+                   fuente=f"Fuente: `reports/api_latencia.json`, escrito por `cmd/carga` ({fecha(m.get('momento'))}, commit "
+                          f"`{str(m.get('commit'))[:7]}`).",
+                   nota=f"Contra `{par.get('url', '¿?')}`, con las {entero(par.get('filas'))} lecturas de `{par.get('lecturas', '¿?')}` "
+                        f"en ronda y {entero(par.get('calentamiento'))} pedidos de calentamiento por nivel, que no se miden. "
+                        "La latencia de un pedido va desde antes de enviarlo hasta tener el cuerpo de la respuesta: incluye la red, el "
+                        "JWT y el JSON. Percentiles por rango más cercano sobre los pedidos que respondieron 200. "
+                        + (f"Durante la corrida la API aceptó {entero(esc.get('predicciones_aceptadas'))} predicciones (con el "
+                           f"calentamiento): MongoDB escribió {entero(almacenes['mongo'].get('escritas'))} "
+                           f"({entero(almacenes['mongo'].get('descartadas'))} descartadas, {entero(almacenes['mongo'].get('fallidas'))} fallidas) "
+                           f"y Redis, {entero(almacenes['redis'].get('escritas'))} ({entero(almacenes['redis'].get('descartadas'))} descartadas, "
+                           f"{entero(almacenes['redis'].get('fallidas'))} fallidas), según `GET /api/metricas` antes y después."
+                           if esc.get("medido") else "El archivo no registra lo escrito en cada almacén durante la corrida."))
+        primero, ultimo = niveles[0], niveles[-1]
+        peor = max(niveles, key=lambda n: n["p99_ms"])
+        self.cifras["api_latencia"] = {
+            "clientes_lista": lista([n["clientes"] for n in niveles]), "clientes_max": entero(ultimo["clientes"]),
+            "pedidos_por_nivel": entero(par.get("pedidos_por_nivel", primero["pedidos"])),
+            "pedidos_total": entero(sum(n["pedidos"] for n in niveles)), "limite_ms": entero(limite),
+            "p50_1": tiempo(primero["p50_ms"]), "p99_1": tiempo(primero["p99_ms"]), "p50_max": tiempo(ultimo["p50_ms"]),
+            "p95_max": tiempo(ultimo["p95_ms"]), "p99_max": tiempo(ultimo["p99_ms"]), "p99_peor": tiempo(peor["p99_ms"]),
+            "max_peor": tiempo(max(n["max_ms"] for n in niveles)), "clientes_peor": entero(peor["clientes"]),
+            "errores": entero(sum(n.get("errores", 0) for n in niveles)),
+            "sobre_el_limite": entero(sum(n.get("sobre_el_limite", 0) for n in niveles)),
+            "pedidos_por_s_max": entero(max(n.get("pedidos_por_segundo", 0) for n in niveles)),
+            "lecturas": entero(par.get("filas")), "cumple": "sí" if d.get("cumple") else "no", "fecha": fecha(m.get("momento")),
+            "escrituras_aceptadas": entero(esc.get("predicciones_aceptadas")),
+            "escrituras_descartadas": entero(sum(x.get("descartadas", 0) for x in almacenes.values())) if esc.get("medido") else "—",
+            "escrituras_fallidas": entero(sum(x.get("fallidas", 0) for x in almacenes.values())) if esc.get("medido") else "—",
+            "escritas_mongo": entero(almacenes["mongo"].get("escritas")), "escritas_redis": entero(almacenes["redis"].get("escritas")),
+            "lotes_mongo": entero(almacenes["mongo"].get("lotes")), "lotes_redis": entero(almacenes["redis"].get("lotes")),
+            "por_lote_mongo": decimal(almacenes["mongo"]["escritas"] / almacenes["mongo"]["lotes"], 1)
+            if almacenes["mongo"].get("lotes") else "—",
+        }
+
+    def api_rutas(self) -> None:
+        """docs/api/openapi.yaml contra las rutas que registra api/servidor.go: el contrato es el del código."""
+        import re
+        o = "docs/api/openapi.yaml"
+        titulo = "Rutas de la API: el contrato OpenAPI, que la API sirve en `/openapi.yaml` y Swagger UI muestra en `/docs`"
+        ruta_c, ruta_s = RAIZ / o, RAIZ / "api" / "servidor.go"
+        if not ruta_c.exists() or not ruta_s.exists():
+            self.faltantes.append(o if not ruta_c.exists() else "api/servidor.go")
+            self.tabla("api_rutas.md", o, None, "tbl-api-rutas", titulo)
+            self.pendientes("api", ["rutas", "libres", "admin", "usuario"])
+            return
+        # El contrato está escrito a mano con dos espacios de sangría: ruta, método y sus campos.
+        ops, camino, op = [], None, None
+        for linea in ruta_c.read_text(encoding="utf-8").splitlines():
+            if linea.startswith("components:"):
+                break
+            if m := re.match(r"^  (/\S*):\s*$", linea):
+                camino = m.group(1)
+            elif (m := re.match(r"^    (get|post|put|patch|delete):\s*$", linea)) and camino:
+                op = {"metodo": m.group(1).upper(), "ruta": camino, "roles": None, "libre": False, "resumen": ""}
+                ops.append(op)
+            elif op is not None:
+                if m := re.match(r"^      summary:\s*(.+)$", linea):
+                    op["resumen"] = m.group(1).strip().strip("'\"")
+                elif m := re.match(r"^      x-roles:\s*\[(.*)\]", linea):
+                    op["roles"] = [r.strip() for r in m.group(1).split(",")]
+                elif re.match(r"^      security:\s*\[\]", linea):
+                    op["libre"] = True
+        codigo = {}
+        for m in re.finditer(r's\.ruta\("(\w+) (\S+)", (nil|cualquiera|\[\]string\{RolAdmin\})', ruta_s.read_text(encoding="utf-8")):
+            codigo[(m.group(1), m.group(2))] = {"nil": None, "cualquiera": ["usuario", "admin"]}.get(m.group(3), ["admin"])
+        self.comprobar(o, {(x["metodo"], x["ruta"]) for x in ops} == set(codigo),
+                       "las rutas del contrato no son las que registra api/servidor.go")
+        for x in ops:
+            esperado = codigo.get((x["metodo"], x["ruta"]), "?")
+            if x["ruta"] == "/ws":     # se autentica dentro del handler (el navegador no manda Authorization)
+                continue
+            self.comprobar(o, (x["roles"] or None) == esperado and x["libre"] == (esperado is None),
+                           f"el acceso de {x['metodo']} {x['ruta']} en el contrato no es el del código")
+
+        def acceso(x):
+            return "libre" if not x["roles"] else " o ".join(x["roles"])
+
+        t = pd.DataFrame([(f"`{x['metodo']} {x['ruta']}`", x["resumen"], acceso(x)) for x in ops],
+                         columns=["Método y ruta", "Qué hace", "Acceso"])
+        self.tabla("api_rutas.md", o, {}, "tbl-api-rutas", titulo, markdown(t, "lll"), anchos=[34, 48, 18],
+                   fuente="Fuente: `docs/api/openapi.yaml` (el texto de «Qué hace» es el `summary` de cada operación; el acceso, su "
+                          "`x-roles`), comprobado contra las rutas que registra `api/servidor.go`.",
+                   nota="«libre»: sin token. En las demás hace falta un JWT con alguno de esos roles; sin token la respuesta es "
+                        "401 y con otro rol, 403.")
+        self.cifras["api"] = {
+            "rutas": entero(len(ops)), "libres": entero(sum(1 for x in ops if not x["roles"])),
+            "admin": entero(sum(1 for x in ops if x["roles"] == ["admin"])),
+            "usuario": entero(sum(1 for x in ops if x["roles"] and "usuario" in x["roles"])),
+        }
+
+    # ----------------------------------------------------------------------- bases de datos
+    COLECCIONES = [   # colección, archivo de ejemplo, qué guarda, quién la escribe (docs/datos/README.md)
+        ("estaciones", "estaciones.json", "El catálogo de estaciones: el código OEFA y su ficha", "El seed, desde la ficha"),
+        ("predicciones", "predicciones.json", "Una por lectura predicha: la lectura, su régimen, la media de 24 h, la alerta y el INCA",
+         "La API, por lotes"),
+        ("modelos", "modelos.json", "Cada modelo, con lo necesario para volver a predecir con él; a lo sumo uno activo",
+         "La API al arrancar y al activar un modelo"),
+        ("entrenamientos", "entrenamientos.json", "Cada corrida distribuida: parámetros, nodos con su rango, rondas y resultado",
+         "El coordinador de la API"),
+        ("eventos_cluster", "eventos_cluster.json", "Altas, bajas y errores de los nodos", "El coordinador de la API"),
+    ]
+    CLAVES = [        # clave, archivo de ejemplo, para qué
+        ("estacion:{id}:regimen", "redis-estacion-regimen.json",
+         "El estado de la estación en su lectura más reciente; lo lee `GET /api/estaciones/{id}/regimen`"),
+        ("modelo:activo", "redis-modelo-activo.json", "El modelo activo, para arrancar con él sin esperar a MongoDB"),
+        ("entrenamiento:{id}:punto", "redis-entrenamiento-punto.json",
+         "Punto de control: la iteración y los centroides de la última ronda completa"),
+    ]
+
+    @staticmethod
+    def campos(doc: dict, omitir=("_id",)) -> str:
+        """Los campos de un documento de ejemplo; los de un subdocumento (o del primero de un arreglo), entre llaves."""
+        partes = []
+        for k, v in doc.items():
+            if k in omitir:
+                continue
+            hijo = v[0] if isinstance(v, list) and v and isinstance(v[0], dict) else v
+            if isinstance(hijo, dict) and hijo and k != "ms_por_nodo":
+                dentro = ", ".join(hijo)
+                partes.append(f"`{k}` [{{{dentro}}}]" if isinstance(v, list) else f"`{k}` {{{dentro}}}")
+            else:
+                partes.append(f"`{k}`")
+        return ", ".join(partes)
+
+    def entidades(self) -> None:
+        """docs/datos/ejemplos/ y docs/datos/seed.js: las colecciones de MongoDB, sus índices y las claves de Redis."""
+        import csv
+        import re
+        o = "docs/datos/ejemplos/"
+        t_mongo = "Entidades de MongoDB: las cinco colecciones de la base `aire_distribuido`"
+        t_redis = "Entidades de Redis: las tres familias de claves, cada una con un valor JSON"
+        dir_ej, seed = RAIZ / "docs" / "datos" / "ejemplos", RAIZ / "docs" / "datos" / "seed.js"
+        ejemplos = {}
+        for _, archivo, *_ in self.COLECCIONES + self.CLAVES:
+            if (dir_ej / archivo).exists():
+                ejemplos[archivo] = json.loads((dir_ej / archivo).read_text(encoding="utf-8"))
+            else:
+                self.faltantes.append(f"{o}{archivo}")
+        if len(ejemplos) < len(self.COLECCIONES) + len(self.CLAVES) or not seed.exists():
+            if not seed.exists():
+                self.faltantes.append("docs/datos/seed.js")
+            self.tabla("entidades_mongo.md", o, None, "tbl-entidades-mongo", t_mongo)
+            self.tabla("claves_redis.md", o, None, "tbl-claves-redis", t_redis)
+            self.pendientes("datos", ["colecciones", "claves", "indices", "estaciones", "estaciones_sin_gold"])
+            return
+        js = seed.read_text(encoding="utf-8")
+        indices = {}
+        for m in re.finditer(r"database\.(\w+)\.createIndex\(\s*\{([^}]*)\},\s*\{\s*name:\s*\"(\w+)\"\s*\},?\s*\)", js, re.S):
+            campos_i = ", ".join(c.split(":")[0].strip() for c in m.group(2).split(",") if c.strip())
+            indices.setdefault(m.group(1), []).append(f"`{m.group(3)}` ({campos_i})")
+        del_seed = re.search(r"const colecciones = \[(.*?)\];", js, re.S)
+        del_seed = set(re.findall(r'"(\w+)"', del_seed.group(1))) if del_seed else set()
+        self.comprobar("docs/datos/seed.js", del_seed == {c[0] for c in self.COLECCIONES},
+                       "las colecciones que crea el seed no son las del informe")
+        self.comprobar("docs/datos/seed.js", set(indices) <= del_seed, "hay un índice sobre una colección que el seed no crea")
+        redis_go = (RAIZ / "almacen" / "redis" / "redis.go").read_text(encoding="utf-8") if (RAIZ / "almacen" / "redis" / "redis.go").exists() else ""
+        for trozo in ('"modelo:activo"', '"estacion:"', '":regimen"', '"entrenamiento:"', '":punto"'):
+            self.comprobar("almacen/redis/redis.go", trozo in redis_go, f"ya no arma la clave con {trozo}")
+        # Un régimen de la caché es el estado de una predicción: sus campos tienen que estar en ella.
+        self.comprobar(o, set(ejemplos["redis-estacion-regimen.json"]) <= set(ejemplos["predicciones.json"]),
+                       "el régimen por estación trae campos que la predicción no tiene")
+        self.comprobar(o, ejemplos["redis-modelo-activo.json"] == ejemplos["modelos.json"],
+                       "el ejemplo de modelo:activo no es el documento de modelos")
+        t = pd.DataFrame([(f"`{col}`", que, self.campos(ejemplos[archivo]), ", ".join(indices.get(col, ["—"])), quien)
+                          for col, archivo, que, quien in self.COLECCIONES],
+                         columns=["Colección", "Qué guarda", "Campos (además de `_id`)", "Índices", "Quién la escribe"])
+        self.tabla("entidades_mongo.md", o, {}, "tbl-entidades-mongo", t_mongo, markdown(t, "lllll"), anchos=[21, 16, 33, 15, 15],
+                   fuente="Fuente: los documentos de ejemplo de `docs/datos/ejemplos/` (los campos) y `docs/datos/seed.js` (los índices, con "
+                          "su nombre y, entre paréntesis, sus campos).",
+                   nota="Entre llaves, los campos de un subdocumento; con corchetes, los de cada elemento de un arreglo. Las pruebas "
+                        "`TestLosDocumentosTienenLosCamposDeSusEjemplos` (`almacen` y `almacen/mongo`) fallan si un documento que escribe "
+                        "la API deja de tener exactamente los campos de su ejemplo.")
+        t = pd.DataFrame([(f"`{clave}`", self.campos(ejemplos[archivo]) if clave != "modelo:activo"
+                           else "El documento de `modelos`, completo", para) for clave, archivo, para in self.CLAVES],
+                         columns=["Clave", "Campos del valor", "Para qué"])
+        self.tabla("claves_redis.md", o, {}, "tbl-claves-redis", t_redis, markdown(t, "lll"), anchos=[25, 37, 38],
+                   fuente="Fuente: los valores de ejemplo de `docs/datos/ejemplos/redis-*.json`; las claves las arma `almacen/redis/redis.go`.",
+                   nota="Ninguna clave vence: son pocas (una por estación y una por entrenamiento) y el régimen de una estación es su "
+                        "única copia.")
+        ficha = self.reports / "estaciones_ficha.csv"
+        n_est = n_gold = None
+        if ficha.exists():
+            with ficha.open(encoding="utf-8-sig", newline="") as f:
+                filas_f = list(csv.DictReader(f))
+            n_est = len(filas_f)
+            n_gold = sum(1 for r in filas_f if str(r.get("filas_gold", "0")).strip() not in ("", "0", "0.0"))
+            lim = self.datos.get("limpieza.json") or {}
+            if lim.get("estaciones"):
+                self.comprobar("reports/estaciones_ficha.csv", n_est == len(lim["estaciones"]),
+                               "la ficha no tiene las estaciones de limpieza.json")
+        else:
+            self.faltantes.append("reports/estaciones_ficha.csv")
+        self.cifras["datos"] = {
+            "colecciones": entero(len(self.COLECCIONES)), "claves": entero(len(self.CLAVES)),
+            "indices": entero(sum(len(v) for v in indices.values())),
+            "estaciones": entero(n_est) if n_est is not None else self.PENDIENTE,
+            "estaciones_gold": entero(n_gold) if n_gold is not None else self.PENDIENTE,
+        }
+
+    # ----------------------------------------------------------------------- evidencias
+    def datos_prueba(self) -> None:
+        """docs/postman/lecturas_prueba.csv: los datos de prueba de Postman y de cmd/carga."""
+        o = "docs/postman/lecturas_prueba.csv"
+        titulo = "Datos de prueba: lecturas reales con la respuesta que la API tiene que dar"
+        claves = ["lecturas", "casos", "estaciones", "regimenes"]
+        ruta = RAIZ / o
+        if not ruta.exists():
+            self.faltantes.append(o)
+            self.tabla("datos_prueba.md", o, None, "tbl-datos-prueba", titulo)
+            self.pendientes("datos_prueba", claves)
+            return
+        df = pd.read_csv(ruta)
+        necesarias = {"caso", "estacion", "fecha_hora", "pm2_5", "pm10", "regimen_esperado"}
+        if not necesarias <= set(df.columns):
+            self.problema(o, "no tiene las columnas " + ", ".join(sorted(necesarias - set(df.columns))))
+            self.tabla("datos_prueba.md", o, None, "tbl-datos-prueba", titulo)
+            self.pendientes("datos_prueba", claves)
+            return
+        self.revisar_estaciones(o, df["estacion"].unique())
+        regs = {r.get("cluster", r.get("regimen")) for r in (self.datos.get("regimenes.json") or {}).get("regimenes", [])}
+        if regs:
+            self.comprobar(o, set(df["regimen_esperado"].unique()) <= regs, "espera un régimen que el modelo no tiene")
+        con_alerta = "alerta_esperada" in df.columns
+
+        def rango(xs):
+            return f"{decimal(xs.min(), 1)}–{decimal(xs.max(), 1)}"
+
+        filas = []
+        for caso, g in df.groupby("caso", sort=False):
+            filas.append((escapar(str(caso)), entero(len(g)), entero(g["estacion"].nunique()), lista(g["regimen_esperado"].unique()),
+                          rango(g["pm2_5"]), rango(g["pm10"]),
+                          entero((g["alerta_esperada"].astype(str).str.lower() == "true").sum()) if con_alerta else "—"))
+        t = pd.DataFrame(filas, columns=["Caso", "Lecturas", "Estaciones", "Régimen esperado", "PM2,5 (µg/m³)", "PM10 (µg/m³)",
+                                         "Con alerta esperada"])
+        self.tabla("datos_prueba.md", o, {}, "tbl-datos-prueba", titulo, markdown(t, "lrrrrrr"), anchos=[19, 12, 13, 13, 15, 15, 13],
+                   fuente=f"Fuente: `{o}`.",
+                   nota="Cada fila del archivo es una lectura real (estación, fecha y hora, PM2,5 y PM10) con el régimen que el modelo "
+                        "tiene que asignarle" + (" y, donde aplica, la media de 24 h, la alerta y la banda INCA esperadas" if con_alerta else "")
+                        + ". Lo usan el Runner de Postman y `cmd/carga`.")
+        self.cifras["datos_prueba"] = {
+            "lecturas": entero(len(df)), "casos": entero(df["caso"].nunique()), "estaciones": entero(df["estacion"].nunique()),
+            "regimenes": lista(df["regimen_esperado"].unique()),
+        }
+
+    PAQUETES_PC4 = [   # paquete, qué comprueban sus pruebas
+        ("protocolo", "Mensajes y codificación, la barrera de una ronda con su plazo, la fusión en orden de nodo y el parcial rezagado"),
+        ("cluster", "El nodo, la espera de nodos, el reparto de rangos, Lloyd sobre el clúster (bit a bit con un nodo, con tolerancia "
+                    "con varios, un nodo caído) y el pool"),
+        ("cmd/distribuido", "El coordinador de línea de comandos de punta a punta, con nodos reales por TCP"),
+        ("cmd/nodo", "El comando del nodo"),
+        ("cmd/smoke", "El smoke test del clúster"),
+        ("modelo", "Sembrar el modelo desde `reports/` y predecir: casos fijos del gold y el ejemplo del contrato"),
+        ("ventana", "La media de 24 horas: ventana, lecturas desordenadas, mínimo de lecturas, ECA e INCA, concurrencia"),
+        ("api", "Rutas y errores, JWT, métricas, el escritor por colas, el coordinador de entrenamientos, el hub y el WebSocket, CORS"),
+        ("almacen", "La ficha de estaciones y los documentos frente a sus ejemplos"),
+        ("almacen/memoria", "El doble en memoria que usan las pruebas y el CI"),
+        ("almacen/mongo", "MongoDB real: colecciones, índices del seed, un solo modelo activo, el ciclo de un entrenamiento"),
+        ("almacen/redis", "Redis real: el régimen que no retrocede, escritores concurrentes, modelo activo y punto de control"),
+        ("cmd/api", "El arranque, el apagado en orden, los almacenes reales y el coordinador con nodos reales"),
+    ]
+
+    def pruebas_pc4(self) -> None:
+        """Las pruebas de los paquetes de la PC4, contadas del código (func Test…)."""
+        import re
+        o = "los archivos _test.go de cluster/, protocolo/, api/, almacen/, modelo/, ventana/ y cmd/"
+        titulo = "Pruebas automáticas de los paquetes del Entregable 2"
+        filas, total, integ_total = [], 0, 0
+        for paquete, que in self.PAQUETES_PC4:
+            carpeta = RAIZ / paquete
+            archivos = sorted(carpeta.glob("*_test.go")) if carpeta.is_dir() else []
+            if not archivos:
+                self.problema(paquete, "no tiene pruebas (¿cambió la estructura del repositorio?)")
+                continue
+            n = integ = 0
+            for a in archivos:
+                texto = a.read_text(encoding="utf-8")
+                k = len(re.findall(r"^func Test\w+\(t \*testing\.T\)", texto, re.M))
+                if re.search(r"^//go:build .*\bintegracion\b", texto, re.M):
+                    integ += k
+                else:
+                    n += k
+            total, integ_total = total + n, integ_total + integ
+            filas.append((f"`{paquete}`", que, entero(n) if n else "—", entero(integ) if integ else "—"))
+        todas = sum(len(re.findall(r"^func Test\w+\(t \*testing\.T\)", a.read_text(encoding="utf-8"), re.M))
+                    for a in RAIZ.rglob("*_test.go") if ".claude" not in a.parts and "node_modules" not in a.parts)
+        t = pd.DataFrame(filas, columns=["Paquete", "Qué comprueban", "Pruebas", "De integración"])
+        self.tabla("pruebas_pc4.md", o, {}, "tbl-pruebas-pc4", titulo, markdown(t, "llrr"), anchos=[18, 58, 11, 13],
+                   fuente="Fuente: las funciones `Test…` de los archivos `_test.go` de cada paquete, contadas del código en cada render.",
+                   nota="«De integración» son las que llevan la etiqueta de compilación `integracion`: corren contra el MongoDB y el "
+                        "Redis del Compose (`go test -race -tags integracion ./almacen/... ./cmd/api/`), no en la integración continua, que "
+                        "usa el doble en memoria.")
+        self.cifras["pruebas"] = {"pc4": entero(total), "pc4_integracion": entero(integ_total), "paquetes_pc4": entero(len(filas)),
+                                  "repo": entero(todas)}
+
+    # Constantes del código que la prosa cita: se leen del código en cada render, para que el informe no
+    # diga un valor que el código ya cambió. (clave, archivo, patrón con un grupo, cómo se escribe).
+    CONSTANTES = [
+        ("ventana_horas", "ventana/ventana.go", r"Duracion = (\d+) \* time\.Hour", entero),
+        ("minimo_lecturas", "ventana/ventana.go", r"MinimoLecturas = (\d+)", entero),
+        ("lecturas_guardadas", "ventana/ventana.go", r"Guardadas = (\d+)", entero),
+        ("max_lote", "api/escritor.go", r"maxLote = (\d+)", entero),
+        ("plazo_escritura_s", "api/escritor.go", r"plazoEscritura = (\d+) \* time\.Second", entero),
+        ("plazo_vaciado_s", "api/escritor.go", r"plazoVaciado = (\d+) \* time\.Second", entero),
+        ("max_pm", "api/rutas.go", r"maxPM\s+= (\d+)", entero),
+        ("max_estacion", "api/rutas.go", r"maxEstacion = (\d+)", entero),
+        ("limite_cuerpo_kib", "api/servidor.go", r"limiteCuerpo = (\d+) << 10", entero),
+        ("jwt_secreto_bytes", "api/jwt.go", r"largoMinimoSecreto = (\d+)", entero),
+        ("cubetas_por_octava", "api/metricas.go", r"cubetasPorOctava = (\d+)", entero),
+        ("ws_bufer_cliente", "api/hub.go", r"buferCliente: (\d+)", entero),
+        ("ws_ping_s", "api/hub.go", r"cadaPing: (\d+) \* time\.Second", entero),
+        ("ws_pong_s", "api/hub.go", r"plazoPong: (\d+) \* time\.Second", entero),
+        ("tolerancia", "cluster/lloyd.go", r"const Tolerancia = (\S+)", lambda x: cientifica(x, 0)),
+        ("chunk", "cluster/nodo.go", r"ChunkPorOmision = (\d+)", entero),
+        ("max_filas_nodo", "cluster/nodo.go", r"MaxFilasPorOmision = ([\d_]+)", entero),
+        ("version_protocolo", "protocolo/mensaje.go", r"const Version = (\d+)", entero),
+        ("max_linea_mib", "protocolo/codec.go", r"const MaxLinea = (\d+) << 20", entero),
+        ("puerto_http", "cmd/api/main.go", r'"addr", ":(\d+)"', str),
+        ("puerto_nodos", "cmd/api/main.go", r'"nodos-addr", ":(\d+)"', str),
+        ("cola_por_omision", "cmd/api/main.go", r'"cola", (\d+),', entero),
+        ("latido_s", "cmd/api/main.go", r'"latido", (\d+)\*time\.Second', entero),
+        ("plazo_hola_s", "cmd/api/main.go", r'"plazo-hola", (\d+)\*time\.Second', entero),
+        ("plazo_carga_s", "cmd/api/main.go", r'"plazo-carga", (\d+)\*time\.Second', entero),
+        ("plazo_ronda_s", "cmd/api/main.go", r'"plazo-ronda", (\d+)\*time\.Second', entero),
+        ("plazo_latido_s", "cluster/pool.go", r"op\.PlazoLatido = (\d+) \* time\.Second", entero),
+        ("espera_nodo_s", "cmd/nodo/main.go", r'"espera", (\d+)\*time\.Second', entero),
+        ("cola_compose", "docker-compose.yml", r'"-cola", "(\d+)"', entero),
+        ("gracia_compose_s", "docker-compose.yml", r"stop_grace_period: (\d+)s", entero),
+        ("mongo_imagen", "docker-compose.yml", r"image: (mongo:[\w.\-]+)", str),
+        ("redis_imagen", "docker-compose.yml", r"image: (redis:[\w.\-]+)", str),
+        ("go", "go.mod", r"^go (\S+)", str),
+        ("driver_mongo", "go.mod", r"(go\.mongodb\.org/mongo-driver/v2 v\S+)", str),
+        ("driver_redis", "go.mod", r"(github\.com/redis/go-redis/v9 v\S+)", str),
+        ("swagger_ui", "api/rutas.go", r"swagger-ui-dist@([\d.]+)/swagger-ui-bundle", str),
+    ]
+
+    def constantes_pc4(self) -> None:
+        import re
+        valores = {}
+        for clave, archivo, patron, fmt in self.CONSTANTES:
+            ruta = RAIZ / archivo
+            m = re.search(patron, ruta.read_text(encoding="utf-8"), re.M) if ruta.exists() else None
+            if m is None:
+                self.problema(archivo, f"no se encontró la constante «{clave}»: ¿cambió el código?")
+                valores[clave] = self.PENDIENTE
+                continue
+            crudo = m.group(1).replace("_", "") if fmt is not str else m.group(1)
+            valores[clave] = fmt(float(crudo)) if fmt is not str else crudo
+        # El modelo sembrado y el tamaño de la tabla, de los JSON de la PC3 que la API lee al arrancar.
+        modelo = self.datos.get("kmeans.json") or {}
+        if modelo:
+            n, k, dim = modelo["gold"]["n"], modelo["k"], modelo["gold"]["d"]
+            valores |= {"filas_gold": entero(n), "k": entero(k), "features": entero(dim),
+                        "inercia": decimal(modelo["inercia"], 2), "iteraciones": entero(modelo["iteraciones"]),
+                        # Lo que viaja por ronda y por nodo en binario: k·D centroides de ida, k·D sumas, k conteos y la inercia de vuelta.
+                        "numeros_por_ronda": entero(2 * k * dim + k + 1)}
+        self.cifras["pc4"] = valores
+
+    FRAGMENTOS_PC4 = [
+        ("frag_repartir", "lst-repartir", "cluster/reparto.go",
+         [("rango", r"^\tbase, resto := n/k, n%k", r"^\treturn rangos, nil")],
+         "Repartir: rangos contiguos que difieren a lo sumo en una fila, en orden de nodo"),
+        ("frag_ronda", "lst-ronda", "protocolo/coordinador.go",
+         [("rango", r"^\tparciales := make\(\[\]Mensaje", r"^\treturn parciales, nil")],
+         "La barrera de una ronda: una goroutine por nodo, un WaitGroup y los parciales en orden de nodo"),
+        ("frag_esperar", "lst-esperar", "protocolo/coordinador.go",
+         [("rango", r"^\t\tswitch \{", r"ErrProtocolo, m\.Iter, e\.ultimaIter\)")],
+         "Mientras se espera el PARCIAL de una ronda: se descartan los PONG sueltos y los parciales rezagados"),
+        ("frag_lloyd", "lst-lloyd", "cluster/lloyd.go",
+         [("bloque", r"^\tfor it := 1; it <= op\.MaxIter; it\+\+ \{")],
+         "Lloyd sobre el clúster: ronda, fusión en orden de nodo, cierre de la iteración y aviso a quien la sigue"),
+        ("frag_nodo_iterar", "lst-nodo-iterar", "cluster/nodo.go",
+         [("funcion", r"^func \(n \*Nodo\) iterar\(")],
+         "El nodo ante un ITERAR: el parcial de su rango, con su propio pool de workers"),
+        ("frag_pool_tomar", "lst-pool-tomar", "cluster/pool.go",
+         [("rango", r"^\tp\.latir\(\)$", r"^\treturn ms, nil")],
+         "Tomar: un entrenamiento se lleva n nodos libres del pool, ordenados por nombre"),
+        ("frag_semaforo", "lst-semaforo", "api/entrenamientos.go",
+         [("rango", r"^\t// El semáforo: un entrenamiento a la vez", r"^\t\treturn\n?$")],
+         "Un entrenamiento a la vez: un canal de capacidad 1 como semáforo, sin esperar"),
+        ("frag_al_ronda", "lst-al-ronda", "api/entrenamientos.go",
+         [("bloque", r"^\talRonda := func\(r cluster\.Ronda\) \{")],
+         "Cada ronda va a sus tres consumidores, cada uno por su canal"),
+        ("frag_predecir", "lst-predecir", "api/rutas.go",
+         [("rango", r"^\tmedia := s\.ventanas\.Agregar", r"^\t\}\)\n?$")],
+         "El final del camino de una predicción: la ventana en memoria y la escritura encolada"),
+        ("frag_cola", "lst-cola", "api/escritor.go",
+         [("bloque", r"^func \(c \*cola\) encolar\("), ("bloque", r"^func \(c \*cola\) completar\(")],
+         "La cola de escritura de un almacén: encolar nunca bloquea y el lote toma lo que ya esté esperando"),
+        ("frag_ventana", "lst-ventana", "ventana/ventana.go",
+         [("bloque", r"^func \(w \*ventana\) agregar\(")],
+         "La ventana de 24 horas de una estación: una lectura por hora, 72 guardadas y la media de las de la ventana"),
+        ("frag_activar", "lst-activar", "api/servidor.go",
+         [("funcion", r"^func \(s \*Servidor\) ActivarModelo\(")],
+         "El modelo activo se reemplaza entero, sin candado en el camino de la predicción"),
+        ("frag_jwt", "lst-jwt", "api/jwt.go",
+         [("bloque", r"^func \(f \*Firmador\) Verificar\(")],
+         "Verificación de un JWT HS256 con la biblioteca estándar"),
+        ("frag_hub", "lst-hub", "api/hub.go",
+         [("bloque", r"^\trepartir := func\(d difusion\) \{")],
+         "El hub reparte un evento sin esperar a nadie: el cliente con el búfer lleno se desconecta"),
+        ("frag_guion_regimen", "lst-guion-regimen", "almacen/redis/redis.go",
+         [("rango", r"^local guardado = redis\.call", r"^return 1")],
+         "El script de Lua con que Redis compara y escribe el régimen de una estación en un solo paso"),
+        ("frag_buzon", "lst-buzon", "api/puntos.go",
+         [("funcion", r"^func \(b \*buzonPuntos\) dejar\(")],
+         "El punto de control de cada ronda: un buzón de un lugar donde el punto nuevo reemplaza al que no se escribió"),
+    ]
+
+    def estado(self, ambito: str, archivo: str) -> None:
+        """El aviso de lo que falta o no cuadra en un entregable, que su informe incluye al inicio."""
+        l = self._listas[ambito]
         estado = ["<!-- Generado por tablas.py. No editar a mano. -->", ""]
-        if self.placeholders or self.faltantes or self.problemas or self.sinteticos or self.desactualizadas:
+        if any(l.values()):
             estado += ["::: {.callout-warning title=\"PENDIENTE: salidas por actualizar\"}"]
-            if self.placeholders:
+            if l["placeholders"]:
                 estado.append("Estos archivos de `generado/` todavía son PLACEHOLDER y sus cifras no son "
-                              "resultados sobre el dataset de OEFA: " + ", ".join(f"`{p}`" for p in self.placeholders) + ".")
-            if self.sinteticos:
-                estado.append("\nDatos sintéticos: " + "; ".join(self.sinteticos) + ".")
-            if self.desactualizadas:
-                estado.append("\nDesactualizado (se regenera con los notebooks): " + "; ".join(self.desactualizadas) + ".")
-            if self.faltantes:
-                estado.append("\nFaltan: " + ", ".join(f"`{p}`" for p in self.faltantes) + ".")
-            if self.problemas:
-                estado.append("\nInvariantes que no cuadran: " + "; ".join(self.problemas) + ".")
+                              "resultados sobre el dataset de OEFA: " + ", ".join(f"`{p}`" for p in l["placeholders"]) + ".")
+            if l["sinteticos"]:
+                estado.append("\nDatos sintéticos: " + "; ".join(l["sinteticos"]) + ".")
+            if l["desactualizadas"]:
+                estado.append("\nDesactualizado (se regenera con los notebooks): " + "; ".join(l["desactualizadas"]) + ".")
+            if l["faltantes"]:
+                estado.append("\nFaltan: " + ", ".join(f"`{p}`" for p in dict.fromkeys(l["faltantes"])) + ".")
+            if l["problemas"]:
+                estado.append("\nInvariantes que no cuadran: " + "; ".join(l["problemas"]) + ".")
             estado += [":::", ""]
-        (self.salida / "_estado.md").write_text("\n".join(estado), encoding="utf-8")
+        (self.salida / archivo).write_text("\n".join(estado), encoding="utf-8")
+
+    def cerrar(self, estricto: bool, final: bool, entrega: str = "pc3") -> int:
+        self.estado("pc3", "_estado.md")
+        self.estado("pc4", "_estado_pc4.md")
+        pc3 = self._listas["pc3"]
 
         lineas = ["# Generado por tablas.py desde generado/*.json. No editar a mano.",
                   "# Uso en el .qmd: shortcode meta con la clave cifras.grupo.clave", "cifras:", "  estado:",
-                  f"    placeholders: {json.dumps(', '.join(self.placeholders) or 'ninguno', ensure_ascii=False)}"]
+                  f"    placeholders: {json.dumps(', '.join(pc3['placeholders']) or 'ninguno', ensure_ascii=False)}"]
         for grupo, valores in self.cifras.items():
             lineas.append(f"  {grupo}:")
             for k, v in valores.items():
@@ -1717,15 +2696,20 @@ class Informe:
         (AQUI / "generado" / "cifras.yml").write_text("\n".join(lineas) + "\n", encoding="utf-8")
 
         print(f"tablas en {self.salida.relative_to(AQUI)}/, cifras en generado/cifras.yml")
-        if self.placeholders:
-            print("PLACEHOLDER: " + ", ".join(self.placeholders), file=sys.stderr)
-        if (estricto or final) and (self.faltantes or self.problemas):
+        if pc3["placeholders"]:
+            print("PLACEHOLDER: " + ", ".join(pc3["placeholders"]), file=sys.stderr)
+        # El informe de la PC4 contiene el de la PC3: tiene que estar en regla lo de los dos.
+        ambitos = ("pc3", "pc4") if entrega == "pc4" else ("pc3",)
+        junto = {n: [x for a in ambitos for x in self._listas[a][n]] for n in LISTAS}
+        if (estricto or final) and (junto["faltantes"] or junto["problemas"]):
+            for x in dict.fromkeys(junto["faltantes"]):
+                print(f"falta: {x}", file=sys.stderr)
             print("error: faltan JSON o no cuadran invariantes", file=sys.stderr)
             return 1
-        if final and (self.placeholders or self.sinteticos or self.desactualizadas):
-            for x in self.desactualizadas:
+        if final and (junto["placeholders"] or junto["sinteticos"] or junto["desactualizadas"]):
+            for x in junto["desactualizadas"]:
                 print(f"desactualizado: {x}", file=sys.stderr)
-            for x in self.sinteticos:
+            for x in junto["sinteticos"]:
                 print(f"sintético: {x}", file=sys.stderr)
             print("error (--final): quedan JSON PLACEHOLDER, datos sintéticos o salidas desactualizadas", file=sys.stderr)
             return 1
@@ -1739,6 +2723,9 @@ def main() -> int:
                     help="reports/ del repo: calibracion_resumen.csv y kmeans_propuesto.json del notebook 02")
     ap.add_argument("--estricto", action="store_true", help="falla si falta un JSON o no cuadra un invariante")
     ap.add_argument("--final", action="store_true", help="como --estricto y, además, falla si queda un PLACEHOLDER")
+    ap.add_argument("--entrega", choices=("pc3", "pc4"), default="pc3",
+                    help="qué informe decide el código de salida de --estricto y --final: el de la PC4 exige "
+                         "además lo de la PC4 (las tablas y cifras de los dos se generan siempre)")
     a = ap.parse_args()
     salida = AQUI / "generado" / "tablas"
     salida.mkdir(parents=True, exist_ok=True)
@@ -1759,7 +2746,21 @@ def main() -> int:
     inf.calibracion()
     inf.auditoria()
     inf.figuras()
-    return inf.cerrar(a.estricto, a.final)
+    inf.ambito = "pc4"      # lo que sigue es del Entregable 2
+    inf.smoke()
+    inf.distribuido()
+    inf.gpu()
+    inf.mapa_gpu()
+    inf.alerta()
+    inf.api_latencia()
+    inf.api_rutas()
+    inf.entidades()
+    inf.datos_prueba()
+    inf.salidas()
+    inf.pruebas_pc4()
+    inf.constantes_pc4()
+    inf.fragmentos(inf.FRAGMENTOS_PC4)
+    return inf.cerrar(a.estricto, a.final, a.entrega)
 
 
 if __name__ == "__main__":

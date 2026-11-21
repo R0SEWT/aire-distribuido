@@ -1,0 +1,42 @@
+<!-- h) Recomendaciones del Entregable 2. El título «Recomendaciones» lo pone informe-pc4.qmd; las
+de la PC3 se incluyen después, sin cambios. -->
+
+## Para el entregable final (TB2): la interfaz y la evaluación experimental
+
+1. **Construir el panel sobre lo que la API ya publica.** El estado de cada estación
+   (`GET /api/estaciones/{id}/regimen`), el modelo activo y los eventos de un entrenamiento por
+   WebSocket están listos para una interfaz web; la configuración de orígenes permitidos (CORS) ya
+   existe. Conviene mostrar siempre juntas, y separadas, las dos respuestas: el nivel del aire y la
+   alerta frente al ECA.
+2. **Medir la latencia desde otra máquina.** La prueba de carga corrió con el cliente y la API en el
+   mismo equipo. Para la evaluación experimental hay que repetirla a través de una red, que es lo
+   que vería un usuario.
+3. **Reconstruir las ventanas de 24 horas al arrancar.** Hoy viven solo en memoria y, después de un
+   reinicio, cada estación vuelve a necesitar {{< meta cifras.pc4.minimo_lecturas >}} lecturas para
+   tener alerta. Las predicciones guardadas en MongoDB, con su índice por estación, alcanzan para
+   reconstruirlas.
+4. **Proteger las bases antes de salir de la máquina de desarrollo.** El Compose las deja sin
+   autenticación y publicadas solo en `localhost`; cualquier despliegue fuera de eso necesita
+   usuarios, claves y TLS.
+
+## Para el clúster
+
+1. **Hacer la sesión de laboratorio que falta.** Correr `cmd/distribuido` sobre los PC del aula con
+   1, 2, 4 y 8 equipos y con réplicas virtuales, comparar con un solo equipo del mismo hardware y
+   apagar un nodo a mitad de una corrida. Los binarios, el paquete del nodo y los comandos están en
+   `lab/`; esas mediciones son las que convertirían la lectura de la @sec-topologia en una curva.
+2. **Reanudar desde el punto de control.** El punto de cada ronda ya se escribe en Redis; falta que
+   un entrenamiento abortado pueda continuar desde ahí con los nodos que queden, en vez de empezar
+   de nuevo.
+3. **Verificar la barrera con Spin.** El modelo en Promela del protocolo (nodos, coordinador, plazo
+   y un nodo que puede caerse) sigue pendiente desde la PC3: las pruebas con `-race` verifican esta
+   implementación, no todos los entrelazados del algoritmo.
+4. **Repartir según lo medido.** El coordinador ya registra cuánto tarda cada nodo en cada ronda.
+   Con nodos desiguales, repartir los rangos en proporción a ese rendimiento evitaría que el más
+   lento marque el paso de todos.
+
+## Recomendaciones del Entregable 1 (PC3)
+
+Las recomendaciones de la PC3 se conservan a continuación como se entregaron. La primera parte,
+«Para la PC4», es la que este entregable atendió: la @tbl-cambios-pc3 dice qué se hizo con cada
+una. Las del TB2 y las dirigidas a OEFA siguen vigentes.

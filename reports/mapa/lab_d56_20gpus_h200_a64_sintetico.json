@@ -1,0 +1,2576 @@
+{
+  "metadatos": {
+    "momento": "2026-11-14T19:59:27.354031521-05:00",
+    "maquina": "A019803",
+    "version_go": "go1.27.4",
+    "gomaxprocs": 14,
+    "cpus_logicas": 14,
+    "commit": "60de7c27903341f65d26c1db031b190b63801392",
+    "arbol_sucio": true
+  },
+  "estado": "completa",
+  "tarea": "mapa-20261114-195859",
+  "manifiesto": {
+    "fuente": "http://10.11.97.211:8090/mapa-sint168/manifiesto.json",
+    "huella": "sha256:c15063627d7c692a9032f2bb04713c33a46c8e3c4fac054faa60997e4966b527",
+    "dias": 168
+  },
+  "validacion": [
+    "SIN-01",
+    "SIN-02"
+  ],
+  "hiper": {
+    "lote": 4,
+    "tasa": 0.001,
+    "decaimiento": 0.0001,
+    "semilla": 0,
+    "ancho": 64,
+    "muestras_val": 32,
+    "amp": true
+  },
+  "semilla": 42,
+  "parametros": 7972354,
+  "pesos_iniciales": {
+    "archivo": "pesos64/pesos_0.bin",
+    "sha256": "d770ddb7e0f6241ac6ed06d31cda471e721e93b8afdc0c6ee0cea891997fd991"
+  },
+  "pesos_finales": {
+    "archivo": "pesos_final_20_a64.bin",
+    "sha256": "bc54f925fa2802a66b720b6fd699233761ade2234f2716a99d26c93a939e0c94",
+    "ronda": 10
+  },
+  "rondas_pedidas": 10,
+  "pasos": 200,
+  "plazo_ronda_ms": 1800000,
+  "nodos_esperados": 21,
+  "nodos": [
+    {
+      "nodo": "D56-004-gpu",
+      "direccion": "10.11.98.202:59506",
+      "gpu": "NVIDIA RTX A1000",
+      "vram_gb": 8,
+      "workers": 1,
+      "muestras": 336,
+      "ms_tarea": 21902.986526,
+      "rezagados": 0,
+      "dias": [
+        "2020-01-08",
+        "2020-01-09",
+        "2020-01-10",
+        "2020-01-11",
+        "2020-01-12",
+        "2020-01-13",
+        "2020-01-14",
+        "2020-03-25",
+        "2020-03-26",
+        "2020-03-27",
+        "2020-03-28",
+        "2020-03-29",
+        "2020-03-30",
+        "2020-03-31"
+      ]
+    },
+    {
+      "nodo": "D56-005-gpu",
+      "direccion": "10.11.98.203:56005",
+      "gpu": "NVIDIA RTX A1000",
+      "vram_gb": 8,
+      "workers": 1,
+      "muestras": 313,
+      "ms_tarea": 21939.208113,
+      "rezagados": 0,
+      "dias": [
+        "2020-01-01",
+        "2020-01-02",
+        "2020-01-03",
+        "2020-01-04",
+        "2020-01-05",
+        "2020-01-06",
+        "2020-01-07",
+        "2020-01-15",
+        "2020-01-16",
+        "2020-01-17",
+        "2020-01-18",
+        "2020-01-19",
+        "2020-01-20",
+        "2020-01-21"
+      ]
+    },
+    {
+      "nodo": "D56-01-gpu",
+      "direccion": "10.11.97.199:64316",
+      "gpu": "NVIDIA RTX A1000",
+      "vram_gb": 8,
+      "workers": 1,
+      "muestras": 336,
+      "ms_tarea": 21809.332648,
+      "rezagados": 0,
+      "dias": [
+        "2020-01-29",
+        "2020-01-30",
+        "2020-01-31",
+        "2020-02-01",
+        "2020-02-02",
+        "2020-02-03",
+        "2020-02-04",
+        "2020-06-03",
+        "2020-06-04",
+        "2020-06-05",
+        "2020-06-06",
+        "2020-06-07",
+        "2020-06-08",
+        "2020-06-09"
+      ]
+    },
+    {
+      "nodo": "D56-02-gpu",
+      "direccion": "10.11.97.200:53714",
+      "gpu": "NVIDIA RTX A1000",
+      "vram_gb": 8,
+      "workers": 1,
+      "muestras": 336,
+      "ms_tarea": 18852.218415,
+      "rezagados": 0,
+      "dias": [
+        "2020-02-26",
+        "2020-02-27",
+        "2020-02-28",
+        "2020-02-29",
+        "2020-03-01",
+        "2020-03-02",
+        "2020-03-03",
+        "2020-05-20",
+        "2020-05-21",
+        "2020-05-22",
+        "2020-05-23",
+        "2020-05-24",
+        "2020-05-25",
+        "2020-05-26"
+      ]
+    },
+    {
+      "nodo": "D56-027-gpu",
+      "direccion": "10.11.98.225:57185",
+      "gpu": "NVIDIA RTX A1000",
+      "vram_gb": 8,
+      "workers": 1,
+      "muestras": 168,
+      "ms_tarea": 1339.143075,
+      "rezagados": 0,
+      "dias": [
+        "2020-05-13",
+        "2020-05-14",
+        "2020-05-15",
+        "2020-05-16",
+        "2020-05-17",
+        "2020-05-18",
+        "2020-05-19"
+      ]
+    },
+    {
+      "nodo": "D56-03-gpu",
+      "direccion": "10.11.97.201:63637",
+      "gpu": "NVIDIA RTX A1000",
+      "vram_gb": 8,
+      "workers": 1,
+      "muestras": 168,
+      "ms_tarea": 18307.065101,
+      "rezagados": 0,
+      "dias": [
+        "2020-03-11",
+        "2020-03-12",
+        "2020-03-13",
+        "2020-03-14",
+        "2020-03-15",
+        "2020-03-16",
+        "2020-03-17"
+      ]
+    },
+    {
+      "nodo": "D56-06-gpu",
+      "direccion": "10.11.97.204:56928",
+      "gpu": "NVIDIA RTX A1000",
+      "vram_gb": 8,
+      "workers": 1,
+      "muestras": 168,
+      "ms_tarea": 1334.348723,
+      "rezagados": 0,
+      "dias": [
+        "2020-04-15",
+        "2020-04-16",
+        "2020-04-17",
+        "2020-04-18",
+        "2020-04-19",
+        "2020-04-20",
+        "2020-04-21"
+      ]
+    },
+    {
+      "nodo": "D56-07-gpu",
+      "direccion": "10.11.97.205:62521",
+      "gpu": "NVIDIA RTX A1000",
+      "vram_gb": 8,
+      "workers": 1,
+      "muestras": 168,
+      "ms_tarea": 17993.413947,
+      "rezagados": 0,
+      "dias": [
+        "2020-03-04",
+        "2020-03-05",
+        "2020-03-06",
+        "2020-03-07",
+        "2020-03-08",
+        "2020-03-09",
+        "2020-03-10"
+      ]
+    },
+    {
+      "nodo": "D56-08-gpu",
+      "direccion": "10.11.97.206:59018",
+      "gpu": "NVIDIA RTX A1000",
+      "vram_gb": 8,
+      "workers": 1,
+      "muestras": 168,
+      "ms_tarea": 18733.561604,
+      "rezagados": 0,
+      "dias": [
+        "2020-02-05",
+        "2020-02-06",
+        "2020-02-07",
+        "2020-02-08",
+        "2020-02-09",
+        "2020-02-10",
+        "2020-02-11"
+      ]
+    },
+    {
+      "nodo": "D56-10-gpu",
+      "direccion": "10.11.97.208:55247",
+      "gpu": "NVIDIA RTX A1000",
+      "vram_gb": 8,
+      "workers": 1,
+      "muestras": 168,
+      "ms_tarea": 18009.363731,
+      "rezagados": 0,
+      "dias": [
+        "2020-04-29",
+        "2020-04-30",
+        "2020-05-01",
+        "2020-05-02",
+        "2020-05-03",
+        "2020-05-04",
+        "2020-05-05"
+      ]
+    },
+    {
+      "nodo": "D56-11-gpu",
+      "direccion": "10.11.97.209:58473",
+      "gpu": "NVIDIA RTX A1000",
+      "vram_gb": 8,
+      "workers": 1,
+      "muestras": 168,
+      "ms_tarea": 16213.28303,
+      "rezagados": 0,
+      "dias": [
+        "2020-03-18",
+        "2020-03-19",
+        "2020-03-20",
+        "2020-03-21",
+        "2020-03-22",
+        "2020-03-23",
+        "2020-03-24"
+      ]
+    },
+    {
+      "nodo": "D56-12-gpu",
+      "direccion": "10.11.97.210:62416",
+      "gpu": "NVIDIA RTX A1000",
+      "vram_gb": 8,
+      "workers": 1,
+      "muestras": 168,
+      "ms_tarea": 18892.302027,
+      "rezagados": 0,
+      "dias": [
+        "2020-05-27",
+        "2020-05-28",
+        "2020-05-29",
+        "2020-05-30",
+        "2020-05-31",
+        "2020-06-01",
+        "2020-06-02"
+      ]
+    },
+    {
+      "nodo": "D56-14-gpu",
+      "direccion": "10.11.97.212:62008",
+      "gpu": "NVIDIA RTX A1000",
+      "vram_gb": 8,
+      "workers": 1,
+      "muestras": 168,
+      "ms_tarea": 17999.185137,
+      "rezagados": 0,
+      "dias": [
+        "2020-04-01",
+        "2020-04-02",
+        "2020-04-03",
+        "2020-04-04",
+        "2020-04-05",
+        "2020-04-06",
+        "2020-04-07"
+      ]
+    },
+    {
+      "nodo": "D56-15-gpu",
+      "direccion": "10.11.97.213:63091",
+      "gpu": "NVIDIA RTX A1000",
+      "vram_gb": 8,
+      "workers": 1,
+      "muestras": 168,
+      "ms_tarea": 18768.533345,
+      "rezagados": 0,
+      "dias": [
+        "2020-02-19",
+        "2020-02-20",
+        "2020-02-21",
+        "2020-02-22",
+        "2020-02-23",
+        "2020-02-24",
+        "2020-02-25"
+      ]
+    },
+    {
+      "nodo": "D56-16-gpu",
+      "direccion": "10.11.97.214:52055",
+      "gpu": "NVIDIA RTX A1000",
+      "vram_gb": 8,
+      "workers": 1,
+      "muestras": 168,
+      "ms_tarea": 1335.854456,
+      "rezagados": 0,
+      "dias": [
+        "2020-04-08",
+        "2020-04-09",
+        "2020-04-10",
+        "2020-04-11",
+        "2020-04-12",
+        "2020-04-13",
+        "2020-04-14"
+      ]
+    },
+    {
+      "nodo": "D56-17-gpu",
+      "direccion": "10.11.97.215:63337",
+      "gpu": "NVIDIA RTX A1000",
+      "vram_gb": 8,
+      "workers": 1,
+      "muestras": 168,
+      "ms_tarea": 18812.964562,
+      "rezagados": 0,
+      "dias": [
+        "2020-06-10",
+        "2020-06-11",
+        "2020-06-12",
+        "2020-06-13",
+        "2020-06-14",
+        "2020-06-15",
+        "2020-06-16"
+      ]
+    },
+    {
+      "nodo": "D56-18-gpu",
+      "direccion": "10.11.97.216:53049",
+      "gpu": "NVIDIA RTX A1000",
+      "vram_gb": 8,
+      "workers": 1,
+      "muestras": 168,
+      "ms_tarea": 18087.645711,
+      "rezagados": 0,
+      "dias": [
+        "2020-02-12",
+        "2020-02-13",
+        "2020-02-14",
+        "2020-02-15",
+        "2020-02-16",
+        "2020-02-17",
+        "2020-02-18"
+      ]
+    },
+    {
+      "nodo": "D56-19-gpu",
+      "direccion": "10.11.97.217:54330",
+      "gpu": "NVIDIA RTX A1000",
+      "vram_gb": 8,
+      "workers": 1,
+      "muestras": 168,
+      "ms_tarea": 18068.583373,
+      "rezagados": 0,
+      "dias": [
+        "2020-04-22",
+        "2020-04-23",
+        "2020-04-24",
+        "2020-04-25",
+        "2020-04-26",
+        "2020-04-27",
+        "2020-04-28"
+      ]
+    },
+    {
+      "nodo": "D56-20-gpu",
+      "direccion": "10.11.97.218:63694",
+      "gpu": "NVIDIA RTX A1000",
+      "vram_gb": 8,
+      "workers": 1,
+      "muestras": 168,
+      "ms_tarea": 1330.47198,
+      "rezagados": 0,
+      "dias": [
+        "2020-05-06",
+        "2020-05-07",
+        "2020-05-08",
+        "2020-05-09",
+        "2020-05-10",
+        "2020-05-11",
+        "2020-05-12"
+      ]
+    },
+    {
+      "nodo": "D56-21-gpu",
+      "direccion": "10.11.97.219:64479",
+      "gpu": "NVIDIA RTX A1000",
+      "vram_gb": 8,
+      "workers": 1,
+      "muestras": 168,
+      "ms_tarea": 18029.22735,
+      "rezagados": 0,
+      "dias": [
+        "2020-01-22",
+        "2020-01-23",
+        "2020-01-24",
+        "2020-01-25",
+        "2020-01-26",
+        "2020-01-27",
+        "2020-01-28"
+      ]
+    }
+  ],
+  "reparto": "bloques de 7 días seguidos del manifiesto, barajados con la semilla (math/rand/v2, PCG(semilla, 0)) y repartidos en ronda entre los nodos en orden de nombre; cada nodo recibe sus días en orden de calendario",
+  "rondas": [
+    {
+      "ronda": 1,
+      "perdida": 0.11636048226244748,
+      "perdida_val": 0.18772815047210575,
+      "muestras": 16000,
+      "ms_barrera": 28293.701885,
+      "ms_promedio": 105.631985,
+      "bytes": 1275576640,
+      "nodos": [
+        {
+          "nodo": "D56-004-gpu",
+          "muestras": 800,
+          "perdida": 0.11784416457638144,
+          "perdida_val": 0.14777266953745458,
+          "ms_computo": 17634,
+          "ms_envio": 5339.817068,
+          "ms_transferencia": 10386.070658,
+          "ms_total": 28020.070658
+        },
+        {
+          "nodo": "D56-005-gpu",
+          "muestras": 800,
+          "perdida": 0.12114773733541369,
+          "perdida_val": 0.3079404506060454,
+          "ms_computo": 17678,
+          "ms_envio": 5333.306203,
+          "ms_transferencia": 10477.611378,
+          "ms_total": 28155.611378
+        },
+        {
+          "nodo": "D56-01-gpu",
+          "muestras": 800,
+          "perdida": 0.09780989682301879,
+          "perdida_val": 0.17965135309431288,
+          "ms_computo": 17652,
+          "ms_envio": 5329.249312,
+          "ms_transferencia": 9998.695287,
+          "ms_total": 27650.695287
+        },
+        {
+          "nodo": "D56-02-gpu",
+          "muestras": 800,
+          "perdida": 0.1098404068686068,
+          "perdida_val": 0.11781597229813741,
+          "ms_computo": 17740,
+          "ms_envio": 5316.814661,
+          "ms_transferencia": 10494.458328,
+          "ms_total": 28234.458328
+        },
+        {
+          "nodo": "D56-027-gpu",
+          "muestras": 800,
+          "perdida": 0.12201340280473233,
+          "perdida_val": 0.057815162545960884,
+          "ms_computo": 17555,
+          "ms_envio": 5290.894212,
+          "ms_transferencia": 10495.563916,
+          "ms_total": 28050.563916
+        },
+        {
+          "nodo": "D56-03-gpu",
+          "muestras": 800,
+          "perdida": 0.12534684690646827,
+          "perdida_val": 0.1464307781565806,
+          "ms_computo": 18393,
+          "ms_envio": 5339.142208,
+          "ms_transferencia": 9715.769333,
+          "ms_total": 28108.769333
+        },
+        {
+          "nodo": "D56-06-gpu",
+          "muestras": 800,
+          "perdida": 0.1162990148179233,
+          "perdida_val": 0.0366266047235875,
+          "ms_computo": 17536,
+          "ms_envio": 5331.955025,
+          "ms_transferencia": 9866.391671,
+          "ms_total": 27402.391671
+        },
+        {
+          "nodo": "D56-07-gpu",
+          "muestras": 800,
+          "perdida": 0.12073505623266101,
+          "perdida_val": 0.0518896103347257,
+          "ms_computo": 17519,
+          "ms_envio": 5300.344468,
+          "ms_transferencia": 10649.181168,
+          "ms_total": 28168.181168
+        },
+        {
+          "nodo": "D56-08-gpu",
+          "muestras": 800,
+          "perdida": 0.11560240216553211,
+          "perdida_val": 0.2784606225914874,
+          "ms_computo": 17572,
+          "ms_envio": 5300.74418,
+          "ms_transferencia": 10392.580121,
+          "ms_total": 27964.580121
+        },
+        {
+          "nodo": "D56-10-gpu",
+          "muestras": 800,
+          "perdida": 0.10232610717415809,
+          "perdida_val": 0.09777446779406677,
+          "ms_computo": 17776,
+          "ms_envio": 5300.574295,
+          "ms_transferencia": 10473.789847,
+          "ms_total": 28249.789847
+        },
+        {
+          "nodo": "D56-11-gpu",
+          "muestras": 800,
+          "perdida": 0.10588070560246705,
+          "perdida_val": 0.3980928058383845,
+          "ms_computo": 17557,
+          "ms_envio": 5337.682267,
+          "ms_transferencia": 9620.783988,
+          "ms_total": 27177.783988
+        },
+        {
+          "nodo": "D56-12-gpu",
+          "muestras": 800,
+          "perdida": 0.1235574100445956,
+          "perdida_val": 0.24640345703000607,
+          "ms_computo": 17472,
+          "ms_envio": 5264.385988,
+          "ms_transferencia": 10666.1142,
+          "ms_total": 28138.1142
+        },
+        {
+          "nodo": "D56-14-gpu",
+          "muestras": 800,
+          "perdida": 0.1240241876617074,
+          "perdida_val": 0.10106444941097949,
+          "ms_computo": 17459,
+          "ms_envio": 5328.851894,
+          "ms_transferencia": 10243.665904,
+          "ms_total": 27702.665904
+        },
+        {
+          "nodo": "D56-15-gpu",
+          "muestras": 800,
+          "perdida": 0.10564618699252605,
+          "perdida_val": 0.25803191326888264,
+          "ms_computo": 17807,
+          "ms_envio": 5260.169425,
+          "ms_transferencia": 10395.919062,
+          "ms_total": 28202.919062
+        },
+        {
+          "nodo": "D56-16-gpu",
+          "muestras": 800,
+          "perdida": 0.10985322028398514,
+          "perdida_val": 0.11811354289884153,
+          "ms_computo": 17595,
+          "ms_envio": 5275.24902,
+          "ms_transferencia": 10621.910245,
+          "ms_total": 28216.910245
+        },
+        {
+          "nodo": "D56-17-gpu",
+          "muestras": 800,
+          "perdida": 0.12622040698304773,
+          "perdida_val": 0.265718694208032,
+          "ms_computo": 17555,
+          "ms_envio": 5298.910173,
+          "ms_transferencia": 10584.335885,
+          "ms_total": 28139.335885
+        },
+        {
+          "nodo": "D56-18-gpu",
+          "muestras": 800,
+          "perdida": 0.11219295434653759,
+          "perdida_val": 0.1591436768355577,
+          "ms_computo": 17498,
+          "ms_envio": 5274.677403,
+          "ms_transferencia": 10387.587599,
+          "ms_total": 27885.587599
+        },
+        {
+          "nodo": "D56-19-gpu",
+          "muestras": 800,
+          "perdida": 0.11897015501745045,
+          "perdida_val": 0.5010970495970903,
+          "ms_computo": 17553,
+          "ms_envio": 5300.363518,
+          "ms_transferencia": 10271.877405,
+          "ms_total": 27824.877405
+        },
+        {
+          "nodo": "D56-20-gpu",
+          "muestras": 800,
+          "perdida": 0.12542914969846605,
+          "perdida_val": 0.15158874640422584,
+          "ms_computo": 17445,
+          "ms_envio": 5333.771203,
+          "ms_transferencia": 9913.584675,
+          "ms_total": 27358.584675
+        },
+        {
+          "nodo": "D56-21-gpu",
+          "muestras": 800,
+          "perdida": 0.12647023291327059,
+          "perdida_val": 0.1331309822677564,
+          "ms_computo": 17638,
+          "ms_envio": 5337.280714,
+          "ms_transferencia": 10584.896867,
+          "ms_total": 28222.896867
+        }
+      ]
+    },
+    {
+      "ronda": 2,
+      "perdida": 0.04620335253467783,
+      "perdida_val": 0.08280536014017986,
+      "muestras": 16000,
+      "ms_barrera": 27805.417275,
+      "ms_promedio": 124.940758,
+      "bytes": 1275576640,
+      "nodos": [
+        {
+          "nodo": "D56-004-gpu",
+          "muestras": 800,
+          "perdida": 0.04784650274552405,
+          "perdida_val": 0.08751858955519831,
+          "ms_computo": 17243,
+          "ms_envio": 5319.393279,
+          "ms_transferencia": 10509.578852,
+          "ms_total": 27752.578852
+        },
+        {
+          "nodo": "D56-005-gpu",
+          "muestras": 800,
+          "perdida": 0.04733862387947738,
+          "perdida_val": 0.09279948915984179,
+          "ms_computo": 17143,
+          "ms_envio": 5319.459503,
+          "ms_transferencia": 10382.795983,
+          "ms_total": 27525.795983
+        },
+        {
+          "nodo": "D56-01-gpu",
+          "muestras": 800,
+          "perdida": 0.04889656602405012,
+          "perdida_val": 0.08857712768909769,
+          "ms_computo": 17120,
+          "ms_envio": 5324.811957,
+          "ms_transferencia": 10511.019535,
+          "ms_total": 27631.019535
+        },
+        {
+          "nodo": "D56-02-gpu",
+          "muestras": 800,
+          "perdida": 0.050054713245481254,
+          "perdida_val": 0.10175193476775461,
+          "ms_computo": 17274,
+          "ms_envio": 5332.235852,
+          "ms_transferencia": 10429.692806,
+          "ms_total": 27703.692806
+        },
+        {
+          "nodo": "D56-027-gpu",
+          "muestras": 800,
+          "perdida": 0.043835695954039695,
+          "perdida_val": 0.05310755990769552,
+          "ms_computo": 17009,
+          "ms_envio": 5273.746432,
+          "ms_transferencia": 9924.540277,
+          "ms_total": 26933.540277
+        },
+        {
+          "nodo": "D56-03-gpu",
+          "muestras": 800,
+          "perdida": 0.04911361540667713,
+          "perdida_val": 0.08931695817616479,
+          "ms_computo": 17258,
+          "ms_envio": 5305.818893,
+          "ms_transferencia": 10395.628007,
+          "ms_total": 27653.628007
+        },
+        {
+          "nodo": "D56-06-gpu",
+          "muestras": 800,
+          "perdida": 0.04416432071477175,
+          "perdida_val": 0.07017685842197553,
+          "ms_computo": 17785,
+          "ms_envio": 5325.068551,
+          "ms_transferencia": 9889.847917,
+          "ms_total": 27674.847917
+        },
+        {
+          "nodo": "D56-07-gpu",
+          "muestras": 800,
+          "perdida": 0.043921092534437774,
+          "perdida_val": 0.08082158825660156,
+          "ms_computo": 17050,
+          "ms_envio": 5280.160275,
+          "ms_transferencia": 10407.78007,
+          "ms_total": 27457.78007
+        },
+        {
+          "nodo": "D56-08-gpu",
+          "muestras": 800,
+          "perdida": 0.04437879676930606,
+          "perdida_val": 0.13637410192671467,
+          "ms_computo": 17316,
+          "ms_envio": 5276.820141,
+          "ms_transferencia": 10442.613128,
+          "ms_total": 27758.613128
+        },
+        {
+          "nodo": "D56-10-gpu",
+          "muestras": 800,
+          "perdida": 0.043555255886167286,
+          "perdida_val": 0.04449682591198865,
+          "ms_computo": 17105,
+          "ms_envio": 5295.831752,
+          "ms_transferencia": 10588.488176,
+          "ms_total": 27693.488176
+        },
+        {
+          "nodo": "D56-11-gpu",
+          "muestras": 800,
+          "perdida": 0.044249166026711466,
+          "perdida_val": 0.07880437765426997,
+          "ms_computo": 17104,
+          "ms_envio": 5276.418558,
+          "ms_transferencia": 10368.261712,
+          "ms_total": 27472.261712
+        },
+        {
+          "nodo": "D56-12-gpu",
+          "muestras": 800,
+          "perdida": 0.04401738467626273,
+          "perdida_val": 0.07261639175855596,
+          "ms_computo": 17034,
+          "ms_envio": 5269.861525,
+          "ms_transferencia": 10193.248409,
+          "ms_total": 27227.248409
+        },
+        {
+          "nodo": "D56-14-gpu",
+          "muestras": 800,
+          "perdida": 0.04366615570150316,
+          "perdida_val": 0.09107941470476759,
+          "ms_computo": 16980,
+          "ms_envio": 5322.91762,
+          "ms_transferencia": 10070.75674,
+          "ms_total": 27050.75674
+        },
+        {
+          "nodo": "D56-15-gpu",
+          "muestras": 800,
+          "perdida": 0.04521987459622324,
+          "perdida_val": 0.048636649825931653,
+          "ms_computo": 17139,
+          "ms_envio": 5271.549251,
+          "ms_transferencia": 10597.36489,
+          "ms_total": 27736.36489
+        },
+        {
+          "nodo": "D56-16-gpu",
+          "muestras": 800,
+          "perdida": 0.04988125128671527,
+          "perdida_val": 0.0962587151190509,
+          "ms_computo": 17237,
+          "ms_envio": 5276.875056,
+          "ms_transferencia": 10416.672268,
+          "ms_total": 27653.672268
+        },
+        {
+          "nodo": "D56-17-gpu",
+          "muestras": 800,
+          "perdida": 0.04480488060042262,
+          "perdida_val": 0.06433951818400015,
+          "ms_computo": 17050,
+          "ms_envio": 5276.985124,
+          "ms_transferencia": 10207.740447,
+          "ms_total": 27257.740447
+        },
+        {
+          "nodo": "D56-18-gpu",
+          "muestras": 800,
+          "perdida": 0.04790992392227054,
+          "perdida_val": 0.12457819095124369,
+          "ms_computo": 17164,
+          "ms_envio": 5276.694908,
+          "ms_transferencia": 10367.216766,
+          "ms_total": 27531.216766
+        },
+        {
+          "nodo": "D56-19-gpu",
+          "muestras": 800,
+          "perdida": 0.04839921654202044,
+          "perdida_val": 0.08684653637156023,
+          "ms_computo": 17048,
+          "ms_envio": 5298.388666,
+          "ms_transferencia": 9899.283848,
+          "ms_total": 26947.283848
+        },
+        {
+          "nodo": "D56-20-gpu",
+          "muestras": 800,
+          "perdida": 0.04874707563780248,
+          "perdida_val": 0.07068555597710398,
+          "ms_computo": 16969,
+          "ms_envio": 5303.784926,
+          "ms_transferencia": 9693.350496,
+          "ms_total": 26662.350496
+        },
+        {
+          "nodo": "D56-21-gpu",
+          "muestras": 800,
+          "perdida": 0.04406693854369223,
+          "perdida_val": 0.07732081848407994,
+          "ms_computo": 17149,
+          "ms_envio": 5328.029612,
+          "ms_transferencia": 10573.019064,
+          "ms_total": 27722.019064
+        }
+      ]
+    },
+    {
+      "ronda": 3,
+      "perdida": 0.04033482226589695,
+      "perdida_val": 0.08884024135061608,
+      "muestras": 16000,
+      "ms_barrera": 27875.410936,
+      "ms_promedio": 106.77677,
+      "bytes": 1275576640,
+      "nodos": [
+        {
+          "nodo": "D56-004-gpu",
+          "muestras": 800,
+          "perdida": 0.041747431410476564,
+          "perdida_val": 0.09714163763400836,
+          "ms_computo": 17573,
+          "ms_envio": 5299.565,
+          "ms_transferencia": 10114.828914,
+          "ms_total": 27687.828914
+        },
+        {
+          "nodo": "D56-005-gpu",
+          "muestras": 800,
+          "perdida": 0.042780150445178154,
+          "perdida_val": 0.07056732180419269,
+          "ms_computo": 17225,
+          "ms_envio": 5290.926669,
+          "ms_transferencia": 10550.881256,
+          "ms_total": 27775.881256
+        },
+        {
+          "nodo": "D56-01-gpu",
+          "muestras": 800,
+          "perdida": 0.04218557124957442,
+          "perdida_val": 0.0705164327708065,
+          "ms_computo": 17179,
+          "ms_envio": 5305.782047,
+          "ms_transferencia": 10570.010003,
+          "ms_total": 27749.010003
+        },
+        {
+          "nodo": "D56-02-gpu",
+          "muestras": 800,
+          "perdida": 0.04272243087179959,
+          "perdida_val": 0.06807937208286002,
+          "ms_computo": 17339,
+          "ms_envio": 5310.326305,
+          "ms_transferencia": 10474.209398,
+          "ms_total": 27813.209398
+        },
+        {
+          "nodo": "D56-027-gpu",
+          "muestras": 800,
+          "perdida": 0.03848726827651262,
+          "perdida_val": 0.09738139782262885,
+          "ms_computo": 17080,
+          "ms_envio": 5276.674195,
+          "ms_transferencia": 9856.330663,
+          "ms_total": 26936.330663
+        },
+        {
+          "nodo": "D56-03-gpu",
+          "muestras": 800,
+          "perdida": 0.0417334352619946,
+          "perdida_val": 0.0772944481336865,
+          "ms_computo": 17309,
+          "ms_envio": 5317.99889,
+          "ms_transferencia": 10441.670433,
+          "ms_total": 27750.670433
+        },
+        {
+          "nodo": "D56-06-gpu",
+          "muestras": 800,
+          "perdida": 0.039047809122130274,
+          "perdida_val": 0.05709790339512107,
+          "ms_computo": 17242,
+          "ms_envio": 5294.621821,
+          "ms_transferencia": 10590.369411,
+          "ms_total": 27832.369411
+        },
+        {
+          "nodo": "D56-07-gpu",
+          "muestras": 800,
+          "perdida": 0.03791213273070752,
+          "perdida_val": 0.07891992632678504,
+          "ms_computo": 17133,
+          "ms_envio": 5276.218038,
+          "ms_transferencia": 10518.525096,
+          "ms_total": 27651.525096
+        },
+        {
+          "nodo": "D56-08-gpu",
+          "muestras": 800,
+          "perdida": 0.03913224183954298,
+          "perdida_val": 0.07328898846408573,
+          "ms_computo": 17072,
+          "ms_envio": 5275.647573,
+          "ms_transferencia": 10454.817422,
+          "ms_total": 27526.817422
+        },
+        {
+          "nodo": "D56-10-gpu",
+          "muestras": 800,
+          "perdida": 0.03929275292903185,
+          "perdida_val": 0.1127051219217858,
+          "ms_computo": 17170,
+          "ms_envio": 5279.381239,
+          "ms_transferencia": 10640.600576,
+          "ms_total": 27810.600576
+        },
+        {
+          "nodo": "D56-11-gpu",
+          "muestras": 800,
+          "perdida": 0.038952621798962354,
+          "perdida_val": 0.09144151868189082,
+          "ms_computo": 17212,
+          "ms_envio": 5276.792574,
+          "ms_transferencia": 10496.590011,
+          "ms_total": 27708.590011
+        },
+        {
+          "nodo": "D56-12-gpu",
+          "muestras": 800,
+          "perdida": 0.03802390138618648,
+          "perdida_val": 0.11183027242836745,
+          "ms_computo": 17136,
+          "ms_envio": 5270.685201,
+          "ms_transferencia": 10221.896501,
+          "ms_total": 27357.896501
+        },
+        {
+          "nodo": "D56-14-gpu",
+          "muestras": 800,
+          "perdida": 0.03849049282260239,
+          "perdida_val": 0.10027019942508024,
+          "ms_computo": 17050,
+          "ms_envio": 5308.750107,
+          "ms_transferencia": 9708.253197,
+          "ms_total": 26758.253197
+        },
+        {
+          "nodo": "D56-15-gpu",
+          "muestras": 800,
+          "perdida": 0.038860417054966095,
+          "perdida_val": 0.10830507585696414,
+          "ms_computo": 17210,
+          "ms_envio": 5272.878736,
+          "ms_transferencia": 10556.353191,
+          "ms_total": 27766.353191
+        },
+        {
+          "nodo": "D56-16-gpu",
+          "muestras": 800,
+          "perdida": 0.041971603175625205,
+          "perdida_val": 0.09802040017169455,
+          "ms_computo": 17305,
+          "ms_envio": 5272.406108,
+          "ms_transferencia": 10522.80326,
+          "ms_total": 27827.80326
+        },
+        {
+          "nodo": "D56-17-gpu",
+          "muestras": 800,
+          "perdida": 0.038835173714905975,
+          "perdida_val": 0.13280957867786036,
+          "ms_computo": 17121,
+          "ms_envio": 5272.992088,
+          "ms_transferencia": 10315.793603,
+          "ms_total": 27436.793603
+        },
+        {
+          "nodo": "D56-18-gpu",
+          "muestras": 800,
+          "perdida": 0.04226466153748334,
+          "perdida_val": 0.05533181364121644,
+          "ms_computo": 17239,
+          "ms_envio": 5274.755644,
+          "ms_transferencia": 10485.065906,
+          "ms_total": 27724.065906
+        },
+        {
+          "nodo": "D56-19-gpu",
+          "muestras": 800,
+          "perdida": 0.04329633830115199,
+          "perdida_val": 0.09547020138892452,
+          "ms_computo": 17140,
+          "ms_envio": 5280.687859,
+          "ms_transferencia": 10528.097449,
+          "ms_total": 27668.097449
+        },
+        {
+          "nodo": "D56-20-gpu",
+          "muestras": 800,
+          "perdida": 0.042300840429961684,
+          "perdida_val": 0.10362389340864873,
+          "ms_computo": 17081,
+          "ms_envio": 5283.500023,
+          "ms_transferencia": 10655.733466,
+          "ms_total": 27736.733466
+        },
+        {
+          "nodo": "D56-21-gpu",
+          "muestras": 800,
+          "perdida": 0.03865917095914483,
+          "perdida_val": 0.07670932297571366,
+          "ms_computo": 17250,
+          "ms_envio": 5265.446576,
+          "ms_transferencia": 10515.278169,
+          "ms_total": 27765.278169
+        }
+      ]
+    },
+    {
+      "ronda": 4,
+      "perdida": 0.039046197018586096,
+      "perdida_val": 0.09290326097421704,
+      "muestras": 16000,
+      "ms_barrera": 27899.004434,
+      "ms_promedio": 105.611271,
+      "bytes": 1275576640,
+      "nodos": [
+        {
+          "nodo": "D56-004-gpu",
+          "muestras": 800,
+          "perdida": 0.04082350941374898,
+          "perdida_val": 0.08012788336819564,
+          "ms_computo": 17319,
+          "ms_envio": 5327.451044,
+          "ms_transferencia": 10289.494847,
+          "ms_total": 27608.494847
+        },
+        {
+          "nodo": "D56-005-gpu",
+          "muestras": 800,
+          "perdida": 0.04051895515061915,
+          "perdida_val": 0.07234481564378953,
+          "ms_computo": 17217,
+          "ms_envio": 5305.202623,
+          "ms_transferencia": 10590.381646,
+          "ms_total": 27807.381646
+        },
+        {
+          "nodo": "D56-01-gpu",
+          "muestras": 800,
+          "perdida": 0.04142878680489957,
+          "perdida_val": 0.11955578628386188,
+          "ms_computo": 17162,
+          "ms_envio": 5273.360397,
+          "ms_transferencia": 10482.78568,
+          "ms_total": 27644.78568
+        },
+        {
+          "nodo": "D56-02-gpu",
+          "muestras": 800,
+          "perdida": 0.04166100483387709,
+          "perdida_val": 0.12025350406150187,
+          "ms_computo": 17349,
+          "ms_envio": 5308.166172,
+          "ms_transferencia": 10383.281797,
+          "ms_total": 27732.281797
+        },
+        {
+          "nodo": "D56-027-gpu",
+          "muestras": 800,
+          "perdida": 0.03684392662718892,
+          "perdida_val": 0.08616205000359078,
+          "ms_computo": 17256,
+          "ms_envio": 5262.164998,
+          "ms_transferencia": 10455.576694,
+          "ms_total": 27711.576694
+        },
+        {
+          "nodo": "D56-03-gpu",
+          "muestras": 800,
+          "perdida": 0.04109467637725175,
+          "perdida_val": 0.1351880652123484,
+          "ms_computo": 17304,
+          "ms_envio": 5297.653431,
+          "ms_transferencia": 10347.995615,
+          "ms_total": 27651.995615
+        },
+        {
+          "nodo": "D56-06-gpu",
+          "muestras": 800,
+          "perdida": 0.03733792912214994,
+          "perdida_val": 0.10015073886751073,
+          "ms_computo": 17382,
+          "ms_envio": 5302.414318,
+          "ms_transferencia": 10323.264737,
+          "ms_total": 27705.264737
+        },
+        {
+          "nodo": "D56-07-gpu",
+          "muestras": 800,
+          "perdida": 0.03750307987444103,
+          "perdida_val": 0.10814141355833765,
+          "ms_computo": 17326,
+          "ms_envio": 5267.084914,
+          "ms_transferencia": 10415.511483,
+          "ms_total": 27741.511483
+        },
+        {
+          "nodo": "D56-08-gpu",
+          "muestras": 800,
+          "perdida": 0.03772649372927844,
+          "perdida_val": 0.08767095318663928,
+          "ms_computo": 17087,
+          "ms_envio": 5282.350302,
+          "ms_transferencia": 9621.009769,
+          "ms_total": 26708.009769
+        },
+        {
+          "nodo": "D56-10-gpu",
+          "muestras": 800,
+          "perdida": 0.0374266217648983,
+          "perdida_val": 0.06859088534394563,
+          "ms_computo": 17163,
+          "ms_envio": 5301.581988,
+          "ms_transferencia": 10491.320448,
+          "ms_total": 27654.320448
+        },
+        {
+          "nodo": "D56-11-gpu",
+          "muestras": 800,
+          "perdida": 0.03744308683089912,
+          "perdida_val": 0.06987343268359408,
+          "ms_computo": 17409,
+          "ms_envio": 5290.26461,
+          "ms_transferencia": 10280.269643,
+          "ms_total": 27689.269643
+        },
+        {
+          "nodo": "D56-12-gpu",
+          "muestras": 800,
+          "perdida": 0.03744736220687628,
+          "perdida_val": 0.07051655478451563,
+          "ms_computo": 17342,
+          "ms_envio": 5275.30944,
+          "ms_transferencia": 10460.711154,
+          "ms_total": 27802.711154
+        },
+        {
+          "nodo": "D56-14-gpu",
+          "muestras": 800,
+          "perdida": 0.037684251880273224,
+          "perdida_val": 0.0886698955309992,
+          "ms_computo": 17247,
+          "ms_envio": 5293.121694,
+          "ms_transferencia": 10314.778381,
+          "ms_total": 27561.778381
+        },
+        {
+          "nodo": "D56-15-gpu",
+          "muestras": 800,
+          "perdida": 0.037711817836388946,
+          "perdida_val": 0.06053928216606115,
+          "ms_computo": 17180,
+          "ms_envio": 5278.843724,
+          "ms_transferencia": 10471.594718,
+          "ms_total": 27651.594718
+        },
+        {
+          "nodo": "D56-16-gpu",
+          "muestras": 800,
+          "perdida": 0.04035512226633728,
+          "perdida_val": 0.07608429212933002,
+          "ms_computo": 17308,
+          "ms_envio": 5281.776384,
+          "ms_transferencia": 10552.609694,
+          "ms_total": 27860.609694
+        },
+        {
+          "nodo": "D56-17-gpu",
+          "muestras": 800,
+          "perdida": 0.03711865434423089,
+          "perdida_val": 0.15339916534090448,
+          "ms_computo": 17305,
+          "ms_envio": 5282.424003,
+          "ms_transferencia": 10467.818083,
+          "ms_total": 27772.818083
+        },
+        {
+          "nodo": "D56-18-gpu",
+          "muestras": 800,
+          "perdida": 0.04136158550158143,
+          "perdida_val": 0.05638143449373867,
+          "ms_computo": 17221,
+          "ms_envio": 5282.052958,
+          "ms_transferencia": 10534.897925,
+          "ms_total": 27755.897925
+        },
+        {
+          "nodo": "D56-19-gpu",
+          "muestras": 800,
+          "perdida": 0.041767372973263266,
+          "perdida_val": 0.08733930392602904,
+          "ms_computo": 17347,
+          "ms_envio": 5272.043431,
+          "ms_transferencia": 10387.912615,
+          "ms_total": 27734.912615
+        },
+        {
+          "nodo": "D56-20-gpu",
+          "muestras": 800,
+          "perdida": 0.04063370374031365,
+          "perdida_val": 0.12495548442929191,
+          "ms_computo": 17098,
+          "ms_envio": 5269.035481,
+          "ms_transferencia": 9779.551932,
+          "ms_total": 26877.551932
+        },
+        {
+          "nodo": "D56-21-gpu",
+          "muestras": 800,
+          "perdida": 0.037035999093204736,
+          "perdida_val": 0.09212027847015557,
+          "ms_computo": 17291,
+          "ms_envio": 5274.985609,
+          "ms_transferencia": 10554.176224,
+          "ms_total": 27845.176224
+        }
+      ]
+    },
+    {
+      "ronda": 5,
+      "perdida": 0.03823949593771249,
+      "perdida_val": 0.08740453309948175,
+      "muestras": 16000,
+      "ms_barrera": 27970.288835,
+      "ms_promedio": 107.867988,
+      "bytes": 1275576640,
+      "nodos": [
+        {
+          "nodo": "D56-004-gpu",
+          "muestras": 800,
+          "perdida": 0.03947357200086117,
+          "perdida_val": 0.07385364257627064,
+          "ms_computo": 17277,
+          "ms_envio": 5319.785294,
+          "ms_transferencia": 10165.544744,
+          "ms_total": 27442.544744
+        },
+        {
+          "nodo": "D56-005-gpu",
+          "muestras": 800,
+          "perdida": 0.040175445610657334,
+          "perdida_val": 0.06821162005265553,
+          "ms_computo": 17188,
+          "ms_envio": 5310.690313,
+          "ms_transferencia": 10201.768628,
+          "ms_total": 27389.768628
+        },
+        {
+          "nodo": "D56-01-gpu",
+          "muestras": 800,
+          "perdida": 0.04066167997196317,
+          "perdida_val": 0.07617038461323987,
+          "ms_computo": 17139,
+          "ms_envio": 5271.096424,
+          "ms_transferencia": 9967.582984,
+          "ms_total": 27106.582984
+        },
+        {
+          "nodo": "D56-02-gpu",
+          "muestras": 800,
+          "perdida": 0.04057880375534296,
+          "perdida_val": 0.06904879132331895,
+          "ms_computo": 17291,
+          "ms_envio": 5310.944883,
+          "ms_transferencia": 10306.252532,
+          "ms_total": 27597.252532
+        },
+        {
+          "nodo": "D56-027-gpu",
+          "muestras": 800,
+          "perdida": 0.0359461298212409,
+          "perdida_val": 0.1462254788564599,
+          "ms_computo": 17260,
+          "ms_envio": 5270.987076,
+          "ms_transferencia": 10336.806797,
+          "ms_total": 27596.806797
+        },
+        {
+          "nodo": "D56-03-gpu",
+          "muestras": 800,
+          "perdida": 0.03973298601806164,
+          "perdida_val": 0.09531167390403049,
+          "ms_computo": 17489,
+          "ms_envio": 5305.828147,
+          "ms_transferencia": 10305.191539,
+          "ms_total": 27794.191539
+        },
+        {
+          "nodo": "D56-06-gpu",
+          "muestras": 800,
+          "perdida": 0.03668318348005414,
+          "perdida_val": 0.10106023569154528,
+          "ms_computo": 17233,
+          "ms_envio": 5277.574739,
+          "ms_transferencia": 10551.989366,
+          "ms_total": 27784.989366
+        },
+        {
+          "nodo": "D56-07-gpu",
+          "muestras": 800,
+          "perdida": 0.036072816234081984,
+          "perdida_val": 0.09957256256523779,
+          "ms_computo": 17309,
+          "ms_envio": 5276.548362,
+          "ms_transferencia": 10534.706005,
+          "ms_total": 27843.706005
+        },
+        {
+          "nodo": "D56-08-gpu",
+          "muestras": 800,
+          "perdida": 0.036702674133703116,
+          "perdida_val": 0.06809983857102313,
+          "ms_computo": 17252,
+          "ms_envio": 5290.860643,
+          "ms_transferencia": 10536.466748,
+          "ms_total": 27788.466748
+        },
+        {
+          "nodo": "D56-10-gpu",
+          "muestras": 800,
+          "perdida": 0.03680338586680591,
+          "perdida_val": 0.06227678976069063,
+          "ms_computo": 17161,
+          "ms_envio": 5270.260355,
+          "ms_transferencia": 10395.157138,
+          "ms_total": 27556.157138
+        },
+        {
+          "nodo": "D56-11-gpu",
+          "muestras": 800,
+          "perdida": 0.036506039714440705,
+          "perdida_val": 0.14406363850756854,
+          "ms_computo": 17416,
+          "ms_envio": 5275.874846,
+          "ms_transferencia": 10512.6415,
+          "ms_total": 27928.6415
+        },
+        {
+          "nodo": "D56-12-gpu",
+          "muestras": 800,
+          "perdida": 0.03644516894593835,
+          "perdida_val": 0.09605768549701442,
+          "ms_computo": 17345,
+          "ms_envio": 5272.43783,
+          "ms_transferencia": 10535.859333,
+          "ms_total": 27880.859333
+        },
+        {
+          "nodo": "D56-14-gpu",
+          "muestras": 800,
+          "perdida": 0.03689355520531535,
+          "perdida_val": 0.07000073853160153,
+          "ms_computo": 17225,
+          "ms_envio": 5275.798019,
+          "ms_transferencia": 10679.53544,
+          "ms_total": 27904.53544
+        },
+        {
+          "nodo": "D56-15-gpu",
+          "muestras": 800,
+          "perdida": 0.036831109188497066,
+          "perdida_val": 0.06851833013702283,
+          "ms_computo": 17173,
+          "ms_envio": 5263.852952,
+          "ms_transferencia": 10561.938193,
+          "ms_total": 27734.938193
+        },
+        {
+          "nodo": "D56-16-gpu",
+          "muestras": 800,
+          "perdida": 0.04038097149692476,
+          "perdida_val": 0.07239954358209734,
+          "ms_computo": 17278,
+          "ms_envio": 5277.12968,
+          "ms_transferencia": 10642.304006,
+          "ms_total": 27920.304006
+        },
+        {
+          "nodo": "D56-17-gpu",
+          "muestras": 800,
+          "perdida": 0.03640049490146339,
+          "perdida_val": 0.0687286636271214,
+          "ms_computo": 17307,
+          "ms_envio": 5277.304186,
+          "ms_transferencia": 10249.750886,
+          "ms_total": 27556.750886
+        },
+        {
+          "nodo": "D56-18-gpu",
+          "muestras": 800,
+          "perdida": 0.04016829355619848,
+          "perdida_val": 0.05896959324245867,
+          "ms_computo": 17205,
+          "ms_envio": 5276.242028,
+          "ms_transferencia": 9914.79385,
+          "ms_total": 27119.79385
+        },
+        {
+          "nodo": "D56-19-gpu",
+          "muestras": 800,
+          "perdida": 0.040797252031043174,
+          "perdida_val": 0.08738788645879357,
+          "ms_computo": 17357,
+          "ms_envio": 5252.737595,
+          "ms_transferencia": 10394.463382,
+          "ms_total": 27751.463382
+        },
+        {
+          "nodo": "D56-20-gpu",
+          "muestras": 800,
+          "perdida": 0.04054049964994192,
+          "perdida_val": 0.09961144289875452,
+          "ms_computo": 17300,
+          "ms_envio": 5274.162739,
+          "ms_transferencia": 10495.381799,
+          "ms_total": 27795.381799
+        },
+        {
+          "nodo": "D56-21-gpu",
+          "muestras": 800,
+          "perdida": 0.0369958571717143,
+          "perdida_val": 0.12252212159273003,
+          "ms_computo": 17283,
+          "ms_envio": 5284.737618,
+          "ms_transferencia": 10645.614159,
+          "ms_total": 27928.614159
+        }
+      ]
+    },
+    {
+      "ronda": 6,
+      "perdida": 0.03769924834184349,
+      "perdida_val": 0.09234572214872348,
+      "muestras": 16000,
+      "ms_barrera": 27936.406961,
+      "ms_promedio": 103.5613,
+      "bytes": 1275576640,
+      "nodos": [
+        {
+          "nodo": "D56-004-gpu",
+          "muestras": 800,
+          "perdida": 0.03886316862888634,
+          "perdida_val": 0.06503708963083406,
+          "ms_computo": 17381,
+          "ms_envio": 5308.330254,
+          "ms_transferencia": 10523.604402,
+          "ms_total": 27904.604402
+        },
+        {
+          "nodo": "D56-005-gpu",
+          "muestras": 800,
+          "perdida": 0.039436988951638344,
+          "perdida_val": 0.11052897478546109,
+          "ms_computo": 17287,
+          "ms_envio": 5313.236763,
+          "ms_transferencia": 10511.442332,
+          "ms_total": 27798.442332
+        },
+        {
+          "nodo": "D56-01-gpu",
+          "muestras": 800,
+          "perdida": 0.04004417221993208,
+          "perdida_val": 0.06434644405276348,
+          "ms_computo": 17194,
+          "ms_envio": 5273.93715,
+          "ms_transferencia": 10210.606753,
+          "ms_total": 27404.606753
+        },
+        {
+          "nodo": "D56-02-gpu",
+          "muestras": 800,
+          "perdida": 0.04031046036630869,
+          "perdida_val": 0.0995622822198986,
+          "ms_computo": 17392,
+          "ms_envio": 5305.914959,
+          "ms_transferencia": 10192.299946,
+          "ms_total": 27584.299946
+        },
+        {
+          "nodo": "D56-027-gpu",
+          "muestras": 800,
+          "perdida": 0.035184433469548825,
+          "perdida_val": 0.0872144330130971,
+          "ms_computo": 17150,
+          "ms_envio": 5251.071211,
+          "ms_transferencia": 10530.676193,
+          "ms_total": 27680.676193
+        },
+        {
+          "nodo": "D56-03-gpu",
+          "muestras": 800,
+          "perdida": 0.03953965032473206,
+          "perdida_val": 0.10516562916595361,
+          "ms_computo": 17365,
+          "ms_envio": 5310.109186,
+          "ms_transferencia": 10435.551483,
+          "ms_total": 27800.551483
+        },
+        {
+          "nodo": "D56-06-gpu",
+          "muestras": 800,
+          "perdida": 0.036312330449,
+          "perdida_val": 0.09082302859926646,
+          "ms_computo": 17320,
+          "ms_envio": 5281.46986,
+          "ms_transferencia": 10537.474427,
+          "ms_total": 27857.474427
+        },
+        {
+          "nodo": "D56-07-gpu",
+          "muestras": 800,
+          "perdida": 0.03545197050087154,
+          "perdida_val": 0.07019506896830212,
+          "ms_computo": 17219,
+          "ms_envio": 5278.365837,
+          "ms_transferencia": 10466.919862,
+          "ms_total": 27685.919862
+        },
+        {
+          "nodo": "D56-08-gpu",
+          "muestras": 800,
+          "perdida": 0.03672921567223966,
+          "perdida_val": 0.12575527924602314,
+          "ms_computo": 17139,
+          "ms_envio": 5275.999162,
+          "ms_transferencia": 10411.600651,
+          "ms_total": 27550.600651
+        },
+        {
+          "nodo": "D56-10-gpu",
+          "muestras": 800,
+          "perdida": 0.037367708748206496,
+          "perdida_val": 0.08562472721530219,
+          "ms_computo": 17246,
+          "ms_envio": 5270.474293,
+          "ms_transferencia": 10387.006412,
+          "ms_total": 27633.006412
+        },
+        {
+          "nodo": "D56-11-gpu",
+          "muestras": 800,
+          "perdida": 0.03626374100334942,
+          "perdida_val": 0.12005511993745796,
+          "ms_computo": 17512,
+          "ms_envio": 5256.383753,
+          "ms_transferencia": 10359.838722,
+          "ms_total": 27871.838722
+        },
+        {
+          "nodo": "D56-12-gpu",
+          "muestras": 800,
+          "perdida": 0.03528046474792063,
+          "perdida_val": 0.10635291299094325,
+          "ms_computo": 17254,
+          "ms_envio": 5255.707901,
+          "ms_transferencia": 10485.164097,
+          "ms_total": 27739.164097
+        },
+        {
+          "nodo": "D56-14-gpu",
+          "muestras": 800,
+          "perdida": 0.03614096900448203,
+          "perdida_val": 0.07824012702878784,
+          "ms_computo": 17111,
+          "ms_envio": 5279.630751,
+          "ms_transferencia": 9150.277607,
+          "ms_total": 26261.277607
+        },
+        {
+          "nodo": "D56-15-gpu",
+          "muestras": 800,
+          "perdida": 0.03628700966946781,
+          "perdida_val": 0.12125265512582475,
+          "ms_computo": 17252,
+          "ms_envio": 5292.683297,
+          "ms_transferencia": 10525.355876,
+          "ms_total": 27777.355876
+        },
+        {
+          "nodo": "D56-16-gpu",
+          "muestras": 800,
+          "perdida": 0.03982959497720003,
+          "perdida_val": 0.07281133121122485,
+          "ms_computo": 17368,
+          "ms_envio": 5271.774675,
+          "ms_transferencia": 10453.494719,
+          "ms_total": 27821.494719
+        },
+        {
+          "nodo": "D56-17-gpu",
+          "muestras": 800,
+          "perdida": 0.03606539951637387,
+          "perdida_val": 0.09422814006269989,
+          "ms_computo": 17187,
+          "ms_envio": 5274.17028,
+          "ms_transferencia": 10302.906233,
+          "ms_total": 27489.906233
+        },
+        {
+          "nodo": "D56-18-gpu",
+          "muestras": 800,
+          "perdida": 0.0394935361109674,
+          "perdida_val": 0.10365932195082955,
+          "ms_computo": 17276,
+          "ms_envio": 5229.493483,
+          "ms_transferencia": 10334.186321,
+          "ms_total": 27610.186321
+        },
+        {
+          "nodo": "D56-19-gpu",
+          "muestras": 800,
+          "perdida": 0.03964523221366108,
+          "perdida_val": 0.08958562549236601,
+          "ms_computo": 17430,
+          "ms_envio": 5282.095912,
+          "ms_transferencia": 10334.612715,
+          "ms_total": 27764.612715
+        },
+        {
+          "nodo": "D56-20-gpu",
+          "muestras": 800,
+          "perdida": 0.03964710699394345,
+          "perdida_val": 0.08139629032363933,
+          "ms_computo": 17200,
+          "ms_envio": 5275.555092,
+          "ms_transferencia": 10073.865579,
+          "ms_total": 27273.865579
+        },
+        {
+          "nodo": "D56-21-gpu",
+          "muestras": 800,
+          "perdida": 0.036091813268139955,
+          "perdida_val": 0.07507996195379425,
+          "ms_computo": 17358,
+          "ms_envio": 5286.07225,
+          "ms_transferencia": 10449.661098,
+          "ms_total": 27807.661098
+        }
+      ]
+    },
+    {
+      "ronda": 7,
+      "perdida": 0.03701495104189962,
+      "perdida_val": 0.09301026821509564,
+      "muestras": 16000,
+      "ms_barrera": 27996.080662,
+      "ms_promedio": 103.414074,
+      "bytes": 1275576640,
+      "nodos": [
+        {
+          "nodo": "D56-004-gpu",
+          "muestras": 800,
+          "perdida": 0.038941946728155014,
+          "perdida_val": 0.08535983722306724,
+          "ms_computo": 17290,
+          "ms_envio": 5312.229956,
+          "ms_transferencia": 10200.035386,
+          "ms_total": 27490.035386
+        },
+        {
+          "nodo": "D56-005-gpu",
+          "muestras": 800,
+          "perdida": 0.03903139059431851,
+          "perdida_val": 0.10459583964165267,
+          "ms_computo": 17195,
+          "ms_envio": 5309.080097,
+          "ms_transferencia": 10374.863059,
+          "ms_total": 27569.863059
+        },
+        {
+          "nodo": "D56-01-gpu",
+          "muestras": 800,
+          "perdida": 0.039016312984749675,
+          "perdida_val": 0.09837234785987271,
+          "ms_computo": 17302,
+          "ms_envio": 5275.785805,
+          "ms_transferencia": 10420.263364,
+          "ms_total": 27722.263364
+        },
+        {
+          "nodo": "D56-02-gpu",
+          "muestras": 800,
+          "perdida": 0.039087841315194966,
+          "perdida_val": 0.07997590974589025,
+          "ms_computo": 17312,
+          "ms_envio": 5272.455765,
+          "ms_transferencia": 10634.790148,
+          "ms_total": 27946.790148
+        },
+        {
+          "nodo": "D56-027-gpu",
+          "muestras": 800,
+          "perdida": 0.03521418560296297,
+          "perdida_val": 0.10063846911425176,
+          "ms_computo": 17250,
+          "ms_envio": 5272.781034,
+          "ms_transferencia": 10271.130996,
+          "ms_total": 27521.130996
+        },
+        {
+          "nodo": "D56-03-gpu",
+          "muestras": 800,
+          "perdida": 0.03883645492605865,
+          "perdida_val": 0.09705997659856903,
+          "ms_computo": 17490,
+          "ms_envio": 5304.847556,
+          "ms_transferencia": 9946.707793,
+          "ms_total": 27436.707793
+        },
+        {
+          "nodo": "D56-06-gpu",
+          "muestras": 800,
+          "perdida": 0.03521952115930617,
+          "perdida_val": 0.08424682618506187,
+          "ms_computo": 17233,
+          "ms_envio": 5231.70574,
+          "ms_transferencia": 10562.542341,
+          "ms_total": 27795.542341
+        },
+        {
+          "nodo": "D56-07-gpu",
+          "muestras": 800,
+          "perdida": 0.035272835707291963,
+          "perdida_val": 0.12202473742476964,
+          "ms_computo": 17316,
+          "ms_envio": 5276.415525,
+          "ms_transferencia": 10531.137423,
+          "ms_total": 27847.137423
+        },
+        {
+          "nodo": "D56-08-gpu",
+          "muestras": 800,
+          "perdida": 0.034858619440346954,
+          "perdida_val": 0.13048883085533725,
+          "ms_computo": 17253,
+          "ms_envio": 5275.489753,
+          "ms_transferencia": 10617.610861,
+          "ms_total": 27870.610861
+        },
+        {
+          "nodo": "D56-10-gpu",
+          "muestras": 800,
+          "perdida": 0.035925049986690286,
+          "perdida_val": 0.07709287858362925,
+          "ms_computo": 17164,
+          "ms_envio": 5270.620279,
+          "ms_transferencia": 9498.364723,
+          "ms_total": 26662.364723
+        },
+        {
+          "nodo": "D56-11-gpu",
+          "muestras": 800,
+          "perdida": 0.03574075368233025,
+          "perdida_val": 0.07127966177688927,
+          "ms_computo": 17450,
+          "ms_envio": 5254.909204,
+          "ms_transferencia": 10381.685195,
+          "ms_total": 27831.685195
+        },
+        {
+          "nodo": "D56-12-gpu",
+          "muestras": 800,
+          "perdida": 0.03523160507902503,
+          "perdida_val": 0.10667896147655404,
+          "ms_computo": 17362,
+          "ms_envio": 5237.03171,
+          "ms_transferencia": 10587.757252,
+          "ms_total": 27949.757252
+        },
+        {
+          "nodo": "D56-14-gpu",
+          "muestras": 800,
+          "perdida": 0.03526321340352297,
+          "perdida_val": 0.0999017871227585,
+          "ms_computo": 17205,
+          "ms_envio": 5277.458516,
+          "ms_transferencia": 10566.407238,
+          "ms_total": 27771.407238
+        },
+        {
+          "nodo": "D56-15-gpu",
+          "muestras": 800,
+          "perdida": 0.03531297632493079,
+          "perdida_val": 0.10388098195590804,
+          "ms_computo": 17358,
+          "ms_envio": 5263.447344,
+          "ms_transferencia": 10456.831667,
+          "ms_total": 27814.831667
+        },
+        {
+          "nodo": "D56-16-gpu",
+          "muestras": 800,
+          "perdida": 0.039328214293345806,
+          "perdida_val": 0.06735077244432076,
+          "ms_computo": 17295,
+          "ms_envio": 5275.527811,
+          "ms_transferencia": 10463.846844,
+          "ms_total": 27758.846844
+        },
+        {
+          "nodo": "D56-17-gpu",
+          "muestras": 800,
+          "perdida": 0.03501077768392861,
+          "perdida_val": 0.0834655791710494,
+          "ms_computo": 17312,
+          "ms_envio": 5280.45321,
+          "ms_transferencia": 10628.698113,
+          "ms_total": 27940.698113
+        },
+        {
+          "nodo": "D56-18-gpu",
+          "muestras": 800,
+          "perdida": 0.03911992071196437,
+          "perdida_val": 0.08135042310408924,
+          "ms_computo": 17185,
+          "ms_envio": 5249.907284,
+          "ms_transferencia": 10640.046421,
+          "ms_total": 27825.046421
+        },
+        {
+          "nodo": "D56-19-gpu",
+          "muestras": 800,
+          "perdida": 0.03989711433649063,
+          "perdida_val": 0.07798979787436207,
+          "ms_computo": 17388,
+          "ms_envio": 5288.530777,
+          "ms_transferencia": 10538.593345,
+          "ms_total": 27926.593345
+        },
+        {
+          "nodo": "D56-20-gpu",
+          "muestras": 800,
+          "perdida": 0.03930838314816356,
+          "perdida_val": 0.11465748139055429,
+          "ms_computo": 17332,
+          "ms_envio": 5285.535069,
+          "ms_transferencia": 10625.161289,
+          "ms_total": 27957.161289
+        },
+        {
+          "nodo": "D56-21-gpu",
+          "muestras": 800,
+          "perdida": 0.034681903729215265,
+          "perdida_val": 0.07379426475332565,
+          "ms_computo": 17487,
+          "ms_envio": 5254.847012,
+          "ms_transferencia": 10454.113997,
+          "ms_total": 27941.113997
+        }
+      ]
+    },
+    {
+      "ronda": 8,
+      "perdida": 0.03685264305444434,
+      "perdida_val": 0.0909620401805547,
+      "muestras": 16000,
+      "ms_barrera": 27979.928934,
+      "ms_promedio": 103.581589,
+      "bytes": 1275576640,
+      "nodos": [
+        {
+          "nodo": "D56-004-gpu",
+          "muestras": 800,
+          "perdida": 0.03808496381156146,
+          "perdida_val": 0.08980351173852244,
+          "ms_computo": 17318,
+          "ms_envio": 5301.801932,
+          "ms_transferencia": 10136.391129,
+          "ms_total": 27454.391129
+        },
+        {
+          "nodo": "D56-005-gpu",
+          "muestras": 800,
+          "perdida": 0.039202718213200566,
+          "perdida_val": 0.06633612916276262,
+          "ms_computo": 17229,
+          "ms_envio": 5309.951656,
+          "ms_transferencia": 10563.516562,
+          "ms_total": 27792.516562
+        },
+        {
+          "nodo": "D56-01-gpu",
+          "muestras": 800,
+          "perdida": 0.039976902781054376,
+          "perdida_val": 0.06951266328175353,
+          "ms_computo": 17158,
+          "ms_envio": 5269.635636,
+          "ms_transferencia": 9412.733388,
+          "ms_total": 26570.733388
+        },
+        {
+          "nodo": "D56-02-gpu",
+          "muestras": 800,
+          "perdida": 0.038956928700208664,
+          "perdida_val": 0.07223706951072394,
+          "ms_computo": 17349,
+          "ms_envio": 5276.418328,
+          "ms_transferencia": 10345.544532,
+          "ms_total": 27694.544532
+        },
+        {
+          "nodo": "D56-027-gpu",
+          "muestras": 800,
+          "perdida": 0.03470303225331008,
+          "perdida_val": 0.1037391980705054,
+          "ms_computo": 17286,
+          "ms_envio": 5282.535022,
+          "ms_transferencia": 10273.708768,
+          "ms_total": 27559.708768
+        },
+        {
+          "nodo": "D56-03-gpu",
+          "muestras": 800,
+          "perdida": 0.038651972534134986,
+          "perdida_val": 0.1029295671474317,
+          "ms_computo": 17519,
+          "ms_envio": 5306.350871,
+          "ms_transferencia": 10388.10267,
+          "ms_total": 27907.10267
+        },
+        {
+          "nodo": "D56-06-gpu",
+          "muestras": 800,
+          "perdida": 0.03542783301323652,
+          "perdida_val": 0.10130659682033337,
+          "ms_computo": 17238,
+          "ms_envio": 5270.057466,
+          "ms_transferencia": 10389.988984,
+          "ms_total": 27627.988984
+        },
+        {
+          "nodo": "D56-07-gpu",
+          "muestras": 800,
+          "perdida": 0.035011134892702106,
+          "perdida_val": 0.10170363840031421,
+          "ms_computo": 17353,
+          "ms_envio": 5274.643256,
+          "ms_transferencia": 10577.71346,
+          "ms_total": 27930.71346
+        },
+        {
+          "nodo": "D56-08-gpu",
+          "muestras": 800,
+          "perdida": 0.03549625164829195,
+          "perdida_val": 0.11750837244977386,
+          "ms_computo": 17275,
+          "ms_envio": 5275.528964,
+          "ms_transferencia": 10363.650761,
+          "ms_total": 27638.650761
+        },
+        {
+          "nodo": "D56-10-gpu",
+          "muestras": 800,
+          "perdida": 0.035440799063071605,
+          "perdida_val": 0.05883108148888006,
+          "ms_computo": 17206,
+          "ms_envio": 5271.645293,
+          "ms_transferencia": 10538.837736,
+          "ms_total": 27744.837736
+        },
+        {
+          "nodo": "D56-11-gpu",
+          "muestras": 800,
+          "perdida": 0.03542313898913562,
+          "perdida_val": 0.09838540122664276,
+          "ms_computo": 17479,
+          "ms_envio": 5262.647577,
+          "ms_transferencia": 10373.095987,
+          "ms_total": 27852.095987
+        },
+        {
+          "nodo": "D56-12-gpu",
+          "muestras": 800,
+          "perdida": 0.03418477944098413,
+          "perdida_val": 0.10484896820524464,
+          "ms_computo": 17396,
+          "ms_envio": 5263.341174,
+          "ms_transferencia": 10237.843302,
+          "ms_total": 27633.843302
+        },
+        {
+          "nodo": "D56-14-gpu",
+          "muestras": 800,
+          "perdida": 0.034922365322709086,
+          "perdida_val": 0.07528247355538256,
+          "ms_computo": 17251,
+          "ms_envio": 5276.148132,
+          "ms_transferencia": 10667.551277,
+          "ms_total": 27918.551277
+        },
+        {
+          "nodo": "D56-15-gpu",
+          "muestras": 800,
+          "perdida": 0.03543634693138301,
+          "perdida_val": 0.1181214041018908,
+          "ms_computo": 17201,
+          "ms_envio": 5271.322217,
+          "ms_transferencia": 10679.342528,
+          "ms_total": 27880.342528
+        },
+        {
+          "nodo": "D56-16-gpu",
+          "muestras": 800,
+          "perdida": 0.038890526546165344,
+          "perdida_val": 0.09694103080293406,
+          "ms_computo": 17317,
+          "ms_envio": 5297.573423,
+          "ms_transferencia": 10622.417416,
+          "ms_total": 27939.417416
+        },
+        {
+          "nodo": "D56-17-gpu",
+          "muestras": 800,
+          "perdida": 0.03507976562716067,
+          "perdida_val": 0.08466919879350117,
+          "ms_computo": 17352,
+          "ms_envio": 5268.800569,
+          "ms_transferencia": 10547.162409,
+          "ms_total": 27899.162409
+        },
+        {
+          "nodo": "D56-18-gpu",
+          "muestras": 800,
+          "perdida": 0.03950219548307359,
+          "perdida_val": 0.07894614040851593,
+          "ms_computo": 17213,
+          "ms_envio": 5214.010362,
+          "ms_transferencia": 10677.255977,
+          "ms_total": 27890.255977
+        },
+        {
+          "nodo": "D56-19-gpu",
+          "muestras": 800,
+          "perdida": 0.03939607836306095,
+          "perdida_val": 0.07489074440260904,
+          "ms_computo": 17412,
+          "ms_envio": 5275.777509,
+          "ms_transferencia": 10307.573619,
+          "ms_total": 27719.573619
+        },
+        {
+          "nodo": "D56-20-gpu",
+          "muestras": 800,
+          "perdida": 0.038435937110334634,
+          "perdida_val": 0.10452008237485337,
+          "ms_computo": 17368,
+          "ms_envio": 5283.640313,
+          "ms_transferencia": 10289.393242,
+          "ms_total": 27657.393242
+        },
+        {
+          "nodo": "D56-21-gpu",
+          "muestras": 800,
+          "perdida": 0.03482919036410749,
+          "perdida_val": 0.09872753166851878,
+          "ms_computo": 17352,
+          "ms_envio": 5238.272553,
+          "ms_transferencia": 10552.410779,
+          "ms_total": 27904.410779
+        }
+      ]
+    },
+    {
+      "ronda": 9,
+      "perdida": 0.036249194816220555,
+      "perdida_val": 0.09364369728090972,
+      "muestras": 16000,
+      "ms_barrera": 27962.02643,
+      "ms_promedio": 103.701442,
+      "bytes": 1275576640,
+      "nodos": [
+        {
+          "nodo": "D56-004-gpu",
+          "muestras": 800,
+          "perdida": 0.036885724812746046,
+          "perdida_val": 0.06224559478334382,
+          "ms_computo": 17380,
+          "ms_envio": 5314.448691,
+          "ms_transferencia": 10410.058255,
+          "ms_total": 27790.058255
+        },
+        {
+          "nodo": "D56-005-gpu",
+          "muestras": 800,
+          "perdida": 0.038167966483160856,
+          "perdida_val": 0.06307746003474202,
+          "ms_computo": 17292,
+          "ms_envio": 5308.969255,
+          "ms_transferencia": 10611.960877,
+          "ms_total": 27903.960877
+        },
+        {
+          "nodo": "D56-01-gpu",
+          "muestras": 800,
+          "perdida": 0.03851598465815186,
+          "perdida_val": 0.07518236262676044,
+          "ms_computo": 17200,
+          "ms_envio": 5270.465242,
+          "ms_transferencia": 9869.597634,
+          "ms_total": 27069.597634
+        },
+        {
+          "nodo": "D56-02-gpu",
+          "muestras": 800,
+          "perdida": 0.038458101619035005,
+          "perdida_val": 0.10196737132289192,
+          "ms_computo": 17411,
+          "ms_envio": 5264.433435,
+          "ms_transferencia": 9905.527922,
+          "ms_total": 27316.527922
+        },
+        {
+          "nodo": "D56-027-gpu",
+          "muestras": 800,
+          "perdida": 0.03437247719615698,
+          "perdida_val": 0.14886934245410172,
+          "ms_computo": 17355,
+          "ms_envio": 5253.475074,
+          "ms_transferencia": 10502.205844,
+          "ms_total": 27857.205844
+        },
+        {
+          "nodo": "D56-03-gpu",
+          "muestras": 800,
+          "perdida": 0.03864756672643125,
+          "perdida_val": 0.08993237497734613,
+          "ms_computo": 17389,
+          "ms_envio": 5306.887337,
+          "ms_transferencia": 10122.246192,
+          "ms_total": 27511.246192
+        },
+        {
+          "nodo": "D56-06-gpu",
+          "muestras": 800,
+          "perdida": 0.03422982555814087,
+          "perdida_val": 0.07494495589846531,
+          "ms_computo": 17285,
+          "ms_envio": 5275.297496,
+          "ms_transferencia": 10574.867417,
+          "ms_total": 27859.867417
+        },
+        {
+          "nodo": "D56-07-gpu",
+          "muestras": 800,
+          "perdida": 0.03415553102269769,
+          "perdida_val": 0.12168586001557818,
+          "ms_computo": 17392,
+          "ms_envio": 5275.653872,
+          "ms_transferencia": 10509.876131,
+          "ms_total": 27901.876131
+        },
+        {
+          "nodo": "D56-08-gpu",
+          "muestras": 800,
+          "perdida": 0.03464766607619822,
+          "perdida_val": 0.11473136300505218,
+          "ms_computo": 17129,
+          "ms_envio": 5275.656618,
+          "ms_transferencia": 8444.184496,
+          "ms_total": 25573.184496
+        },
+        {
+          "nodo": "D56-10-gpu",
+          "muestras": 800,
+          "perdida": 0.03511211711913347,
+          "perdida_val": 0.07218166857452715,
+          "ms_computo": 17271,
+          "ms_envio": 5269.967307,
+          "ms_transferencia": 10159.896743,
+          "ms_total": 27430.896743
+        },
+        {
+          "nodo": "D56-11-gpu",
+          "muestras": 800,
+          "perdida": 0.03454795113764703,
+          "perdida_val": 0.0800415703854641,
+          "ms_computo": 17538,
+          "ms_envio": 5241.182037,
+          "ms_transferencia": 10366.493909,
+          "ms_total": 27904.493909
+        },
+        {
+          "nodo": "D56-12-gpu",
+          "muestras": 800,
+          "perdida": 0.03412547372281551,
+          "perdida_val": 0.10397114727808082,
+          "ms_computo": 17453,
+          "ms_envio": 5239.470536,
+          "ms_transferencia": 10273.954029,
+          "ms_total": 27726.954029
+        },
+        {
+          "nodo": "D56-14-gpu",
+          "muestras": 800,
+          "perdida": 0.034647155944257976,
+          "perdida_val": 0.09401178575989579,
+          "ms_computo": 17320,
+          "ms_envio": 5251.39171,
+          "ms_transferencia": 10599.489748,
+          "ms_total": 27919.489748
+        },
+        {
+          "nodo": "D56-15-gpu",
+          "muestras": 800,
+          "perdida": 0.03464243248105049,
+          "perdida_val": 0.09081050166777804,
+          "ms_computo": 17273,
+          "ms_envio": 5253.986859,
+          "ms_transferencia": 10307.909549,
+          "ms_total": 27580.909549
+        },
+        {
+          "nodo": "D56-16-gpu",
+          "muestras": 800,
+          "perdida": 0.0389695681259036,
+          "perdida_val": 0.09162007797023525,
+          "ms_computo": 17383,
+          "ms_envio": 5282.39979,
+          "ms_transferencia": 10460.631544,
+          "ms_total": 27843.631544
+        },
+        {
+          "nodo": "D56-17-gpu",
+          "muestras": 800,
+          "perdida": 0.034511964246630666,
+          "perdida_val": 0.0996261853093313,
+          "ms_computo": 17399,
+          "ms_envio": 5270.740026,
+          "ms_transferencia": 10507.057308,
+          "ms_total": 27906.057308
+        },
+        {
+          "nodo": "D56-18-gpu",
+          "muestras": 800,
+          "perdida": 0.03831554781645537,
+          "perdida_val": 0.07444184730234353,
+          "ms_computo": 17293,
+          "ms_envio": 5252.189614,
+          "ms_transferencia": 10551.390338,
+          "ms_total": 27844.390338
+        },
+        {
+          "nodo": "D56-19-gpu",
+          "muestras": 800,
+          "perdida": 0.03861686578951776,
+          "perdida_val": 0.09261458439637074,
+          "ms_computo": 17466,
+          "ms_envio": 5274.62381,
+          "ms_transferencia": 10309.921808,
+          "ms_total": 27775.921808
+        },
+        {
+          "nodo": "D56-20-gpu",
+          "muestras": 800,
+          "perdida": 0.03862208130769432,
+          "perdida_val": 0.1272977551000308,
+          "ms_computo": 17223,
+          "ms_envio": 5282.518226,
+          "ms_transferencia": 10649.224082,
+          "ms_total": 27872.224082
+        },
+        {
+          "nodo": "D56-21-gpu",
+          "muestras": 800,
+          "perdida": 0.034791894480586054,
+          "perdida_val": 0.09362013675585515,
+          "ms_computo": 17396,
+          "ms_envio": 5265.310628,
+          "ms_transferencia": 10235.877845,
+          "ms_total": 27631.877845
+        }
+      ]
+    },
+    {
+      "ronda": 10,
+      "perdida": 0.03576236470695585,
+      "perdida_val": 0.09263860538590495,
+      "muestras": 16000,
+      "ms_barrera": 28022.615329,
+      "ms_promedio": 107.065895,
+      "bytes": 1275576640,
+      "nodos": [
+        {
+          "nodo": "D56-004-gpu",
+          "muestras": 800,
+          "perdida": 0.03701940975151956,
+          "perdida_val": 0.0657317282902634,
+          "ms_computo": 17459,
+          "ms_envio": 5296.873925,
+          "ms_transferencia": 10285.052799,
+          "ms_total": 27744.052799
+        },
+        {
+          "nodo": "D56-005-gpu",
+          "muestras": 800,
+          "perdida": 0.0373707534559071,
+          "perdida_val": 0.09144887395270236,
+          "ms_computo": 17348,
+          "ms_envio": 5308.802798,
+          "ms_transferencia": 10570.784947,
+          "ms_total": 27918.784947
+        },
+        {
+          "nodo": "D56-01-gpu",
+          "muestras": 800,
+          "perdida": 0.037830560058355334,
+          "perdida_val": 0.1038894548248022,
+          "ms_computo": 17285,
+          "ms_envio": 5270.519084,
+          "ms_transferencia": 10669.103064,
+          "ms_total": 27954.103064
+        },
+        {
+          "nodo": "D56-02-gpu",
+          "muestras": 800,
+          "perdida": 0.03835399242118001,
+          "perdida_val": 0.08684367575675003,
+          "ms_computo": 17478,
+          "ms_envio": 5267.465582,
+          "ms_transferencia": 10407.452498,
+          "ms_total": 27885.452498
+        },
+        {
+          "nodo": "D56-027-gpu",
+          "muestras": 800,
+          "perdida": 0.03347307310439646,
+          "perdida_val": 0.09840551491664803,
+          "ms_computo": 17230,
+          "ms_envio": 5262.788636,
+          "ms_transferencia": 10198.74389,
+          "ms_total": 27428.74389
+        },
+        {
+          "nodo": "D56-03-gpu",
+          "muestras": 800,
+          "perdida": 0.037355824979022144,
+          "perdida_val": 0.09736091393078196,
+          "ms_computo": 17481,
+          "ms_envio": 5305.645761,
+          "ms_transferencia": 10269.093326,
+          "ms_total": 27750.093326
+        },
+        {
+          "nodo": "D56-06-gpu",
+          "muestras": 800,
+          "perdida": 0.03407234792597592,
+          "perdida_val": 0.07091679976247581,
+          "ms_computo": 17368,
+          "ms_envio": 5248.171231,
+          "ms_transferencia": 10500.83843,
+          "ms_total": 27868.83843
+        },
+        {
+          "nodo": "D56-07-gpu",
+          "muestras": 800,
+          "perdida": 0.034001700412482024,
+          "perdida_val": 0.10027547063842668,
+          "ms_computo": 17262,
+          "ms_envio": 5258.928493,
+          "ms_transferencia": 10576.919275,
+          "ms_total": 27838.919275
+        },
+        {
+          "nodo": "D56-08-gpu",
+          "muestras": 800,
+          "perdida": 0.03447256973944604,
+          "perdida_val": 0.12975690450708746,
+          "ms_computo": 17202,
+          "ms_envio": 5265.65504,
+          "ms_transferencia": 9919.739655,
+          "ms_total": 27121.739655
+        },
+        {
+          "nodo": "D56-10-gpu",
+          "muestras": 800,
+          "perdida": 0.03441889250651002,
+          "perdida_val": 0.0862568227290097,
+          "ms_computo": 17326,
+          "ms_envio": 5272.948373,
+          "ms_transferencia": 10345.431352,
+          "ms_total": 27671.431352
+        },
+        {
+          "nodo": "D56-11-gpu",
+          "muestras": 800,
+          "perdida": 0.03486599269323051,
+          "perdida_val": 0.10257994937671333,
+          "ms_computo": 17394,
+          "ms_envio": 5229.078599,
+          "ms_transferencia": 10580.416713,
+          "ms_total": 27974.416713
+        },
+        {
+          "nodo": "D56-12-gpu",
+          "muestras": 800,
+          "perdida": 0.03402780638076365,
+          "perdida_val": 0.07876629780815995,
+          "ms_computo": 17325,
+          "ms_envio": 5262.670218,
+          "ms_transferencia": 10637.782844,
+          "ms_total": 27962.782844
+        },
+        {
+          "nodo": "D56-14-gpu",
+          "muestras": 800,
+          "perdida": 0.03406879254616797,
+          "perdida_val": 0.1283696344231858,
+          "ms_computo": 17214,
+          "ms_envio": 5278.389442,
+          "ms_transferencia": 10137.7974,
+          "ms_total": 27351.7974
+        },
+        {
+          "nodo": "D56-15-gpu",
+          "muestras": 800,
+          "perdida": 0.03481756228022277,
+          "perdida_val": 0.10553901655747827,
+          "ms_computo": 17353,
+          "ms_envio": 5284.236596,
+          "ms_transferencia": 10615.77126,
+          "ms_total": 27968.77126
+        },
+        {
+          "nodo": "D56-16-gpu",
+          "muestras": 800,
+          "perdida": 0.037856028117239475,
+          "perdida_val": 0.08029399770109549,
+          "ms_computo": 17451,
+          "ms_envio": 5278.10519,
+          "ms_transferencia": 10490.514398,
+          "ms_total": 27941.514398
+        },
+        {
+          "nodo": "D56-17-gpu",
+          "muestras": 800,
+          "perdida": 0.03406259815208614,
+          "perdida_val": 0.10082837311014281,
+          "ms_computo": 17295,
+          "ms_envio": 5269.69228,
+          "ms_transferencia": 10662.557722,
+          "ms_total": 27957.557722
+        },
+        {
+          "nodo": "D56-18-gpu",
+          "muestras": 800,
+          "perdida": 0.037844981644302604,
+          "perdida_val": 0.0735009903655104,
+          "ms_computo": 17358,
+          "ms_envio": 5264.120161,
+          "ms_transferencia": 10602.090882,
+          "ms_total": 27960.090882
+        },
+        {
+          "nodo": "D56-19-gpu",
+          "muestras": 800,
+          "perdida": 0.03765064009465277,
+          "perdida_val": 0.10521322811863064,
+          "ms_computo": 17352,
+          "ms_envio": 5271.371478,
+          "ms_transferencia": 10576.926911,
+          "ms_total": 27928.926911
+        },
+        {
+          "nodo": "D56-20-gpu",
+          "muestras": 800,
+          "perdida": 0.038033492704853414,
+          "perdida_val": 0.07760431337277446,
+          "ms_computo": 17294,
+          "ms_envio": 5283.561497,
+          "ms_transferencia": 10407.610252,
+          "ms_total": 27701.610252
+        },
+        {
+          "nodo": "D56-21-gpu",
+          "muestras": 800,
+          "perdida": 0.03365027517080307,
+          "perdida_val": 0.06919014757546056,
+          "ms_computo": 17486,
+          "ms_envio": 5244.219678,
+          "ms_transferencia": 10420.721164,
+          "ms_total": 27906.721164
+        }
+      ]
+    }
+  ],
+  "ms": {
+    "espera_nodos": 27562.454544,
+    "tarea": 21939.622112,
+    "entrenamiento": 281354.255994,
+    "total": 303296.939744
+  },
+  "nota_tiempos": "Por ronda: ms_barrera va del primer PESOS al último LOCAL; ms_promedio es el promedio ponderado en orden de nodo; bytes es la carga binaria que cruzó la red (un PESOS y un LOCAL por nodo). Por nodo: ms_computo es lo que el nodo informa que tardó en sus pasos; ms_envio, escribir el PESOS en la conexión; ms_total, desde que empieza a salir el PESOS hasta que llega el LOCAL entero; ms_transferencia = ms_total − ms_computo, lo que costó la red (mandar, esperar y recibir). perdida y perdida_val de la ronda son las de cada nodo ponderadas por sus muestras. ms.tarea va del reparto al último LISTO (bajar y verificar los días); ms.total no incluye ms.espera_nodos."
+}
