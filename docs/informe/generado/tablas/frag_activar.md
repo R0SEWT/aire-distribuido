@@ -12,5 +12,5 @@ func (s *Servidor) ActivarModelo(m *modelo.Modelo) {
 }
 ```
 
-El modelo activo se reemplaza entero, sin candado en el camino de la predicción (`api/servidor.go`, líneas 325–332)
+El modelo activo se reemplaza entero, sin candado en el camino de la predicción (`api/servidor.go`, líneas 362–369)
 :::

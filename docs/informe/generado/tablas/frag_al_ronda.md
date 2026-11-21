@@ -14,5 +14,5 @@ alRonda := func(r cluster.Ronda) {
 }
 ```
 
-Cada ronda va a sus tres consumidores, cada uno por su canal (`api/entrenamientos.go`, líneas 393–402)
+Cada ronda va a sus tres consumidores, cada uno por su canal (`api/entrenamientos.go`, líneas 394–403)
 :::

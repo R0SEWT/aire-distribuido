@@ -10,12 +10,12 @@
 | `cmd/smoke` | El smoke test del clúster | 3 | — |
 | `modelo` | Sembrar el modelo desde `reports/` y predecir: casos fijos del gold y el ejemplo del contrato | 14 | — |
 | `ventana` | La media de 24 horas: ventana, lecturas desordenadas, mínimo de lecturas, ECA e INCA, concurrencia | 14 | — |
-| `api` | Rutas y errores, JWT, métricas, el escritor por colas, el coordinador de entrenamientos, el hub y el WebSocket, CORS | 86 | — |
+| `api` | Rutas y errores, JWT, métricas, el escritor por colas, el coordinador de entrenamientos, el hub y el WebSocket, CORS | 103 | — |
 | `almacen` | La ficha de estaciones y los documentos frente a sus ejemplos | 5 | — |
-| `almacen/memoria` | El doble en memoria que usan las pruebas y el CI | 11 | — |
+| `almacen/memoria` | El doble en memoria que usan las pruebas y el CI | 13 | — |
 | `almacen/mongo` | MongoDB real: colecciones, índices del seed, un solo modelo activo, el ciclo de un entrenamiento | 4 | 9 |
-| `almacen/redis` | Redis real: el régimen que no retrocede, escritores concurrentes, modelo activo y punto de control | — | 10 |
-| `cmd/api` | El arranque, el apagado en orden, los almacenes reales y el coordinador con nodos reales | 12 | 1 |
+| `almacen/redis` | Redis real: el régimen que no retrocede, escritores concurrentes, modelo activo y punto de control | — | 13 |
+| `cmd/api` | El arranque, el apagado en orden, los almacenes reales y el coordinador con nodos reales | 12 | 2 |
 
 Pruebas automáticas de los paquetes del Entregable 2
 :::
