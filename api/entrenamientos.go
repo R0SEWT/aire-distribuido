@@ -8,6 +8,7 @@ import (
 	"log/slog"
 	"math"
 	"net/http"
+	"strconv"
 	"sync"
 	"time"
 
@@ -676,6 +677,50 @@ func (s *Servidor) listarNodos(w http.ResponseWriter, r *http.Request) {
 		for _, n := range s.pool.Nodos() {
 			out = append(out, nodo{n.Nombre, n.Direccion, n.Workers, ms(n.Latencia), n.Libre})
 		}
+	}
+	s.responder(w, r, http.StatusOK, out)
+}
+
+// Topes de GET /api/cluster/eventos: cuántos eventos trae si no se le dice, y
+// cuántos como máximo. Son los del parámetro limite del contrato.
+const (
+	limiteEventosPorOmision = 50
+	limiteEventosMaximo     = 200
+)
+
+var msgLimiteEventos = fmt.Sprintf("limite tiene que ser un entero entre 1 y %d", limiteEventosMaximo)
+
+// GET /api/cluster/eventos?limite=N
+//
+// Los «logs» del clúster que pide el panel de administrador: las altas, las
+// bajas y los errores de los nodos que el pool le fue dejando al almacén
+// (registrarEvento), del más reciente al más antiguo. Un evento aparece en
+// cuanto la goroutine que los guarda lo escribió, no en el instante en que pasó.
+func (s *Servidor) listarEventosCluster(w http.ResponseWriter, r *http.Request) {
+	limite := limiteEventosPorOmision
+	if consulta := r.URL.Query(); consulta.Has("limite") {
+		n, err := strconv.Atoi(consulta.Get("limite"))
+		if err != nil || n < 1 || n > limiteEventosMaximo {
+			escribirError(w, http.StatusBadRequest, msgLimiteEventos)
+			return
+		}
+		limite = n
+	}
+	eventos, err := s.eventos.Recientes(r.Context(), limite)
+	if err != nil {
+		s.log.Error("eventos del clúster", "err", err)
+		escribirError(w, http.StatusServiceUnavailable, "MongoDB no disponible")
+		return
+	}
+	type evento struct {
+		TS      time.Time `json:"ts"`
+		Tipo    string    `json:"tipo"`
+		Nodo    string    `json:"nodo"`
+		Detalle string    `json:"detalle"`
+	}
+	out := make([]evento, 0, len(eventos))
+	for _, e := range eventos {
+		out = append(out, evento{enLima(e.TS), e.Tipo, e.Nodo, e.Detalle})
 	}
 	s.responder(w, r, http.StatusOK, out)
 }

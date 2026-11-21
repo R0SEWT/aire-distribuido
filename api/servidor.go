@@ -194,6 +194,7 @@ func Nuevo(cfg Config) (*Servidor, error) {
 	s.ruta("GET /api/modelos/activo", cualquiera, s.modeloActivo)
 	s.ruta("GET /api/metricas", []string{RolAdmin}, s.consultarMetricas)
 	s.ruta("GET /api/cluster/nodos", []string{RolAdmin}, s.listarNodos)
+	s.ruta("GET /api/cluster/eventos", []string{RolAdmin}, s.listarEventosCluster)
 	s.ruta("POST /api/entrenamientos", []string{RolAdmin}, s.iniciarEntrenamiento)
 	s.ruta("GET /api/entrenamientos", []string{RolAdmin}, s.listarEntrenamientos)
 	s.ruta("GET /api/entrenamientos/{id}", []string{RolAdmin}, s.consultarEntrenamiento)
