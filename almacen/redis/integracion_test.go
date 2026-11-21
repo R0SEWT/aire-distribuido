@@ -196,19 +196,24 @@ func TestGuardarRegimenesPorLote(t *testing.T) {
 	for i := range 33 {
 		lote[fmt.Sprintf("CA-%02d", i)] = almacen.RegimenEstacion{FechaHora: t0, Regimen: i % 3}
 	}
-	if err := c.GuardarRegimenes(ctx, lote); err != nil {
-		t.Fatal(err)
+	if guardados, err := c.GuardarRegimenes(ctx, lote); err != nil || len(guardados) != 33 {
+		t.Fatalf("GuardarRegimenes = %d guardados, %v; se esperaban los 33", len(guardados), err)
 	}
-	if err := c.GuardarRegimenes(ctx, nil); err != nil {
-		t.Fatalf("un lote vacío no es un error: %v", err)
+	if guardados, err := c.GuardarRegimenes(ctx, nil); err != nil || len(guardados) != 0 {
+		t.Fatalf("un lote vacío no es un error: %v, %v", guardados, err)
 	}
 	if n := c.cliente.DBSize(ctx).Val(); n != 33 {
 		t.Fatalf("%d claves, se esperaban 33", n)
 	}
-	if err := c.GuardarRegimenes(ctx, map[string]almacen.RegimenEstacion{
+	guardados, err := c.GuardarRegimenes(ctx, map[string]almacen.RegimenEstacion{
 		"CA-00": {FechaHora: t0.Add(-time.Hour), Regimen: 9}, "CA-01": {FechaHora: t0.Add(time.Hour), Regimen: 9},
-	}); err != nil {
+	})
+	if err != nil {
 		t.Fatal(err)
+	}
+	// Lo que devuelve es lo que quedó guardado: CA-01, no CA-00.
+	if _, esta00 := guardados["CA-00"]; len(guardados) != 1 || esta00 || guardados["CA-01"].Regimen != 9 {
+		t.Fatalf("guardados = %+v; se esperaba solo CA-01", guardados)
 	}
 	if a, b := regimen(t, c, "CA-00"), regimen(t, c, "CA-01"); a.Regimen != 0 || b.Regimen != 9 {
 		t.Fatalf("CA-00 = %d (se esperaba 0: la más antigua no reemplaza), CA-01 = %d (se esperaba 9)", a.Regimen, b.Regimen)
@@ -254,7 +259,7 @@ func TestRegimenesDeTodoElCatalogoEnUnaSolaIda(t *testing.T) {
 	if vacio, err := c.Regimenes(ctx, catalogo); err != nil || vacio == nil || len(vacio) != 0 {
 		t.Fatalf("Regimenes sin datos = %v, %v; se esperaba un mapa vacío", vacio, err)
 	}
-	if err := c.GuardarRegimenes(ctx, lote); err != nil {
+	if _, err := c.GuardarRegimenes(ctx, lote); err != nil {
 		t.Fatal(err)
 	}
 	cuenta := &cuentaComandos{}
@@ -282,6 +287,71 @@ func TestRegimenesDeTodoElCatalogoEnUnaSolaIda(t *testing.T) {
 	c.cliente.Set(ctx, claveRegimen("CA-01"), "no es JSON", 0)
 	if _, err := c.Regimenes(ctx, catalogo); err == nil || !strings.Contains(err.Error(), "estacion:CA-01:regimen") {
 		t.Fatalf("Regimenes con un valor ilegible = %v", err)
+	}
+}
+
+// Lo que GuardarRegimenes devuelve es lo que decide si un cambio se avisa por
+// el WebSocket: tiene que ser exactamente lo que Regimen devuelve después (las
+// fechas en hora de Lima y al segundo, como se guardan), y nada de lo que no
+// reemplazó. Una lectura de la misma hora sí reemplaza.
+func TestGuardarRegimenesDevuelveLoQueQuedoGuardado(t *testing.T) {
+	c := conectar(t)
+	inca := "mala"
+	pm := 58.3
+	nuevo := almacen.RegimenEstacion{
+		FechaHora: time.Date(2026, 11, 14, 20, 0, 0, 0, time.UTC), // las 15:00 de Lima, en otra zona
+		Regimen:   1, ExcedeECA: true, Alerta: true, INCA: &inca,
+		Media24h: almacen.Media24h{PM25: &pm, PM10: &pm, Lecturas: 24},
+		TS:       time.Date(2026, 11, 14, 15, 0, 2, 987_000_000, lima), // con milisegundos
+	}
+	guardados, err := c.GuardarRegimenes(ctx, map[string]almacen.RegimenEstacion{"CA-A": nuevo})
+	if err != nil || len(guardados) != 1 {
+		t.Fatalf("GuardarRegimenes = %+v, %v", guardados, err)
+	}
+	// Se comparan como JSON, que es como salen por la API (y time.Time no se
+	// compara con DeepEqual: la zona de lo leído es otro puntero).
+	devuelto, _ := json.Marshal(guardados["CA-A"])
+	leido, _ := json.Marshal(regimen(t, c, "CA-A"))
+	if string(devuelto) != string(leido) || !strings.Contains(string(devuelto), `"ts":"2026-11-14T15:00:02-05:00"`) ||
+		!strings.Contains(string(devuelto), `"fecha_hora":"2026-11-14T15:00:00-05:00"`) {
+		t.Fatalf("lo devuelto no es lo guardado:\n devuelto %s\n guardado %s", devuelto, leido)
+	}
+	// Una hora anterior: no reemplaza, no se devuelve y lo guardado no cambia.
+	vieja := almacen.RegimenEstacion{FechaHora: t0.Add(-time.Hour), Regimen: 2, TS: t0}
+	if guardados, err = c.GuardarRegimenes(ctx, map[string]almacen.RegimenEstacion{"CA-A": vieja}); err != nil || len(guardados) != 0 {
+		t.Fatalf("una lectura más antigua no tenía que guardarse: %+v, %v", guardados, err)
+	}
+	if leido := regimen(t, c, "CA-A"); leido.Regimen != 1 {
+		t.Fatalf("la lectura más antigua cambió el régimen: %+v", leido)
+	}
+	// La misma hora, corregida: reemplaza y se devuelve.
+	corregida := almacen.RegimenEstacion{FechaHora: t0, Regimen: 0, TS: t0}
+	if guardados, err = c.GuardarRegimenes(ctx, map[string]almacen.RegimenEstacion{"CA-A": corregida}); err != nil || guardados["CA-A"].Regimen != 0 {
+		t.Fatalf("la misma hora tenía que reemplazar: %+v, %v", guardados, err)
+	}
+	// Después de que Redis olvida el script, el lote se repite y la respuesta
+	// sigue diciendo qué se guardó.
+	if err := c.cliente.ScriptFlush(ctx).Err(); err != nil {
+		t.Fatal(err)
+	}
+	guardados, err = c.GuardarRegimenes(ctx, map[string]almacen.RegimenEstacion{
+		"CA-A": {FechaHora: t0.Add(-2 * time.Hour), Regimen: 2}, "CA-B": {FechaHora: t0, Regimen: 2},
+	})
+	if _, estaA := guardados["CA-A"]; err != nil || len(guardados) != 1 || estaA || guardados["CA-B"].Regimen != 2 {
+		t.Fatalf("tras olvidar el script: %+v, %v; se esperaba solo CA-B", guardados, err)
+	}
+}
+
+// Con Redis caído no se guardó nada: el mapa viene vacío junto con el error.
+func TestGuardarRegimenesConRedisCaidoNoDevuelveNada(t *testing.T) {
+	c, err := Conectar(Opciones{Addr: "127.0.0.1:1"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer c.Cerrar()
+	guardados, err := c.GuardarRegimenes(ctx, map[string]almacen.RegimenEstacion{"CA-A": {FechaHora: t0}})
+	if err == nil || len(guardados) != 0 {
+		t.Fatalf("GuardarRegimenes sin Redis = %+v, %v", guardados, err)
 	}
 }
 

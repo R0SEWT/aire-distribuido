@@ -278,6 +278,61 @@ func TestEscritorApagadoAcotado(t *testing.T) {
 	}
 }
 
+// cacheAMedias guarda de verdad, pero responde con un error después de
+// guardar: es un lote que se escribió en parte.
+type cacheAMedias struct{ *memoria.Cache }
+
+func (c cacheAMedias) GuardarRegimenes(ctx context.Context, rs map[string]almacen.RegimenEstacion) (map[string]almacen.RegimenEstacion, error) {
+	guardados, _ := c.Cache.GuardarRegimenes(ctx, rs)
+	return guardados, errors.New("el lote falló a medias")
+}
+
+// El escritor avisa (alGuardar) solo de lo que la caché dice que quedó
+// guardado: ni de una lectura más antigua que la guardada, ni de más. Si el
+// lote falla pero una parte se guardó, de esa parte sí: ya es el estado.
+func TestEscritorAvisaSoloDeLoQueQuedoGuardado(t *testing.T) {
+	for nombre, cache := range map[string]almacen.Cache{"caché sana": memoria.NuevaCache(), "lote a medias": cacheAMedias{memoria.NuevaCache()}} {
+		t.Run(nombre, func(t *testing.T) {
+			e := nuevoEscritor(8, memoria.NuevasPredicciones(), cache, logMudo)
+			var mu sync.Mutex
+			var avisados []almacen.RegimenEstacion
+			e.alGuardar = func(rs map[string]almacen.RegimenEstacion) {
+				mu.Lock()
+				defer mu.Unlock()
+				for estacion, r := range rs {
+					if estacion != "CA-A" {
+						t.Errorf("aviso de %s", estacion)
+					}
+					avisados = append(avisados, r)
+				}
+			}
+			parar := arrancar(e)
+			h := func(n int) time.Time { return time.Date(2026, 11, 14, n, 0, 0, 0, time.UTC) }
+			for i, p := range []almacen.Prediccion{
+				{Estacion: "CA-A", FechaHora: h(10), Regimen: 0},
+				{Estacion: "CA-A", FechaHora: h(4), Regimen: 1},  // más antigua: no es el estado
+				{Estacion: "CA-A", FechaHora: h(10), Regimen: 2}, // la misma hora, corregida: sí
+			} {
+				e.encolar(p)
+				// De a una, para que cada predicción sea su propio lote.
+				esperar := time.Now().Add(5 * time.Second)
+				for e.redis.lotes.Load() < uint64(i+1) || len(e.redis.ch) > 0 {
+					if time.Now().After(esperar) {
+						t.Fatalf("el escritor no procesó la predicción %d", i)
+					}
+					time.Sleep(time.Millisecond)
+				}
+			}
+			parar()
+			mu.Lock()
+			defer mu.Unlock()
+			if len(avisados) != 2 || avisados[0].Regimen != 0 || avisados[1].Regimen != 2 {
+				t.Fatalf("avisados = %+v; se esperaban la hora 10 y su corrección", avisados)
+			}
+		})
+	}
+}
+
 // De un lote, a la caché va lo último de cada estación.
 func TestRegimenesDelLote(t *testing.T) {
 	h := func(n int) time.Time { return time.Date(2026, 11, 14, n, 0, 0, 0, time.UTC) }

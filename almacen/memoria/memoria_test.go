@@ -93,7 +93,7 @@ func TestCacheRegimenesDeVariasEstaciones(t *testing.T) {
 		t.Fatalf("Regimenes sin datos = %v, %v; se esperaba un mapa vacío", rs, err)
 	}
 	t0 := time.Date(2026, 11, 14, 15, 0, 0, 0, time.UTC)
-	if err := c.GuardarRegimenes(ctx, map[string]almacen.RegimenEstacion{
+	if _, err := c.GuardarRegimenes(ctx, map[string]almacen.RegimenEstacion{
 		"CA-A": {FechaHora: t0, Regimen: 1}, "CA-B": {FechaHora: t0, Regimen: 2}, "CA-C": {FechaHora: t0, Regimen: 0},
 	}); err != nil {
 		t.Fatal(err)

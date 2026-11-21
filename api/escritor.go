@@ -38,16 +38,26 @@ const (
 type escritor struct {
 	mongo, redis *cola
 	plazoVaciado time.Duration
+	// alGuardar, si no es nil, recibe después de cada lote de Redis los
+	// regímenes que quedaron guardados: los que pasaron a ser el estado de su
+	// estación. Es de donde salen los eventos estacion.regimen. Lo llama la
+	// goroutine de Redis, así que no puede bloquear; se pone antes de correr.
+	alGuardar func(map[string]almacen.RegimenEstacion)
 }
 
 func nuevoEscritor(tam int, p almacen.Predicciones, c almacen.Cache, log *slog.Logger) *escritor {
-	return &escritor{
-		mongo: nuevaCola("mongo", tam, p.GuardarLote, log),
-		redis: nuevaCola("redis", tam, func(ctx context.Context, lote []almacen.Prediccion) error {
-			return c.GuardarRegimenes(ctx, regimenes(lote))
-		}, log),
-		plazoVaciado: plazoVaciado,
-	}
+	e := &escritor{plazoVaciado: plazoVaciado}
+	e.mongo = nuevaCola("mongo", tam, p.GuardarLote, log)
+	e.redis = nuevaCola("redis", tam, func(ctx context.Context, lote []almacen.Prediccion) error {
+		guardados, err := c.GuardarRegimenes(ctx, regimenes(lote))
+		// Aunque el lote haya fallado, lo que la caché sabe que guardó ya es
+		// el estado de esas estaciones.
+		if e.alGuardar != nil && len(guardados) > 0 {
+			e.alGuardar(guardados)
+		}
+		return err
+	}, log)
+	return e
 }
 
 // regimenes reduce un lote a lo último de cada estación: régimen, media de

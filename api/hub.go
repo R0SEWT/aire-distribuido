@@ -399,16 +399,20 @@ func (h *Hub) escribir(c *clienteWS, saludo []byte) {
 	}
 }
 
-// Quién puede abrir el WebSocket y quién recibe cada evento (spec §6.1 y
-// §6.4). Lo abren usuario y admin. Los dos eventos que existen hoy son de
-// entrenamientos, que son cosa de admin (las rutas de /api/entrenamientos lo
-// son): el hub se los reparte solo a los clientes admin. Un usuario común
-// conectado hoy no recibe nada; el WebSocket queda abierto para los eventos
-// que sí son de todos, como las alertas de la SPA.
+// Quién puede abrir el WebSocket y quién recibe cada evento (spec de la PC4,
+// §6.1 y §6.4; spec del frontend, §6). Lo abren usuario y admin. El estado de
+// una estación (estacion.regimen, avisos.go) es de todos: es el tiempo real
+// del panel. Los eventos de los entrenamientos son cosa de admin (las rutas de
+// /api/entrenamientos lo son): el hub se los reparte solo a los clientes admin.
 var (
 	rolesWS                   = []string{RolUsuario, RolAdmin}
+	rolesEventosEstacion      = rolesWS
 	rolesEventosEntrenamiento = []string{RolAdmin}
 )
+
+// eventoRegimen es el nombre del evento con el estado nuevo de una estación;
+// sus datos son un estadoEstacion (esquema EstadoEstacion del contrato).
+const eventoRegimen = "estacion.regimen"
 
 // subprotocoloJWT es el subprotocolo con que un navegador manda su token sin
 // ponerlo en la URL: new WebSocket(url, ["aire.jwt", token]) llega como

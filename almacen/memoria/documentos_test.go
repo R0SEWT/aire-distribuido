@@ -53,14 +53,29 @@ func TestCacheModeloYPunto(t *testing.T) {
 func TestCacheGuardaRegimenesPorLote(t *testing.T) {
 	c := NuevaCache()
 	t0 := time.Date(2026, 11, 14, 15, 0, 0, 0, time.UTC)
-	if err := c.GuardarRegimenes(ctx, map[string]almacen.RegimenEstacion{
+	// Devuelve lo que quedó guardado: la primera vez, todo.
+	guardados, err := c.GuardarRegimenes(ctx, map[string]almacen.RegimenEstacion{
 		"CA-A": {FechaHora: t0, Regimen: 1}, "CA-B": {FechaHora: t0, Regimen: 2},
-	}); err != nil {
-		t.Fatal(err)
+	})
+	if err != nil || len(guardados) != 2 || guardados["CA-A"].Regimen != 1 || guardados["CA-B"].Regimen != 2 {
+		t.Fatalf("GuardarRegimenes = %+v, %v; se esperaban las dos estaciones", guardados, err)
 	}
-	if err := c.GuardarRegimenes(ctx, map[string]almacen.RegimenEstacion{
+	// Después, solo la que reemplazó: CA-A llega con una hora anterior y se
+	// conserva la guardada, así que no está.
+	guardados, err = c.GuardarRegimenes(ctx, map[string]almacen.RegimenEstacion{
 		"CA-A": {FechaHora: t0.Add(-time.Hour), Regimen: 0}, "CA-B": {FechaHora: t0.Add(time.Hour), Regimen: 0},
-	}); err != nil {
+	})
+	if _, estaA := guardados["CA-A"]; err != nil || len(guardados) != 1 || estaA || !guardados["CA-B"].FechaHora.Equal(t0.Add(time.Hour)) {
+		t.Fatalf("GuardarRegimenes = %+v, %v; se esperaba solo CA-B", guardados, err)
+	}
+	// La misma hora, corregida, sí reemplaza.
+	if guardados, err = c.GuardarRegimenes(ctx, map[string]almacen.RegimenEstacion{"CA-A": {FechaHora: t0, Regimen: 2}}); err != nil || guardados["CA-A"].Regimen != 2 {
+		t.Fatalf("GuardarRegimenes con la misma hora = %+v, %v", guardados, err)
+	}
+	if guardados, err = c.GuardarRegimenes(ctx, nil); err != nil || len(guardados) != 0 {
+		t.Fatalf("GuardarRegimenes sin nada = %+v, %v", guardados, err)
+	}
+	if _, err := c.GuardarRegimenes(ctx, map[string]almacen.RegimenEstacion{"CA-A": {FechaHora: t0, Regimen: 1}}); err != nil {
 		t.Fatal(err)
 	}
 	a, _ := c.Regimen(ctx, "CA-A")

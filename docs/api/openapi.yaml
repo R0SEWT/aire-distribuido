@@ -440,17 +440,33 @@ paths:
     get:
       tags: [Eventos]
       operationId: seguirEventos
-      summary: Abre un WebSocket de eventos del entrenamiento
+      summary: Abre un WebSocket con el estado de las estaciones y los eventos del entrenamiento
       description: |
         Rol usuario o admin. Solo el servidor envía. Cada trama de texto es un
         objeto JSON con el nombre del evento y sus datos (esquema EventoWS):
-        {"evento": "entrenamiento.ronda", "datos": {...}}.
+        {"evento": "estacion.regimen", "datos": {...}}.
 
-        Qué eventos ve cada rol: entrenamiento.ronda y entrenamiento.fin llegan
-        solo a los clientes con rol admin (los entrenamientos son de admin). Un
-        cliente con rol usuario se conecta igual y hoy no recibe ningún evento:
-        el WebSocket queda abierto para los eventos que sí son de todos, como
-        las alertas que consumirá la SPA.
+        Qué eventos ve cada rol: estacion.regimen llega a todos, usuario y
+        admin. entrenamiento.ronda y entrenamiento.fin llegan solo a los
+        clientes con rol admin (los entrenamientos son de admin).
+
+        estacion.regimen es el tiempo real del panel: el estado nuevo de una
+        estación (esquema EstadoEstacion, el mismo objeto de cada entrada de
+        GET /api/regimenes). Dos reglas:
+        - Sale solo cuando esa lectura pasó a ser el estado de la estación, es
+          decir, cuando la escritura en Redis reemplazó al guardado. Una
+          lectura más antigua que la guardada se predice y se responde igual,
+          pero no cambia el estado ni emite evento: el evento y
+          GET /api/regimenes dicen siempre lo mismo. Sale después de la
+          escritura, así que quien lo recibe puede pedir el GET en el acto.
+        - Va agrupado por estación: de una misma estación sale a lo sumo un
+          evento cada 250 ms. El primero sale enseguida; si en ese intervalo la
+          estación cambia varias veces (una ráfaga de lecturas), al cumplirse
+          sale solo el último estado. Los intermedios no se envían: el evento
+          es el estado, no cada lectura.
+
+        Para no perder cambios, el cliente abre primero el WebSocket y después
+        pide GET /api/regimenes; al reconectar, lo vuelve a pedir.
 
         El JWT se acepta de tres maneras, en este orden:
         - Authorization: Bearer, como en el resto de la API, para un cliente
@@ -472,14 +488,24 @@ paths:
         - bearerAuth: []
       x-roles: [usuario, admin]
       x-websocket-events:
+        estacion.regimen:
+          schema: {$ref: '#/components/schemas/EventoWS'}
+          x-roles: [usuario, admin]
+          example:
+            evento: estacion.regimen
+            datos: {estacion: CA-AYAS-01, fecha_hora: '2026-11-14T15:00:00-05:00', regimen: 1, excede_eca: true,
+                    media_24h: {pm2_5: 58.3, pm10: 121.4, lecturas: 24},
+                    alerta: true, inca: mala, ts: '2026-11-14T15:00:02-05:00'}
         entrenamiento.ronda:
           schema: {$ref: '#/components/schemas/EventoWS'}
+          x-roles: [admin]
           example:
             evento: entrenamiento.ronda
             datos: {id: e-20261119-1530, iter: 1, inercia: 73075.5, ms_ronda: 0.61, ms_fusion: 0.003,
                     ms_por_nodo: {H45-022: 0.11, H45-023: 0.12}}
         entrenamiento.fin:
           schema: {$ref: '#/components/schemas/EventoWS'}
+          x-roles: [admin]
           examples:
             terminado:
               evento: entrenamiento.fin
@@ -884,10 +910,13 @@ components:
       required: [evento, datos]
       description: Una trama de texto del WebSocket.
       properties:
-        evento: {type: string, enum: [entrenamiento.ronda, entrenamiento.fin]}
+        evento: {type: string, enum: [estacion.regimen, entrenamiento.ronda, entrenamiento.fin]}
         datos:
-          description: EventoRonda con entrenamiento.ronda; EventoFin o EventoError con entrenamiento.fin.
+          description: |
+            EstadoEstacion con estacion.regimen; EventoRonda con entrenamiento.ronda;
+            EventoFin o EventoError con entrenamiento.fin.
           oneOf:
+            - $ref: '#/components/schemas/EstadoEstacion'
             - $ref: '#/components/schemas/EventoRonda'
             - $ref: '#/components/schemas/EventoFin'
             - $ref: '#/components/schemas/EventoError'

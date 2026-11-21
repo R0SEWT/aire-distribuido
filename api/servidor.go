@@ -62,6 +62,10 @@ type Config struct {
 	OpenAPI      []byte         // docs/api/openapi.yaml, que se sirve tal cual
 	TamCola      int            // búfer de la cola de escritura
 	Log          *slog.Logger
+	// CadaAvisoRegimen es cada cuánto, a lo sumo, sale por el WebSocket el
+	// estado de una misma estación (evento estacion.regimen, avisos.go). Con
+	// cero, cadaAvisoPorOmision.
+	CadaAvisoRegimen time.Duration
 
 	// Lo del coordinador del clúster (spec §5.2).
 	//
@@ -112,7 +116,8 @@ type Servidor struct {
 
 	cors    *cors
 	hub     *Hub
-	pool    *cluster.Pool // nil: sin clúster
+	avisos  *avisosRegimen // los cambios de estado de las estaciones, camino al hub
+	pool    *cluster.Pool  // nil: sin clúster
 	coord   *coordinador
 	eventos almacen.Eventos
 	cronica chan almacen.EventoCluster // los eventos del clúster, camino al almacén
@@ -169,6 +174,8 @@ func Nuevo(cfg Config) (*Servidor, error) {
 	}
 	s.modelo.Store(cfg.Modelo)
 	s.puntos = cfg.Puntos
+	s.avisos = nuevosAvisosRegimen(cfg.CadaAvisoRegimen, s.difundirRegimen)
+	s.escritor.alGuardar = s.avisos.anotar
 	if cfg.Nodos != nil {
 		op := cfg.Pool
 		op.AlEvento = s.registrarEvento
@@ -247,17 +254,21 @@ func (s *Servidor) Escribir(ctx context.Context) { s.escritor.correr(ctx) }
 const tamCronica = 256
 
 // Coordinar corre lo que el coordinador del clúster tiene en segundo plano: el
-// hub del WebSocket, el pool de nodos (si hay) y la goroutine que guarda los
-// eventos del clúster. Vuelve cuando ctx se cancela y todo eso terminó, en
-// este orden: se corta el entrenamiento en curso, que queda abortado en el
-// almacén y avisa su fin por el WebSocket; se cierra el pool; el hub despide a
+// hub del WebSocket, los avisos de régimen de las estaciones, el pool de nodos
+// (si hay) y la goroutine que guarda los eventos del clúster. Vuelve cuando
+// ctx se cancela y todo eso terminó, en este orden: se corta el entrenamiento
+// en curso, que queda abortado en el almacén y avisa su fin por el WebSocket;
+// se cierra el pool; salen los avisos de régimen pendientes; el hub despide a
 // sus clientes con un cierre 1001; y se guardan los eventos pendientes. Sin
 // Coordinar la API predice igual, pero no entran nodos ni salen eventos.
 func (s *Servidor) Coordinar(ctx context.Context) {
 	fondo, parar := context.WithCancel(context.Background())
 	defer parar()
-	var pool, hub, cronista sync.WaitGroup
+	var pool, hub, avisos, cronista sync.WaitGroup
 	hub.Go(func() { s.hub.Correr(fondo) })
+	ctxAvisos, pararAvisos := context.WithCancel(context.Background())
+	defer pararAvisos()
+	avisos.Go(func() { s.avisos.correr(ctxAvisos) })
 	pararCronista := make(chan struct{})
 	cronista.Go(func() { s.guardarEventos(pararCronista) })
 	pararPool := func() {}
@@ -272,10 +283,24 @@ func (s *Servidor) Coordinar(ctx context.Context) {
 	s.coord.apagar()
 	pararPool()
 	pool.Wait()
+	// Antes que el hub: lo pendiente todavía tiene a quién llegarle. Lo que el
+	// escritor guarde después (sigue vaciando sus colas) ya no se avisa.
+	pararAvisos()
+	avisos.Wait()
 	parar()
 	hub.Wait()
 	close(pararCronista)
 	cronista.Wait()
+}
+
+// difundirRegimen manda al hub el evento estacion.regimen: el estado nuevo de
+// una estación, para todos los roles del WebSocket. Si el hub lo descarta (no
+// corre, o ya se apagó) no pasa nada: el estado está en la caché y quien se
+// conecte lo pide con GET /api/regimenes.
+func (s *Servidor) difundirRegimen(estado estadoEstacion) {
+	if err := s.hub.Difundir(eventoRegimen, estado, rolesEventosEstacion...); err != nil && !errors.Is(err, errHubCerrado) {
+		s.log.Warn("evento no difundido", "evento", eventoRegimen, "estacion", estado.Estacion, "err", err)
+	}
 }
 
 // registrarEvento recibe un evento del clúster (es el AlEvento del pool) y lo

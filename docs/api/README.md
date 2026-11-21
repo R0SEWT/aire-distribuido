@@ -11,8 +11,9 @@ file**).
 
 Libres: token, salud, `/openapi.yaml` y `/docs`. Con rol `usuario` o `admin`: predicciones,
 estaciones, modelo activo y `/ws`. Solo `admin`: nodos del clúster, entrenamientos y métricas;
-un `usuario` recibe 403. `x-roles` deja el rol escrito en cada operación. Por `/ws` los eventos de
-un entrenamiento llegan solo a los `admin`; un `usuario` conectado hoy no recibe ninguno.
+un `usuario` recibe 403. `x-roles` deja el rol escrito en cada operación. Por `/ws`, el estado de
+las estaciones (`estacion.regimen`) llega a los dos roles y los eventos de un entrenamiento, solo a
+los `admin`.
 
 ## Lo que el contrato fija y la spec no decía
 
@@ -41,8 +42,16 @@ un entrenamiento llegan solo a los `admin`; un `usuario` conectado hoy no recibe
 - **Reinicios**: `ultimo_entrenamiento` se recupera del almacén al arrancar, y un entrenamiento que
   estaba `en_curso` cuando la API murió queda `abortado` con `error` «la API se reinició mientras el
   entrenamiento estaba en curso». `puntos_de_control` cuenta los puntos de control por ronda.
-- **WebSocket**: cada trama es `{"evento": "entrenamiento.ronda" | "entrenamiento.fin", "datos":
-  {…}}`, con los datos de §6.4. El JWT va en `Authorization`, en `Sec-WebSocket-Protocol`
+- **Estado de las estaciones** (spec del frontend, §6): `GET /api/regimenes` trae en un pedido, y en
+  una sola ida a Redis, el estado de todas las estaciones que tienen uno (una lista vacía es un 200).
+  El evento `estacion.regimen` de `/ws` lleva ese mismo objeto (`EstadoEstacion`) cuando el estado de
+  una estación cambia. Sale solo si la lectura pasó a ser el estado de la estación (la escritura en
+  Redis reemplazó al guardado): una lectura más antigua no emite nada, así que el evento y el GET
+  dicen siempre lo mismo. Va agrupado por estación, a lo sumo uno cada 250 ms con el último estado:
+  una ráfaga de miles de predicciones no llena el búfer de los clientes. El cliente abre primero el
+  WebSocket y después pide el GET.
+- **WebSocket**: cada trama es `{"evento": "estacion.regimen" | "entrenamiento.ronda" |
+  "entrenamiento.fin", "datos": {…}}`; los de entrenamiento, con los datos de §6.4. El JWT va en `Authorization`, en `Sec-WebSocket-Protocol`
   (`aire.jwt` seguido del token: lo recomendado para el navegador, que no deja poner encabezados,
   porque el token no queda en la URL) o en `?token=`. El `entrenamiento.fin` sale cuando el detalle
   ya tiene el estado final: quien lo recibe puede pedir `GET /api/entrenamientos/{id}` en el acto.
