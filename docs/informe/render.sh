@@ -78,7 +78,12 @@ if ! ./generar-historial.sh; then
 fi
 
 # Los códigos salen de `equipo` (líneas indentadas), la misma fuente de la carátula.
-mapfile -t equipo < <(sed -n 's/^[[:space:]]\{1,\}codigo:[[:space:]]*\(U[0-9]\{9\}\)[[:space:]]*\(#.*\)\{0,1\}$/\1/p' generado/local/equipo.yml)
+# macOS todavía incluye Bash 3.2, que no tiene mapfile; el bucle funciona tanto
+# allí como en versiones nuevas de Bash.
+equipo=()
+while IFS= read -r codigo_equipo || [[ -n "$codigo_equipo" ]]; do
+  equipo+=("$codigo_equipo")
+done < <(sed -n 's/^[[:space:]]\{1,\}codigo:[[:space:]]*\(U[0-9]\{9\}\)[[:space:]]*\(#.*\)\{0,1\}$/\1/p' generado/local/equipo.yml)
 [ "${#equipo[@]}" -gt 0 ] || { echo "error: no hay códigos en generado/local/equipo.yml" >&2; exit 1; }
 if [ "$#" -gt 0 ]; then codigos=("$@"); else codigos=("${equipo[@]}"); fi
 for c in "${codigos[@]}"; do
