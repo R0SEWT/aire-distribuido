@@ -1,0 +1,39 @@
+/* Tokens de diseño (spec §8). Cada --color-* de @theme es a la vez una variable
+   CSS y una utilidad de Tailwind: --color-superficie da bg-superficie,
+   text-superficie, border-superficie…
+
+   Los gráficos de D3 leen las mismas variables (var(--color-inca-mala)) con
+   .style() o con clases, nunca con el atributo style: la CSP no lo admite. */
+
+@theme {
+  --font-sans: 'Inter Variable', ui-sans-serif, system-ui, sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, 'SFMono-Regular', monospace;
+
+  /* Capas: la página, la tarjeta y lo que va hundido dentro de una tarjeta. */
+  --color-fondo: #0d1117;
+  --color-superficie: #161b26;
+  --color-relieve: #1e2533;
+  --color-borde: #283041;
+
+  /* Texto: el que manda, el que acompaña y el de las etiquetas. */
+  --color-texto: #f2f4f8;
+  --color-suave: #aab3c2;
+  --color-tenue: #8791a3;
+
+  /* Acento: bordes, foco y botones. El claro es para texto y enlaces sobre fondo oscuro. */
+  --color-acento: #2a78d6;
+  --color-acento-claro: #6ea8ef;
+
+  /* Bandas INCA (RM 181-2016-MINAM) y los dos estados sin banda. */
+  --color-inca-buena: #1baf7a;
+  --color-inca-moderada: #e0b43a;
+  --color-inca-mala: #eb6834;
+  --color-inca-cuidado: #d03b3b;
+  --color-sin-datos: #c3cad6;
+  --color-no-mide: #5c6676;
+
+  /* Estado de la API y de la conexión de tiempo real. */
+  --color-ok: #1baf7a;
+  --color-aviso: #e0b43a;
+  --color-falla: #e5534b;
+}

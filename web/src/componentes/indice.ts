@@ -1,0 +1,15 @@
+// Los componentes base (spec §8). Una pantalla los importa de aquí.
+
+export { Banda } from './Banda'
+export { BANDAS, estadoDeBanda, type BandaINCA, type EstadoBanda, type InfoBanda } from './bandas'
+export { Cifra } from './Cifra'
+export { Desplegable } from './Desplegable'
+export { EnConstruccion } from './EnConstruccion'
+export { Estado, EstadoDeError, type TipoEstado } from './Estado'
+export { Etiqueta } from './Etiqueta'
+export { fechaHora, hora, numero } from './formato'
+export { Frase } from './Frase'
+export { Pildoras, type Opcion } from './Pildoras'
+export { Tabla, type Columna } from './Tabla'
+export { Tarjeta } from './Tarjeta'
+export type { Tono } from './tonos'
