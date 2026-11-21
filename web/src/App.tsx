@@ -25,6 +25,7 @@ const Impacto = lazy(() => import('./pantallas/Impacto'))
 const Entrenamiento = lazy(() => import('./pantallas/Entrenamiento'))
 const Cluster = lazy(() => import('./pantallas/Cluster'))
 const NoExiste = lazy(() => import('./pantallas/NoExiste'))
+const Muestrario = lazy(() => import('./pantallas/Muestrario'))
 
 export function Rutas() {
   return (
@@ -53,6 +54,8 @@ export function Rutas() {
               </RequiereRol>
             }
           />
+          {/* Fuera del menú: los componentes base a la vista, para quien construye una pantalla. */}
+          <Route path={RUTAS.muestrario} element={<Muestrario />} />
           <Route path="*" element={<NoExiste />} />
         </Route>
       </Route>

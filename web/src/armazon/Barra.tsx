@@ -18,7 +18,7 @@ export function Barra() {
   return (
     <header className="border-borde border-b">
       <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-x-4 gap-y-2 px-6 py-3">
-        <NavLink to={RUTAS.panel} className="no-underline hover:no-underline" aria-label="Aire distribuido: ir al panel">
+        <NavLink to={RUTAS.panel} className="inline-flex items-center no-underline hover:no-underline" aria-label="Aire distribuido: ir al panel">
           <Marca />
         </NavLink>
         <EstadoApi />

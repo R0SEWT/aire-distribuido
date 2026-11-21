@@ -19,6 +19,8 @@ export const RUTAS = {
   impacto: '/impacto',
   entrenamiento: '/entrenamiento',
   cluster: '/cluster',
+  /** Fuera del menú: el muestrario de los componentes base. */
+  muestrario: '/muestrario',
 } as const
 
 export const MENU: readonly EntradaDeMenu[] = [

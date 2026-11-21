@@ -215,6 +215,16 @@ describe('la app', () => {
       expect(screen.getByText('En construcción')).toBeInTheDocument()
     })
 
+    it('el muestrario de componentes está fuera del menú, en /muestrario', async () => {
+      simularApi({ 'GET /api/salud': SALUD_OK })
+      sesionDe('usuario')
+
+      montar('/muestrario')
+
+      expect(await screen.findByRole('heading', { name: 'Muestrario de componentes' })).toBeInTheDocument()
+      expect(menu()).not.toContain('Muestrario')
+    })
+
     it('una dirección que no existe lo dice', async () => {
       simularApi({ 'GET /api/salud': SALUD_OK })
       sesionDe('usuario')
