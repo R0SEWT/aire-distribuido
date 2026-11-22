@@ -1,7 +1,10 @@
 # Lo que cambia para una máquina virtual chica y expuesta a internet (ver README.md de esta
 # carpeta). Se usa encima del Compose del repo:
 #
-#   docker compose -f docker-compose.yml -f despliegue/azure/compose.azure.yml up -d --build --scale nodo=2
+#   docker compose -f docker-compose.yml -f despliegue/azure/compose.azure.yml up -d --remove-orphans --scale nodo=2
+#
+# --remove-orphans saca el contenedor del Caddy aparte que hubo antes, que si no sigue ocupando el
+# 80 y el 443. Sin --build: las imágenes llegan desde la laptop.
 #
 # - El servicio web (el único Caddy del sistema) recibe el tráfico de internet en el 80 y el 443,
 #   saca el certificado solo, sirve la UI y pasa /api, /ws, /docs y /openapi.yaml a la API. Su

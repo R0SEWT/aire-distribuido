@@ -87,7 +87,8 @@ La imagen se construye en la laptop y se manda: compilar Go en 1 GiB de RAM es l
 HOST=azureuser@$DNS.$LOC.cloudapp.azure.com; LLAVE=~/.ssh/aire-azure_ed25519
 
 docker build -t aire-distribuido .
-docker save aire-distribuido | gzip | ssh -i $LLAVE $HOST 'gunzip | sudo docker load'
+docker build -t aire-distribuido-web web           # la UI: compilarla necesita Node, la máquina no puede
+docker save aire-distribuido aire-distribuido-web | gzip | ssh -i $LLAVE $HOST 'gunzip | sudo docker load'
 scp -i $LLAVE data/gold/oefa_features.csv $HOST:aire-distribuido/data/gold/     # el gold no se versiona
 ```
 
@@ -100,20 +101,14 @@ cd ~/aire-distribuido && umask 077
   echo "DOMINIO=<el nombre público de la máquina>"
   echo "CORS_ORIGENES="; } > .env
 
-sudo docker compose -f docker-compose.yml -f despliegue/azure/compose.azure.yml up -d --wait --scale nodo=2
+sudo docker compose -f docker-compose.yml -f despliegue/azure/compose.azure.yml up -d --wait --remove-orphans --scale nodo=2
 ```
 
 Caddy saca el certificado de Let's Encrypt solo, en el primer pedido. La UI y la API quedan en el
 mismo origen (`https://$DOMINIO`), así que `CORS_ORIGENES` va vacío.
 
-La imagen `aire-distribuido-web` no se construye en la máquina (compilar la UI necesita Node y más
-memoria de la que tiene): se construye en la laptop y se manda, igual que la de la API.
-
-```bash
-# en la laptop, desde la raíz del repo
-docker build -t aire-distribuido-web web
-docker save aire-distribuido-web | gzip | ssh azureuser@$DOMINIO 'gunzip | sudo docker load'
-```
+Las dos imágenes (`aire-distribuido` y `aire-distribuido-web`) llegan desde la laptop, con el paso
+de arriba: la máquina no las construye.
 
 ## Comprobar
 
@@ -136,7 +131,7 @@ y `cmd/carga` del informe se hacen contra el Compose local.
 
 ```bash
 # Actualizar: mandar la imagen nueva (como arriba) y, en la máquina:
-git pull && sudo docker compose -f docker-compose.yml -f despliegue/azure/compose.azure.yml up -d --scale nodo=2
+git pull && sudo docker compose -f docker-compose.yml -f despliegue/azure/compose.azure.yml up -d --remove-orphans --scale nodo=2
 
 # Apagar sin borrar (deja de contar horas de cómputo; el disco y la IP siguen):
 az vm deallocate --subscription $SUB -g $RG -n $VM
