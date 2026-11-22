@@ -331,6 +331,33 @@ describe('la curva de la Estación con lecturas enviadas en la sesión', () => {
     expect(document.querySelectorAll('[style]')).toHaveLength(0)
   })
 
+  it('dos tramos separados por días no quedan unidos por la línea de la media', async () => {
+    simularPanel([], { [REGIMEN('CA-HU-04')]: regimenDe('CA-HU-04', { ...EN_ALERTA, hora: 10 }) })
+    const { enchufes } = montar('/estacion/CA-HU-04')
+    await screen.findByText('CA-HU-04 · último estado recibido')
+    const tramos = () => document.querySelectorAll('[data-capa="curva"] path[data-tramo]')
+    act(() => enchufes.ultimo().abrir())
+
+    // Dos horas seguidas del 15 de diciembre: un solo tramo.
+    act(() => enchufes.ultimo().recibir({ evento: 'estacion.regimen', datos: estadoDe('CA-HU-04', { ...EN_ALERTA, hora: 11 }) }))
+    await waitFor(() => expect(puntos()).toHaveLength(2))
+    expect(tramos()).toHaveLength(1)
+    expect(document.querySelector('[data-curva-pie]')).not.toHaveTextContent('se corta')
+
+    // Otro tramo de la misma estación, cinco días después.
+    const cincoDiasDespues = (hora: number) => ({ ...estadoDe('CA-HU-04', { hora, pm10: 40, pm2_5: 12 }), fecha_hora: `2021-12-20T${hora}:00:00-05:00` })
+    act(() => enchufes.ultimo().recibir({ evento: 'estacion.regimen', datos: cincoDiasDespues(10) }))
+    act(() => enchufes.ultimo().recibir({ evento: 'estacion.regimen', datos: cincoDiasDespues(11) }))
+
+    await waitFor(() => expect(puntos()).toHaveLength(4))
+    expect(tramos()).toHaveLength(2)
+    // Ningún trazo cruza el hueco: cada uno une solo dos puntos (un «M» y un «L»).
+    for (const tramo of tramos()) expect(tramo.getAttribute('d')).toMatch(/^M[^ML]+L[^ML]+$/)
+    expect(document.querySelector('[data-curva-pie]')).toHaveTextContent(
+      'La línea se corta en 1 lugar donde faltan más de 6 horas: son tramos distintos, y la media de 24 horas no es continua de uno al otro.',
+    )
+  })
+
   it('al terminar la sesión, lo enviado no queda para quien entre después', async () => {
     simularPanel([], { [REGIMEN('CA-HU-04')]: regimenDe('CA-HU-04', EN_ALERTA) })
     act(() => anotarVista('CA-HU-04', vista(8, 260, 110)))

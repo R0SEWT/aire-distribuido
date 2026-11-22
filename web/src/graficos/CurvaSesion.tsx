@@ -7,7 +7,9 @@
 //    envió. Un estado recibido no trae su lectura: de esas horas solo hay media.
 //
 // No es una serie histórica: la API no tiene una. Si entre dos puntos de la
-// media hubo otros que no llegaron, la línea los une igual.
+// media hubo otros que no llegaron, la línea los une igual; pero si entre los
+// dos faltan más de unas horas (tramos.ts), se corta: son tramos distintos, y la
+// media de 24 horas no es continua de uno al otro.
 //
 // D3 hace las escalas y el trazo; React dibuja el SVG, con clases y sin estilos
 // en línea. El color no va solo: cada franja lleva su palabra, el ECA su
@@ -17,6 +19,7 @@ import { line, scaleLinear, scaleTime } from 'd3'
 import { useMemo } from 'react'
 import { diaCorto, hora, numero } from '../componentes/formato'
 import { useMedida } from './medida'
+import { partirPorHuecos } from './tramos'
 
 export interface PuntoCurva {
   /** La hora de la lectura a la que corresponde el estado, en milisegundos. */
@@ -94,10 +97,11 @@ export function CurvaSesion({ puntos, lecturas = SIN_LECTURAS, eca, cortes, titu
       return { t: fecha.getTime(), x: x(fecha), hora: hora(fecha), dia: !anterior || diaCorto(anterior) !== dia ? dia : null }
     })
 
-    const trazo = line<PuntoCurva>()
-      .defined((p) => p.valor !== null)
+    // La línea une solo lo que es continuo: se corta donde no hubo media y donde
+    // faltan horas (tramos.ts). Un tramo de un solo punto queda como su punto.
+    const trazo = line<{ t: number; valor: number }>()
       .x((p) => x(p.t))
-      .y((p) => y(p.valor ?? 0))
+      .y((p) => y(p.valor))
 
     return {
       margen,
@@ -105,7 +109,7 @@ export function CurvaSesion({ puntos, lecturas = SIN_LECTURAS, eca, cortes, titu
       marcasY: y.ticks(5).map((v) => ({ v, y: y(v) })),
       marcasX,
       yEca: y(eca),
-      camino: trazo(puntos as PuntoCurva[]) ?? '',
+      caminos: partirPorHuecos(puntos).map((tramo) => ({ desde: tramo[0]!.t, d: trazo(tramo) ?? '' })),
       puntos: puntos.map((p) => ({ ...p, x: x(p.t), y: y(p.valor ?? 0), sobre: p.valor !== null && p.valor > eca })),
       lecturas: lecturas.map((l) => ({ ...l, x: x(l.t), y: y(l.valor) })),
       base: y(0),
@@ -224,7 +228,9 @@ export function CurvaSesion({ puntos, lecturas = SIN_LECTURAS, eca, cortes, titu
         )}
 
         <g data-capa="curva">
-          <path d={dibujo.camino} className="stroke-texto fill-none" strokeWidth={2 * k} strokeLinejoin="round" strokeLinecap="round" />
+          {dibujo.caminos.map((c) => (
+            <path key={c.desde} data-tramo d={c.d} className="stroke-texto fill-none" strokeWidth={2 * k} strokeLinejoin="round" strokeLinecap="round" />
+          ))}
           {dibujo.puntos.map((p) =>
             p.valor === null ? (
               <circle key={p.t} data-punto="sin-media" cx={p.x} cy={dibujo.base} r={radio} className="fill-superficie stroke-sin-datos" strokeWidth={1.25} />

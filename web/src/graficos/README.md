@@ -5,7 +5,7 @@ Los gráficos de D3 (spec §9.2). Cada uno recibe sus datos ya armados por la pa
 | Archivo | Qué dibuja | Quién lo usa |
 |---|---|---|
 | `MapaPeru.tsx` | El mapa del Perú con las 33 estaciones (también exporta `GlifoEstacion` y `TramaNoMide`, para la leyenda) | Panel |
-| `CurvaSesion.tsx` | La media de 24 h de lo que la sesión vio de una estación y, si las envió, sus lecturas horarias | Estación |
+| `CurvaSesion.tsx` | La media de 24 h de lo que la sesión vio de una estación (cortada donde faltan horas) y, si las envió, sus lecturas horarias | Estación |
 | `CurvaSimulacion.tsx` | Las lecturas horarias de un tramo (barras) y la media que respondió la API | Simulación |
 | `RejillaEscenario.tsx` | Una fila por estación y una celda por hora del escenario | Simulación |
 | `BarraBandas.tsx` | Cómo se reparten unas horas entre las bandas INCA | Impacto |
@@ -30,6 +30,9 @@ Lo que comparten:
 
 - **`dibujo.ts`**: `useDibujo()`, para los gráficos en que D3 dibuja por su cuenta con `.join()` sobre un nodo
   (los de Simulación e Impacto). En los demás, React arma el SVG y D3 pone las escalas y las formas.
+- **`tramos.ts`**: `partirPorHuecos()`, dónde se corta la línea de una serie horaria. `CurvaSesion` no une dos
+  puntos de la media separados por más de `HUECO_QUE_CORTA_H` horas (6): la media de 24 h no es continua a través
+  de un hueco así.
 - **`ejeDeRondas.ts`**: el eje horizontal que comparten `InerciaPorRonda` y `TiemposPorNodo`, para que una ronda
   quede en la misma vertical en los dos.
 

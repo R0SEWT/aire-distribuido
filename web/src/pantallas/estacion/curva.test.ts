@@ -35,6 +35,7 @@ describe('armarCurva', () => {
       estados: 0,
       estadosAjenos: 0,
       sinMedia: 0,
+      huecos: 0,
       ultimoEstado: null,
       ultimaLectura: null,
       vacia: true,
@@ -82,6 +83,45 @@ describe('armarCurva', () => {
 
     expect(curva.lecturas.map((l) => l.valor)).toEqual([1, 2, 3])
     expect(curva.medias.map((m) => m.valor)).toEqual([1, 2, 3])
+  })
+})
+
+describe('los huecos', () => {
+  const otroDia = (hora: number, pm10: number): PuntoSesion => {
+    const fecha_hora = `2021-12-20T${String(hora).padStart(2, '0')}:00:00-05:00`
+    return { fecha_hora, t: Date.parse(fecha_hora), pm2_5: pm10 / 2, pm10, lecturas: 24, alerta: false, inca: null }
+  }
+
+  it('dos tramos de la misma estación separados por días cuentan un hueco', () => {
+    const curva = armarCurva([estado(10, 90), estado(11, 95), otroDia(8, 40), otroDia(9, 42)], [], 'pm10')
+
+    expect(curva.huecos).toBe(1)
+    expect(curva.medias).toHaveLength(4)
+  })
+
+  it('unas horas sin estado no son un hueco', () => {
+    expect(armarCurva([estado(1, 90), estado(4, 95), estado(10, 99)], [], 'pm10').huecos).toBe(0)
+    expect(armarCurva([estado(1, 90), estado(8, 95)], [], 'pm10').huecos).toBe(1)
+  })
+
+  it('el hueco puede estar entre lo enviado y lo recibido', () => {
+    const curva = armarCurva([otroDia(8, 40)], [vista(10, 150, 90), vista(11, 180, 95)], 'pm10')
+
+    expect(curva.huecos).toBe(1)
+  })
+
+  it('el pie dice que la línea se corta y por qué, en los dos casos', () => {
+    const soloEstados = textosDeCurva('CA-HU-04', armarCurva([estado(10, 90), otroDia(8, 40)], [], 'pm10'), 'pm10')
+    expect(soloEstados.pie).toContain(
+      'La línea se corta en 1 lugar donde faltan más de 6 horas: son tramos distintos, y la media de 24 horas no es continua de uno al otro.',
+    )
+
+    const conLecturas = textosDeCurva('CA-HU-04', armarCurva([otroDia(8, 40), otroDia(20, 41)], [vista(10, 150, 90)], 'pm10'), 'pm10')
+    expect(conLecturas.pie).toContain('La línea se corta en 2 lugares donde faltan más de 6 horas')
+  })
+
+  it('sin huecos no dice nada de cortes', () => {
+    expect(textosDeCurva('CA-HU-04', armarCurva([estado(10, 90), estado(11, 95)], [], 'pm10'), 'pm10').pie).not.toContain('se corta')
   })
 })
 
