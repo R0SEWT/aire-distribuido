@@ -9,14 +9,18 @@ import { QueryClientProvider, useQueryClient, type QueryClient } from '@tanstack
 import { lazy, useEffect, useState } from 'react'
 import { BrowserRouter, Route, Routes } from 'react-router'
 import { claves, crearClienteDeConsultas } from './api/cliente'
+import { olvidarEventosEnVivo } from './api/enVivo'
+import { olvidarHistoria } from './api/historia'
 import { TiempoRealProveedor } from './api/TiempoRealProveedor'
 import { useEvento } from './api/tiempoReal'
+import { olvidarVistas } from './api/vistas'
 import type { OpcionesWS } from './api/ws'
 import { Armazon } from './armazon/Armazon'
 import { RUTAS } from './armazon/menu'
 import { Barrera } from './componentes/Barrera'
 import { entrenamientoALaVista } from './pantallas/entrenamiento/almacen'
 import Ingreso from './pantallas/Ingreso'
+import { simulador } from './pantallas/simulacion/motor'
 import { RequiereRol, RequiereSesion } from './sesion/guardas'
 import { SOLO_ADMIN } from './sesion/roles'
 import { useSesion } from './sesion/useSesion'
@@ -67,20 +71,39 @@ export function Rutas() {
 }
 
 /**
- * Al terminar una sesión, lo que quedó en la caché se borra: lo que vio un
- * admin no lo ve quien entre después en la misma pestaña. Tampoco el
- * entrenamiento que tenía a la vista.
+ * Todo lo que una sesión deja en la pestaña, borrado en un solo lugar: lo que
+ * vio un admin no lo ve quien entre después. Cada cosa que una pantalla guarde
+ * fuera de sus componentes se suma aquí.
+ */
+function limpiarLoDeLaSesion(consultas: QueryClient) {
+  // Primero lo que sigue haciendo cosas: una simulación en curso se corta (lo ya enviado queda en el sistema).
+  simulador.reiniciar()
+  // Lo visto: las lecturas enviadas y los estados recibidos (estos, también de sessionStorage).
+  olvidarVistas()
+  olvidarHistoria(consultas)
+  // El entrenamiento que estaba a la vista.
+  entrenamientoALaVista.reiniciar()
+  // La caché en vivo: los eventos que llegaron por el WebSocket de esta sesión ya no mandan sobre la API.
+  olvidarEventosEnVivo(consultas)
+  // Y la caché de consultas. La salud es pública y la muestra también el ingreso: se queda.
+  consultas.removeQueries({ predicate: (c) => c.queryKey[0] !== claves.salud[0] })
+}
+
+/**
+ * Limpia lo de la sesión cuando termina, sea por «Salir», porque venció o por
+ * un 401: en los tres casos el token deja de estar. Y también al arrancar sin
+ * sesión: si venció con la pestaña recargada, lo guardado no espera al próximo.
  */
 function LimpiarAlSalir() {
   const { sesion } = useSesion()
   const consultas = useQueryClient()
   const token = sesion?.token
   useEffect(() => {
-    return () => {
-      entrenamientoALaVista.reiniciar()
-      // La salud es pública y la muestra también el ingreso: se queda.
-      consultas.removeQueries({ predicate: (c) => c.queryKey[0] !== claves.salud[0] })
+    if (token === undefined) {
+      limpiarLoDeLaSesion(consultas)
+      return
     }
+    return () => limpiarLoDeLaSesion(consultas)
   }, [token, consultas])
   return null
 }

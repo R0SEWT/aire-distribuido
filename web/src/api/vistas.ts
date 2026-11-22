@@ -8,12 +8,11 @@
 // curva de la Estación y los gráficos de la simulación.
 //
 // Es un almacén fuera de React, como la sesión: el simulador escribe aunque su
-// pantalla no esté a la vista. Vive en memoria: se vacía al terminar la sesión
-// y al recargar la página.
+// pantalla no esté a la vista. Vive en memoria: se pierde al recargar la página,
+// y al terminar la sesión lo vacía App.tsx, junto con todo lo demás de la sesión.
 
 import { useSyncExternalStore } from 'react'
 import type { BandaINCA } from '../componentes/bandas'
-import { sesionActual, suscribir as suscribirASesion } from '../sesion/almacen'
 
 /** Una lectura enviada y la respuesta de la API a esa lectura. */
 export interface LecturaVista {
@@ -55,6 +54,7 @@ export function lecturasVistas(estacion: string): readonly LecturaVista[] {
   return porEstacion.get(estacion) ?? VACIO
 }
 
+/** La sesión terminó: lo que vio no lo ve la siguiente en la misma pestaña. */
 export function olvidarVistas() {
   if (porEstacion.size === 0) return
   porEstacion.clear()
@@ -70,8 +70,3 @@ function suscribir(oyente: () => void) {
 export function useLecturasVistas(estacion: string): readonly LecturaVista[] {
   return useSyncExternalStore(suscribir, () => lecturasVistas(estacion))
 }
-
-// Lo que vio una sesión no lo ve la siguiente en la misma pestaña.
-suscribirASesion(() => {
-  if (!sesionActual()) olvidarVistas()
-})

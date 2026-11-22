@@ -6,6 +6,7 @@ import {
   aplicarEstadoEstacion,
   EN_VIVO,
   fusionar,
+  olvidarEventosEnVivo,
   pedirRegimen,
   pedirRegimenes,
   type EstadoEstacion,
@@ -183,6 +184,20 @@ describe('la fusión del GET con los eventos', () => {
     expect(await pedirLista(consultas, async () => [estado('CA-B', 17, { alerta: true })])).toEqual([
       estado('CA-B', 17, { alerta: true }),
     ])
+  })
+
+  it('al terminar la sesión se olvidan los eventos: en la siguiente manda la API, también su 404', async () => {
+    const consultas = new QueryClient()
+    aplicarEstadoEstacion(consultas, estado('CA-A', 15, { alerta: true }))
+
+    olvidarEventosEnVivo(consultas)
+
+    expect(await pedirRegimenes(consultas, async () => [])).toEqual([])
+    await expect(
+      pedirRegimen(consultas, 'CA-A', async () => {
+        throw errorDeRespuesta(404, { error: 'la estación CA-A todavía no tiene un régimen registrado' }, true)
+      }),
+    ).rejects.toMatchObject({ tipo: 'no_encontrado' })
   })
 
   it('al reabrirse tras un reinicio limpio del sistema, la lista vacía del GET queda vacía', async () => {

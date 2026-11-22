@@ -10,8 +10,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { api, claves, crearClienteDeConsultas, pedir } from './api/cliente'
 import { EN_VIVO, pedirRegimenes, type EstadoEstacion } from './api/enVivo'
 import { useEvento } from './api/tiempoReal'
+import { lecturasVistas } from './api/vistas'
 import { Proveedores, Rutas } from './App'
 import { Armazon } from './armazon/Armazon'
+import { entrenamientoALaVista } from './pantallas/entrenamiento/almacen'
 import { simulador } from './pantallas/simulacion/motor'
 import type { Tramo } from './pantallas/simulacion/series'
 import { fabricaDeEnchufes, SALUD_OK, simularApi, tokenDe } from './pruebas/dobles'
@@ -278,6 +280,157 @@ describe('la app', () => {
   })
 
   describe('el fin de la sesión', () => {
+    describe('no deja nada para quien entre después en la misma pestaña', () => {
+      const ESTADO = {
+        estacion: 'CA-HU-04',
+        fecha_hora: '2021-12-15T10:00:00-05:00',
+        regimen: 2,
+        excede_eca: false,
+        media_24h: { pm2_5: 88.8, pm10: 120.7, lecturas: 24 },
+        alerta: true,
+        inca: 'mala',
+        ts: '2026-11-21T17:10:00-05:00',
+      }
+      const lecturaDe = (hora: number) => ({ estacion: 'CA-HU-04', fecha_hora: `2021-12-15T1${hora}:00:00-05:00`, pm2_5: 20, pm10: 90 })
+      const TRAMO: Tramo = {
+        id: 'dia-de-prueba',
+        tipo: 'dia',
+        titulo: 'CA-HU-04 · 15 dic 2021',
+        desde: lecturaDe(1).fecha_hora,
+        hasta: lecturaDe(3).fecha_hora,
+        lecturas: [lecturaDe(1), lecturaDe(2), lecturaDe(3)],
+        estaciones: ['CA-HU-04'],
+        esperado: {},
+        primera: { 'CA-HU-04': lecturaDe(1).fecha_hora },
+        ultima: { 'CA-HU-04': lecturaDe(3).fecha_hora },
+      }
+      const PREDICCION = {
+        estacion: 'CA-HU-04',
+        regimen: 2,
+        excede_eca: false,
+        media_24h: { pm2_5: 80, pm10: 119, lecturas: 24 },
+        alerta: true,
+        inca: 'mala',
+        pm2_5_medio_regimen: 24.4,
+        pm10_medio_regimen: 58.2,
+        modelo_id: 'sembrado-kmeans-json',
+        ms: 0.04,
+      }
+      const ENTRENAMIENTO = { id: 'e-1', estado: 'terminado', nodos: ['nodo-a'], replicas: 1, iteraciones: 1, ms_total: 50, rondas: [] }
+
+      afterEach(() => simulador.reiniciar())
+
+      /** Una sesión de admin que ya dejó de todo en la pestaña: curvas, lecturas enviadas, un entrenamiento a la vista y una simulación corriendo. */
+      async function sesionConDeTodo(rutas: Parameters<typeof simularApi>[0] = {}) {
+        simularApi({ 'GET /api/salud': SALUD_OK, 'POST /api/predicciones': { estado: 200, cuerpo: PREDICCION }, ...rutas })
+        sesionDe('admin')
+        const { enchufes } = montar('/muestrario')
+        await screen.findByRole('heading', { name: 'Muestrario de componentes' })
+        act(() => enchufes.ultimo().abrir())
+        // Un estado recibido: queda para la curva, también en sessionStorage.
+        act(() => enchufes.ultimo().recibir({ evento: 'estacion.regimen', datos: ESTADO }))
+        await waitFor(() => expect(sessionStorage.getItem('aire.curvas')).toContain('CA-HU-04'))
+        // Un entrenamiento abierto del historial, a la vista.
+        act(() => entrenamientoALaVista.despachar({ tipo: 'ver', detalle: ENTRENAMIENTO as never }))
+        // Y una simulación en curso, que ya mandó una lectura y espera para la siguiente.
+        act(() => simulador.iniciar(TRAMO, 1))
+        await waitFor(() => expect(lecturasVistas('CA-HU-04')).toHaveLength(1))
+        expect(simulador.leer().fase).toBe('en_curso')
+        expect(entrenamientoALaVista.leer().seguimiento.corrida?.id).toBe('e-1')
+      }
+
+      function nadaQueda() {
+        expect(sessionStorage.getItem('aire.curvas')).toBeNull()
+        expect(lecturasVistas('CA-HU-04')).toEqual([])
+        expect(entrenamientoALaVista.leer().seguimiento.corrida).toBeNull()
+        expect(simulador.leer()).toMatchObject({ fase: 'lista', tramo: null, enviadas: 0 })
+        expect(document.querySelector('[data-simulacion-en-curso]')).toBeNull()
+      }
+
+      it('«Salir» borra las curvas, las lecturas enviadas y el entrenamiento a la vista, y detiene la simulación', async () => {
+        await sesionConDeTodo()
+
+        await userEvent.click(screen.getByRole('button', { name: 'Salir' }))
+
+        await screen.findByRole('form', { name: 'Ingreso' })
+        nadaQueda()
+      })
+
+      it('lo mismo cuando la sesión vence', async () => {
+        await sesionConDeTodo()
+
+        act(() => cerrarSesion('vencida'))
+
+        await screen.findByRole('form', { name: 'Ingreso' })
+        expect(screen.getByText('La sesión venció.')).toBeInTheDocument()
+        nadaQueda()
+      })
+
+      it('lo mismo cuando la API responde 401 a un pedido', async () => {
+        await sesionConDeTodo({ 'GET /api/estaciones': { estado: 401, cuerpo: { error: 'token inválido' } } })
+
+        // El Panel pide el catálogo y la API ya no acepta el token.
+        await userEvent.click(within(screen.getByRole('navigation', { name: 'Pantallas' })).getByRole('link', { name: 'Panel' }))
+
+        await screen.findByRole('form', { name: 'Ingreso' })
+        expect(sesionActual()).toBeNull()
+        nadaQueda()
+      })
+
+      it('la simulación detenida no manda más lecturas con la sesión cerrada', async () => {
+        await sesionConDeTodo()
+        const predicciones = () => (globalThis.fetch as ReturnType<typeof simularApi>).mock.calls.filter((c) => c[0].url.endsWith('/api/predicciones')).length
+        const antes = predicciones()
+
+        await userEvent.click(screen.getByRole('button', { name: 'Salir' }))
+        await screen.findByRole('form', { name: 'Ingreso' })
+        // Pasa de sobra el segundo que el simulador esperaba para la lectura siguiente.
+        await new Promise((r) => setTimeout(r, 1200))
+
+        expect(predicciones()).toBe(antes)
+      })
+
+      it('quien entra después ve la curva de la estación vacía, no la del anterior', async () => {
+        await sesionConDeTodo({
+          'POST /api/auth/token': { estado: 200, cuerpo: tokenDe('usuario') },
+          'GET /api/estaciones': { estado: 200, cuerpo: [{ id: 'CA-HU-04', objeto_fiscalizado: 'Ladrilleras', tipo_actividad: 'ladrilleras', departamento: 'LIMA', provincia: 'LIMA', distrito: 'LURIGANCHO', lat: -11.99, lon: -76.92 }] },
+          'GET /datos/impacto.json': { estado: 200, cuerpo: { metadatos: { reglas: {} }, totales: {}, distritos: [], senales: {}, anticipacion: {}, alcance: { estaciones_sin_pm_horario: [] }, estaciones: [], poblacion_distritos: [] } },
+          'GET /api/estaciones/CA-HU-04/regimen': { estado: 404, cuerpo: { error: 'la estación CA-HU-04 todavía no tiene un régimen registrado' } },
+        })
+        await userEvent.click(screen.getByRole('button', { name: 'Salir' }))
+        await screen.findByRole('form', { name: 'Ingreso' })
+
+        await ingresarComo('demo', 'una-clave')
+        await screen.findByRole('navigation', { name: 'Pantallas' })
+        await userEvent.click(within(screen.getByRole('navigation', { name: 'Pantallas' })).getByRole('link', { name: 'Estación' }))
+        await userEvent.selectOptions(await screen.findByRole('combobox'), 'CA-HU-04')
+
+        expect(await screen.findByText(/Esta pestaña todavía no recibió ningún estado de CA-HU-04 ni le envió lecturas/)).toBeInTheDocument()
+        expect(document.querySelectorAll('[data-capa="curva"] [data-punto], [data-lectura]')).toHaveLength(0)
+      })
+
+      it('al arrancar sin sesión borra lo que una sesión vencida dejó guardado antes de recargar', async () => {
+        simularApi({ 'GET /api/salud': SALUD_OK })
+        sessionStorage.setItem('aire.curvas', JSON.stringify({ 'CA-HU-04': [{ fecha_hora: ESTADO.fecha_hora, t: Date.parse(ESTADO.fecha_hora), pm2_5: 88.8, pm10: 120.7, lecturas: 24, alerta: true, inca: 'mala' }] }))
+
+        montar('/ingreso')
+
+        await screen.findByRole('form', { name: 'Ingreso' })
+        await waitFor(() => expect(sessionStorage.getItem('aire.curvas')).toBeNull())
+      })
+
+      it('recargar la página con la sesión viva no borra las curvas', async () => {
+        simularApi({ 'GET /api/salud': SALUD_OK })
+        sesionDe('usuario')
+        sessionStorage.setItem('aire.curvas', JSON.stringify({ 'CA-HU-04': [{ fecha_hora: ESTADO.fecha_hora, t: Date.parse(ESTADO.fecha_hora), pm2_5: 88.8, pm10: 120.7, lecturas: 24, alerta: true, inca: 'mala' }] }))
+
+        montar('/muestrario')
+
+        await screen.findByRole('heading', { name: 'Muestrario de componentes' })
+        expect(sessionStorage.getItem('aire.curvas')).toContain('CA-HU-04')
+      })
+    })
+
     it('salir vuelve al ingreso y borra el token', async () => {
       simularApi({ 'GET /api/salud': SALUD_OK })
       sesionDe('admin')

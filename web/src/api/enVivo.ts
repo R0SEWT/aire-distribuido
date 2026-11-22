@@ -107,6 +107,15 @@ export function alConectarEnVivo(consultas: QueryClient): Promise<void> {
 }
 
 /**
+ * La sesión terminó: se olvida de qué estaciones había eventos. Si no, hasta
+ * que el WebSocket de la sesión siguiente quede abierto, un evento de la
+ * anterior seguiría valiendo más que la respuesta de la API.
+ */
+export function olvidarEventosEnVivo(consultas: QueryClient) {
+  eventosDe(consultas).clear()
+}
+
+/**
  * Pide la lista de estados (GET /api/regimenes) para una consulta EN_VIVO y le
  * aplica la regla de fusión con los eventos que hayan llegado hasta el momento
  * de la respuesta, también los que llegaron mientras el pedido viajaba.

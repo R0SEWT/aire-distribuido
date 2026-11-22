@@ -8,7 +8,8 @@
 // claves.regimenes o en claves.regimen(id) queda anotado aquí, con su hora.
 //
 // Se guarda en sessionStorage, como la sesión: un F5 no borra la curva, y al
-// cerrar la pestaña se va. Son medias de estaciones, no hay nada secreto.
+// cerrar la pestaña se va. Al terminar la sesión («Salir», vencimiento o 401)
+// la borra App.tsx con olvidarHistoria(), junto con todo lo demás de la sesión.
 //
 // La API manda, a lo sumo, un evento por estación cada 250 ms (api/avisos.go):
 // de una ráfaga de lecturas llegan solo algunos estados, y la curva tiene esos.
@@ -108,6 +109,13 @@ export class Historia {
     return [...this.porEstacion.keys()]
   }
 
+  /** La sesión terminó: se olvida todo, también lo guardado, y se avisa a quien esté mirando. */
+  vaciar() {
+    this.porEstacion.clear()
+    borrarLoGuardado()
+    for (const oyente of [...this.oyentes]) oyente()
+  }
+
   /** Guarda y avisa a quien esté mirando. Se llama una vez por tanda de cambios. */
   publicar() {
     try {
@@ -133,7 +141,26 @@ export class Historia {
   }
 }
 
+function borrarLoGuardado() {
+  try {
+    sessionStorage.removeItem(CLAVE)
+  } catch {
+    // Sin sessionStorage no había nada guardado.
+  }
+}
+
 const historias = new WeakMap<QueryClient, Historia>()
+
+/**
+ * Olvida la historia de una sesión que terminó: quien entre después en la misma
+ * pestaña no hereda sus curvas. Borra lo guardado aunque nadie la haya
+ * encendido todavía (una sesión que venció antes de recargar la página).
+ */
+export function olvidarHistoria(consultas: QueryClient) {
+  const historia = historias.get(consultas)
+  if (historia) historia.vaciar()
+  else borrarLoGuardado()
+}
 
 /**
  * La historia de una caché. La primera vez que se pide queda mirando la caché

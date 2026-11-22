@@ -18,7 +18,6 @@
 import { useSyncExternalStore } from 'react'
 import { api, pedir } from '../../api/cliente'
 import { anotarVista, type LecturaVista } from '../../api/vistas'
-import { sesionActual, suscribir as suscribirASesion } from '../../sesion/almacen'
 import type { Lectura, Prediccion, Tramo } from './series'
 
 export type Fase =
@@ -322,13 +321,12 @@ export function enMarcha(fase: Fase): boolean {
   return fase === 'en_curso' || fase === 'en_pausa' || fase === 'con_error'
 }
 
-/** El simulador de la app: uno solo, para que la corrida siga al cambiar de pantalla. */
+/**
+ * El simulador de la app: uno solo, para que la corrida siga al cambiar de
+ * pantalla. No sigue en la sesión siguiente: al terminar la sesión, App.tsx lo
+ * reinicia junto con todo lo demás que la sesión dejó en la pestaña.
+ */
 export const simulador = new Simulador()
-
-// Sin sesión no se manda nada: la corrida de una sesión no sigue en la siguiente.
-suscribirASesion(() => {
-  if (!sesionActual()) simulador.reiniciar()
-})
 
 /** La corrida de un simulador, dentro de React. */
 export function useCorrida(de: Simulador = simulador): Corrida {

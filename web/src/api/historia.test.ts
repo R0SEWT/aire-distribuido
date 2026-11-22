@@ -2,7 +2,7 @@ import { QueryClient } from '@tanstack/react-query'
 import { describe, expect, it } from 'vitest'
 import { estadoDe } from '../pantallas/panel/dobles'
 import { claves } from './cliente'
-import { Historia, historiaDe } from './historia'
+import { Historia, historiaDe, olvidarHistoria } from './historia'
 
 const horas = (h: Historia, estacion: string) => h.leer(estacion).map((p) => p.fecha_hora.slice(11, 13))
 
@@ -62,6 +62,23 @@ describe('la historia de la sesión', () => {
     expect(localStorage.length).toBe(0)
   })
 
+  it('al vaciarse (la sesión terminó) olvida todo, también lo guardado, y avisa a quien mira', () => {
+    const h = new Historia()
+    h.anotar('CA-HU-04', estadoDe('CA-HU-04', { hora: 10 }))
+    h.anotar('CA-AYAS-01', estadoDe('CA-AYAS-01', { hora: 10 }))
+    h.publicar()
+    let avisos = 0
+    h.suscribir(() => avisos++)
+
+    h.vaciar()
+
+    expect(h.estaciones()).toEqual([])
+    expect(h.leer('CA-HU-04')).toEqual([])
+    expect(sessionStorage.getItem('aire.curvas')).toBeNull()
+    expect(new Historia().leer('CA-HU-04')).toEqual([])
+    expect(avisos).toBe(1)
+  })
+
   it('si lo guardado no se puede leer, empieza de cero', () => {
     sessionStorage.setItem('aire.curvas', '{"CA-HU-04": "no es una lista"')
 
@@ -108,6 +125,28 @@ describe('la historia de la sesión', () => {
 
       consultas.setQueryData(claves.regimen('CA-AYAS-01'), null)
       expect(h.leer('CA-AYAS-01')).toEqual([])
+    })
+
+    it('olvidarHistoria vacía la de esa caché, que sigue anotando lo que llegue después', () => {
+      const consultas = new QueryClient()
+      const h = historiaDe(consultas)
+      consultas.setQueryData(claves.regimen('CA-HU-04'), estadoDe('CA-HU-04', { hora: 10 }))
+      expect(sessionStorage.getItem('aire.curvas')).toContain('CA-HU-04')
+
+      olvidarHistoria(consultas)
+      expect(h.leer('CA-HU-04')).toEqual([])
+      expect(sessionStorage.getItem('aire.curvas')).toBeNull()
+
+      consultas.setQueryData(claves.regimen('CA-AYAS-01'), estadoDe('CA-AYAS-01', { hora: 11 }))
+      expect(horas(h, 'CA-AYAS-01')).toEqual(['11'])
+    })
+
+    it('olvidarHistoria borra lo guardado aunque nadie la haya encendido en esa caché', () => {
+      sessionStorage.setItem('aire.curvas', '{"CA-HU-04":[]}')
+
+      olvidarHistoria(new QueryClient())
+
+      expect(sessionStorage.getItem('aire.curvas')).toBeNull()
     })
 
     it('no mira lo que no es el estado de las estaciones', () => {
