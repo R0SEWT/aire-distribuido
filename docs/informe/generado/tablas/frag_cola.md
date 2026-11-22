@@ -1,29 +1,7 @@
 <!-- Generado por tablas.py desde api/escritor.go. No editar a mano. -->
 
 ::: {#lst-cola}
-```go
-func (c *cola) encolar(p almacen.Prediccion) bool {
-    select {
-    case c.ch <- p:
-        return true
-    default:
-        c.descartadas.Add(1)
-        return false
-    }
-}
-
-func (c *cola) completar(lote []almacen.Prediccion) []almacen.Prediccion {
-    for len(lote) < maxLote {
-        select {
-        case p := <-c.ch:
-            lote = append(lote, p)
-        default:
-            return lote
-        }
-    }
-    return lote
-}
-```
+![](generado/imagenes/frag_cola.png){width=11.5cm}
 
 La cola de escritura de un almacén: encolar nunca bloquea y el lote toma lo que ya esté esperando (`api/escritor.go`, líneas 232–240 y 281–291)
 :::

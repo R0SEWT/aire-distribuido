@@ -212,10 +212,16 @@ forma del costo: la fusión y la actualización, que es lo que el coordinador ha
 milésimas de milisegundo, y la ronda es todo lo demás.
 
 Las mismas propiedades están fijadas por pruebas que corren con `go test -race` en cada cambio:
-`TestLloydConUnNodoEsElConcurrenteBitABit` y
-`TestLloydConVariosNodosCoincideConToleranciaYEsDeterminista` en `cluster/`,
-`TestUnNodoDaElModeloDeEntrenarBitABit` en `cmd/distribuido/` y, por la API,
-`TestEntrenamientoConUnNodoEsBitABit` y `TestConElGoldRealYUnNodoElModeloEsElDeKmeansJSONBitABit`.
+
+| Qué comprueba | Prueba | Paquete |
+|:---|:---|:---|
+| Con un nodo, el distribuido es el concurrente bit a bit | `TestLloydConUnNodo​EsElConcurrenteBitABit` | `cluster/` |
+| Con varios nodos coincide dentro de la tolerancia y es determinista | `TestLloydConVariosNodos​CoincideConTolerancia​YEsDeterminista` | `cluster/` |
+| Un nodo da el modelo de `cmd/entrenar` bit a bit | `TestUnNodoDaElModelo​DeEntrenarBitABit` | `cmd/distribuido/` |
+| Por la API, con un nodo, también bit a bit | `TestEntrenamientoConUnNodo​EsBitABit` | `api/` |
+| Con el gold real y un nodo, el modelo es el de `kmeans.json` | `TestConElGoldRealYUnNodo​ElModeloEsElDeKmeansJSON​BitABit` | `api/` |
+
+: Pruebas de que el distribuido da el mismo modelo {#tbl-pruebas-equivalencia tbl-colwidths="[38,47,15]"}
 
 ### Qué pasa si un nodo cae {#sec-fallas}
 
@@ -235,9 +241,16 @@ es peor que no publicar nada. En concreto:
 - Si lo que se detiene es el coordinador, la corrida se cancela sin esperar al plazo: cierra las
   conexiones, que es lo único que destraba una lectura en curso.
 
-Lo prueban `TestUnNodoCaidoAbortaLaCorridaConUnErrorQueLoNombra`,
-`TestUnNodoQueNoRespondeVenceElPlazoDeLaRonda` y `TestCargarRechazaUnNodoConOtroGold` en `cluster/`,
-y `TestNodoQueSeCaeAMitadDeLaCorridaConservaLasRondasHechas` en `api/`.
+Cada caso tiene su prueba:
+
+| Qué comprueba | Prueba | Paquete |
+|:---|:---|:---|
+| Un nodo caído aborta la corrida y el error lo nombra | `TestUnNodoCaidoAbortaLaCorrida​ConUnErrorQueLoNombra` | `cluster/` |
+| Un nodo que no responde vence el plazo de la ronda | `TestUnNodoQueNoResponde​VenceElPlazoDeLaRonda` | `cluster/` |
+| Un nodo con otro gold se rechaza al cargar | `TestCargarRechazaUnNodo​ConOtroGold` | `cluster/` |
+| Si un nodo cae a mitad, se conservan las rondas hechas | `TestNodoQueSeCaeAMitadDeLaCorrida​ConservaLasRondasHechas` | `api/` |
+
+: Pruebas de los fallos de un nodo {#tbl-pruebas-fallos tbl-colwidths="[38,47,15]"}
 
 Hay un caso que el plazo no cubre: un nodo que responde a tiempo con parciales bien formados pero de
 otras filas. El coordinador no ve las filas de los nodos, solo comprueba la forma de cada parcial y
