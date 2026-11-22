@@ -30,7 +30,6 @@ import {
 import { MapaPeru, type LugarEnMapa, type MarcaEnMapa } from '../graficos/MapaPeru'
 import { SOLO_ADMIN, puede } from '../sesion/roles'
 import { useSesion } from '../sesion/useSesion'
-import { useRegistroDeSesion } from './estacion/historia'
 import { Leyenda } from './panel/Leyenda'
 import {
   detalleSinBanda,
@@ -350,7 +349,6 @@ function Contenido({
 }
 
 export default function Panel() {
-  useRegistroDeSesion()
   const estaciones = useEstaciones()
   const impacto = useImpacto()
   const estados = useEstados()

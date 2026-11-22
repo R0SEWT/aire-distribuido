@@ -1,5 +1,6 @@
 import { Suspense, useEffect, useLayoutEffect, useRef } from 'react'
 import { Outlet, useLocation } from 'react-router'
+import { useRegistroDeSesion } from '../api/historia'
 import { Barrera } from '../componentes/Barrera'
 import { Estado } from '../componentes/Estado'
 import { AvisoVencimiento } from './AvisoVencimiento'
@@ -18,6 +19,8 @@ export function Armazon() {
   const { pathname } = useLocation()
   const principal = useRef<HTMLElement>(null)
   const primeraVez = useRef(true)
+  // Lo que llega de cada estación queda anotado para su curva, se mire la pantalla que se mire.
+  useRegistroDeSesion()
 
   // El título de la ruta. En un efecto de layout, que corre antes que los
   // efectos comunes: una pantalla puede poner uno más preciso con useTitulo.

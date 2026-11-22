@@ -12,13 +12,15 @@
 //
 // La API manda, a lo sumo, un evento por estación cada 250 ms (api/avisos.go):
 // de una ráfaga de lecturas llegan solo algunos estados, y la curva tiene esos.
+// El evento tampoco trae la lectura horaria: las que esta sesión envió están en
+// api/vistas.ts.
 
 import { useQueryClient, type QueryClient } from '@tanstack/react-query'
 import { useEffect, useMemo, useSyncExternalStore } from 'react'
-import { claves } from '../../api/cliente'
-import type { EstadoEstacion } from '../../api/enVivo'
-import type { BandaINCA } from '../../componentes/indice'
-import type { RegimenEstacion } from '../../api/estaciones'
+import type { BandaINCA } from '../componentes/bandas'
+import { claves } from './cliente'
+import type { EstadoEstacion } from './enVivo'
+import type { RegimenEstacion } from './estaciones'
 
 /** Un estado recibido de una estación: un punto de la curva. */
 export interface PuntoSesion {
@@ -168,9 +170,9 @@ export function historiaDe(consultas: QueryClient): Historia {
 }
 
 /**
- * Deja anotando la historia de la sesión. Lo llaman el Panel y la Estación al
- * montarse: desde ahí, cada estado que llegue queda para la curva, se mire la
- * pantalla que se mire.
+ * Deja anotando la historia de la sesión. Lo llama el armazón, una sola vez:
+ * cada estado que llegue queda para la curva, se mire la pantalla que se mire,
+ * también después de recargar la página en cualquiera de ellas.
  */
 export function useRegistroDeSesion() {
   const consultas = useQueryClient()

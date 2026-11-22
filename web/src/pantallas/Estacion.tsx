@@ -8,6 +8,7 @@ import { useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router'
 import { useImpacto, type Impacto } from '../api/datos'
 import { useEstaciones, useEstado, type Estacion as FichaEstacion, type RegimenEstacion } from '../api/estaciones'
+import { useHistoria, type PuntoSesion } from '../api/historia'
 import { RUTAS } from '../armazon/menu'
 import {
   Banda,
@@ -24,7 +25,6 @@ import {
 } from '../componentes/indice'
 import { CurvaSesion, type PuntoCurva } from '../graficos/CurvaSesion'
 import { Ficha } from './estacion/Ficha'
-import { useHistoria, useRegistroDeSesion, type PuntoSesion } from './estacion/historia'
 import { contaminanteInicial, fraseEstacion, NORMA, type Contaminante } from './estacion/norma'
 import { filaDe, MINIMO_LECTURAS, tonoDe } from './panel/situacion'
 
@@ -223,7 +223,6 @@ function Detalle({ estacion, impacto }: { estacion: FichaEstacion; impacto: Impa
 }
 
 export default function Estacion() {
-  useRegistroDeSesion()
   const { id } = useParams()
   const estaciones = useEstaciones()
   const impacto = useImpacto()

@@ -1,7 +1,7 @@
 import { QueryClient } from '@tanstack/react-query'
 import { describe, expect, it } from 'vitest'
-import { claves } from '../../api/cliente'
-import { estadoDe } from '../panel/dobles'
+import { estadoDe } from '../pantallas/panel/dobles'
+import { claves } from './cliente'
 import { Historia, historiaDe } from './historia'
 
 const horas = (h: Historia, estacion: string) => h.leer(estacion).map((p) => p.fecha_hora.slice(11, 13))

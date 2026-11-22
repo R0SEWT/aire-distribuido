@@ -7,6 +7,7 @@ import { crearClienteDeConsultas } from '../../api/cliente'
 import type { Impacto, MapaDelPeru } from '../../api/datos'
 import type { EstadoEstacion } from '../../api/enVivo'
 import type { Estacion as FichaEstacion } from '../../api/estaciones'
+import { historiaDe } from '../../api/historia'
 import { Proveedores } from '../../App'
 import { fabricaDeEnchufes, SALUD_OK, simularApi } from '../../pruebas/dobles'
 import { abrirSesion, type Rol } from '../../sesion/almacen'
@@ -126,6 +127,8 @@ export function montar(ruta: string, rol: Rol = 'usuario') {
   abrirSesion({ usuario: rol === 'admin' ? 'ana' : 'demo', token: `token-de-${rol}`, rol, expira: Date.now() + 3_600_000 })
   const enchufes = fabricaDeEnchufes()
   const consultas = crearClienteDeConsultas()
+  // Lo que el armazón hace por estas pantallas (useRegistroDeSesion): dejar anotando lo que llega de cada estación.
+  historiaDe(consultas)
   const vista = render(
     <Proveedores consultas={consultas} tiempoReal={{ crearEnchufe: enchufes.crearEnchufe }}>
       <MemoryRouter initialEntries={[ruta]}>

@@ -632,6 +632,35 @@ describe('la app', () => {
       expect(pie.getByRole('link', { name: 'Informe' })).toBeInTheDocument()
     })
 
+    it('anota lo que llega de cada estación desde cualquier pantalla, sin haber pasado por el Panel ni por la Estación', async () => {
+      simularApi({ 'GET /api/salud': SALUD_OK })
+      sesionDe('usuario')
+      // Como después de un F5 en una pantalla que no pide el estado de las estaciones.
+      const { enchufes } = montar('/muestrario')
+      await screen.findByRole('heading', { name: 'Muestrario de componentes' })
+      act(() => enchufes.ultimo().abrir())
+
+      act(() =>
+        enchufes.ultimo().recibir({
+          evento: 'estacion.regimen',
+          datos: {
+            estacion: 'CA-HU-04',
+            fecha_hora: '2021-12-15T10:00:00-05:00',
+            regimen: 2,
+            excede_eca: true,
+            media_24h: { pm2_5: 88.8, pm10: 120.7, lecturas: 24 },
+            alerta: true,
+            inca: 'mala',
+            ts: '2026-11-21T17:10:00-05:00',
+          },
+        }),
+      )
+
+      // Queda para la curva de la estación (api/historia.ts), que se guarda en sessionStorage.
+      await waitFor(() => expect(JSON.parse(sessionStorage.getItem('aire.curvas') ?? '{}')).toHaveProperty('CA-HU-04'))
+      expect(JSON.parse(sessionStorage.getItem('aire.curvas')!)['CA-HU-04']).toMatchObject([{ pm10: 120.7, alerta: true }])
+    })
+
     it('el modo proyector se pone y se quita, y se recuerda', async () => {
       simularApi({ 'GET /api/salud': SALUD_OK })
       sesionDe('usuario')
