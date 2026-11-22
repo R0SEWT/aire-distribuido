@@ -74,14 +74,10 @@ este informe: ninguna cifra sale de la redacción.
 | Especificación de diseño y contrato de la API | Claude Code (Anthropic) | Revisión del equipo; el contrato se comprueba contra las rutas del código en cada render de este informe |
 | Redacción y maquetación del informe, tablas y diagramas | Claude Code (Anthropic) | Revisión del equipo; las tablas y las cifras se generan desde los reportes, el contrato y el código (`tablas.py`), no desde la redacción |
 | Experimentos de laboratorio en GPU (código en Python) | Claude Code (Anthropic) | Los resultados se comparan con el modelo de Go; se presentan como experimentos fuera del sistema |
+| Ejemplos y diagrama de entidades, configuración de MongoDB y Redis y sus evidencias (Dayana Gómez) | ChatGPT y Codex (OpenAI) | Revisión de cada solicitud de cambios; los registros se comprobaron contra las bases del Compose levantado |
+| Borrador del contrato OpenAPI y colección de Postman (Julio Meza) | ChatGPT (OpenAI) | Revisión de cada solicitud de cambios; el contrato se corrigió contra el código y la colección se corrió contra la API real |
 
 Uso de IA generativa en el Entregable 2
-:::
-
-::: {.callout-warning title="PENDIENTE"}
-Revisar la tabla y completarla con las herramientas que usaron Dayana y Julio en sus tareas (y el
-modelo de cada una, si se quiere precisar), como en la declaración del Trabajo Parcial. Lo confirma
-el coordinador con el equipo antes de entregar.
 :::
 
 Los commits del repositorio no llevan marca de coautoría de IA: el uso se declara únicamente en
