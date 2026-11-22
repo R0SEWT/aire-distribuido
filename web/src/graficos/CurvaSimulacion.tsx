@@ -7,7 +7,7 @@ import { line, max, scaleLinear, select } from 'd3'
 import { BANDAS, type EstadoBanda } from '../componentes/bandas'
 import { diaCorto, hora as horaEnLima, horaDeLima, numero } from '../componentes/formato'
 import type { Lectura } from '../pantallas/simulacion/series'
-import type { Punto } from '../pantallas/simulacion/vistas'
+import type { LecturaVista } from '../api/vistas'
 import { useDibujo } from './dibujo'
 import { useMedida } from './medida'
 
@@ -26,7 +26,7 @@ interface Props {
   /** Todas las lecturas de la estación en el tramo: las que faltan mandar se dibujan apagadas. */
   programadas: readonly Lectura[]
   /** Las ya enviadas, con lo que respondió la API. */
-  puntos: readonly Punto[]
+  puntos: readonly LecturaVista[]
   contaminante: Contaminante
   /** El ECA de 24 h del contaminante y los cortes de sus bandas INCA, en µg/m³. */
   eca: number

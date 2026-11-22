@@ -8,10 +8,10 @@ import { useId, useState, type FormEvent } from 'react'
 import { api, claves, pedir } from '../../api/cliente'
 import type { EstadoEstacion } from '../../api/enVivo'
 import { presentarError } from '../../api/errores'
+import { anotarVista } from '../../api/vistas'
 import { Banda, Cifra, Estado, Etiqueta, fechaHora, Frase, numero, Tarjeta } from '../../componentes/indice'
 import { horaSiguiente } from './fechas'
 import type { Lectura, Prediccion } from './series'
-import { anotarVista } from './vistas'
 
 interface Props {
   /** Las estaciones con PM por hora. */

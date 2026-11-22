@@ -9,7 +9,7 @@ import { diaDisponible, revisarSistema } from './limpieza'
 import type { Seguimiento } from './motor'
 import type { Esperado } from '../../api/datos'
 import { estacionesConPM, tramoDelDia, tramoDelEscenario, type Prediccion } from './series'
-import type { Punto } from './vistas'
+import type { LecturaVista } from '../../api/vistas'
 
 const DIA = SERIES.dias.find((d) => d.id === 'CA-ESP-01-2021-12-21')!
 const ESPERADO = DIA.esperado
@@ -33,7 +33,7 @@ function respuestaDe(e: Esperado, cambios: Partial<Prediccion> = {}): Prediccion
 function seguimiento(ultima: Prediccion, cambios: Partial<Seguimiento> = {}, enviadas = ESPERADO.lecturas_enviadas): Seguimiento {
   return {
     estacion: 'CA-ESP-01',
-    puntos: Array.from({ length: enviadas }, () => ({}) as Punto),
+    puntos: Array.from({ length: enviadas }, () => ({}) as LecturaVista),
     ultima,
     primeraMedia: ESPERADO.primera_media,
     primeraAlerta: ESPERADO.primera_alerta,

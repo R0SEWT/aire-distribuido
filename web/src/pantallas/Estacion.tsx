@@ -1,6 +1,6 @@
 // Estación (spec §5.3): el último estado RECIBIDO de una estación, la curva de
-// lo que esta pestaña recibió de ella durante la sesión y su ficha. No hay una
-// serie histórica en la API: la curva no inventa una.
+// lo que esta pestaña recibió de ella y le envió durante la sesión, y su ficha.
+// No hay una serie histórica en la API: la curva no inventa una.
 //
 // Se actualiza sola: el estado sale de la caché en vivo (web/README.md).
 
@@ -8,7 +8,8 @@ import { useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router'
 import { useImpacto, type Impacto } from '../api/datos'
 import { useEstaciones, useEstado, type Estacion as FichaEstacion, type RegimenEstacion } from '../api/estaciones'
-import { useHistoria, type PuntoSesion } from '../api/historia'
+import { useHistoria } from '../api/historia'
+import { useLecturasVistas } from '../api/vistas'
 import { RUTAS } from '../armazon/menu'
 import {
   Banda,
@@ -23,7 +24,8 @@ import {
   Pildoras,
   Tarjeta,
 } from '../componentes/indice'
-import { CurvaSesion, type PuntoCurva } from '../graficos/CurvaSesion'
+import { CurvaSesion } from '../graficos/CurvaSesion'
+import { armarCurva, textosDeCurva } from './estacion/curva'
 import { Ficha } from './estacion/Ficha'
 import { contaminanteInicial, fraseEstacion, NORMA, type Contaminante } from './estacion/norma'
 import { filaDe, MINIMO_LECTURAS, tonoDe } from './panel/situacion'
@@ -137,45 +139,39 @@ const OPCIONES = [
   { valor: 'pm10', etiqueta: 'PM10' },
 ] as const
 
-function TarjetaCurva({ id, estado, historia }: { id: string; estado: RegimenEstacion | null; historia: readonly PuntoSesion[] }) {
+function TarjetaCurva({ id, estado }: { id: string; estado: RegimenEstacion | null }) {
+  const historia = useHistoria(id)
+  const vistas = useLecturasVistas(id)
   const [elegido, setElegido] = useState<Contaminante | null>(null)
   const contaminante = elegido ?? contaminanteInicial(estado)
   const norma = NORMA[contaminante]
-  const puntos = useMemo<PuntoCurva[]>(() => historia.map((p) => ({ t: p.t, valor: p[contaminante] })), [historia, contaminante])
-  const conMedia = puntos.filter((p) => p.valor !== null).length
-  const sinMedia = puntos.length - conMedia
-  const ultimo = historia[historia.length - 1]
+  const curva = useMemo(() => armarCurva(historia, vistas, contaminante), [historia, vistas, contaminante])
+  const textos = textosDeCurva(id, curva, contaminante)
 
   return (
     <Tarjeta
-      rotulo="Lo recibido en esta sesión"
-      titulo={`Media de 24 horas de ${norma.nombre}`}
+      rotulo={textos.rotulo}
+      titulo={textos.titulo}
       aLaDerecha={<Pildoras etiqueta="Contaminante de la curva" opciones={OPCIONES} valor={contaminante} alCambiar={setElegido} />}
     >
-      {puntos.length === 0 ? (
+      {curva.vacia ? (
         <p className="text-suave py-8 text-center text-sm">
-          Esta pestaña todavía no recibió ningún estado de {id}: la curva se arma con los que vayan llegando.
+          Esta pestaña todavía no recibió ningún estado de {id} ni le envió lecturas: la curva se arma con lo que vaya
+          llegando.
         </p>
       ) : (
         <>
           <CurvaSesion
-            puntos={puntos}
+            puntos={curva.medias}
+            lecturas={curva.lecturas}
             eca={norma.eca}
             cortes={norma.cortes}
             className="h-80"
-            titulo={`Media de 24 horas de ${norma.nombre} de ${id}: ${puntos.length} ${puntos.length === 1 ? 'estado recibido' : 'estados recibidos'} en esta sesión${
-              ultimo ? `, el último del ${fechaHora(ultimo.fecha_hora)}` : ''
-            }. ECA: ${norma.eca} µg/m³.`}
+            titulo={textos.descripcion}
           />
-          <p className="text-suave mt-3 text-xs" data-curva-pie>
-            <span className="text-texto font-semibold">
-              {puntos.length} {puntos.length === 1 ? 'estado recibido' : 'estados recibidos'}
-            </span>{' '}
-            por esta pestaña{ultimo ? `, el último del ${fechaHora(ultimo.fecha_hora)}` : ''}. Cada punto es la media de 24 horas
-            de un estado
-            {sinMedia > 0 ? `; ${sinMedia} ${sinMedia === 1 ? 'llegó' : 'llegaron'} sin media (círculo hueco, abajo)` : ''}. La línea
-            cortada es el ECA y las franjas, las bandas INCA de {norma.nombre}; las horas son las de Lima. No es una serie
-            histórica: la API no guarda una, y lo anterior a esta sesión no se ve.
+          <p className="text-suave mt-3 text-xs" data-curva-pie data-curva={curva.lecturas.length > 0 ? 'lecturas-y-media' : 'media'}>
+            <span className="text-texto font-semibold">{textos.cuenta}</span>
+            {textos.pie}
           </p>
         </>
       )}
@@ -187,7 +183,6 @@ function Detalle({ estacion, impacto }: { estacion: FichaEstacion; impacto: Impa
   const navegar = useNavigate()
   const midePM = !impacto.alcance.estaciones_sin_pm_horario.includes(estacion.id)
   const estado = useEstado(estacion.id)
-  const historia = useHistoria(estacion.id)
 
   return (
     <div className="space-y-4">
@@ -213,7 +208,7 @@ function Detalle({ estacion, impacto }: { estacion: FichaEstacion; impacto: Impa
         </Estado>
       )}
       <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,24rem)]">
-        {(midePM || estado.data) && <TarjetaCurva id={estacion.id} estado={estado.data ?? null} historia={historia} />}
+        {(midePM || estado.data) && <TarjetaCurva id={estacion.id} estado={estado.data ?? null} />}
         <div className={midePM || estado.data ? '' : 'lg:col-span-2'}>
           <Ficha estacion={estacion} impacto={impacto} midePM={midePM} />
         </div>

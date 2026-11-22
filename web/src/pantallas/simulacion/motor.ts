@@ -17,9 +17,9 @@
 
 import { useSyncExternalStore } from 'react'
 import { api, pedir } from '../../api/cliente'
+import { anotarVista, type LecturaVista } from '../../api/vistas'
 import { sesionActual, suscribir as suscribirASesion } from '../../sesion/almacen'
 import type { Lectura, Prediccion, Tramo } from './series'
-import { anotarVista, type Punto } from './vistas'
 
 export type Fase =
   /** No hay corrida. */
@@ -35,7 +35,7 @@ export type Fase =
 /** Lo que se sabe de una estación del tramo: lo enviado y lo que la API respondió. */
 export interface Seguimiento {
   estacion: string
-  puntos: readonly Punto[]
+  puntos: readonly LecturaVista[]
   /** La respuesta a su lectura más reciente. */
   ultima: Prediccion | null
   /** La fecha_hora de la primera lectura a la que la API le devolvió media, y de la primera con alerta. */
@@ -107,7 +107,7 @@ export class Simulador {
 
   // Lo que cambia con cada lectura se lleva aparte y se copia a la foto al
   // publicar: una hora del escenario son hasta 14 respuestas y un solo dibujo.
-  private seguimientos = new Map<string, { puntos: Punto[]; ultima: Prediccion; primeraMedia: string | null; primeraAlerta: string | null }>()
+  private seguimientos = new Map<string, { puntos: LecturaVista[]; ultima: Prediccion; primeraMedia: string | null; primeraAlerta: string | null }>()
   private tocadas = new Set<string>()
   private siguiente = 0
   private modeloId: string | null = null
@@ -255,7 +255,7 @@ export class Simulador {
   }
 
   private anotar(lectura: Lectura, r: Prediccion) {
-    const punto: Punto = {
+    const punto: LecturaVista = {
       fecha_hora: lectura.fecha_hora,
       pm2_5: lectura.pm2_5,
       pm10: lectura.pm10,

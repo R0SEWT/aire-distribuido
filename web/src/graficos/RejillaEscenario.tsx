@@ -9,7 +9,7 @@
 import { select } from 'd3'
 import { BANDAS, estadoDeBanda } from '../componentes/bandas'
 import { diaCorto, fechaHora, horaDeLima, numero } from '../componentes/formato'
-import type { Punto } from '../pantallas/simulacion/vistas'
+import type { LecturaVista } from '../api/vistas'
 import { useDibujo } from './dibujo'
 import { useMedida } from './medida'
 
@@ -20,7 +20,7 @@ export interface FilaDeRejilla {
   /** Las horas (instantes) en que el archivo trae una lectura de la estación: las demás son huecos. */
   programadas: ReadonlySet<number>
   /** Las lecturas enviadas, con lo que la API respondió. */
-  puntos: readonly Punto[]
+  puntos: readonly LecturaVista[]
 }
 
 interface Props {
@@ -42,10 +42,10 @@ interface Celda {
   estacion: string
   hora: number
   programada: boolean
-  punto: Punto | undefined
+  punto: LecturaVista | undefined
 }
 
-function palabras(punto: Punto | undefined, minimo: number): string {
+function palabras(punto: LecturaVista | undefined, minimo: number): string {
   if (!punto) return 'por enviar'
   if (punto.inca === null) return `${punto.lecturas} de ${minimo} lecturas`
   return punto.alerta ? `${BANDAS[punto.inca].palabra} · en alerta` : BANDAS[punto.inca].palabra

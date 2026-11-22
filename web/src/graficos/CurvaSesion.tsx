@@ -1,7 +1,13 @@
-// La curva de una estación (spec §5.3): la media de 24 horas de cada estado que
-// la UI recibió en esta sesión, con la línea del ECA y las bandas INCA de fondo.
-// No es una serie histórica: la API no tiene una. Cada punto es un estado
-// recibido; si entre dos hubo otros que no llegaron, la línea los une igual.
+// La curva de una estación (spec §5.3): lo que la UI vio de ella en esta sesión,
+// con la línea del ECA y las bandas INCA de fondo. Dibuja dos cosas:
+//
+//  - la media de 24 horas (una línea con un punto por hora que la tiene): la de
+//    cada estado recibido y la que la API respondió a cada lectura enviada;
+//  - las lecturas horarias (rombos sueltos, sin línea), cuando esta sesión las
+//    envió. Un estado recibido no trae su lectura: de esas horas solo hay media.
+//
+// No es una serie histórica: la API no tiene una. Si entre dos puntos de la
+// media hubo otros que no llegaron, la línea los une igual.
 //
 // D3 hace las escalas y el trazo; React dibuja el SVG, con clases y sin estilos
 // en línea. El color no va solo: cada franja lleva su palabra, el ECA su
@@ -19,8 +25,17 @@ export interface PuntoCurva {
   valor: number | null
 }
 
+/** Una lectura horaria: lo que midió la estación en esa hora, en µg/m³. */
+export interface LecturaCurva {
+  t: number
+  valor: number
+}
+
 interface Props {
+  /** La media de 24 horas, de la hora más antigua a la más nueva. */
   puntos: readonly PuntoCurva[]
+  /** Las lecturas horarias que se conocen, en el mismo orden. Sin ellas se dibuja solo la media. */
+  lecturas?: readonly LecturaCurva[]
   /** ECA de 24 horas del contaminante, en µg/m³. */
   eca: number
   /** Hasta dónde llegan las bandas buena, moderada y mala del INCA. */
@@ -40,24 +55,28 @@ const FRANJAS = [
   { banda: 'umbral_de_cuidado', palabra: 'Umbral de cuidado', relleno: 'fill-inca-cuidado/20', marca: 'fill-inca-cuidado' },
 ] as const
 
-export function CurvaSesion({ puntos, eca, cortes, titulo, className = '' }: Props) {
+const SIN_LECTURAS: readonly LecturaCurva[] = []
+
+export function CurvaSesion({ puntos, lecturas = SIN_LECTURAS, eca, cortes, titulo, className = '' }: Props) {
   const [caja, medida] = useMedida<HTMLDivElement>(POR_OMISION)
   const { ancho, alto, escala: k } = medida
 
   const dibujo = useMemo(() => {
-    const margen = { arriba: 30 * k, derecha: 124 * k, abajo: 40 * k, izquierda: 44 * k }
+    // A la derecha va el nombre de cada banda: «Umbral de cuidado» es el más largo.
+    const margen = { arriba: 30 * k, derecha: 140 * k, abajo: 40 * k, izquierda: 44 * k }
     const conMedia = puntos.filter((p): p is { t: number; valor: number } => p.valor !== null)
-    const ultimo = puntos[puntos.length - 1]
-    const primero = puntos[0]
+    const instantes = [...puntos, ...lecturas].map((p) => p.t)
+    const hayAlgo = instantes.length > 0
 
     // El eje llega, como mínimo, un poco más arriba del ECA: la línea siempre se ve.
-    const tope = Math.max(eca * 1.25, ...conMedia.map((p) => p.valor * 1.15))
+    // Una lectura horaria puede ser mucho más alta que la media: también tiene que entrar.
+    const tope = Math.max(eca * 1.25, ...conMedia.map((p) => p.valor * 1.15), ...lecturas.map((l) => l.valor * 1.05))
     const y = scaleLinear().domain([0, tope]).nice(5).range([alto - margen.abajo, margen.arriba])
     const [, yMax = tope] = y.domain()
 
     // Con pocas horas recibidas se muestra un día entero, que es lo que promedia la media.
-    const hasta = ultimo?.t ?? 0
-    const desde = Math.min(primero?.t ?? 0, hasta - 23 * HORA)
+    const hasta = hayAlgo ? Math.max(...instantes) : 0
+    const desde = Math.min(hayAlgo ? Math.min(...instantes) : 0, hasta - 23 * HORA)
     const x = scaleTime()
       .domain([desde, hasta])
       .range([margen.izquierda + 6 * k, ancho - margen.derecha - 10 * k])
@@ -88,15 +107,19 @@ export function CurvaSesion({ puntos, eca, cortes, titulo, className = '' }: Pro
       yEca: y(eca),
       camino: trazo(puntos as PuntoCurva[]) ?? '',
       puntos: puntos.map((p) => ({ ...p, x: x(p.t), y: y(p.valor ?? 0), sobre: p.valor !== null && p.valor > eca })),
+      lecturas: lecturas.map((l) => ({ ...l, x: x(l.t), y: y(l.valor) })),
       base: y(0),
     }
-  }, [puntos, eca, cortes, ancho, alto, k])
+  }, [puntos, lecturas, eca, cortes, ancho, alto, k])
 
   const { margen } = dibujo
   const derecha = ancho - margen.derecha
   const final = dibujo.puntos[dibujo.puntos.length - 1]
   // Con muchos estados los puntos se achican para no taparse.
   const radio = (dibujo.puntos.length > 60 ? 1.75 : 2.75) * k
+  // Una lectura es un rombo suelto: se distingue de la media por la forma y porque no la une ninguna línea.
+  const lado = (dibujo.lecturas.length > 60 ? 2.5 : 3.25) * k
+  const hayLecturas = dibujo.lecturas.length > 0
 
   return (
     <div ref={caja} className={`relative overflow-hidden ${className}`}>
@@ -165,6 +188,40 @@ export function CurvaSesion({ puntos, eca, cortes, titulo, className = '' }: Pro
             ECA {numero(eca)} µg/m³
           </text>
         </g>
+
+        {hayLecturas && (
+          <g data-capa="lecturas">
+            {dibujo.lecturas.map((l) => (
+              <path
+                key={l.t}
+                data-lectura
+                d={`M${l.x} ${l.y - lado}L${l.x + lado} ${l.y}L${l.x} ${l.y + lado}L${l.x - lado} ${l.y}Z`}
+                className="fill-acento stroke-acento-claro"
+                strokeWidth={0.75}
+              >
+                <title>{`${diaCorto(l.t)}, ${hora(l.t)}: lectura de ${numero(l.valor, 1)} µg/m³`}</title>
+              </path>
+            ))}
+          </g>
+        )}
+
+        {hayLecturas && (
+          <g data-capa="leyenda" className="text-xs">
+            <path
+              d={`M${margen.izquierda + 12 * k} ${5 * k}l${4 * k} ${4 * k}l${-4 * k} ${4 * k}l${-4 * k} ${-4 * k}Z`}
+              className="fill-acento stroke-acento-claro"
+              strokeWidth={0.75}
+            />
+            <text x={margen.izquierda + 22 * k} y={9 * k} dominantBaseline="central" className="fill-suave">
+              Lectura horaria
+            </text>
+            <line x1={margen.izquierda + 122 * k} x2={margen.izquierda + 142 * k} y1={9 * k} y2={9 * k} className="stroke-texto" strokeWidth={2 * k} strokeLinecap="round" />
+            <circle cx={margen.izquierda + 132 * k} cy={9 * k} r={2.75 * k} className="fill-texto" />
+            <text x={margen.izquierda + 149 * k} y={9 * k} dominantBaseline="central" className="fill-suave">
+              Media de 24 h
+            </text>
+          </g>
+        )}
 
         <g data-capa="curva">
           <path d={dibujo.camino} className="stroke-texto fill-none" strokeWidth={2 * k} strokeLinejoin="round" strokeLinecap="round" />

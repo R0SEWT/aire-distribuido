@@ -4,6 +4,7 @@
 import { act, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { anotarVista, lecturasVistas } from '../../api/vistas'
 import { fechaHora } from '../../componentes/indice'
 import { cerrarSesion, recargarSesion } from '../../sesion/almacen'
 import { EN_ALERTA, estadoDe, montar, simularPanel } from '../panel/dobles'
@@ -265,5 +266,79 @@ describe('la Estación', () => {
       await screen.findByText('CA-HU-04 · último estado recibido')
       expect(puntos()).toHaveLength(3)
     })
+  })
+})
+
+describe('la curva de la Estación con lecturas enviadas en la sesión', () => {
+  beforeEach(() => recargarSesion())
+  afterEach(() => cerrarSesion('salir'))
+
+  const lecturas = () => document.querySelectorAll('[data-capa="lecturas"] [data-lectura]')
+  const vista = (hora: number, pm10: number, media: number | null) => ({
+    fecha_hora: `2021-12-15T${String(hora).padStart(2, '0')}:00:00-05:00`,
+    pm2_5: pm10 / 2,
+    pm10,
+    media_pm2_5: media === null ? null : media / 2,
+    media_pm10: media,
+    lecturas: 24,
+    alerta: (media ?? 0) > 100,
+    inca: null,
+    regimen: 2,
+    excede_eca: true,
+  })
+
+  it('sin lecturas enviadas dibuja solo la media y dice que las lecturas no se ven', async () => {
+    simularPanel([], { [REGIMEN('CA-HU-04')]: regimenDe('CA-HU-04', EN_ALERTA) })
+    montar('/estacion/CA-HU-04')
+    await screen.findByText('CA-HU-04 · último estado recibido')
+
+    expect(lecturas()).toHaveLength(0)
+    expect(document.querySelector('[data-capa="leyenda"]')).toBeNull()
+    const pie = document.querySelector('[data-curva-pie]')!
+    expect(pie).toHaveAttribute('data-curva', 'media')
+    expect(pie).toHaveTextContent('Las lecturas horarias no se ven: el estado no las trae, y esta sesión no envió ninguna de CA-HU-04 desde Simulación.')
+  })
+
+  it('con lecturas enviadas dibuja cada lectura y la línea de la media, con su leyenda y su texto', async () => {
+    simularPanel([], { [REGIMEN('CA-HU-04')]: regimenDe('CA-HU-04', { ...EN_ALERTA, hora: 10 }) })
+    montar('/estacion/CA-HU-04')
+    await screen.findByText('CA-HU-04 · último estado recibido')
+
+    // Lo que hace el simulador con cada lectura que manda y su respuesta.
+    act(() => {
+      anotarVista('CA-HU-04', vista(8, 260, 110))
+      anotarVista('CA-HU-04', vista(9, 190, 115.2))
+      anotarVista('CA-HU-04', vista(10, 140, 120.7))
+      anotarVista('CA-AYAS-01', vista(10, 30, 20))
+    })
+
+    expect(await screen.findByRole('heading', { name: 'Lecturas horarias y media de 24 horas de PM10' })).toBeInTheDocument()
+    expect(screen.getByText('Lo enviado y lo recibido en esta sesión')).toBeInTheDocument()
+    expect(lecturas()).toHaveLength(3)
+    // La media: tres horas, una de ellas (las 10) también recibida como estado. No se duplica.
+    expect(puntos()).toHaveLength(3)
+    const curva = screen.getByRole('img', { name: /Lecturas horarias y media de 24 horas de PM10 de CA-HU-04: 3 lecturas horarias enviadas/ })
+    expect(within(curva.querySelector<SVGGElement>('[data-capa="leyenda"]')! as unknown as HTMLElement).getByText('Lectura horaria')).toBeInTheDocument()
+    expect(curva).toHaveTextContent('Media de 24 h')
+    const pie = document.querySelector('[data-curva-pie]')!
+    expect(pie).toHaveAttribute('data-curva', 'lecturas-y-media')
+    expect(pie).toHaveTextContent('3 lecturas horarias de PM10 que esta sesión envió desde Simulación')
+    expect(pie).toHaveTextContent('Cada rombo es una de esas lecturas')
+    expect(pie).toHaveTextContent('El ECA es de 24 horas: se compara con la media, no con cada lectura.')
+    // Una lectura de 260 no es un punto «sobre el ECA»: eso se dice de la media.
+    expect(curva.querySelectorAll('[data-punto="sobre-eca"]')).toHaveLength(3)
+    expect(document.querySelectorAll('[style]')).toHaveLength(0)
+  })
+
+  it('al terminar la sesión, lo enviado no queda para quien entre después', async () => {
+    simularPanel([], { [REGIMEN('CA-HU-04')]: regimenDe('CA-HU-04', EN_ALERTA) })
+    act(() => anotarVista('CA-HU-04', vista(8, 260, 110)))
+    expect(lecturasVistas('CA-HU-04')).toHaveLength(1)
+
+    montar('/estacion/CA-HU-04')
+    await screen.findByText('CA-HU-04 · último estado recibido')
+    act(() => cerrarSesion('salir'))
+
+    expect(lecturasVistas('CA-HU-04')).toHaveLength(0)
   })
 })

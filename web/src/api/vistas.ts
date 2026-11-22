@@ -1,16 +1,22 @@
 // Las lecturas que la UI mandó en esta sesión, con lo que la API respondió a
 // cada una. No hay una serie histórica desde la base (spec §6): la curva de una
-// estación (§5.3) se arma con lo que la UI vio, y esto es lo que vio.
+// estación (§5.3) se arma con lo que la UI vio, y esto es lo que vio. El evento
+// `estacion.regimen` no trae la lectura, solo el estado (api/historia.ts): la
+// lectura horaria se conoce únicamente de las que esta sesión envió.
+//
+// Escriben aquí el simulador y la lectura a mano de Simulación; lo leen la
+// curva de la Estación y los gráficos de la simulación.
 //
 // Es un almacén fuera de React, como la sesión: el simulador escribe aunque su
-// pantalla no esté a la vista. Se vacía al terminar la sesión.
+// pantalla no esté a la vista. Vive en memoria: se vacía al terminar la sesión
+// y al recargar la página.
 
 import { useSyncExternalStore } from 'react'
-import { sesionActual, suscribir as suscribirASesion } from '../../sesion/almacen'
-import type { BandaINCA } from '../../componentes/bandas'
+import type { BandaINCA } from '../componentes/bandas'
+import { sesionActual, suscribir as suscribirASesion } from '../sesion/almacen'
 
 /** Una lectura enviada y la respuesta de la API a esa lectura. */
-export interface Punto {
+export interface LecturaVista {
   fecha_hora: string
   pm2_5: number
   pm10: number
@@ -25,8 +31,8 @@ export interface Punto {
   excede_eca: boolean
 }
 
-const VACIO: readonly Punto[] = []
-const porEstacion = new Map<string, readonly Punto[]>()
+const VACIO: readonly LecturaVista[] = []
+const porEstacion = new Map<string, readonly LecturaVista[]>()
 const oyentes = new Set<() => void>()
 
 function avisar() {
@@ -34,7 +40,7 @@ function avisar() {
 }
 
 /** Anota una lectura vista. Una de la misma hora reemplaza a la anterior, como en la API. */
-export function anotarVista(estacion: string, punto: Punto) {
+export function anotarVista(estacion: string, punto: LecturaVista) {
   const t = Date.parse(punto.fecha_hora)
   const otras = (porEstacion.get(estacion) ?? VACIO).filter((p) => Date.parse(p.fecha_hora) !== t)
   porEstacion.set(
@@ -45,7 +51,7 @@ export function anotarVista(estacion: string, punto: Punto) {
 }
 
 /** Lo visto de una estación en esta sesión, de la lectura más antigua a la más nueva. */
-export function lecturasVistas(estacion: string): readonly Punto[] {
+export function lecturasVistas(estacion: string): readonly LecturaVista[] {
   return porEstacion.get(estacion) ?? VACIO
 }
 
@@ -61,7 +67,7 @@ function suscribir(oyente: () => void) {
 }
 
 /** Lo visto de una estación, dentro de React: se vuelve a dibujar con cada lectura nueva. */
-export function useLecturasVistas(estacion: string): readonly Punto[] {
+export function useLecturasVistas(estacion: string): readonly LecturaVista[] {
   return useSyncExternalStore(suscribir, () => lecturasVistas(estacion))
 }
 
