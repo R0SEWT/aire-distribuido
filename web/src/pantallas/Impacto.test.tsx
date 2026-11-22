@@ -128,7 +128,7 @@ describe('Impacto', () => {
       expect(within(tabla).getByRole('columnheader', { name: 'Distrito (contexto)' })).toBeInTheDocument()
       const fila = within(tabla).getByText('CA-RZC-02').closest('tr')!
       expect(fila).toHaveTextContent('Lurigancho, Lima')
-      expect(fila).toHaveTextContent('240,814 hab. en el censo de 2017')
+      expect(fila).toHaveTextContent('240,814 hab. (censo de 2017)')
       expect(within(tabla).getByText('CA-HUAR-01').closest('tr')).toHaveTextContent('sin distrito en la fuente')
     })
   })
@@ -153,7 +153,8 @@ describe('Impacto', () => {
       expect(within(tabla).getAllByRole('row')).toHaveLength(REAL.estaciones.length + 1)
       const fila = within(tabla).getByText('CA-HU-04').closest('tr')!
       expect(fila).toHaveTextContent('Zona ladrillera de centro poblado menor Santa María de Huachipa y Nievería')
-      expect(fila).toHaveTextContent('ladrilleras')
+      expect(fila).toHaveTextContent('CA-HU-04ladrilleras')
+      expect(within(tabla).getByText('CA-SOC-01').closest('tr')).toHaveTextContent('actividad: no lo dice el nombre')
       expect(fila).toHaveTextContent('10 dic. 2021 – 20 dic. 2021')
       expect(fila).toHaveTextContent('11 días con datos')
       expect(fila).toHaveTextContent('campaña corta')
@@ -167,7 +168,7 @@ describe('Impacto', () => {
       montar()
       const tabla = within(await seccion(/Cada estación vigila una actividad/)).getByRole('table')
 
-      const codigos = within(tabla).getAllByRole('row').slice(1).map((f) => f.querySelector('p')?.textContent)
+      const codigos = within(tabla).getAllByRole('row').slice(1).map((f) => f.querySelector('.font-mono')?.textContent)
       expect(codigos.slice(0, 5)).toEqual(['CA-HU-04', 'CA-RZC-02', 'CA-HU-09', 'CA-ESP-01', 'CA-CP-01'])
     })
 

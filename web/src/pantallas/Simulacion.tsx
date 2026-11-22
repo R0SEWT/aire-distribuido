@@ -78,8 +78,8 @@ function Encabezado({ children }: { children?: ReactNode }) {
         {children}
       </div>
       <p className="text-suave">
-        Lecturas reales de OEFA mandadas una por una a la API: se ve cómo se llena la ventana de 24 horas, cuándo aparece
-        la media y cuándo se enciende la alerta.
+        Lecturas reales de OEFA mandadas una por una a la API: cómo se llena la ventana de 24 horas y cuándo se enciende
+        la alerta.
       </p>
     </header>
   )
@@ -106,7 +106,8 @@ function Mesa({ series, simulador }: { series: Series; simulador: Simulador }) {
     (estacion: string) => {
       const e = catalogo.data?.find((x) => x.id === estacion)
       if (!e) return null
-      return [e.objeto_fiscalizado, e.distrito ? enMinusculas(e.distrito) : null].filter(Boolean).join(', ') || null
+      // La ficha repite a veces el objeto fiscalizado con otro nombre, separado por una barra: basta el primero.
+      return [e.objeto_fiscalizado?.split(' | ')[0], e.distrito ? enMinusculas(e.distrito) : null].filter(Boolean).join(', ') || null
     },
     [catalogo.data],
   )

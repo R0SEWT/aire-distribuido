@@ -34,6 +34,8 @@ interface Props {
   /** La hora de la primera lectura con media y de la primera con alerta, según lo que respondió la API. */
   primeraMedia: string | null
   primeraAlerta: string | null
+  /** El alto del gráfico, en rem. */
+  alto?: number
 }
 
 interface Barra {
@@ -48,9 +50,9 @@ interface Marca {
   alerta: boolean
 }
 
-export function CurvaSimulacion({ estacion, horas, programadas, puntos, contaminante, eca, cortes, primeraMedia, primeraAlerta }: Props) {
+export function CurvaSimulacion({ estacion, horas, programadas, puntos, contaminante, eca, cortes, primeraMedia, primeraAlerta, alto: altoEnRem = 15.5 }: Props) {
   const [contenedor, { ancho, rem }] = useMedidas<HTMLDivElement>()
-  const alto = 15.5 * rem
+  const alto = altoEnRem * rem
   const nombre = contaminante === 'pm2_5' ? 'PM2.5' : 'PM10'
 
   const svg = useDibujo<SVGSVGElement>(

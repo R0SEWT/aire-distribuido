@@ -85,7 +85,7 @@ function Ventana({ lecturas, reglas }: { lecturas: number; reglas: ReglasDeSerie
   return (
     <div>
       <p className="rotulo mb-1.5">
-        Ventana de 24 horas · {lecturas} de {reglas.ventana_horas} lecturas
+        Ventana de 24 h · {lecturas} de {reglas.ventana_horas} lecturas
       </p>
       <div
         role="img"
@@ -101,9 +101,7 @@ function Ventana({ lecturas, reglas }: { lecturas: number; reglas: ReglasDeSerie
           />
         ))}
       </div>
-      <p className="text-tenue mt-1 text-xs">
-        La casilla alta es la lectura {reglas.minimo_lecturas}: desde ahí hay media, alerta y banda INCA.
-      </p>
+      <p className="text-tenue mt-1 text-xs">Casilla alta: la lectura {reglas.minimo_lecturas}, donde aparece la media.</p>
     </div>
   )
 }
@@ -173,6 +171,7 @@ export function Marcha({ tramo, corrida, reglas }: Props) {
   )
   const curva = (
     <CurvaSimulacion
+      alto={esEscenario ? 15.5 : 13.5}
       estacion={elegida}
       horas={horas}
       programadas={lecturasDeElegida}
@@ -192,15 +191,15 @@ export function Marcha({ tramo, corrida, reglas }: Props) {
         rotulo={`Progreso · ${tramo.tipo === 'escenario' ? 'el escenario' : tramo.estaciones[0]}`}
         aLaDerecha={<Etiqueta tono={FASES[fase].tono}>{FASES[fase].palabra}</Etiqueta>}
       >
-        <div className="space-y-4">
-          <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+        <div className="space-y-3.5">
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-[1fr_1.35fr_1fr_1fr]">
             <Cifra tamano="mediana" rotulo="Lecturas enviadas" valor={enviadas} unidad={`de ${numero(total)}`} />
             <div>
               <p className="rotulo mb-1">Hora simulada</p>
               {corrida?.horaActual ? (
-                <p className="flex flex-wrap items-baseline gap-x-2">
+                <p className="flex items-baseline gap-x-2">
                   <span className="text-texto font-mono text-3xl leading-none font-semibold tabular-nums">{hora(corrida.horaActual)}</span>
-                  <span className="text-suave text-base font-medium whitespace-nowrap">{diaDeInstante(corrida.horaActual)}</span>
+                  <span className="text-suave text-sm font-medium whitespace-nowrap">{diaDeInstante(corrida.horaActual)}</span>
                 </p>
               ) : (
                 <p className="flex items-baseline gap-2">
@@ -223,8 +222,8 @@ export function Marcha({ tramo, corrida, reglas }: Props) {
               </>
             ) : (
               <>
-                <Cifra tamano="mediana" rotulo="PM2.5 · media de 24 h" valor={unica?.ultima?.media_24h.pm2_5} decimales={1} unidad="µg/m³" sinDato="sin media" />
-                <Cifra tamano="mediana" rotulo="PM10 · media de 24 h" valor={unica?.ultima?.media_24h.pm10} decimales={1} unidad="µg/m³" sinDato="sin media" />
+                <Cifra tamano="mediana" rotulo="PM2.5 · media 24 h" valor={unica?.ultima?.media_24h.pm2_5} decimales={1} unidad="µg/m³" sinDato="sin media" />
+                <Cifra tamano="mediana" rotulo="PM10 · media 24 h" valor={unica?.ultima?.media_24h.pm10} decimales={1} unidad="µg/m³" sinDato="sin media" />
               </>
             )}
           </div>
@@ -250,7 +249,6 @@ export function Marcha({ tramo, corrida, reglas }: Props) {
 
           {esEscenario ? (
             <div>
-              <p className="rotulo mb-1">Estación por estación, hora por hora · hora de Lima</p>
               <RejillaEscenario
                 horas={horas}
                 filas={filas}

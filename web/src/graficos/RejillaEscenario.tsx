@@ -66,8 +66,8 @@ export function RejillaEscenario({ horas, filas, minimo, cursor, elegida, alEleg
 
   const izquierda = 6.25 * rem
   const derecha = 9.25 * rem
-  const arriba = 2.5 * rem
-  const altoFila = 1.2 * rem
+  const arriba = 2.3 * rem
+  const altoFila = 1.1 * rem
   const paso = Math.max(4, (ancho - izquierda - derecha) / Math.max(1, horas.length))
   const lado = Math.max(3, Math.min(paso - 2, altoFila - 4))
   const alto = arriba + filas.length * altoFila + 0.4 * rem
@@ -119,7 +119,7 @@ export function RejillaEscenario({ horas, filas, minimo, cursor, elegida, alEleg
         .data([...dias], (d) => d[0])
         .join('text')
         .attr('x', (d) => x(d[1].desde))
-        .attr('y', 0.95 * rem)
+        .attr('y', 0.8 * rem)
         .attr('class', 'fill-suave text-xs font-semibold')
         .text((d) => d[0])
       raiz
@@ -140,7 +140,7 @@ export function RejillaEscenario({ horas, filas, minimo, cursor, elegida, alEleg
         .data(marcas, (m) => m.hora)
         .join('text')
         .attr('x', (m) => x(m.columna) + paso / 2)
-        .attr('y', 2.15 * rem)
+        .attr('y', 1.9 * rem)
         .attr('text-anchor', 'middle')
         .attr('class', 'fill-tenue font-mono text-xs')
         .text((m) => `${String(horaDeLima(m.hora)).padStart(2, '0')}h`)
@@ -248,7 +248,7 @@ export function RejillaEscenario({ horas, filas, minimo, cursor, elegida, alEleg
         width={ancho}
         height={alto}
         role="img"
-        aria-label={`Rejilla del escenario: ${filas.length} estaciones por ${horas.length} horas. ${conMedia} con media de 24 horas y ${enAlerta} en alerta.`}
+        aria-label={`Rejilla del escenario, estación por estación y hora por hora (hora de Lima): ${filas.length} estaciones por ${horas.length} horas. ${conMedia} con media de 24 horas y ${enAlerta} en alerta.`}
         className="block"
       >
         <g className="filas" />

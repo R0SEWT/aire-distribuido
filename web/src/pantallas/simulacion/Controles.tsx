@@ -166,9 +166,9 @@ export function EstadoDelSistema({ tramo, consulta, revision, otrosDias }: Props
   return (
     <div className="space-y-2" role="alert" data-sistema="no-limpio">
       <Etiqueta tono="moderada">El sistema no está limpio para este tramo</Etiqueta>
-      <p className="text-texto text-sm leading-relaxed font-semibold">
-        El último estado de una estación no retrocede: una lectura más antigua que la guardada se predice y se responde,
-        pero no cambia el estado ni mueve el panel.
+      <p className="text-suave text-sm leading-relaxed">
+        <strong className="text-texto">El último estado de una estación no retrocede:</strong> una lectura más antigua que
+        la guardada se predice y se responde, pero no cambia el estado ni mueve el panel.
       </p>
       <ul className="text-suave list-disc space-y-1 pl-5 text-sm leading-relaxed">
         <GrupoDeChoques tipo="posterior" choques={de('posterior')} />

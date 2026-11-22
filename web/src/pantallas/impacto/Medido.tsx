@@ -105,7 +105,7 @@ function SobreElEca({ horas, calculables }: { horas: number; calculables: number
 
 function Reparto({ de, fila }: { de: string; fila: { inca: Record<NombreDeBanda, number>; banda_mas_frecuente: NombreDeBanda } }) {
   return (
-    <div className="flex w-44 flex-col gap-1.5">
+    <div className="flex w-40 flex-col gap-1.5">
       <BarraBandas horas={fila.inca} de={de} />
       <span className="text-suave text-xs">
         más frecuente: <span className="text-texto font-semibold">{BANDAS[fila.banda_mas_frecuente].palabra.toLowerCase()}</span>
@@ -117,18 +117,18 @@ function Reparto({ de, fila }: { de: string; fila: { inca: Record<NombreDeBanda,
 const COLUMNAS_DE_ESTACION: Columna<EstacionDeImpacto>[] = [
   {
     clave: 'estacion',
-    titulo: 'Estación y lo que vigila',
+    titulo: 'Estación, tipo de actividad y lo que vigila',
     celda: (e) => (
-      <div className="w-64">
-        <p className="text-texto font-mono font-semibold">{e.estacion}</p>
-        <p className="text-suave text-xs leading-snug">{e.objeto_fiscalizado.split(' | ')[0]}</p>
+      <div className="w-72">
+        <p className="flex flex-wrap items-baseline gap-x-2">
+          <span className="text-texto font-mono font-semibold">{e.estacion}</span>
+          <span className={e.tipo_actividad === 'no lo dice el nombre' ? 'text-tenue italic' : 'text-texto font-semibold'}>
+            {e.tipo_actividad === 'no lo dice el nombre' ? 'actividad: no lo dice el nombre' : e.tipo_actividad}
+          </span>
+        </p>
+        <p className="text-suave mt-0.5 text-xs leading-snug">{e.objeto_fiscalizado.split(' | ')[0]}</p>
       </div>
     ),
-  },
-  {
-    clave: 'actividad',
-    titulo: 'Tipo de actividad',
-    celda: (e) => <span className={e.tipo_actividad === 'no lo dice el nombre' ? 'text-tenue italic' : 'text-texto'}>{e.tipo_actividad}</span>,
   },
   {
     clave: 'midio',
@@ -160,7 +160,7 @@ const COLUMNAS_DE_ESTACION: Columna<EstacionDeImpacto>[] = [
             {lugar(e.distrito)}, {lugar(e.departamento)}
           </p>
           <p className="text-tenue mt-0.5 text-xs whitespace-nowrap">
-            {numero(e.poblacion_distrito.poblacion)} hab. en el censo de {e.poblacion_distrito.anio}
+            {numero(e.poblacion_distrito.poblacion)} hab. (censo de {e.poblacion_distrito.anio})
           </p>
         </div>
       ) : (
