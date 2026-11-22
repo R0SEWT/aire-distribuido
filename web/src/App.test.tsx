@@ -219,6 +219,8 @@ describe('la app', () => {
       ['/', 'Panel'],
       ['/estacion', 'Estación'],
       ['/estacion/CA-AYAS-01', 'Estación'],
+      ['/simulacion', 'Simulación'],
+      ['/impacto', 'Impacto'],
     ])('un usuario entra a %s', async (ruta, titulo) => {
       simularApi({ 'GET /api/salud': SALUD_OK })
       sesionDe('usuario')
@@ -227,19 +229,6 @@ describe('la app', () => {
 
       expect(await screen.findByRole('heading', { name: titulo })).toBeInTheDocument()
       expect(screen.queryByText('En construcción')).not.toBeInTheDocument()
-    })
-
-    it.each([
-      ['/simulacion', 'Simulación'],
-      ['/impacto', 'Impacto'],
-    ])('un usuario entra a %s, que todavía muestra su marcador', async (ruta, titulo) => {
-      simularApi({ 'GET /api/salud': SALUD_OK })
-      sesionDe('usuario')
-
-      montar(ruta)
-
-      expect(await screen.findByRole('heading', { name: titulo })).toBeInTheDocument()
-      expect(screen.getByText('En construcción')).toBeInTheDocument()
     })
 
     it('el muestrario de componentes está fuera del menú, en /muestrario', async () => {
