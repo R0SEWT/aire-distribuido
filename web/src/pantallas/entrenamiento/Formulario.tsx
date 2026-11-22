@@ -5,7 +5,7 @@
 import { useId, useState, type FormEvent } from 'react'
 import type { components } from '../../api/contrato'
 import { errorDeExcepcion, presentarError, type TipoError } from '../../api/errores'
-import { Advertencia, Aviso, Cifra, Etiqueta, Pildoras, Tarjeta } from '../../componentes/indice'
+import { Advertencia, Aviso, Cifra, Etiqueta, numero, Pildoras, Tarjeta } from '../../componentes/indice'
 import { cuantosNodos, REPLICAS_MEDICION, SEMILLA_POR_OMISION, validar, type Campos, type Errores } from './formulario'
 import type { Pedido } from './seguimiento'
 
@@ -29,6 +29,8 @@ interface Props {
   bloqueo: Bloqueo | null
   /** El rechazo del último pedido, si lo hubo. */
   rechazo: unknown
+  /** Se cambió algo del formulario: lo que se dijo del pedido anterior ya no vale. */
+  alCambiar?: () => void
   /** El WebSocket no está conectado: las rondas no se van a ver en vivo. */
   sinTiempoReal: boolean
   alLanzar: (pedido: Pedido) => void
@@ -65,6 +67,8 @@ function Rechazo({ error }: { error: unknown }) {
 
 type Preajuste = 'modelo' | 'medicion' | 'otro'
 
+const ORDEN_DE_LOS_CAMPOS: readonly (keyof Campos)[] = ['nodos', 'replicas', 'semilla']
+
 export function Formulario({
   nodos,
   errorDeNodos,
@@ -73,6 +77,7 @@ export function Formulario({
   modeloActivo,
   bloqueo,
   rechazo,
+  alCambiar: alCambiarAlgo,
   sinTiempoReal,
   alLanzar,
 }: Props) {
@@ -96,7 +101,13 @@ export function Formulario({
     if (bloqueo) return
     const resultado = validar(campos)
     setErrores(resultado.errores ?? {})
-    if (resultado.pedido) alLanzar(resultado.pedido)
+    if (resultado.pedido) {
+      alLanzar(resultado.pedido)
+      return
+    }
+    // El foco va al primer campo que no pasó: su error, que es un aviso (role="alert"), se anuncia.
+    const primero = ORDEN_DE_LOS_CAMPOS.find((nombre) => resultado.errores?.[nombre])
+    if (primero) document.getElementById(`${id}-${primero}`)?.focus()
   }
 
   function campo(nombre: keyof Campos, etiqueta: string, valor: string, alCambiar: (v: string) => void) {
@@ -117,11 +128,12 @@ export function Formulario({
           aria-describedby={error ? `${id}-${nombre}-error` : undefined}
           onChange={(e) => {
             alCambiar(e.target.value)
+            alCambiarAlgo?.()
             if (error) setErrores((antes) => ({ ...antes, [nombre]: undefined }))
           }}
         />
         {error && (
-          <p id={`${id}-${nombre}-error`} className="text-falla mt-1 text-xs font-semibold">
+          <p id={`${id}-${nombre}-error`} role="alert" className="text-falla mt-1 text-xs font-semibold">
             {error}
           </p>
         )}
@@ -173,7 +185,10 @@ export function Formulario({
         <Pildoras<Preajuste>
           etiqueta="Preajuste"
           valor={preajuste}
-          alCambiar={(p) => setReplicas(p === 'medicion' ? String(REPLICAS_MEDICION) : '1')}
+          alCambiar={(p) => {
+            setReplicas(p === 'medicion' ? String(REPLICAS_MEDICION) : '1')
+            alCambiarAlgo?.()
+          }}
           opciones={[
             { valor: 'modelo', etiqueta: 'Entrenar el modelo' },
             { valor: 'medicion', etiqueta: 'Medición larga' },
@@ -189,8 +204,8 @@ export function Formulario({
         <p className="text-suave text-sm leading-snug" data-nota-replicas>
           {replicasPedidas !== null && replicasPedidas > 1 ? (
             <>
-              Con <strong className="text-texto">{replicasPedidas} réplicas es una medición</strong>: {replicasPedidas}{' '}
-              copias del gold, para verla avanzar. <strong className="text-texto">No cambia el modelo activo</strong>.
+              Con <strong className="text-texto">{numero(replicasPedidas)} réplicas es una medición</strong>:{' '}
+              {numero(replicasPedidas)} copias del gold, para verla avanzar. <strong className="text-texto">No cambia el modelo activo</strong>.
             </>
           ) : (
             <>Con 1 réplica se entrena sobre el gold: si coincide con el K-Means secuencial, el modelo nuevo queda activo.</>

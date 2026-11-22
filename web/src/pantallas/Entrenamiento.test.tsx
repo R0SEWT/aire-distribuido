@@ -156,6 +156,34 @@ describe('la pantalla de entrenamiento', () => {
       expect(formulario().getByLabelText('Réplicas')).toBeValid()
     })
 
+    it('los errores de validación se anuncian y el foco va al primer campo inválido', async () => {
+      api()
+      montar()
+      await screen.findByRole('list', { name: 'Nodos libres' })
+      await escribir('Réplicas', 'muchas')
+      await escribir('Semilla', '')
+
+      await lanzar()
+
+      const avisos = formulario().getAllByRole('alert')
+      expect(avisos).toHaveLength(2)
+      // El primero en el orden del formulario es Réplicas: ahí queda el foco, con su error asociado.
+      const replicas = formulario().getByLabelText('Réplicas')
+      expect(replicas).toHaveFocus()
+      expect(replicas).toHaveAttribute('aria-invalid', 'true')
+      expect(document.getElementById(replicas.getAttribute('aria-describedby')!)).toBe(avisos[0])
+    })
+
+    it('las réplicas se escriben con separador de miles', async () => {
+      api()
+      montar()
+      await screen.findByRole('list', { name: 'Nodos libres' })
+
+      await escribir('Réplicas', '301138')
+
+      expect(document.querySelector('[data-nota-replicas]')).toHaveTextContent('Con 301,138 réplicas es una medición: 301,138 copias del gold')
+    })
+
     it('el preajuste «Medición larga» pone 300 réplicas y dice que no cambia el modelo activo', async () => {
       const fetch = api()
       montar()
@@ -220,6 +248,76 @@ describe('la pantalla de entrenamiento', () => {
       // No quedó nada a medias: se puede corregir y volver a lanzar.
       expect(formulario().getByRole('button', { name: 'Lanzar entrenamiento' })).toBeEnabled()
       expect(screen.getByText('Todavía no hay un entrenamiento a la vista')).toBeInTheDocument()
+    })
+
+    it('el rechazo se retira al cambiar el formulario: ya no habla del pedido que se ve', async () => {
+      api({ 'POST /api/entrenamientos': { estado: 400, cuerpo: { error: 'replicas 5000 es demasiado: el máximo es 379' } } })
+      montar()
+      await screen.findByRole('list', { name: 'Nodos libres' })
+      await escribir('Réplicas', '5000')
+      await lanzar()
+      expect(await formulario().findByRole('alert')).toHaveTextContent('replicas 5000 es demasiado')
+
+      await escribir('Réplicas', '300')
+
+      expect(formulario().queryByRole('alert')).not.toBeInTheDocument()
+      expect(formulario().queryByText(/replicas 5000 es demasiado/)).not.toBeInTheDocument()
+    })
+
+    it('también al cambiar de preajuste', async () => {
+      api({ 'POST /api/entrenamientos': { estado: 422, cuerpo: { error: 'hay 0 nodos libres en el pool y se pidieron 2' } } })
+      montar()
+      await screen.findByRole('list', { name: 'Nodos libres' })
+      await lanzar()
+      await formulario().findByRole('alert')
+
+      await userEvent.click(formulario().getByRole('button', { name: 'Medición larga' }))
+
+      expect(formulario().queryByRole('alert')).not.toBeInTheDocument()
+    })
+
+    it('«ya hay un entrenamiento en curso» se retira cuando ese entrenamiento termina', async () => {
+      api({ 'POST /api/entrenamientos': { estado: 409, cuerpo: { error: 'ya hay un entrenamiento en curso: e-de-otro' } } })
+      const { emitir } = montar()
+      await screen.findByRole('list', { name: 'Nodos libres' })
+      await lanzar()
+      expect(await formulario().findByRole('alert')).toHaveTextContent('Ya hay un entrenamiento en curso')
+
+      // El entrenamiento que causó el 409 termina.
+      emitir('entrenamiento.fin', { ...FIN, id: 'e-de-otro' })
+
+      await waitFor(() => expect(formulario().queryByRole('alert')).not.toBeInTheDocument())
+      expect(formulario().getByRole('button', { name: 'Lanzar entrenamiento' })).toBeEnabled()
+    })
+
+    it('y sin WebSocket, cuando el historial deja de mostrar uno en curso', async () => {
+      let historial: unknown[] = [{ id: 'e-de-otro', estado: 'en_curso', nodos: ['nodo-a'], replicas: 300 }]
+      api({
+        'POST /api/entrenamientos': { estado: 409, cuerpo: { error: 'ya hay un entrenamiento en curso: e-de-otro' } },
+        'GET /api/entrenamientos': () => ({ estado: 200, cuerpo: historial }),
+      })
+      const { cortar } = montar()
+      await screen.findByRole('list', { name: 'Nodos libres' })
+      cortar()
+      await lanzar()
+      expect(await formulario().findByRole('alert')).toHaveTextContent('Ya hay un entrenamiento en curso')
+
+      historial = [{ id: 'e-de-otro', estado: 'terminado', nodos: ['nodo-a'], replicas: 300, iteraciones: 44, ms_total: 1900 }]
+
+      // El historial se vuelve a pedir cada 2 s mientras muestra uno en curso.
+      await waitFor(() => expect(formulario().queryByRole('alert')).not.toBeInTheDocument(), { timeout: 5000 })
+    }, 10_000)
+
+    it('un rechazo que no depende de otro entrenamiento sigue a la vista aunque termine uno', async () => {
+      api({ 'POST /api/entrenamientos': { estado: 400, cuerpo: { error: 'replicas 5000 es demasiado: el máximo es 379' } } })
+      const { emitir } = montar()
+      await screen.findByRole('list', { name: 'Nodos libres' })
+      await lanzar()
+      await formulario().findByRole('alert')
+
+      emitir('entrenamiento.fin', { ...FIN, id: 'e-de-otro' })
+
+      expect(formulario().getByRole('alert')).toHaveTextContent('replicas 5000 es demasiado')
     })
 
     it('el rechazo se borra al volver a lanzar y salir bien', async () => {

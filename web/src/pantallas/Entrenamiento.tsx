@@ -146,12 +146,6 @@ export default function Entrenamiento() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [conectada])
 
-  // Las rondas y el fin llegan al almacén por su cuenta (App.tsx), esté o no esta pantalla a la vista.
-  useEvento('entrenamiento.fin', (evento) => {
-    refrescar()
-    void consultas.invalidateQueries({ queryKey: claves.entrenamiento(evento.id) })
-  })
-
   const lanzar = useMutation({
     mutationFn: (pedido: Pedido) => pedir(api.POST('/api/entrenamientos', { body: pedido })),
     onMutate: (pedido) => {
@@ -170,6 +164,27 @@ export default function Entrenamiento() {
       refrescar()
     },
   })
+
+  // El rechazo del último pedido se muestra mientras sea cierto. «Ya hay un
+  // entrenamiento en curso» deja de serlo cuando ese entrenamiento termina: se
+  // retira con su evento de fin o, sin WebSocket, cuando el historial deja de
+  // mostrar uno en curso. Y cualquier rechazo se retira al cambiar el formulario.
+  const hayRechazo = lanzar.isError
+  const esConflicto = lanzar.error instanceof ErrorApi && lanzar.error.tipo === 'conflicto'
+  const reiniciarLanzar = lanzar.reset
+  // Las rondas y el fin llegan al almacén por su cuenta (App.tsx), esté o no esta pantalla a la vista.
+  useEvento('entrenamiento.fin', (evento) => {
+    refrescar()
+    void consultas.invalidateQueries({ queryKey: claves.entrenamiento(evento.id) })
+    if (esConflicto) reiniciarLanzar()
+  })
+  const hayUnoEnCurso = historial.data?.some((e) => e.estado === 'en_curso') ?? false
+  const habiaUnoEnCurso = useRef(hayUnoEnCurso)
+  useEffect(() => {
+    const termino = habiaUnoEnCurso.current && !hayUnoEnCurso
+    habiaUnoEnCurso.current = hayUnoEnCurso
+    if (termino && esConflicto) reiniciarLanzar()
+  }, [hayUnoEnCurso, esConflicto, reiniciarLanzar])
 
   const reproduccion = useReproduccion(
     corrida?.id ?? null,
@@ -234,6 +249,9 @@ export default function Entrenamiento() {
             modeloActivo={modelo.data?.id}
             bloqueo={bloqueo}
             rechazo={lanzar.error}
+            alCambiar={() => {
+              if (hayRechazo) reiniciarLanzar()
+            }}
             sinTiempoReal={tiempoReal !== 'conectada'}
             alLanzar={(pedido) => lanzar.mutate(pedido)}
         />
