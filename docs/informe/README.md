@@ -70,7 +70,7 @@ FETCH=1 bash render.sh                   # además hace git fetch antes del hist
 ```
 
 Requisitos: Quarto ≥ 1.4 (probado con 1.10.19), Python 3 con pandas (o `uv`, que lo instala al
-vuelo: `uv run tablas.py`; `render.sh` lo usa solo si el `python3` del sistema no tiene pandas) y git. Para renderizar no hace falta Jupyter ni LaTeX; para **regenerar las figuras** en
+vuelo: `uv run tablas.py`; `render.sh` lo usa solo si el `python3` del sistema no tiene pandas) y git. El informe de la PC4 pasa además los listados a imagen (`listados_imagen.py`): para eso usa Chrome (`google-chrome`) y pygments, que `render.sh` toma del `python3` del sistema o de `uv`; si falta alguno avisa y deja los listados como texto. Para renderizar no hace falta Jupyter ni LaTeX; para **regenerar las figuras** en
 local sí: los notebooks se corren con `jupyter nbconvert` (ver `notebooks/README.md`). El índice es un
 campo de Word: `render.sh` marca el `.docx` para que Word pregunte al abrirlo si actualiza los
 campos; hay que aceptar (o clic derecho sobre el índice → Actualizar campo).
