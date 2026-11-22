@@ -24,7 +24,7 @@ src/
   api/          cliente tipado desde el contrato, errores, WebSocket y la caché en vivo; los archivos de
                 /datos/ (datos.ts), las consultas de estaciones (estaciones.ts) y lo visto en la sesión
                 (historia.ts y vistas.ts)
-  sesion/       token y rol en sessionStorage, guardas de ruta
+  sesion/       token y rol en sessionStorage, guardas de ruta y los dos ingresos (con clave y de invitado)
   armazon/      barra superior con sus indicadores, pie, menú, modo proyector, aviso de vencimiento, título
   componentes/  Encabezado, Tarjeta, Cifra, Dato, Frase, Banda, Etiqueta, Pildoras, Tabla, Desplegable, Estado,
                 Aviso y Advertencia, Barrera; los tonos (tonos.ts) y los formatos (formato.ts)
@@ -32,7 +32,7 @@ src/
   pantallas/    una por archivo (Ingreso, Panel, Estacion, Simulacion, Entrenamiento, Cluster, Impacto) y, al
                 lado, una carpeta con lo propio de cada una (panel/, estacion/, simulacion/…)
   estilos/      tokens de diseño, fuentes y modo proyector
-  pruebas/      preparación de Vitest y dobles (fetch y WebSocket falsos)
+  pruebas/      preparación de Vitest y dobles (fetch y WebSocket falsos, y el <dialog> modal que jsdom no trae)
 pruebas/        lo que se prueba fuera del navegador: el Caddyfile y el contraste de los tokens
 public/datos/   impacto.json, series.json y peru.geojson (los generan scripts/; ver su README.md)
 Caddyfile       el servidor del Compose: la UI, el proxy a la API y las cabeceras de seguridad
@@ -195,6 +195,11 @@ ellos marca su consulta `EN_VIVO` para volver a pedirla al reconectar.
 
 - `useSesion()` da la sesión (`sesion.rol`); `puede(rol, SOLO_ADMIN)` decide si se muestra un control. La UI
   esconde, pero quien autoriza es la API.
+- No hay registro. Se entra con usuario y clave (`ingresar`) o, desde «No pienso crearme una cuenta aquí», como
+  invitado (`entrarComoInvitado`, contra `POST /api/auth/invitado`): los dos abren la sesión por el mismo camino,
+  en `sesion/useSesion.ts`. Las credenciales del invitado no están en la UI: la API responde el token de la
+  cuenta que nombra `API_INVITADO`, y si no hay ninguna (404) el diálogo lo dice. A quien entra así la barra lo
+  llama «invitado»: la API no dice el usuario de la cuenta.
 - El armazón pone el título del documento de cada ruta («Estación · Aire distribuido») y, al navegar, lleva el
   foco al contenido. Una pantalla que quiera un título más preciso usa `useTitulo('CA-AYAS-01 · Estación')`
   (`src/armazon/titulo.ts`).
@@ -220,6 +225,11 @@ ellos marca su consulta `EN_VIVO` para volver a pedirla al reconectar.
   rótulo y «media de 24 horas» en una frase, «en alerta» y «sin alerta», «ECA de 24 h». El «excede el ECA» de un
   régimen se dice del grupo de lecturas, nunca de la estación.
 - **El token solo vive en `sessionStorage`** (`sesion/almacen.ts`). No se copia a otro lado ni va en una URL.
+- **Una imagen se importa desde el código** (`import gato from './gato.webp'`), con su ancho y su alto en el
+  `<img>`: Vite la emite en `/assets/` con hash y la CSP solo admite imágenes del propio origen.
+- **Un diálogo modal es un `<dialog>` con `showModal()`** (`pantallas/ingreso/DialogoInvitado.tsx`): el navegador
+  deja inerte lo de atrás y lo cierra con Escape. Lo que no trae se pone a mano: a dónde va el foco al abrir, que
+  Tab dé la vuelta dentro y cerrar con un clic fuera.
 - **`public/datos/` se genera**: `impacto.json` y `series.json` con `scripts/impacto.py`, y `peru.geojson` con
   `scripts/mapa_peru.py` (`public/datos/README.md`). No se editan a mano. Se piden desde `/datos/…`; uno que no
   existe responde 404, no la página.
