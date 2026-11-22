@@ -5,9 +5,13 @@
 // casi juntas (a veces antes que el 202 con el id) y la pantalla las reproduce
 // a ritmo humano, diciéndolo. Qué se sigue y qué llegó vive en un reductor
 // (entrenamiento/seguimiento.ts); el ritmo, en useReproduccion.
+//
+// El entrenamiento a la vista no vive en este componente sino en
+// entrenamiento/almacen.ts: al ir a otra pantalla y volver sigue ahí, por donde
+// iba, y con las rondas que llegaron mientras tanto.
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useReducer, useRef, useState } from 'react'
+import { useRef, useState } from 'react'
 import { api, claves, pedir } from '../api/cliente'
 import { EN_VIVO } from '../api/enVivo'
 import { useEstadoWS, useEvento } from '../api/tiempoReal'
@@ -16,7 +20,8 @@ import { Formulario, type Bloqueo } from './entrenamiento/Formulario'
 import { Historial } from './entrenamiento/Historial'
 import { PanelDeRondas } from './entrenamiento/PanelDeRondas'
 import { Resultado } from './entrenamiento/Resultado'
-import { reducir, SIN_SEGUIMIENTO, type Corrida, type Fin, type Pedido } from './entrenamiento/seguimiento'
+import { entrenamientoALaVista, useEntrenamientoALaVista } from './entrenamiento/almacen'
+import type { Corrida, Fin, Pedido } from './entrenamiento/seguimiento'
 import { PASO_MS, useReproduccion, type Velocidad } from './entrenamiento/useReproduccion'
 import { useVentana } from './entrenamiento/useVentana'
 
@@ -42,8 +47,9 @@ function nodosDeLasRondas(corrida: Corrida | null): string[] {
 export default function Entrenamiento() {
   const consultas = useQueryClient()
   const tiempoReal = useEstadoWS()
-  const [seguimiento, despachar] = useReducer(reducir, SIN_SEGUIMIENTO)
-  const [velocidad, setVelocidad] = useState<Velocidad>('normal')
+  const { seguimiento, velocidad } = useEntrenamientoALaVista()
+  const { despachar } = entrenamientoALaVista
+  const setVelocidad = (v: Velocidad) => entrenamientoALaVista.cambiarVelocidad(v)
   const [abriendo, setAbriendo] = useState<string>()
   const [errorAlAbrir, setErrorAlAbrir] = useState<unknown>(null)
   const panel = useRef<HTMLDivElement>(null)
@@ -90,11 +96,8 @@ export default function Entrenamiento() {
     }
   }
 
-  useEvento('entrenamiento.ronda', (evento) => despachar({ tipo: 'ronda', evento }))
-  useEvento('entrenamiento.fin', (evento) => {
-    despachar({ tipo: 'fin', evento, ahora: Date.now() })
-    refrescar()
-  })
+  // Las rondas y el fin llegan al almacén por su cuenta (App.tsx), esté o no esta pantalla a la vista.
+  useEvento('entrenamiento.fin', () => refrescar())
 
   const lanzar = useMutation({
     mutationFn: (pedido: Pedido) => pedir(api.POST('/api/entrenamientos', { body: pedido })),
@@ -114,6 +117,7 @@ export default function Entrenamiento() {
     corrida?.rondas.length ?? 0,
     PASO_MS[velocidad],
     corrida?.origen === 'historial',
+    entrenamientoALaVista.memoria,
   )
 
   async function ver(id: string) {

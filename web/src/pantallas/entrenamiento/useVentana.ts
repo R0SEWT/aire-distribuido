@@ -6,8 +6,9 @@ import { useEffect, useState } from 'react'
  * vuelve a dibujar solo.
  */
 export function useVentana(desde: number | null, duracionMs: number): boolean {
-  // El instante cuya ventana ya se cumplió.
-  const [cumplida, setCumplida] = useState<number | null>(null)
+  // El instante cuya ventana ya se cumplió. Si al montarse ya pasó (se vuelve a
+  // la pantalla mucho después), nace cumplida: no hay un instante «dentro».
+  const [cumplida, setCumplida] = useState<number | null>(() => (desde !== null && Date.now() >= desde + duracionMs ? desde : null))
 
   useEffect(() => {
     if (desde === null) return

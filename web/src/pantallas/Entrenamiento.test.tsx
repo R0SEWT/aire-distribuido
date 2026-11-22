@@ -4,12 +4,14 @@
 
 import { act, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { Link, MemoryRouter, Route, Routes } from 'react-router'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { crearClienteDeConsultas } from '../api/cliente'
 import { Proveedores } from '../App'
 import { fabricaDeEnchufes, simularApi } from '../pruebas/dobles'
 import { abrirSesion, cerrarSesion, recargarSesion } from '../sesion/almacen'
 import Entrenamiento from './Entrenamiento'
+import { entrenamientoALaVista } from './entrenamiento/almacen'
 
 type Rutas = Parameters<typeof simularApi>[0]
 
@@ -613,6 +615,155 @@ describe('la pantalla de entrenamiento', () => {
       emitir('entrenamiento.fin', { ...FIN, id: 'e-1' })
 
       expect(await screen.findByRole('table', { name: 'Historial de entrenamientos' })).toHaveTextContent('e-1')
+    })
+  })
+
+  describe('al ir a otra pantalla y volver', () => {
+    // La pantalla con sus rutas, como en la app: al ir a otra se desmonta.
+    function montarConRutas() {
+      const enchufes = fabricaDeEnchufes()
+      const consultas = crearClienteDeConsultas()
+      consultas.setDefaultOptions({ queries: { ...consultas.getDefaultOptions().queries, retry: false } })
+      render(
+        <Proveedores consultas={consultas} tiempoReal={{ crearEnchufe: enchufes.crearEnchufe }}>
+          <MemoryRouter initialEntries={['/entrenamiento']}>
+            <nav>
+              <Link to="/entrenamiento">ir a entrenamiento</Link>
+              <Link to="/otra">ir a otra pantalla</Link>
+            </nav>
+            <Routes>
+              <Route path="/entrenamiento" element={<Entrenamiento />} />
+              <Route path="/otra" element={<h1>Otra pantalla</h1>} />
+            </Routes>
+          </MemoryRouter>
+        </Proveedores>,
+      )
+      act(() => enchufes.ultimo().abrir())
+      return {
+        emitir: (evento: string, datos: unknown) => act(() => enchufes.ultimo().recibir({ evento, datos })),
+        irse: async () => {
+          await userEvent.click(screen.getByRole('link', { name: 'ir a otra pantalla' }))
+          await screen.findByRole('heading', { name: 'Otra pantalla' })
+          expect(screen.queryByRole('heading', { name: 'Entrenamiento' })).not.toBeInTheDocument()
+        },
+        volver: async () => {
+          await userEvent.click(screen.getByRole('link', { name: 'ir a entrenamiento' }))
+          await screen.findByRole('heading', { name: 'Entrenamiento' })
+        },
+      }
+    }
+
+    it('el entrenamiento lanzado sigue a la vista, con su resultado, donde había quedado', async () => {
+      api()
+      const { emitir, irse, volver } = montarConRutas()
+      await screen.findByRole('list', { name: 'Nodos libres' })
+      await lanzar()
+      await screen.findByText('Cargando datos en los nodos')
+      for (let i = 1; i <= 4; i++) emitir('entrenamiento.ronda', ronda(i))
+      emitir('entrenamiento.fin', FIN)
+      await userEvent.click(screen.getByRole('button', { name: 'Lenta' }))
+      await userEvent.click(screen.getByRole('button', { name: 'Ir al final' }))
+      expect(screen.getByText('Terminado · 4 rondas')).toBeInTheDocument()
+      await screen.findByText(/El modelo nuevo quedó activo|Activó su modelo/)
+
+      await irse()
+      await volver()
+
+      // Sin esperar nada: ya está todo ahí, no «Todavía no hay un entrenamiento a la vista».
+      expect(screen.getByText('Terminado · 4 rondas')).toBeInTheDocument()
+      expect(screen.getByText(/lanzado desde aquí/)).toBeInTheDocument()
+      expect(screen.getByText('Resultado')).toBeInTheDocument()
+      expect(screen.getByText(/El modelo nuevo quedó activo|Activó su modelo/)).toBeInTheDocument()
+      expect(screen.queryByText('Todavía no hay un entrenamiento a la vista')).not.toBeInTheDocument()
+      expect(screen.getByRole('img', { name: /Inercia por ronda: de 72,000\.0 en la ronda 1 a 69,000\.0 en la ronda 4/ })).toBeInTheDocument()
+      // La velocidad elegida también sigue.
+      expect(screen.getByRole('button', { name: 'Lenta' })).toHaveAttribute('aria-pressed', 'true')
+    })
+
+    it('si seguía en curso, al volver está al día: con las rondas y el fin que llegaron mientras tanto', async () => {
+      api()
+      const { emitir, irse, volver } = montarConRutas()
+      await screen.findByRole('list', { name: 'Nodos libres' })
+      await lanzar()
+      await screen.findByText('Cargando datos en los nodos')
+      emitir('entrenamiento.ronda', ronda(1))
+      await screen.findByText('En vivo · ronda 1')
+
+      await irse()
+      // Mientras se mira otra pantalla, el entrenamiento sigue y termina.
+      emitir('entrenamiento.ronda', ronda(2))
+      emitir('entrenamiento.ronda', ronda(3))
+      emitir('entrenamiento.ronda', ronda(4))
+      emitir('entrenamiento.fin', FIN)
+      await volver()
+
+      // La reproducción sigue desde la ronda 1, que ya se había visto, hasta la última que llegó.
+      expect(screen.getByText('Reproduciendo · ronda 1 de 4')).toBeInTheDocument()
+      expect(screen.getByText(/El entrenamiento real duró 56 ms/)).toBeInTheDocument()
+      expect(await screen.findByText('Terminado · 4 rondas')).toBeInTheDocument()
+      expect(await screen.findByText('Resultado')).toBeInTheDocument()
+      expect(screen.getByRole('img', { name: /Tiempo de respuesta de cada nodo en la ronda 4/ })).toBeInTheDocument()
+    })
+
+    it('una reproducción a medias se retoma donde iba, no desde la primera ronda', async () => {
+      api()
+      const { emitir, irse, volver } = montarConRutas()
+      await screen.findByRole('list', { name: 'Nodos libres' })
+      await lanzar()
+      await screen.findByText('Cargando datos en los nodos')
+      for (let i = 1; i <= 4; i++) emitir('entrenamiento.ronda', ronda(i))
+      emitir('entrenamiento.fin', FIN)
+      await userEvent.click(screen.getByRole('button', { name: 'Lenta' }))
+      await screen.findByText('Reproduciendo · ronda 2 de 4')
+
+      await irse()
+      await volver()
+
+      expect(screen.queryByText(/Reproduciendo · ronda [01] de 4/)).not.toBeInTheDocument()
+      expect(screen.getByText(/Reproduciendo · ronda [23] de 4|Terminado · 4 rondas/)).toBeInTheDocument()
+      expect(await screen.findByText('Terminado · 4 rondas')).toBeInTheDocument()
+    })
+
+    it('uno abierto desde el historial también sigue a la vista', async () => {
+      api({ 'GET /api/entrenamientos': { estado: 200, cuerpo: [{ ...DETALLE, rondas: undefined }] } })
+      const { irse, volver } = montarConRutas()
+      await userEvent.click(await screen.findByRole('button', { name: `Ver las rondas de ${ID}` }))
+      await screen.findByText(/del historial/)
+
+      await irse()
+      await volver()
+
+      expect(screen.getByText(/del historial/)).toBeInTheDocument()
+      expect(screen.getByText('Terminado · 4 rondas')).toBeInTheDocument()
+    })
+
+    it('un entrenamiento de otra sesión que pasa con la pantalla cerrada no la ocupa', async () => {
+      api()
+      const { emitir, irse, volver } = montarConRutas()
+      await screen.findByRole('list', { name: 'Nodos libres' })
+
+      await irse()
+      emitir('entrenamiento.ronda', ronda(1, 'e-de-otra-sesion'))
+      emitir('entrenamiento.fin', { ...FIN, id: 'e-de-otra-sesion' })
+      await volver()
+
+      expect(screen.getByText('Todavía no hay un entrenamiento a la vista')).toBeInTheDocument()
+      expect(screen.queryByText(/e-de-otra-sesion/)).not.toBeInTheDocument()
+    })
+
+    it('al terminar la sesión deja de estar a la vista: quien entre después no lo hereda', async () => {
+      api()
+      const { emitir } = montarConRutas()
+      await screen.findByRole('list', { name: 'Nodos libres' })
+      await lanzar()
+      await screen.findByText('Cargando datos en los nodos')
+      emitir('entrenamiento.ronda', ronda(1))
+      expect(entrenamientoALaVista.leer().seguimiento.corrida?.id).toBe(ID)
+
+      act(() => cerrarSesion('salir'))
+
+      expect(entrenamientoALaVista.leer().seguimiento.corrida).toBeNull()
+      expect(entrenamientoALaVista.leer().velocidad).toBe('normal')
     })
   })
 })

@@ -21,6 +21,15 @@ export interface Reproduccion {
   repetir: () => void
 }
 
+/**
+ * Dónde recordar por qué ronda va la reproducción de cada entrenamiento, para
+ * retomarla ahí si la pantalla se desmonta y se vuelve a montar.
+ */
+export interface MemoriaDeReproduccion {
+  leer: (clave: string) => number | undefined
+  guardar: (clave: string, mostradas: number) => void
+}
+
 interface Estado {
   clave: string | null
   mostradas: number
@@ -31,12 +40,24 @@ interface Estado {
  * @param recibidas  cuántas rondas hay para mostrar hasta ahora
  * @param pasoMs     cuánto dura cada ronda en pantalla
  * @param completa   si empieza ya con todas a la vista (uno abierto desde el historial)
+ * @param memoria    si se da, la reproducción de un entrenamiento ya visto se retoma donde iba
  */
-export function useReproduccion(clave: string | null, recibidas: number, pasoMs: number, completa = false): Reproduccion {
-  const [estado, setEstado] = useState<Estado>({ clave, mostradas: completa ? recibidas : 0 })
+export function useReproduccion(
+  clave: string | null,
+  recibidas: number,
+  pasoMs: number,
+  completa = false,
+  memoria?: MemoriaDeReproduccion,
+): Reproduccion {
+  const alEmpezar = (): number => (clave === null ? undefined : memoria?.leer(clave)) ?? (completa ? recibidas : 0)
+  const [estado, setEstado] = useState<Estado>(() => ({ clave, mostradas: alEmpezar() }))
   // Otro entrenamiento: se ajusta el estado en el mismo render, sin esperar a un efecto.
-  if (estado.clave !== clave) setEstado({ clave, mostradas: completa ? recibidas : 0 })
-  const mostradas = estado.clave === clave ? Math.min(estado.mostradas, recibidas) : completa ? recibidas : 0
+  if (estado.clave !== clave) setEstado({ clave, mostradas: alEmpezar() })
+  const mostradas = Math.min(estado.clave === clave ? estado.mostradas : alEmpezar(), recibidas)
+
+  useEffect(() => {
+    if (clave !== null) memoria?.guardar(clave, mostradas)
+  }, [clave, mostradas, memoria])
 
   // El reloj depende de si queda algo por mostrar, no de cuántas rondas hay: si
   // dependiera de `recibidas`, cada ronda que llega lo reiniciaría, y con rondas

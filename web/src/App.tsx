@@ -10,10 +10,12 @@ import { lazy, useEffect, useState } from 'react'
 import { BrowserRouter, Route, Routes } from 'react-router'
 import { claves, crearClienteDeConsultas } from './api/cliente'
 import { TiempoRealProveedor } from './api/TiempoRealProveedor'
+import { useEvento } from './api/tiempoReal'
 import type { OpcionesWS } from './api/ws'
 import { Armazon } from './armazon/Armazon'
 import { RUTAS } from './armazon/menu'
 import { Barrera } from './componentes/Barrera'
+import { entrenamientoALaVista } from './pantallas/entrenamiento/almacen'
 import Ingreso from './pantallas/Ingreso'
 import { RequiereRol, RequiereSesion } from './sesion/guardas'
 import { SOLO_ADMIN } from './sesion/roles'
@@ -66,7 +68,8 @@ export function Rutas() {
 
 /**
  * Al terminar una sesión, lo que quedó en la caché se borra: lo que vio un
- * admin no lo ve quien entre después en la misma pestaña.
+ * admin no lo ve quien entre después en la misma pestaña. Tampoco el
+ * entrenamiento que tenía a la vista.
  */
 function LimpiarAlSalir() {
   const { sesion } = useSesion()
@@ -74,10 +77,22 @@ function LimpiarAlSalir() {
   const token = sesion?.token
   useEffect(() => {
     return () => {
+      entrenamientoALaVista.reiniciar()
       // La salud es pública y la muestra también el ingreso: se queda.
       consultas.removeQueries({ predicate: (c) => c.queryKey[0] !== claves.salud[0] })
     }
   }, [token, consultas])
+  return null
+}
+
+/**
+ * Las rondas y el fin de un entrenamiento llegan al que está a la vista
+ * (pantallas/entrenamiento/almacen.ts) aunque su pantalla no esté montada: al
+ * volver a ella, está al día.
+ */
+function EntrenamientoEnVivo() {
+  useEvento('entrenamiento.ronda', (evento) => entrenamientoALaVista.recibir({ tipo: 'ronda', evento }))
+  useEvento('entrenamiento.fin', (evento) => entrenamientoALaVista.recibir({ tipo: 'fin', evento, ahora: Date.now() }))
   return null
 }
 
@@ -94,6 +109,7 @@ export function Proveedores({ consultas, tiempoReal, children }: Props & { child
     <QueryClientProvider client={consultas ?? propias}>
       <TiempoRealProveedor opciones={tiempoReal}>
         <LimpiarAlSalir />
+        <EntrenamientoEnVivo />
         {children}
       </TiempoRealProveedor>
     </QueryClientProvider>

@@ -110,4 +110,46 @@ describe('la reproducción de las rondas', () => {
 
     expect(result.current.mostradas).toBe(11)
   })
+
+  describe('con memoria', () => {
+    function memoriaDe(inicial: Record<string, number> = {}) {
+      const guardado = new Map(Object.entries(inicial))
+      return { guardado, leer: (clave: string) => guardado.get(clave), guardar: (clave: string, n: number) => void guardado.set(clave, n) }
+    }
+
+    it('retoma la reproducción donde iba, en vez de empezar por la primera ronda', () => {
+      const memoria = memoriaDe({ 'e-1': 2 })
+      const { result } = renderHook(() => useReproduccion('e-1', 4, 100, false, memoria))
+
+      expect(result.current.mostradas).toBe(2)
+      avanzar(100)
+      expect(result.current.mostradas).toBe(3)
+    })
+
+    it('va guardando por dónde va, también al repetir y al ir al final', () => {
+      const memoria = memoriaDe()
+      const { result } = renderHook(() => useReproduccion('e-1', 3, 100, false, memoria))
+      expect(memoria.guardado.get('e-1')).toBe(0)
+
+      avanzar(100)
+      expect(memoria.guardado.get('e-1')).toBe(1)
+      act(() => result.current.irAlFinal())
+      expect(memoria.guardado.get('e-1')).toBe(3)
+      act(() => result.current.repetir())
+      expect(memoria.guardado.get('e-1')).toBe(0)
+    })
+
+    it('de un entrenamiento que no vio, empieza como siempre: de cero, o completo si viene del historial', () => {
+      const memoria = memoriaDe({ 'e-1': 2 })
+
+      expect(renderHook(() => useReproduccion('e-2', 4, 100, false, memoria)).result.current.mostradas).toBe(0)
+      expect(renderHook(() => useReproduccion('e-3', 4, 100, true, memoria)).result.current.mostradas).toBe(4)
+    })
+
+    it('no muestra más rondas de las que hay aunque la memoria diga otra cosa', () => {
+      const { result } = renderHook(() => useReproduccion('e-1', 2, 100, false, memoriaDe({ 'e-1': 9 })))
+
+      expect(result.current.mostradas).toBe(2)
+    })
+  })
 })
