@@ -42,6 +42,22 @@ else
   exit 1
 fi
 
+# Los listados de código y de terminal pasan a imagen (una línea larga se parte mal en Word).
+# Solo en el informe de la PC4.
+# Necesita Chrome y pygments; si falta alguno, se avisa y los listados quedan como texto, que es como
+# los escribe tablas.py.
+if [ "$ENTREGA" = pc4 ]; then
+  if ! command -v google-chrome >/dev/null 2>&1; then
+    echo "aviso: no hay google-chrome: los listados quedan como texto (listados_imagen.py no corre)" >&2
+  elif python3 -c 'import pygments' 2>/dev/null; then
+    python3 listados_imagen.py
+  elif command -v uv >/dev/null 2>&1; then
+    uv run --quiet --with pygments listados_imagen.py
+  else
+    echo "aviso: falta pygments (pip install pygments, o instalar uv): los listados quedan como texto" >&2
+  fi
+fi
+
 echo "→ generado/local/"
 mkdir -p generado/local
 if [ -f equipo.local.yml ]; then
