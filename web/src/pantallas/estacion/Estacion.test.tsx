@@ -126,7 +126,8 @@ describe('la Estación', () => {
       await screen.findByText('CA-HU-04 · último estado recibido')
 
       const estado = document.querySelector('[data-estado-estacion]')!
-      expect(estado).toHaveTextContent('Régimen1, el de la última lectura; su media excede el ECA')
+      expect(estado).toHaveTextContent('Régimen1, el grupo de la última lectura horaria')
+      expect(estado).toHaveTextContent('La media de ese grupo de lecturas excede el ECA. Describe al grupo, no a esta estación')
       expect(within(estado as HTMLElement).getByText('Sin alerta')).toBeInTheDocument()
       expect(pedidosDe(fetch, '/api/modelos/activo')).toBe(0)
     })

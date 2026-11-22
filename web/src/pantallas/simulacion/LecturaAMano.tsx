@@ -31,7 +31,7 @@ function numeroDe(texto: string): number | null {
 }
 
 function enLlano(r: Prediccion): string {
-  const regimen = `La API asignó la lectura al régimen ${r.regimen}${r.excede_eca ? ', cuya media excede el ECA' : ''}.`
+  const regimen = `La API asignó la lectura al régimen ${r.regimen}${r.excede_eca ? ', un grupo de lecturas cuya media excede el ECA' : ''}.`
   if (r.media_24h.pm2_5 === null || r.media_24h.pm10 === null) {
     return `${regimen} La ventana de 24 horas tiene ${r.media_24h.lecturas} lecturas: todavía no hay media, ni alerta, ni banda INCA.`
   }
@@ -169,7 +169,7 @@ export function LecturaAMano({ estaciones, estados, descripcionDe, ocupado }: Pr
         >
           <div className="space-y-4">
             <div className="grid gap-4 sm:grid-cols-4">
-              <Cifra tamano="mediana" rotulo="Régimen" valor={envio.data.regimen} unidad={envio.data.excede_eca ? 'excede el ECA' : 'no excede el ECA'} />
+              <Cifra tamano="mediana" rotulo="Régimen" valor={envio.data.regimen} unidad={envio.data.excede_eca ? 'el grupo excede el ECA' : 'el grupo no excede el ECA'} />
               <Cifra tamano="mediana" rotulo="PM2.5 · media de 24 h" valor={envio.data.media_24h.pm2_5} decimales={1} unidad="µg/m³" sinDato="sin media" />
               <Cifra tamano="mediana" rotulo="PM10 · media de 24 h" valor={envio.data.media_24h.pm10} decimales={1} unidad="µg/m³" sinDato="sin media" />
               <Cifra tamano="mediana" rotulo="En la ventana" valor={envio.data.media_24h.lecturas} unidad="lecturas" />

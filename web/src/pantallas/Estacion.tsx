@@ -27,7 +27,7 @@ import {
 import { CurvaSesion } from '../graficos/CurvaSesion'
 import { armarCurva, textosDeCurva } from './estacion/curva'
 import { Ficha } from './estacion/Ficha'
-import { contaminanteInicial, fraseEstacion, NORMA, type Contaminante } from './estacion/norma'
+import { contaminanteInicial, fraseDelRegimen, fraseEstacion, NORMA, type Contaminante } from './estacion/norma'
 import { filaDe, MINIMO_LECTURAS, tonoDe } from './panel/situacion'
 
 const enlaceDe = (id: string) => `${RUTAS.estacion}/${encodeURIComponent(id)}`
@@ -81,9 +81,11 @@ function DeDondeSale() {
         en {NORMA.pm10.cortes.join(', ')} µg/m³) y la de PM2.5 (cortes en {NORMA.pm2_5.cortes.join(', ')} µg/m³).
       </p>
       <p>
-        El <strong>régimen</strong> no es la alerta: es el grupo al que el modelo asignó la última lectura horaria. Que un
-        régimen «exceda el ECA» describe la media de las lecturas de ese grupo, no la de esta estación, y se muestra como
-        quedó guardado con el estado: si después se entrenó otro modelo, los números de régimen pueden haber cambiado.
+        El <strong>régimen</strong> no es la alerta: es el grupo de lecturas parecidas al que el modelo asignó la última
+        lectura horaria. Que un régimen «exceda el ECA» describe la media de todas las lecturas de ese grupo, no la de esta
+        estación: una estación puede estar en alerta con su última lectura en un grupo que no lo excede, y al revés. Se
+        muestra como quedó guardado con el estado: si después se entrenó otro modelo, los números de régimen pueden haber
+        cambiado.
       </p>
     </Desplegable>
   )
@@ -119,9 +121,12 @@ function TarjetaPrincipal({ estacion, estado, midePM }: { estacion: FichaEstacio
               <span className="font-mono font-semibold tabular-nums">{lecturas}</span> de 24 lecturas
             </dd>
             <dt className="rotulo">Régimen</dt>
-            <dd className="text-texto">
-              <span className="font-mono font-semibold tabular-nums">{estado.regimen}</span>, el de la última lectura;{' '}
-              {estado.excede_eca ? 'su media excede el ECA' : 'su media no excede el ECA'}
+            <dd className="text-texto max-w-md">
+              <span className="font-mono font-semibold tabular-nums">{estado.regimen}</span>, el grupo de la última lectura
+              horaria
+              <span className="text-suave mt-0.5 block text-xs leading-snug" data-regimen-eca={estado.excede_eca}>
+                {fraseDelRegimen(estado.excede_eca)}
+              </span>
             </dd>
           </dl>
         </div>

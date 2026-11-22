@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { estadoDe } from '../panel/dobles'
-import { contaminanteInicial, fraseEstacion } from './norma'
+import { contaminanteInicial, fraseDelRegimen, fraseEstacion } from './norma'
 
 describe('la frase de la estación', () => {
   it('dice la media y contra qué se compara, con un decimal', () => {
@@ -42,5 +42,16 @@ describe('el contaminante con que abre la curva', () => {
     expect(contaminanteInicial(estadoDe('CA-HU-04', { pm2_5: 88.8, pm10: 120.7 }))).toBe('pm10')
     expect(contaminanteInicial(estadoDe('CA-AYAS-01'))).toBe('pm10')
     expect(contaminanteInicial(null)).toBe('pm10')
+  })
+})
+
+describe('fraseDelRegimen', () => {
+  it('dice que el «excede el ECA» es del grupo de lecturas y no de la estación', () => {
+    expect(fraseDelRegimen(false)).toBe(
+      'La media de ese grupo de lecturas no excede el ECA. Describe al grupo, no a esta estación: su alerta sale de su propia media de 24 h.',
+    )
+    expect(fraseDelRegimen(true)).toMatch(/^La media de ese grupo de lecturas excede el ECA\. Describe al grupo, no a esta estación/)
+    // «su media», a secas, se leía como la de la estación.
+    for (const excede of [true, false]) expect(fraseDelRegimen(excede)).not.toMatch(/^su media|; su media/)
   })
 })

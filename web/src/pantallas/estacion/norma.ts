@@ -32,6 +32,15 @@ export function contaminanteInicial(estado: RegimenEstacion | null): Contaminant
   return 'pm10'
 }
 
+/**
+ * Qué dice de un régimen su «excede el ECA» (contrato, `excede_eca`): si la
+ * media de las lecturas de ese grupo supera el ECA. Describe al grupo, no a la
+ * estación, y por eso puede no coincidir con su alerta: se dice con todas las letras.
+ */
+export function fraseDelRegimen(excedeEca: boolean): string {
+  return `La media de ese grupo de lecturas ${excedeEca ? 'excede' : 'no excede'} el ECA. Describe al grupo, no a esta estación: su alerta sale de su propia media de 24 h.`
+}
+
 const ug = (valor: number) => `${numero(valor, 1)} µg/m³`
 
 /**

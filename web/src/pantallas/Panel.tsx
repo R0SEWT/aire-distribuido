@@ -128,7 +128,8 @@ const COLUMNAS: Columna<FilaEstacion>[] = [
       f.estado ? (
         <div className="whitespace-nowrap">
           <span className="font-mono font-semibold tabular-nums">{f.estado.regimen}</span>
-          {f.estado.excede_eca && <p className="text-suave mt-0.5 text-xs">excede el ECA</p>}
+          {/* Lo dice del grupo de lecturas, no de la estación: puede no coincidir con su alerta. */}
+          {f.estado.excede_eca && <p className="text-suave mt-0.5 text-xs">el grupo excede el ECA</p>}
         </div>
       ) : (
         '—'
