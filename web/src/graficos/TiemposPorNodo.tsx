@@ -6,7 +6,8 @@
 // no es el CPU del nodo, que el protocolo no transporta.
 
 import { scaleLinear } from 'd3'
-import { ejeDeRondas, milisegundos } from './ejeDeRondas'
+import { milisegundos } from '../componentes/formato'
+import { ejeDeRondas } from './ejeDeRondas'
 import { useMedida } from './medida'
 
 export interface RondaConTiempos {

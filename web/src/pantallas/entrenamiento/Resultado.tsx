@@ -5,10 +5,10 @@
 
 import type { ReactNode } from 'react'
 import { presentarError } from '../../api/errores'
-import { Etiqueta, Frase, numero, Tarjeta } from '../../componentes/indice'
+import { duracion, Etiqueta, Frase, numero, Tarjeta } from '../../componentes/indice'
 import { cuantosNodos } from './formulario'
 import type { Corrida, Detalle, Fin } from './seguimiento'
-import { compuerta, cuantasRondas, diferencia, duracion, motivoDeParo, nodosNombrados } from './textos'
+import { compuerta, cuantasRondas, diferencia, motivoDeParo, nodosNombrados } from './textos'
 
 interface Props {
   corrida: Corrida & { fin: Fin }

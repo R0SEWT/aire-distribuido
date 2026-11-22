@@ -8,7 +8,26 @@ export { Desplegable } from './Desplegable'
 export { EnConstruccion } from './EnConstruccion'
 export { Estado, EstadoDeError, type TipoEstado } from './Estado'
 export { Etiqueta } from './Etiqueta'
-export { fechaHora, hora, numero } from './formato'
+export {
+  compacto,
+  diaCorto,
+  diaDeInstante,
+  diasEnLlano,
+  duracion,
+  enumerar,
+  fechaConSegundos,
+  fechaDia,
+  fechaHora,
+  hora,
+  horaConSegundos,
+  horaDeLima,
+  lapso,
+  milisegundos,
+  nombrePropio,
+  numero,
+  porciento,
+  proporcion,
+} from './formato'
 export { Frase } from './Frase'
 export { Pildoras, type Opcion } from './Pildoras'
 export { Tabla, type Columna } from './Tabla'

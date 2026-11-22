@@ -1,6 +1,5 @@
 import type { components } from '../../api/contrato'
-import { Estado, Etiqueta, type Tono } from '../../componentes/indice'
-import { fechaConSegundos } from './formato'
+import { Estado, Etiqueta, fechaConSegundos, type Tono } from '../../componentes/indice'
 
 type Evento = components['schemas']['EventoCluster']
 

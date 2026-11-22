@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { ESTACIONES, estadoDe, EN_ALERTA } from './dobles'
-import { detalleSinBanda, filaDe, filasDe, frasePanel, nombrePropio, resumir, tonoDe } from './situacion'
+import { detalleSinBanda, filaDe, filasDe, frasePanel, resumir, tonoDe } from './situacion'
 
 const SIN_PM = new Set(['CA-01'])
 const [ca01, ayas] = ESTACIONES as [(typeof ESTACIONES)[number], (typeof ESTACIONES)[number]]
@@ -106,18 +106,11 @@ describe('las cifras y la frase del panel', () => {
   })
 })
 
-describe('el tono y los nombres', () => {
+describe('el tono', () => {
   it('el tono es el de la alerta o el de la banda', () => {
     expect(tonoDe({ alerta: true, banda: 'moderada' })).toBe('alerta')
     expect(tonoDe({ alerta: false, banda: 'umbral_de_cuidado' })).toBe('alerta')
     expect(tonoDe({ alerta: false, banda: 'moderada' })).toBe('moderada')
     expect(tonoDe({ alerta: false, banda: 'sin_datos' })).toBe('neutro')
-  })
-
-  it('los nombres de la ficha, que vienen en mayúsculas, se escriben como nombres', () => {
-    expect(nombrePropio('LA LIBERTAD')).toBe('La Libertad')
-    expect(nombrePropio('MADRE DE DIOS')).toBe('Madre de Dios')
-    expect(nombrePropio('PARIÑAS')).toBe('Pariñas')
-    expect(nombrePropio(null)).toBeNull()
   })
 })

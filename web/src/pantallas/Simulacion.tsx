@@ -17,12 +17,23 @@ import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react
 import { claves } from '../api/cliente'
 import { useSeries, type Series } from '../api/datos'
 import { useEstaciones, useEstados } from '../api/estaciones'
-import { Desplegable, Estado, EstadoDeError, Frase, numero, Pildoras, Tarjeta, type Opcion, type Tono } from '../componentes/indice'
+import {
+  Desplegable,
+  enumerar,
+  Estado,
+  EstadoDeError,
+  Frase,
+  nombrePropio,
+  numero,
+  Pildoras,
+  Tarjeta,
+  type Opcion,
+  type Tono,
+} from '../componentes/indice'
 import { SOLO_ADMIN, puede } from '../sesion/roles'
 import { useSesion } from '../sesion/useSesion'
 import { compararTramo, resumir, type Resumen } from './simulacion/comparar'
 import { Botones, ElegirRitmo, EstadoDelSistema, QueMandaElEscenario, QueMandaUnDia, TarjetaDeControles } from './simulacion/Controles'
-import { enumerar } from './simulacion/fechas'
 import { LecturaAMano } from './simulacion/LecturaAMano'
 import { revisarSistema } from './simulacion/limpieza'
 import { Marcha } from './simulacion/Marcha'
@@ -91,7 +102,7 @@ function Mesa({ series, simulador }: { series: Series; simulador: Simulador }) {
       const e = catalogo.data?.find((x) => x.id === estacion)
       if (!e) return null
       // La ficha repite a veces el objeto fiscalizado con otro nombre, separado por una barra: basta el primero.
-      return [e.objeto_fiscalizado?.split(' | ')[0], e.distrito ? enMinusculas(e.distrito) : null].filter(Boolean).join(', ') || null
+      return [e.objeto_fiscalizado?.split(' | ')[0], nombrePropio(e.distrito)].filter(Boolean).join(', ') || null
     },
     [catalogo.data],
   )
@@ -230,10 +241,6 @@ function Mesa({ series, simulador }: { series: Series; simulador: Simulador }) {
       )}
     </>
   )
-}
-
-function enMinusculas(texto: string): string {
-  return texto.toLowerCase().replace(/(^|\s)\p{L}/gu, (l) => l.toUpperCase())
 }
 
 /** En una frase: cuántas estaciones quedaron como dice el archivo. */

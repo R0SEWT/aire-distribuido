@@ -1,9 +1,7 @@
 import type { ReactNode } from 'react'
-import { numero, Tarjeta } from '../../componentes/indice'
+import { fechaDia, nombrePropio, numero, Tarjeta } from '../../componentes/indice'
 import type { Impacto } from '../../api/datos'
 import type { Estacion } from '../../api/estaciones'
-import { nombrePropio } from '../panel/situacion'
-import { fechaDia } from './norma'
 
 function Dato({ nombre, children }: { nombre: string; children: ReactNode }) {
   return (

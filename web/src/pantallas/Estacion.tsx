@@ -18,6 +18,7 @@ import {
   Etiqueta,
   fechaHora,
   Frase,
+  nombrePropio,
   Pildoras,
   Tarjeta,
 } from '../componentes/indice'
@@ -25,7 +26,7 @@ import { CurvaSesion, type PuntoCurva } from '../graficos/CurvaSesion'
 import { Ficha } from './estacion/Ficha'
 import { useHistoria, useRegistroDeSesion, type PuntoSesion } from './estacion/historia'
 import { contaminanteInicial, fraseEstacion, NORMA, type Contaminante } from './estacion/norma'
-import { filaDe, MINIMO_LECTURAS, nombrePropio, tonoDe } from './panel/situacion'
+import { filaDe, MINIMO_LECTURAS, tonoDe } from './panel/situacion'
 
 const enlaceDe = (id: string) => `${RUTAS.estacion}/${encodeURIComponent(id)}`
 

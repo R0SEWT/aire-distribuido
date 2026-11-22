@@ -8,8 +8,7 @@
 
 import { select } from 'd3'
 import { BANDAS, estadoDeBanda } from '../componentes/bandas'
-import { fechaHora, numero } from '../componentes/formato'
-import { diaCorto, horaDeLima } from '../pantallas/simulacion/fechas'
+import { diaCorto, fechaHora, horaDeLima, numero } from '../componentes/formato'
 import type { Punto } from '../pantallas/simulacion/vistas'
 import { useDibujo } from './dibujo'
 import { useMedida } from './medida'

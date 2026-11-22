@@ -7,7 +7,7 @@
 // (en rem, vía viewBox) y no depende del ancho de la tarjeta.
 
 import { scaleLog } from 'd3'
-import { milisegundos } from './ejeDeRondas'
+import { milisegundos } from '../componentes/formato'
 
 /** El objetivo de la PC4: la predicción responde en menos de 100 ms. */
 export const OBJETIVO_MS = 100

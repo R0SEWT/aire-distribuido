@@ -4,9 +4,8 @@
 // lleva lo justo para entrar en la pantalla también en modo proyector.
 
 import { useState } from 'react'
-import { Etiqueta, numero, Tabla, type Columna, type Tono } from '../../componentes/indice'
+import { duracion, Etiqueta, numero, Tabla, type Columna, type Tono } from '../../componentes/indice'
 import type { Resumen } from './seguimiento'
-import { duracion } from './textos'
 
 interface Props {
   entrenamientos: readonly Resumen[]

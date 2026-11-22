@@ -1,6 +1,5 @@
 import type { components } from '../../api/contrato'
-import { Estado, Etiqueta, numero, Tabla, type Columna } from '../../componentes/indice'
-import { milisegundos } from '../../graficos/ejeDeRondas'
+import { Estado, Etiqueta, milisegundos, numero, Tabla, type Columna } from '../../componentes/indice'
 import type { RespuestaPorRonda } from './resumen'
 
 type Nodo = components['schemas']['Nodo']

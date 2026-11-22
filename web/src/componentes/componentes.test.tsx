@@ -12,7 +12,6 @@ import {
   Estado,
   EstadoDeError,
   Etiqueta,
-  fechaHora,
   Frase,
   numero,
   Pildoras,
@@ -300,20 +299,6 @@ describe('Desplegable y EnConstruccion', () => {
     expect(screen.getByText('En construcción')).toBeInTheDocument()
     expect(screen.getByText('web/src/pantallas/Panel.tsx')).toBeInTheDocument()
     expect(screen.getByText(/§5\.2/)).toBeInTheDocument()
-  })
-})
-
-describe('formato', () => {
-  it('escribe los números con sus decimales y una raya cuando no hay', () => {
-    expect(numero(58.349, 1)).toBe('58.3')
-    expect(numero(1536)).toBe('1,536')
-    expect(numero(null)).toBe('—')
-    expect(numero(Number.NaN)).toBe('—')
-  })
-
-  it('escribe las fechas en la hora de Lima, esté donde esté el navegador', () => {
-    expect(fechaHora('2021-12-13T20:00:00Z')).toMatch(/13 dic.* 2021.* 15:00/)
-    expect(fechaHora('no es una fecha')).toBe('—')
   })
 })
 

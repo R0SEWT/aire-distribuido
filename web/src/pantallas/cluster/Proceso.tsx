@@ -1,7 +1,6 @@
-import { Cifra, Frase, numero } from '../../componentes/indice'
+import { Cifra, Frase, lapso, numero } from '../../componentes/indice'
 import { UsoDeCpuEnElTiempo } from '../../graficos/UsoDeCpuEnElTiempo'
 import { serieDeUso, sinMedicionDeCpu, usoDeCpu, usoPromedio, type Proceso as Muestra } from './cpu'
-import { lapso } from './formato'
 
 /** Los segundos que abarca la curva del uso de CPU. */
 const VENTANA_S = 180

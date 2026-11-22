@@ -3,9 +3,8 @@
 // respondió la API y debajo lo que dice el archivo.
 
 import type { ReactNode } from 'react'
-import { Banda, BANDAS, estadoDeBanda, Etiqueta, fechaHora, numero, Tabla, type Columna } from '../../componentes/indice'
+import { Banda, BANDAS, enumerar, estadoDeBanda, Etiqueta, fechaHora, numero, Tabla, type Columna } from '../../componentes/indice'
 import { NOMBRE_DE_CAMPO, type Campo, type Comparacion } from './comparar'
-import { enumerar } from './fechas'
 
 /** Un valor de la API con el esperado debajo; si difieren, el esperado va marcado. */
 function Par({

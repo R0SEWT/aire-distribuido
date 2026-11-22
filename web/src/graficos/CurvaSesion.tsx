@@ -9,7 +9,7 @@
 
 import { line, scaleLinear, scaleTime } from 'd3'
 import { useMemo } from 'react'
-import { hora, numero } from '../componentes/indice'
+import { diaCorto, hora, numero } from '../componentes/formato'
 import { useMedida } from './medida'
 
 export interface PuntoCurva {
@@ -39,8 +39,6 @@ const FRANJAS = [
   { banda: 'mala', palabra: 'Mala', relleno: 'fill-inca-mala/15', marca: 'fill-inca-mala' },
   { banda: 'umbral_de_cuidado', palabra: 'Umbral de cuidado', relleno: 'fill-inca-cuidado/20', marca: 'fill-inca-cuidado' },
 ] as const
-
-const DIA = new Intl.DateTimeFormat('es-PE', { timeZone: 'America/Lima', day: 'numeric', month: 'short' })
 
 export function CurvaSesion({ puntos, eca, cortes, titulo, className = '' }: Props) {
   const [caja, medida] = useMedida<HTMLDivElement>(POR_OMISION)
@@ -72,9 +70,9 @@ export function CurvaSesion({ puntos, eca, cortes, titulo, className = '' }: Pro
     }).filter((f) => f !== null)
 
     const marcasX = x.ticks(Math.max(2, Math.floor((ancho - margen.izquierda - margen.derecha) / (92 * k)))).map((fecha, i, todas) => {
-      const dia = DIA.format(fecha)
+      const dia = diaCorto(fecha)
       const anterior = todas[i - 1]
-      return { t: fecha.getTime(), x: x(fecha), hora: hora(fecha), dia: !anterior || DIA.format(anterior) !== dia ? dia : null }
+      return { t: fecha.getTime(), x: x(fecha), hora: hora(fecha), dia: !anterior || diaCorto(anterior) !== dia ? dia : null }
     })
 
     const trazo = line<PuntoCurva>()

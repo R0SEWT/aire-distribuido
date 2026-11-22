@@ -4,8 +4,19 @@
 import type { ReactNode } from 'react'
 import type { DiaDeSeries, EscenarioDeSeries } from '../../api/datos'
 import type { EstadoEstacion } from '../../api/enVivo'
-import { Estado, EstadoDeError, Etiqueta, fechaHora, numero, Pildoras, Tarjeta, type Opcion } from '../../componentes/indice'
-import { diasEnLlano, enumerar, fechaDia } from './fechas'
+import {
+  diasEnLlano,
+  enumerar,
+  Estado,
+  EstadoDeError,
+  Etiqueta,
+  fechaDia,
+  fechaHora,
+  numero,
+  Pildoras,
+  Tarjeta,
+  type Opcion,
+} from '../../componentes/indice'
 import { diaDisponible, type Choque, type Revision, type TipoDeChoque } from './limpieza'
 import type { Fase } from './motor'
 import { horasPorSegundoDe, RITMOS, type Ritmo } from './ritmos'

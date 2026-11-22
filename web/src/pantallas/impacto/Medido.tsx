@@ -2,11 +2,24 @@
 // quién vive ahí (spec §5.7). Todo sale de impacto.json.
 
 import { useState } from 'react'
-import { Banda, BANDAS, Cifra, Etiqueta, Frase, numero, Pildoras, Tabla, type Columna } from '../../componentes/indice'
+import {
+  Banda,
+  BANDAS,
+  Cifra,
+  enumerar,
+  Etiqueta,
+  fechaDia,
+  Frase,
+  nombrePropio,
+  numero,
+  Pildoras,
+  porciento,
+  Tabla,
+  type Columna,
+} from '../../componentes/indice'
 import { BarraBandas } from '../../graficos/BarraBandas'
-import { enumerar, fechaDia } from '../simulacion/fechas'
 import { DeDondeSale, Seccion } from './apoyo'
-import { DIAS_DE_CAMPANA_CORTA, lugar, porciento } from './textos'
+import { DIAS_DE_CAMPANA_CORTA } from './textos'
 import type { DistritoDeImpacto, EstacionDeImpacto, Impacto, NombreDeBanda, TipoDeActividad } from '../../api/datos'
 
 const ORDEN: readonly NombreDeBanda[] = ['buena', 'moderada', 'mala', 'umbral_de_cuidado']
@@ -157,7 +170,7 @@ const COLUMNAS_DE_ESTACION: Columna<EstacionDeImpacto>[] = [
       e.distrito && e.poblacion_distrito ? (
         <div className="leading-tight">
           <p className="text-suave">
-            {lugar(e.distrito)}, {lugar(e.departamento)}
+            {nombrePropio(e.distrito)}, {nombrePropio(e.departamento)}
           </p>
           <p className="text-tenue mt-0.5 text-xs whitespace-nowrap">
             {numero(e.poblacion_distrito.poblacion)} hab. (censo de {e.poblacion_distrito.anio})
@@ -250,9 +263,9 @@ const COLUMNAS_DE_DISTRITO: Columna<DistritoDeImpacto>[] = [
     celda: (d) =>
       d.distrito ? (
         <div className="leading-tight">
-          <p className="text-texto font-semibold">{lugar(d.distrito)}</p>
+          <p className="text-texto font-semibold">{nombrePropio(d.distrito)}</p>
           <p className="text-tenue mt-0.5 text-xs">
-            {lugar(d.provincia)}, {lugar(d.departamento)}
+            {nombrePropio(d.provincia)}, {nombrePropio(d.departamento)}
           </p>
         </div>
       ) : (

@@ -6,8 +6,8 @@
 // salen de los tokens por clases (stroke-acento-claro…): nada en línea.
 
 import { line, scaleLinear } from 'd3'
-import { numero } from '../componentes/formato'
-import { compacto, ejeDeRondas, milisegundos } from './ejeDeRondas'
+import { compacto, milisegundos, numero } from '../componentes/formato'
+import { ejeDeRondas } from './ejeDeRondas'
 import { useMedida } from './medida'
 
 export interface PuntoDeInercia {

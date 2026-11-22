@@ -8,10 +8,9 @@
 // contexto, y no hay ninguna suma de personas.
 
 import { useImpacto, type Impacto as DatosDeImpacto } from '../api/datos'
-import { Estado, EstadoDeError, numero } from '../componentes/indice'
+import { Estado, EstadoDeError, fechaDia, numero } from '../componentes/indice'
 import { ConCuantaAnticipacion, LoQueNoPuedeDecir, SirveLaAlerta } from './impacto/Alerta'
 import { CuantoTiempo, DondeYJuntoAQue, ElProblema, QuienViveAhi } from './impacto/Medido'
-import { fechaDia } from './simulacion/fechas'
 
 export default function Impacto() {
   const impacto = useImpacto()

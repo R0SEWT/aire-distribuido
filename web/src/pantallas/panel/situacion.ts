@@ -137,14 +137,3 @@ export function tonoDe(fila: Pick<FilaEstacion, 'alerta' | 'banda'>): Tono {
   if (fila.banda === 'buena' || fila.banda === 'moderada' || fila.banda === 'mala') return fila.banda
   return 'neutro'
 }
-
-/** «Lurigancho» a partir de «LURIGANCHO»: los nombres de la ficha vienen en mayúsculas. */
-export function nombrePropio(nombre: string | null | undefined): string | null {
-  if (!nombre) return null
-  const menores = new Set(['de', 'del', 'la', 'las', 'los', 'y'])
-  return nombre
-    .toLocaleLowerCase('es')
-    .split(' ')
-    .map((p, i) => (i > 0 && menores.has(p) ? p : p.charAt(0).toLocaleUpperCase('es') + p.slice(1)))
-    .join(' ')
-}

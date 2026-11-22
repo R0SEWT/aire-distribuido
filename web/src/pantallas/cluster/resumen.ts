@@ -1,8 +1,7 @@
 // Lo que las métricas dicen en una frase (spec §5.6), sin React.
 
 import type { components } from '../../api/contrato'
-import { numero, type Tono } from '../../componentes/indice'
-import { milisegundos } from '../../graficos/ejeDeRondas'
+import { milisegundos, numero, type Tono } from '../../componentes/indice'
 import { OBJETIVO_MS } from '../../graficos/LatenciaPorRuta'
 
 type Metricas = components['schemas']['Metricas']

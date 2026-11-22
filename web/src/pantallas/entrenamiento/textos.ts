@@ -2,15 +2,8 @@
 // reproducción, cuánto duró de verdad y qué pasó con el modelo. Sin React,
 // para probar las frases una por una.
 
-import { numero, type Tono } from '../../componentes/indice'
-import { milisegundos } from '../../graficos/ejeDeRondas'
+import { duracion, numero, type Tono } from '../../componentes/indice'
 import type { Corrida, Fin, Ronda } from './seguimiento'
-
-/** Una duración en la unidad que se lee mejor: «56 ms», «1.9 s». */
-export function duracion(ms: number): string {
-  if (ms < 1000) return `${milisegundos(ms)} ms`
-  return `${numero(ms / 1000, ms < 10_000 ? 1 : 0)} s`
-}
 
 /** «1 ronda», «44 rondas». */
 export function cuantasRondas(n: number): string {

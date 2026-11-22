@@ -4,8 +4,7 @@
 
 import { scaleLinear, select } from 'd3'
 import { BANDAS } from '../componentes/bandas'
-import { numero } from '../componentes/formato'
-import { porciento } from '../pantallas/impacto/textos'
+import { numero, porciento } from '../componentes/formato'
 import type { HorasPorBanda, NombreDeBanda } from '../api/datos'
 import { useDibujo } from './dibujo'
 import { useMedida } from './medida'

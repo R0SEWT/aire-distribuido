@@ -63,10 +63,3 @@ export function fraseEstacion(estado: RegimenEstacion): string {
   }
   return `La media de las últimas 24 horas de PM2.5 es ${ug(pm2_5)} y la de PM10 es ${ug(pm10)}: ninguna supera el ECA (${NORMA.pm2_5.eca} y ${NORMA.pm10.eca}).`
 }
-
-/** «10 dic 2021» a partir de «2021-12-10»: un día sin hora no se pasa por ninguna zona horaria. */
-export function fechaDia(dia: string): string {
-  const fecha = new Date(`${dia}T00:00:00Z`)
-  if (Number.isNaN(fecha.getTime())) return '—'
-  return new Intl.DateTimeFormat('es-PE', { timeZone: 'UTC', day: 'numeric', month: 'short', year: 'numeric' }).format(fecha)
-}

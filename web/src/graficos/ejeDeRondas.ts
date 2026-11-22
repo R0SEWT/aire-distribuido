@@ -43,14 +43,3 @@ export function ejeDeRondas(rondas: number, ancho: number, rem: number): EjeDeRo
   for (let r = cada; r <= hasta; r += cada) if (r !== 1) marcas.push(r)
   return { x, paso, hasta, marcas, izquierda, derecha }
 }
-
-/** Un número grande en pocas letras, para un eje: 73 mil, 21.9 M. */
-export function compacto(valor: number): string {
-  return new Intl.NumberFormat('es-PE', { notation: 'compact', maximumFractionDigits: 1 }).format(valor)
-}
-
-/** Milisegundos con las cifras que hacen falta: 0.27, 3.4, 38, 1 250. */
-export function milisegundos(ms: number): string {
-  const decimales = ms < 1 ? 2 : ms < 10 ? 1 : 0
-  return new Intl.NumberFormat('es-PE', { minimumFractionDigits: decimales, maximumFractionDigits: decimales }).format(ms)
-}

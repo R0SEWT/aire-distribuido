@@ -1,5 +1,4 @@
-import { Etiqueta, Frase, numero, Tabla, type Columna } from '../../componentes/indice'
-import { milisegundos } from '../../graficos/ejeDeRondas'
+import { Etiqueta, Frase, milisegundos, numero, Tabla, type Columna } from '../../componentes/indice'
 import { EjeDeLatencia, LeyendaDeLatencia, MarcaDeLatencia, OBJETIVO_MS } from '../../graficos/LatenciaPorRuta'
 import { decirLatencia, type LatenciaDeRuta } from './resumen'
 

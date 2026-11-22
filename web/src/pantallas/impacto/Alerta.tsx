@@ -1,12 +1,11 @@
 // Impacto, segunda mitad: si la alerta sirve, con cuánta anticipación, y lo que
 // este dato no puede decir (spec §5.7, §7.2 y §7.4). Todo sale de impacto.json.
 
-import { Cifra, Desplegable, Frase, numero, Tabla, type Columna } from '../../componentes/indice'
+import { Cifra, Desplegable, enumerar, Frase, nombrePropio, numero, proporcion, Tabla, type Columna } from '../../componentes/indice'
 import { AnticipacionEpisodios, type MedidaDeAnticipacion } from '../../graficos/AnticipacionEpisodios'
 import { SenalesAlerta } from '../../graficos/SenalesAlerta'
-import { enumerar } from '../simulacion/fechas'
 import { DeDondeSale, Seccion } from './apoyo'
-import { DIAS_DE_CAMPANA_CORTA, enHoras, enLetras, horas, lugar, proporcion } from './textos'
+import { DIAS_DE_CAMPANA_CORTA, enHoras, enLetras, horas } from './textos'
 import type { Cuartiles, Impacto } from '../../api/datos'
 
 export function SirveLaAlerta({ impacto }: { impacto: Impacto }) {
@@ -249,7 +248,7 @@ export function LoQueNoPuedeDecir({ impacto }: { impacto: Impacto }) {
           {mayor && deMayor.length > 0 && (
             <>
               {' '}
-              Uno solo decidiría la cifra: {lugar(mayor.distrito)}, por {enLetras(deMayor.length)}{' '}
+              Uno solo decidiría la cifra: {nombrePropio(mayor.distrito)}, por {enLetras(deMayor.length)}{' '}
               {deMayor.length === 1 ? 'estación' : 'estaciones'} ({[...porTipo].map(([tipo, codigos]) => `${enumerar(codigos)}: ${tipo}`).join('; ')}
               ). Un número grande junto a «horas sobre el ECA» se lee como «personas afectadas», se escriba como se
               escriba.

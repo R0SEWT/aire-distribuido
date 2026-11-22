@@ -5,8 +5,7 @@
 
 import { line, max, scaleLinear, select } from 'd3'
 import { BANDAS, type EstadoBanda } from '../componentes/bandas'
-import { hora as horaEnLima, numero } from '../componentes/formato'
-import { diaCorto, horaDeLima } from '../pantallas/simulacion/fechas'
+import { diaCorto, hora as horaEnLima, horaDeLima, numero } from '../componentes/formato'
 import type { Lectura } from '../pantallas/simulacion/series'
 import type { Punto } from '../pantallas/simulacion/vistas'
 import { useDibujo } from './dibujo'

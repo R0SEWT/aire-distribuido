@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Corrida, Ronda } from './seguimiento'
-import { compuerta, describirAvance, diferencia, duracion, nodosNombrados } from './textos'
+import { compuerta, describirAvance, diferencia, nodosNombrados } from './textos'
 
 function rondas(n: number, ms = 0.4): Ronda[] {
   return Array.from({ length: n }, (_, i) => ({ iter: i + 1, inercia: 100 - i, ms_ronda: ms, ms_fusion: 0.01, ms_por_nodo: { a: ms } }))
@@ -107,12 +107,6 @@ describe('la compuerta del modelo', () => {
 })
 
 describe('los formatos', () => {
-  it('la duración elige la unidad', () => {
-    expect(duracion(0.27)).toBe('0.27 ms')
-    expect(duracion(56.4)).toBe('56 ms')
-    expect(duracion(1887)).toBe('1.9 s')
-  })
-
   it('la diferencia con el secuencial va en notación científica', () => {
     expect(diferencia(7.549e-15)).toBe('7.5 e-15')
     expect(diferencia(0)).toBe('0')

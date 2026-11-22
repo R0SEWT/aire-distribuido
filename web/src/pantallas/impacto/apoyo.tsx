@@ -1,8 +1,7 @@
 // Piezas chicas que comparten las secciones de Impacto.
 
 import type { ReactNode } from 'react'
-import { Desplegable, numero } from '../../componentes/indice'
-import { fechaDia } from '../simulacion/fechas'
+import { Desplegable, fechaDia, numero } from '../../componentes/indice'
 import type { Impacto } from '../../api/datos'
 
 interface PropsDeDondeSale {
