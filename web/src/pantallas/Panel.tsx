@@ -49,6 +49,9 @@ const ALTO_DEL_MAPA = 'h-[clamp(21rem,calc(100dvh-21rem),42rem)]'
 
 const enlaceDe = (id: string) => `${RUTAS.estacion}/${encodeURIComponent(id)}`
 
+/** A dónde salta quien no quiere recorrer el mapa con el teclado. */
+const ID_DE_LA_LISTA = 'lista-de-estaciones'
+
 /** «Lurigancho · ladrillera»: dónde está la estación y qué vigila. */
 function lugarDe(e: Estacion): string {
   const distrito = nombrePropio(e.distrito) ?? 'distrito sin dato'
@@ -59,8 +62,10 @@ function lugarDe(e: Estacion): string {
 
 /** Lo que se lee de una estación en el mapa: su código, su distrito y su estado con palabras. */
 function nombreDeMarca(f: FilaEstacion): string {
+  // Dentro de la frase va en minúscula la inicial, no las siglas: «no mide PM por hora».
+  const sinBanda = BANDAS[f.banda].palabra
   const palabra =
-    f.situacion === 'con_estado' ? `INCA ${BANDAS[f.banda].palabra.toLowerCase()}` : BANDAS[f.banda].palabra.toLowerCase()
+    f.situacion === 'con_estado' ? `INCA ${BANDAS[f.banda].palabra.toLowerCase()}` : sinBanda.charAt(0).toLowerCase() + sinBanda.slice(1)
   return `${f.id}, ${nombrePropio(f.estacion.distrito) ?? 'distrito sin dato'}: ${palabra}${f.alerta ? ', en alerta' : ''}`
 }
 
@@ -233,6 +238,10 @@ function TarjetaDelMapa({ filas, lugares }: { filas: readonly FilaEstacion[]; lu
 
   return (
     <Tarjeta rotulo="Mapa" titulo={`Las ${filas.length} estaciones de OEFA`} className="@[76rem]:sticky @[76rem]:top-4">
+      {/* Con teclado, el mapa son 33 enlaces: quien no los quiera recorrer salta a la lista, que dice lo mismo. */}
+      <a href={`#${ID_DE_LA_LISTA}`} className="pildora sr-only mb-2 focus:not-sr-only" data-saltar-mapa>
+        Saltar el mapa e ir a la lista de estaciones
+      </a>
       {mapa.data ? (
         <MapaPeru
           geo={mapa.data}
@@ -346,7 +355,12 @@ function Contenido({
         <div className="@4xl:col-start-1 @4xl:row-start-1 @[76rem]:row-span-2 @[76rem]:h-full" data-zona="mapa">
           <TarjetaDelMapa filas={filas} lugares={lugares} />
         </div>
-        <div className="@4xl:col-span-2 @[76rem]:col-span-1 @[76rem]:col-start-2 @[76rem]:row-start-2" data-zona="lista">
+        <div
+          id={ID_DE_LA_LISTA}
+          tabIndex={-1}
+          className="@4xl:col-span-2 @[76rem]:col-span-1 @[76rem]:col-start-2 @[76rem]:row-start-2 focus:outline-none"
+          data-zona="lista"
+        >
           <Tarjeta titulo="Estaciones, de la más grave a la menos" aLaDerecha={`${miden.length} miden PM por hora`} className="p-4!">
             <Tabla
               titulo="Último estado recibido de cada estación, por gravedad"

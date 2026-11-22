@@ -48,6 +48,11 @@ export interface MarcaEnMapa {
 interface Props {
   geo: ExtendedFeatureCollection
   lugares: readonly LugarEnMapa[]
+  /**
+   * La marca de cada estación. Su orden (el de inserción) es el orden en que se
+   * recorren con el teclado: quien arma el mapa las pone de la más grave a la
+   * menos, como en la lista que lo acompaña.
+   */
   marcas: ReadonlyMap<string, MarcaEnMapa>
   /** La dirección a la que lleva la marca de una estación. */
   enlaceDe: (id: string) => string
@@ -243,7 +248,7 @@ function rotular(nodos: readonly Nodo[], enAlerta: readonly string[], medida: Me
   return rotulos
 }
 
-// El orden de dibujo: lo más grave va encima.
+// Qué tan arriba se dibuja cada marca: lo más grave va encima.
 const CAPA: Record<EstadoBanda, number> = { no_mide: 0, sin_datos: 1, buena: 2, moderada: 3, mala: 4, umbral_de_cuidado: 5 }
 
 /** El mapa del Perú con una marca por estación; cada marca lleva a su página. */
@@ -265,13 +270,21 @@ export function MapaPeru({ geo, lugares, marcas, enlaceDe, alSenalar, senalada, 
     setOcupado((antes) => (JSON.stringify(antes) === JSON.stringify(cajas) ? antes : cajas))
   }, [caja, medida, children])
 
+  // Los enlaces van en el orden de `marcas`, que es el del teclado: de la más
+  // grave a la menos. Lo que no tenga marca no se dibuja.
   const dibujados = useMemo(() => {
-    const capaDe = (id: string) => {
-      const m = marcas.get(id)
-      return m ? CAPA[m.banda] + (m.alerta ? 10 : 0) : -1
-    }
-    return [...nodos].sort((a, b) => capaDe(a.id) - capaDe(b.id))
+    const lugar = new Map([...marcas.keys()].map((id, i) => [id, i]))
+    return nodos.filter((n) => lugar.has(n.id)).sort((a, b) => lugar.get(a.id)! - lugar.get(b.id)!)
   }, [nodos, marcas])
+  // En el SVG lo último que se dibuja queda encima, así que las más graves
+  // quedarían debajo de las demás donde se toquen: se repiten arriba de todo, sin enlace.
+  const encima = useMemo(() => {
+    const capaDe = (id: string) => {
+      const m = marcas.get(id)!
+      return CAPA[m.banda] + (m.alerta ? 10 : 0)
+    }
+    return dibujados.filter((n) => marcas.get(n.id)!.alerta || CAPA[marcas.get(n.id)!.banda] >= CAPA.mala).sort((a, b) => capaDe(a.id) - capaDe(b.id))
+  }, [dibujados, marcas])
 
   const rotulos = useMemo(
     () =>
@@ -343,6 +356,16 @@ export function MapaPeru({ geo, lugares, marcas, enlaceDe, alSenalar, senalada, 
                   </g>
                 </g>
               </Link>
+            )
+          })}
+        </g>
+        <g aria-hidden="true" data-capa="encima" className="pointer-events-none">
+          {encima.map((n) => {
+            const marca = marcas.get(n.id)!
+            return (
+              <g key={n.id} transform={`translate(${n.x.toFixed(1)} ${n.y.toFixed(1)}) scale(${k})`}>
+                <GlifoEstacion banda={marca.banda} alerta={marca.alerta} trama={trama} />
+              </g>
             )
           })}
         </g>

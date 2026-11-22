@@ -103,7 +103,8 @@ describe('el Panel', () => {
 
       const mapa = await screen.findByRole('group', { name: /Mapa del Perú con las 6 estaciones/ })
       expect(within(mapa).getAllByRole('link')).toHaveLength(6)
-      expect(within(mapa).getByRole('link', { name: 'CA-01, Chimbote: no mide pm por hora' })).toHaveAttribute('data-banda', 'no_mide')
+      // Las siglas no se pasan a minúscula: «PM», no «pm».
+      expect(within(mapa).getByRole('link', { name: 'CA-01, Chimbote: no mide PM por hora' })).toHaveAttribute('data-banda', 'no_mide')
       expect(within(mapa).getByRole('link', { name: 'CA-HU-04, Lurigancho: sin datos suficientes' })).toHaveAttribute(
         'href',
         '/estacion/CA-HU-04',
@@ -182,6 +183,39 @@ describe('el Panel', () => {
 
       // En alerta, moderada, sin datos con lecturas, y las que no recibieron nada por código.
       expect(await codigosDeLaLista()).toEqual(['CA-HU-04', 'CA-AYAS-01', 'CA-MAC-01', 'CA-CG-02', 'CA-HUAR-01'])
+    })
+
+    it('con el teclado, el mapa se recorre en el mismo orden que la lista: de la más grave a la menos, y al final las que no miden', async () => {
+      simularPanel(ESTADOS)
+      montar('/')
+      const mapa = await screen.findByRole('group', { name: /Mapa del Perú/ })
+      const enElMapa = within(mapa)
+        .getAllByRole('link')
+        .map((enlace) => enlace.getAttribute('data-estacion'))
+
+      // El orden del DOM es el del tabulador (ningún enlace lleva tabindex).
+      expect(enElMapa).toEqual([...(await codigosDeLaLista()), 'CA-01'])
+      expect(enElMapa[0]).toBe('CA-HU-04')
+      expect(mapa.querySelectorAll('[tabindex]')).toHaveLength(0)
+      // La que está en alerta se sigue viendo encima de las demás: se repite arriba, sin enlace y fuera del árbol accesible.
+      const encima = mapa.querySelector('[data-capa="encima"]')!
+      expect(encima).toHaveAttribute('aria-hidden', 'true')
+      expect(encima.querySelectorAll('a')).toHaveLength(0)
+      expect(encima.querySelectorAll('[data-anillo]')).toHaveLength(1)
+    })
+
+    it('hay un enlace para saltar el mapa, que lleva a la lista', async () => {
+      simularPanel(ESTADOS)
+      montar('/')
+      await screen.findByRole('table', { name: /por gravedad/ })
+
+      const saltar = screen.getByRole('link', { name: 'Saltar el mapa e ir a la lista de estaciones' })
+      const destino = document.getElementById(saltar.getAttribute('href')!.slice(1))!
+      expect(destino).toContainElement(screen.getByRole('table', { name: /por gravedad/ }))
+      expect(destino).toHaveAttribute('tabindex', '-1')
+      // Va antes que las marcas del mapa: es lo primero que encuentra el tabulador en la tarjeta.
+      const mapa = await screen.findByRole('group', { name: /Mapa del Perú/ })
+      expect(saltar.compareDocumentPosition(mapa) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
     })
 
     it('la lista va al lado del mapa recién cuando la tabla entra entera: a partir de 76 rem, no de 72', async () => {

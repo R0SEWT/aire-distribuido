@@ -84,6 +84,18 @@ describe('el mapa del Perú', () => {
     expect([...document.querySelectorAll('[data-capa="rotulos"] text')].map((t) => t.textContent)).toEqual(['CA-HU-04'])
   })
 
+  it('los enlaces van en el orden de las marcas, que es el del teclado', () => {
+    const orden = ['CA-HU-09', 'CA-TA-01', 'CA-HU-04']
+    const marcas = new Map(orden.map((id) => [id, { banda: 'mala' as const, alerta: false, nombre: `${id}: de prueba` }]))
+    render(
+      <MemoryRouter>
+        <MapaPeru geo={PERU} lugares={LUGARES} marcas={marcas} enlaceDe={(id) => `/estacion/${id}`} titulo="Mapa de prueba" />
+      </MemoryRouter>,
+    )
+
+    expect(screen.getAllByRole('link').map((e) => e.getAttribute('data-estacion'))).toEqual(orden)
+  })
+
   it('no usa estilos en línea: la política de contenido no los admite', () => {
     montar()
 
