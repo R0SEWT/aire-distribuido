@@ -39,6 +39,44 @@ describe('lo que la pantalla dice del avance', () => {
     expect(a.frase).toMatch(/Lo que viste fue una reproducción/)
   })
 
+  it('al terminar no da la cifra de la velocidad: pudo cambiarse a mitad o saltarse con «Ir al final»', () => {
+    const c = corrida({ rondas: rondas(44), fin: { abortado: false, iteraciones: 44, ms_total: 56 } })
+
+    for (const paso of [300, 120, 40]) {
+      const frase = describirAvance(c, 44, paso).frase
+      expect(frase).toContain('Lo que viste fue una reproducción, más lenta que el entrenamiento real.')
+      expect(frase).not.toMatch(/se mostró \d+ ms|veces más/)
+    }
+  })
+
+  describe('si el WebSocket perdió rondas', () => {
+    // Llegaron las rondas 1 a 18 y, tras un corte, la 22 y la 23: veinte recibidas, la última es la 23.
+    const conHueco = [...rondas(18), ...rondas(23).slice(21)]
+
+    it('en vivo dice la iteración de la última ronda, no cuántas se recibieron', () => {
+      const a = describirAvance(corrida({ rondas: conHueco.map((r) => ({ ...r, ms_ronda: 140 })) }), 20, 120)
+
+      expect(a.fase).toBe('en_vivo')
+      expect(a.etiqueta).toBe('En vivo · ronda 23')
+    })
+
+    it('reproduciendo dice la iteración de la ronda que se muestra y la de la última', () => {
+      const terminado = corrida({ rondas: conHueco, fin: { abortado: false, iteraciones: 23, ms_total: 56 } })
+
+      expect(describirAvance(terminado, 18, 120).etiqueta).toBe('Reproduciendo · ronda 18 de 23')
+      expect(describirAvance(terminado, 19, 120).etiqueta).toBe('Reproduciendo · ronda 22 de 23')
+      expect(describirAvance(terminado, 0, 120).etiqueta).toBe('Reproduciendo · ronda 0 de 23')
+      expect(describirAvance(corrida({ rondas: conHueco }), 19, 120).etiqueta).toBe('Reproduciendo · ronda 22')
+    })
+
+    it('abortado dice la ronda siguiente a la última iteración recibida', () => {
+      const a = describirAvance(corrida({ rondas: conHueco, fin: { abortado: true, error: 'x' } }), 20, 120)
+
+      expect(a.etiqueta).toBe('Abortado en la ronda 24')
+      expect(a.frase).toMatch(/abortó en la ronda 24: se muestran las 20 rondas/)
+    })
+  })
+
   it('si las rondas tardan más que el paso (una medición larga), no dice que las frena', () => {
     const c = corrida({ rondas: rondas(5, 140) })
 
@@ -111,6 +149,15 @@ describe('los formatos', () => {
     expect(diferencia(7.549e-15)).toBe('7.5 e-15')
     expect(diferencia(0)).toBe('0')
     expect(diferencia(undefined)).toBe('—')
+  })
+
+  it('si la API manda la diferencia en null, no se midió: no tumba el resultado', () => {
+    expect(diferencia(null)).toBe('no se midió')
+    const puerta = compuerta({ modelo_id: 'entrenado-e-1', dif_secuencial: null }, 'entrenado-e-1')
+    expect(puerta?.titulo).toBe('El modelo nuevo quedó activo')
+    expect(puerta?.detalle).toBe(
+      'entrenado-e-1 pasó la compuerta: la API no informó su diferencia con el K-Means secuencial. Las predicciones ya usan este modelo.',
+    )
   })
 
   it('encuentra en el error el nodo que falló, por su nombre entero', () => {

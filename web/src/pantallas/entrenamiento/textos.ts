@@ -55,6 +55,10 @@ function vecesMasLenta(pasoMs: number, msReal: number): string | null {
 export function describirAvance(corrida: Corrida, mostradas: number, pasoMs: number): Avance {
   const fase = faseDe(corrida, mostradas)
   const recibidas = corrida.rondas.length
+  // El número de una ronda es su iteración, no su lugar entre las recibidas: si
+  // el WebSocket perdió algunas, la última que llegó puede ser la 23 siendo la vigésima.
+  const iterMostrada = mostradas > 0 ? (corrida.rondas[Math.min(mostradas, recibidas) - 1]?.iter ?? mostradas) : 0
+  const ultimaIter = corrida.rondas[recibidas - 1]?.iter ?? 0
   const media = mediaDeRonda(corrida.rondas)
   const paso = duracion(pasoMs)
   const lenta = vecesMasLenta(pasoMs, media)
@@ -73,13 +77,13 @@ export function describirAvance(corrida: Corrida, mostradas: number, pasoMs: num
     case 'en_vivo':
       return {
         fase,
-        etiqueta: `En vivo · ronda ${mostradas}`,
+        etiqueta: `En vivo · ronda ${iterMostrada}`,
         tono: 'acento',
         frase: `En vivo: ya se ${recibidas === 1 ? 'mostró la ronda que llegó' : `mostraron las ${recibidas} rondas que llegaron`} y la siguiente se ve en cuanto llegue. Cada ronda está tardando ${duracion(media)} de verdad.`,
       }
     case 'reproduciendo': {
       const fin = corrida.fin
-      const etiqueta = fin ? `Reproduciendo · ronda ${mostradas} de ${recibidas}` : `Reproduciendo · ronda ${mostradas}`
+      const etiqueta = fin ? `Reproduciendo · ronda ${iterMostrada} de ${ultimaIter}` : `Reproduciendo · ronda ${iterMostrada}`
       if (fin && !fin.abortado) {
         return { fase, etiqueta, tono: 'acento', frase: `${duroDeVerdad(fin, corrida.rondas)} ${reproduccion}` }
       }
@@ -104,18 +108,19 @@ export function describirAvance(corrida: Corrida, mostradas: number, pasoMs: num
         fase,
         etiqueta: `Terminado · ${cuantasRondas(recibidas)}`,
         tono: 'buena',
-        frase: `${duroDeVerdad(fin, corrida.rondas)} ${lenta ? `Lo que viste fue una reproducción: cada ronda se mostró ${paso}, ${lenta}.` : 'Se vio casi a su ritmo real.'}`,
+        // Sin cifra: la velocidad pudo cambiarse a mitad, o haberse saltado con «Ir al final».
+        frase: `${duroDeVerdad(fin, corrida.rondas)} ${lenta ? 'Lo que viste fue una reproducción, más lenta que el entrenamiento real.' : 'Se vio casi a su ritmo real.'}`,
       }
     }
     case 'abortado':
       return {
         fase,
-        etiqueta: recibidas === 0 ? 'Abortado antes de la primera ronda' : `Abortado en la ronda ${recibidas + 1}`,
+        etiqueta: recibidas === 0 ? 'Abortado antes de la primera ronda' : `Abortado en la ronda ${ultimaIter + 1}`,
         tono: 'alerta',
         frase:
           recibidas === 0
             ? 'El entrenamiento abortó antes de completar una ronda: no hay nada que reproducir.'
-            : `El entrenamiento abortó en la ronda ${recibidas + 1}: se muestran las ${cuantasRondas(recibidas)} que llegaron a completarse.`,
+            : `El entrenamiento abortó en la ronda ${ultimaIter + 1}: se muestran las ${cuantasRondas(recibidas)} que llegaron a completarse.`,
       }
   }
 }
@@ -128,9 +133,13 @@ function duroDeVerdad(fin: Extract<Fin, { abortado: false }>, rondas: readonly R
 /** La tolerancia de la compuerta del modelo (cluster.Tolerancia en la API). */
 export const TOLERANCIA = 1e-9
 
-/** La diferencia con el K-Means secuencial, que va de 0 a 1e-15 o a decenas: en notación científica. */
-export function diferencia(dif: number | undefined): string {
+/**
+ * La diferencia con el K-Means secuencial, que va de 0 a 1e-15 o a decenas: en
+ * notación científica. La API puede mandarla en null: no se midió.
+ */
+export function diferencia(dif: number | null | undefined): string {
   if (dif === undefined) return '—'
+  if (dif === null) return 'no se midió'
   if (dif === 0) return '0'
   return dif.toExponential(1).replace('e', ' e')
 }
@@ -151,7 +160,7 @@ interface ParaLaCompuerta {
   replicas?: number
   modelo_id?: string
   aviso?: string
-  dif_secuencial?: number
+  dif_secuencial?: number | null
 }
 
 /**
@@ -165,7 +174,11 @@ export function compuerta(e: ParaLaCompuerta, activo: string | undefined): Compu
     return {
       tono: 'buena',
       titulo: sigue ? 'El modelo nuevo quedó activo' : 'Activó su modelo (después se activó otro)',
-      detalle: `${e.modelo_id} pasó la compuerta: su mayor diferencia con el K-Means secuencial es ${diferencia(e.dif_secuencial)}, dentro de la tolerancia (1 e-9). ${sigue ? 'Las predicciones ya usan este modelo.' : `El modelo activo ahora es ${activo}.`}`,
+      detalle: `${e.modelo_id} pasó la compuerta: ${
+        e.dif_secuencial === null || e.dif_secuencial === undefined
+          ? 'la API no informó su diferencia con el K-Means secuencial'
+          : `su mayor diferencia con el K-Means secuencial es ${diferencia(e.dif_secuencial)}, dentro de la tolerancia (1 e-9)`
+      }. ${sigue ? 'Las predicciones ya usan este modelo.' : `El modelo activo ahora es ${activo}.`}`,
     }
   }
   if (e.aviso) {

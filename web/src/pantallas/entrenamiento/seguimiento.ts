@@ -25,7 +25,8 @@ export type Fin =
       iteraciones: number
       ms_total: number
       paro?: Esquemas['Paro']
-      dif_secuencial?: number
+      /** null si la API no la midió. */
+      dif_secuencial?: number | null
       /** El modelo que quedó activo, si activó uno. */
       modelo_id?: string
       /** Por qué no activó su modelo, si tenía que hacerlo. */
