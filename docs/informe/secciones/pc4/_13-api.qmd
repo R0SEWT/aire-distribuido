@@ -171,7 +171,7 @@ predicciones, contando las de calentamiento, y las dos bases las escribieron tod
 {{< meta cifras.api_latencia.por_lote_mongo >}} predicciones por lote: es el escritor de la
 @sec-escritor adaptándose a la carga.
 
-![Una predicción en Postman: 200 con el régimen, la media de 24 h, la alerta, la banda INCA y el tiempo en milisegundos](capturas/pc4/postman-prediccion.png){#fig-postman-prediccion width=16cm}
+![El pedido «Predicción válida» de la colección de Postman: 200 con el régimen, la media de 24 h, la alerta, la banda INCA y el tiempo en milisegundos](capturas/pc4/postman-prediccion.png){#fig-postman-prediccion width=16cm}
 
 :::: {si-falta="capturas/pc4/postman-prediccion.png"}
 ::: {.callout-warning title="PENDIENTE"}

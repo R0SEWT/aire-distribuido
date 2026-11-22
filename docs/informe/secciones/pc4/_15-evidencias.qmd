@@ -4,10 +4,14 @@
 
 Las evidencias de este entregable son de tres clases: las pruebas automáticas, que corren en cada
 cambio; una corrida completa del sistema desplegado, con sus salidas tal como quedaron; y las
-capturas de pantalla de esa misma secuencia. Los listados marcados como «salida real» se copian en
+figuras de esa misma secuencia. Los listados marcados como «salida real» se copian en
 cada render de los archivos de `docs/informe/capturas/pc4/`, que guardan la salida en texto de la
-corrida; las capturas se toman a mano siguiendo el guion de esa carpeta (`GUION.md`), con el comando
-o el pedido a la vista.
+corrida. Las figuras siguen el guion de esa carpeta (`GUION.md`) y se tomaron el día de la entrega
+contra un Docker Compose recién levantado, con tres nodos. Las de Swagger UI y la del tablero son
+capturas del navegador. Las demás son la salida real de cada pedido o comando volcada a imagen, con
+el pedido o el comando a la vista: los pedidos son los de la colección de Postman, ejecutados uno
+por uno por HTTP, y las corridas completas de la colección se hicieron con `newman`, su ejecutor de
+línea de órdenes. No son capturas de la ventana de Postman. Las claves y los tokens van tapados.
 
 ### Despliegue con Docker Compose {#sec-despliegue}
 
@@ -90,8 +94,8 @@ prueba, una fila por iteración. La misma colección corre sin interfaz con `new
 {{< include generado/tablas/salida_newman_csv.md >}}
 
 El WebSocket no está en la colección, porque el formato de Postman no guarda ese tipo de pedido: se
-prueba con `go test` (@tbl-pruebas-pc4). Las capturas que siguen son una por ruta, con el tiempo de
-respuesta y el resultado de las pruebas a la vista; la de la predicción está en la @sec-latencia.
+prueba con `go test` (@tbl-pruebas-pc4). Las figuras que siguen son una por ruta, con el código y el tiempo de
+respuesta a la vista; la de la predicción está en la @sec-latencia.
 
 ![`GET /api/salud`: la API, las dos bases y los nodos del pool](capturas/pc4/postman-salud.png){#fig-postman-salud width=16cm}
 
@@ -165,7 +169,7 @@ Captura real de pantalla: Postman, «Métricas admin»: `endpoints` con p50, p95
 :::
 ::::
 
-![El Runner de Postman con las carpetas 1 a 3: todas las pruebas pasadas](capturas/pc4/postman-runner-coleccion.png){#fig-postman-runner width=16cm}
+![La colección de Postman, carpetas 1 a 3, corrida con `newman`: todas las pruebas pasadas](capturas/pc4/postman-runner-coleccion.png){#fig-postman-runner width=16cm}
 
 :::: {si-falta="capturas/pc4/postman-runner-coleccion.png"}
 ::: {.callout-warning title="PENDIENTE"}
@@ -173,7 +177,7 @@ Captura real de pantalla: Runner, carpetas 1 a 3: el resumen con todas las prueb
 :::
 ::::
 
-![El Runner con los datos de prueba: una iteración por lectura](capturas/pc4/postman-runner-csv.png){#fig-postman-runner-csv width=16cm}
+![La carpeta 4 de la colección corrida con `newman` y los datos de prueba: una iteración por lectura](capturas/pc4/postman-runner-csv.png){#fig-postman-runner-csv width=16cm}
 
 :::: {si-falta="capturas/pc4/postman-runner-csv.png"}
 ::: {.callout-warning title="PENDIENTE"}
