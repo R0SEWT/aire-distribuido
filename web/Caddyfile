@@ -4,11 +4,13 @@
 # WebSocket pasa el control de origen de la API (api/cors.go) sin tocar nada:
 # Caddy reenvía el Host tal cual llega.
 #
-# Escucha HTTP en el 80 dentro de la red de Compose, que lo publica solo en
-# localhost. No saca certificados ni expone su API de administración.
+# En el Compose del repo escucha HTTP en el 80 dentro de la red de Compose, que
+# lo publica solo en localhost: con una dirección sin nombre (:80) Caddy no saca
+# certificados. En una máquina pública (despliegue/azure) SITIO lleva el nombre
+# de la máquina, y entonces Caddy saca y renueva solo su certificado y pasa el
+# tráfico del 80 al 443. No expone su API de administración.
 {
 	admin off
-	auto_https off
 
 	# El token no llega al log. La UI lo manda en Sec-WebSocket-Protocol
 	# (aire.jwt, <token>), y cuando el proxy falla (la API caída) Caddy escribe
@@ -35,7 +37,7 @@
 	header Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self'; font-src 'self'; img-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
 }
 
-:80 {
+{$SITIO::80} {
 	encode zstd gzip
 
 	# En todas las respuestas, también las de la API.
@@ -46,6 +48,11 @@
 		Referrer-Policy no-referrer
 		-Server
 	}
+
+	# Con TLS (una máquina pública), el navegador recuerda un año que este sitio
+	# solo se abre por HTTPS. Por HTTP (el Compose local) no se manda.
+	@tls protocol https
+	header @tls Strict-Transport-Security "max-age=31536000"
 
 	# La API. reverse_proxy también pasa el WebSocket de /ws.
 	@api path /api/* /ws /openapi.yaml

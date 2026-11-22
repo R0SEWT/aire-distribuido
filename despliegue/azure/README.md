@@ -10,8 +10,7 @@ laptop con `docker compose up`. Esto sirve para tener un enlace público en la s
 
 | Archivo | Para qué |
 |---|---|
-| `compose.azure.yml` | Override de Compose: Caddy con HTTPS delante de la API, MongoDB con la caché acotada, límites de memoria, reinicio solo y ningún puerto interno publicado |
-| `Caddyfile` | Caddy saca el certificado de `DOMINIO` y pasa el tráfico (también el WebSocket) a la API |
+| `compose.azure.yml` | Override de Compose: el servicio `web` (el Caddy de `web/Caddyfile`) recibe el tráfico de internet con HTTPS, sirve la UI y pasa lo demás a la API; MongoDB con la caché acotada, límites de memoria, reinicio solo y ningún puerto interno publicado |
 | `cloud-init.yaml` | Deja la máquina lista al crearla: Docker, 2 GiB de swap y el repo |
 
 ## Cuánto ocupa
@@ -22,7 +21,7 @@ Medido con 2 nodos, después de un entrenamiento y de predicciones:
 |---|---|
 | MongoDB (caché de 0,25 GiB) | 160 a 215 MB |
 | API | 17 a 31 MB |
-| Caddy | 15 a 27 MB |
+| Caddy (servicio `web`, con la UI) | unos 57 MB |
 | Cada nodo | 14 MB |
 | Redis | 11 a 13 MB |
 
@@ -104,8 +103,17 @@ cd ~/aire-distribuido && umask 077
 sudo docker compose -f docker-compose.yml -f despliegue/azure/compose.azure.yml up -d --wait --scale nodo=2
 ```
 
-Caddy saca el certificado de Let's Encrypt solo, en el primer pedido. `CORS_ORIGENES` lleva el
-origen del frontend cuando exista.
+Caddy saca el certificado de Let's Encrypt solo, en el primer pedido. La UI y la API quedan en el
+mismo origen (`https://$DOMINIO`), así que `CORS_ORIGENES` va vacío.
+
+La imagen `aire-distribuido-web` no se construye en la máquina (compilar la UI necesita Node y más
+memoria de la que tiene): se construye en la laptop y se manda, igual que la de la API.
+
+```bash
+# en la laptop, desde la raíz del repo
+docker build -t aire-distribuido-web web
+docker save aire-distribuido-web | gzip | ssh azureuser@$DOMINIO 'gunzip | sudo docker load'
+```
 
 ## Comprobar
 
@@ -113,7 +121,7 @@ origen del frontend cuando exista.
 curl -s https://$DOMINIO/api/salud        # api, mongo y redis en ok, y los nodos en el pool
 ```
 
-Swagger UI queda en `https://$DOMINIO/docs`. Desde afuera solo responden el 80 y el 443 (y el 22
+La UI queda en `https://$DOMINIO/` y Swagger UI en `https://$DOMINIO/docs`. Desde afuera solo responden el 80 y el 443 (y el 22
 desde la IP autorizada): el puerto de los nodos (7070), la API directa (8080), MongoDB y Redis no
 se publican. El puerto de los nodos no tiene autenticación, así que no se abre nunca.
 
