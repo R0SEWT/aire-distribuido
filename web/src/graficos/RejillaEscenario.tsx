@@ -7,9 +7,9 @@
 // respondió la API a su última lectura, y cada celda lleva su descripción.
 
 import { select } from 'd3'
+import type { LecturaVista } from '../api/vistas'
 import { BANDAS, estadoDeBanda } from '../componentes/bandas'
 import { diaCorto, fechaHora, horaDeLima, numero } from '../componentes/formato'
-import type { LecturaVista } from '../api/vistas'
 import { useDibujo } from './dibujo'
 import { useMedida } from './medida'
 

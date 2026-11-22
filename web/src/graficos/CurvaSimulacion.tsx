@@ -4,12 +4,14 @@
 // aparece recién con 18 lecturas en la ventana y en qué hora se enciende la alerta.
 
 import { line, max, scaleLinear, select } from 'd3'
+import type { components } from '../api/contrato'
+import type { LecturaVista } from '../api/vistas'
 import { BANDAS, type EstadoBanda } from '../componentes/bandas'
 import { diaCorto, hora as horaEnLima, horaDeLima, numero } from '../componentes/formato'
-import type { Lectura } from '../pantallas/simulacion/series'
-import type { LecturaVista } from '../api/vistas'
 import { useDibujo } from './dibujo'
 import { useMedida } from './medida'
+
+type Lectura = components['schemas']['Lectura']
 
 const HORA_MS = 3_600_000
 const ORDEN: readonly EstadoBanda[] = ['buena', 'moderada', 'mala', 'umbral_de_cuidado']
