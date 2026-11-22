@@ -21,10 +21,10 @@ import { Barrera } from './componentes/Barrera'
 import { entrenamientoALaVista } from './pantallas/entrenamiento/almacen'
 import Ingreso from './pantallas/Ingreso'
 import { simulador } from './pantallas/simulacion/motor'
+import { sesionActual, suscribir as suscribirASesion } from './sesion/almacen'
 import { avanzarEpoca } from './sesion/epoca'
 import { RequiereRol, RequiereSesion } from './sesion/guardas'
 import { SOLO_ADMIN } from './sesion/roles'
-import { useSesion } from './sesion/useSesion'
 
 const Panel = lazy(() => import('./pantallas/Panel'))
 const Estacion = lazy(() => import('./pantallas/Estacion'))
@@ -94,20 +94,23 @@ function limpiarLoDeLaSesion(consultas: QueryClient) {
 
 /**
  * Limpia lo de la sesión cuando termina, sea por «Salir», porque venció o por
- * un 401: en los tres casos el token deja de estar. Y también al arrancar sin
+ * un 401: en los tres casos la sesión deja de estar. Y también al arrancar sin
  * sesión: si venció con la pestaña recargada, lo guardado no espera al próximo.
+ *
+ * Depende de que la sesión haya terminado, no de que este componente se
+ * desmonte: escucha al almacén de la sesión. En desarrollo, StrictMode desmonta
+ * y vuelve a montar todo al cargar la página; si la limpieza fuera el desmontaje,
+ * un F5 con la sesión viva borraría las curvas.
  */
 function LimpiarAlSalir() {
-  const { sesion } = useSesion()
   const consultas = useQueryClient()
-  const token = sesion?.token
   useEffect(() => {
-    if (token === undefined) {
-      limpiarLoDeLaSesion(consultas)
-      return
+    const siTermino = () => {
+      if (sesionActual() === null) limpiarLoDeLaSesion(consultas)
     }
-    return () => limpiarLoDeLaSesion(consultas)
-  }, [token, consultas])
+    siTermino()
+    return suscribirASesion(siTermino)
+  }, [consultas])
   return null
 }
 

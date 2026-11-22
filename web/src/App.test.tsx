@@ -5,12 +5,12 @@ import { act, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link, MemoryRouter, Route, Routes } from 'react-router'
-import { lazy, useState } from 'react'
+import { lazy, StrictMode, useState } from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { api, claves, crearClienteDeConsultas, pedir } from './api/cliente'
 import { EN_VIVO, pedirRegimenes, type EstadoEstacion } from './api/enVivo'
 import { useEvento } from './api/tiempoReal'
-import { lecturasVistas } from './api/vistas'
+import { anotarVista, lecturasVistas } from './api/vistas'
 import { Proveedores, Rutas } from './App'
 import { Armazon } from './armazon/Armazon'
 import { entrenamientoALaVista } from './pantallas/entrenamiento/almacen'
@@ -419,15 +419,50 @@ describe('la app', () => {
         await waitFor(() => expect(sessionStorage.getItem('aire.curvas')).toBeNull())
       })
 
-      it('recargar la página con la sesión viva no borra las curvas', async () => {
+      it('recargar la página con la sesión viva no borra las curvas, tampoco en desarrollo (StrictMode)', async () => {
         simularApi({ 'GET /api/salud': SALUD_OK })
         sesionDe('usuario')
         sessionStorage.setItem('aire.curvas', JSON.stringify({ 'CA-HU-04': [{ fecha_hora: ESTADO.fecha_hora, t: Date.parse(ESTADO.fecha_hora), pm2_5: 88.8, pm10: 120.7, lecturas: 24, alerta: true, inca: 'mala' }] }))
+        const enchufes = fabricaDeEnchufes()
 
-        montar('/muestrario')
+        // Como main.tsx: con StrictMode, que en desarrollo desmonta y vuelve a montar todo al cargar.
+        render(
+          <StrictMode>
+            <Proveedores consultas={crearClienteDeConsultas()} tiempoReal={{ crearEnchufe: enchufes.crearEnchufe }}>
+              <MemoryRouter initialEntries={['/muestrario']}>
+                <Rutas />
+              </MemoryRouter>
+            </Proveedores>
+          </StrictMode>,
+        )
 
         await screen.findByRole('heading', { name: 'Muestrario de componentes' })
         expect(sessionStorage.getItem('aire.curvas')).toContain('CA-HU-04')
+        expect(sesionActual()).not.toBeNull()
+      })
+
+      it('y con StrictMode, «Salir» sigue limpiando todo', async () => {
+        simularApi({ 'GET /api/salud': SALUD_OK })
+        sesionDe('usuario')
+        sessionStorage.setItem('aire.curvas', JSON.stringify({ 'CA-HU-04': [] }))
+        const enchufes = fabricaDeEnchufes()
+        render(
+          <StrictMode>
+            <Proveedores consultas={crearClienteDeConsultas()} tiempoReal={{ crearEnchufe: enchufes.crearEnchufe }}>
+              <MemoryRouter initialEntries={['/muestrario']}>
+                <Rutas />
+              </MemoryRouter>
+            </Proveedores>
+          </StrictMode>,
+        )
+        await screen.findByRole('heading', { name: 'Muestrario de componentes' })
+        act(() => anotarVista('CA-HU-04', { fecha_hora: ESTADO.fecha_hora, pm2_5: 20, pm10: 90, media_pm2_5: null, media_pm10: null, lecturas: 1, alerta: false, inca: null, regimen: 0, excede_eca: false }))
+
+        await userEvent.click(screen.getByRole('button', { name: 'Salir' }))
+
+        await screen.findByRole('form', { name: 'Ingreso' })
+        expect(sessionStorage.getItem('aire.curvas')).toBeNull()
+        expect(lecturasVistas('CA-HU-04')).toEqual([])
       })
     })
 
