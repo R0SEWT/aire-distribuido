@@ -46,7 +46,7 @@ interface Celda {
 }
 
 function palabras(punto: Punto | undefined, minimo: number): string {
-  if (!punto) return 'sin lecturas'
+  if (!punto) return 'por enviar'
   if (punto.inca === null) return `${punto.lecturas} de ${minimo} lecturas`
   return punto.alerta ? `${BANDAS[punto.inca].palabra} · en alerta` : BANDAS[punto.inca].palabra
 }
