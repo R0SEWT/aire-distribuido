@@ -45,8 +45,8 @@ interface Consulta<T> {
 function ConDatos<T>({ consulta, children }: { consulta: Consulta<T>; children: (datos: T) => ReactNode }) {
   // Con datos ya recibidos, un refresco que falla no los borra: la barra de arriba dice que la API no responde.
   if (consulta.data !== undefined) return <>{children(consulta.data)}</>
-  if (consulta.isPending) return <Estado tipo="cargando" className="border-0 py-6" />
-  return <EstadoDeError error={consulta.error} alReintentar={() => void consulta.refetch()} />
+  if (consulta.isPending) return <Estado tipo="cargando" compacto />
+  return <EstadoDeError error={consulta.error} alReintentar={() => void consulta.refetch()} compacto />
 }
 
 export default function Cluster() {

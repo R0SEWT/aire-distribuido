@@ -6,6 +6,7 @@ import { useMemo, useState } from 'react'
 import type { Esperado, ReglasDeSeries } from '../../api/datos'
 import { presentarError } from '../../api/errores'
 import {
+  Aviso,
   Banda,
   BANDAS,
   Cifra,
@@ -29,9 +30,9 @@ import type { Tramo } from './series'
 const FASES: Record<Fase, { palabra: string; tono: Tono }> = {
   lista: { palabra: 'Sin empezar', tono: 'neutro' },
   en_curso: { palabra: 'En curso', tono: 'acento' },
-  en_pausa: { palabra: 'En pausa', tono: 'moderada' },
+  en_pausa: { palabra: 'En pausa', tono: 'aviso' },
   con_error: { palabra: 'Detenida por un error', tono: 'alerta' },
-  detenida: { palabra: 'Detenida', tono: 'moderada' },
+  detenida: { palabra: 'Detenida', tono: 'aviso' },
   terminada: { palabra: 'Terminó', tono: 'buena' },
 }
 
@@ -249,17 +250,13 @@ export function Marcha({ tramo, corrida, reglas }: Props) {
             max={Math.max(1, total)}
           />
           {error && corrida?.lecturaConError && (
-            <div role="alert" className="border-inca-cuidado bg-relieve rounded-lg border-l-4 px-4 py-3 text-sm">
-              <p className="text-falla font-semibold">
-                {error.titulo}
-                {error.detalle ? `: ${error.detalle}` : ''}
-              </p>
-              <p className="text-suave mt-1">
+            <Aviso tono="alerta" titulo={`${error.titulo}${error.detalle ? `: ${error.detalle}` : ''}`}>
+              <p>
                 No pasó la lectura de <span className="font-mono">{corrida.lecturaConError.estacion}</span> del{' '}
                 {fechaHora(corrida.lecturaConError.fecha_hora)}. La corrida espera ahí: no la salta, porque el orden
                 importa. Las {numero(corrida.enviadas)} anteriores ya están en el sistema.
               </p>
-            </div>
+            </Aviso>
           )}
 
           {esEscenario ? (

@@ -254,7 +254,7 @@ function Veredicto({ resumen, corrida }: { resumen: Resumen; corrida: Corrida })
     resumen.enAlerta.length === 0
       ? 'Ninguna terminó en alerta.'
       : `${resumen.enAlerta.length === 1 ? 'Terminó en alerta' : 'Terminaron en alerta'} ${enumerar(resumen.enAlerta)}.`
-  const tono: Tono = resumen.difieren > 0 ? 'alerta' : resumen.soloRegimen > 0 ? 'moderada' : 'buena'
+  const tono: Tono = resumen.difieren > 0 ? 'alerta' : resumen.soloRegimen > 0 ? 'aviso' : 'buena'
   const partes = [
     resumen.coinciden === 0
       ? n === 1

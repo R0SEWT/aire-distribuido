@@ -3,9 +3,8 @@
 // abortó, el error con el nodo que falló. Los números son los del detalle
 // (GET /api/entrenamientos/{id}); mientras llega, los del evento de fin.
 
-import type { ReactNode } from 'react'
 import { presentarError } from '../../api/errores'
-import { duracion, Etiqueta, Frase, numero, Tarjeta } from '../../componentes/indice'
+import { Advertencia, Dato, duracion, Etiqueta, Frase, numero, Tarjeta } from '../../componentes/indice'
 import { cuantosNodos } from './formulario'
 import type { Corrida, Detalle, Fin } from './seguimiento'
 import { compuerta, cuantasRondas, diferencia, motivoDeParo, nodosNombrados } from './textos'
@@ -21,23 +20,14 @@ interface Props {
   modeloActivo: string | undefined
 }
 
-function Dato({ rotulo, children, titulo }: { rotulo: string; children: ReactNode; titulo?: string }) {
-  return (
-    <div title={titulo}>
-      <dt className="rotulo mb-1">{rotulo}</dt>
-      <dd className="text-texto font-mono text-lg leading-tight font-semibold tabular-nums">{children}</dd>
-    </div>
-  )
-}
-
 function NotaDelDetalle({ detalle, error }: Pick<Props, 'detalle'> & { error: unknown }) {
   if (detalle) return null
   if (error) {
     return (
-      <p className="text-aviso text-xs font-semibold">
+      <Advertencia chica>
         No se pudo pedir el detalle a la API ({presentarError(error).titulo.toLowerCase()}): estos son los datos del evento
         de fin.
-      </p>
+      </Advertencia>
     )
   }
   return <p className="text-tenue text-xs">Pidiendo el detalle a la API…</p>
@@ -110,7 +100,7 @@ export function Resultado({ corrida, detalle, errorDeDetalle, nodos, modeloActiv
     >
       <div className="grid gap-x-5 gap-y-3 md:grid-cols-2" data-resultado="terminado">
         <div className="space-y-3">
-          <dl className="grid grid-cols-2 gap-x-4 gap-y-3">
+          <div className="grid grid-cols-2 gap-x-4 gap-y-3">
             <Dato rotulo="Iteraciones">{numero(datos.iteraciones)}</Dato>
             <Dato rotulo="Tiempo total real">{duracion(datos.ms_total ?? 0)}</Dato>
             <Dato
@@ -122,7 +112,7 @@ export function Resultado({ corrida, detalle, errorDeDetalle, nodos, modeloActiv
             <Dato rotulo="Dif. con el secuencial" titulo="La mayor diferencia entre los centroides distribuidos y los del K-Means secuencial">
               {diferencia(datos.dif_secuencial)}
             </Dato>
-          </dl>
+          </div>
           {reparto}
           <NotaDelDetalle detalle={detalle} error={errorDeDetalle} />
         </div>

@@ -15,6 +15,7 @@ import {
   Banda,
   BANDAS,
   Cifra,
+  Dato,
   Desplegable,
   Estado,
   EstadoDeError,
@@ -163,18 +164,20 @@ function Cifras({ resumen }: { resumen: Resumen }) {
         />
       </Tarjeta>
       <Tarjeta className="p-4!">
-        <p className="rotulo mb-1">Último estado recibido</p>
         {ultimo ? (
-          <>
-            <p className="text-texto font-mono text-lg leading-8 font-semibold whitespace-nowrap tabular-nums">
-              {fechaHora(ultimo.estado.fecha_hora)}
-            </p>
-            <p className="text-suave mt-1 text-xs">
-              <span className="font-mono">{ultimo.id}</span> · llegó el {fechaHora(ultimo.estado.ts)}
-            </p>
-          </>
+          <Dato
+            tamano="mediana"
+            rotulo="Último estado recibido"
+            detalle={
+              <>
+                <span className="font-mono">{ultimo.id}</span> · llegó el {fechaHora(ultimo.estado.ts)}
+              </>
+            }
+          >
+            <span className="whitespace-nowrap">{fechaHora(ultimo.estado.fecha_hora)}</span>
+          </Dato>
         ) : (
-          <p className="text-suave">todavía ninguno</p>
+          <Cifra tamano="mediana" rotulo="Último estado recibido" valor={null} sinDato="todavía ninguno" />
         )}
       </Tarjeta>
     </div>

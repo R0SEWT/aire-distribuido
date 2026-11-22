@@ -6,8 +6,11 @@
 import { useState } from 'react'
 import { errorDeRespuesta } from '../api/errores'
 import {
+  Advertencia,
+  Aviso,
   Banda,
   Cifra,
+  Dato,
   Desplegable,
   Estado,
   EstadoDeError,
@@ -104,6 +107,15 @@ export default function Muestrario() {
               <Cifra tamano="mediana" rotulo="Horas en el gold" valor={65873} unidad="horas" />
               <Cifra tamano="mediana" rotulo="Media de 24 h" valor={null} unidad="µg/m³" sinDato="sin datos suficientes" />
             </div>
+            <div className="border-borde mt-4 grid gap-4 border-t pt-4 sm:grid-cols-3">
+              <Dato tamano="mediana" rotulo="Último estado recibido" detalle="CA-AYAS-01 · Dato con detalle">
+                14 nov 2026, 15:00
+              </Dato>
+              <Dato rotulo="Motivo de paro" titulo="Los centroides dejaron de moverse">
+                Convergió
+              </Dato>
+              <Dato rotulo="Tiempo total real">56 ms</Dato>
+            </div>
           </Tarjeta>
 
           <Tarjeta titulo="Bandas INCA y los dos estados sin banda">
@@ -120,6 +132,26 @@ export default function Muestrario() {
               <Frase tono="moderada">Frase en tono «moderada».</Frase>
               <Frase tono="alerta">Frase en tono «alerta».</Frase>
               <Frase>Frase en tono «acento», el de por omisión.</Frase>
+            </div>
+          </Tarjeta>
+
+          <Tarjeta titulo="Avisos dentro de una tarjeta o de un formulario">
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Aviso tono="alerta" titulo="La API rechazó el pedido" accion={{ etiqueta: 'Reintentar', alHacer: () => {} }}>
+                <p>La API dice: «hay 2 nodos libres en el pool y se pidieron 4».</p>
+              </Aviso>
+              <div className="space-y-3">
+                <Aviso titulo="La sesión venció.">Aviso en tono «aviso», el de por omisión: no interrumpe.</Aviso>
+                <div className="flex flex-wrap items-center gap-2">
+                  <Etiqueta tono="aviso">En pausa</Etiqueta>
+                  <Advertencia>Advertencia de una línea, junto a un control.</Advertencia>
+                </div>
+              </div>
+            </div>
+            <div className="border-borde mt-4 border-t pt-2">
+              <Estado tipo="vacio" titulo="Estado compacto" compacto>
+                Dentro de una tarjeta va sin su borde y con menos aire.
+              </Estado>
             </div>
           </Tarjeta>
         </div>

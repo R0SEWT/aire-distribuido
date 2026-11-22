@@ -209,11 +209,11 @@ export default function Entrenamiento() {
 
       <Tarjeta titulo="Historial de entrenamientos" aLaDerecha="Del más reciente al más antiguo">
         {historial.isPending ? (
-          <Estado tipo="cargando" titulo="Cargando el historial…" className="border-0" />
+          <Estado tipo="cargando" titulo="Cargando el historial…" compacto />
         ) : historial.isError ? (
-          <EstadoDeError error={historial.error} alReintentar={() => void historial.refetch()} />
+          <EstadoDeError error={historial.error} alReintentar={() => void historial.refetch()} compacto />
         ) : historial.data.length === 0 ? (
-          <Estado tipo="vacio" titulo="Todavía no se lanzó ningún entrenamiento" className="border-0">
+          <Estado tipo="vacio" titulo="Todavía no se lanzó ningún entrenamiento" compacto>
             El primero que termine con 1 réplica va a reemplazar al modelo sembrado.
           </Estado>
         ) : (

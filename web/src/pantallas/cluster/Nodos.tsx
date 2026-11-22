@@ -18,7 +18,7 @@ interface Props {
 export function Nodos({ nodos, respuesta }: Props) {
   if (nodos.length === 0) {
     return (
-      <Estado tipo="vacio" titulo="No hay nodos en el pool" className="border-0 py-6">
+      <Estado tipo="vacio" titulo="No hay nodos en el pool" compacto>
         Justo después de un entrenamiento es normal: los nodos se desconectan y vuelven a llamar a la API unos 2
         segundos después. Si no vuelven, se levantan con <code className="font-mono">nodo -coordinador IP:7070</code>.
       </Estado>

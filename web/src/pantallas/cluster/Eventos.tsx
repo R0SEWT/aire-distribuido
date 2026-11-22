@@ -16,7 +16,7 @@ const TIPO: Record<Evento['tipo'], { palabra: string; tono: Tono }> = {
 export function Eventos({ eventos }: { eventos: readonly Evento[] }) {
   if (eventos.length === 0) {
     return (
-      <Estado tipo="vacio" titulo="Todavía no hay eventos" className="border-0 py-6">
+      <Estado tipo="vacio" titulo="Todavía no hay eventos" compacto>
         Aparecen cuando un nodo entra al pool, sale o falla.
       </Estado>
     )

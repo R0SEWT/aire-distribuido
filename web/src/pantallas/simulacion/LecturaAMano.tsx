@@ -9,7 +9,7 @@ import { api, claves, pedir } from '../../api/cliente'
 import type { EstadoEstacion } from '../../api/enVivo'
 import { presentarError } from '../../api/errores'
 import { anotarVista } from '../../api/vistas'
-import { Banda, Cifra, Estado, Etiqueta, fechaHora, Frase, numero, Tarjeta } from '../../componentes/indice'
+import { Advertencia, Banda, Cifra, Estado, Etiqueta, fechaHora, Frase, numero, Tarjeta } from '../../componentes/indice'
 import { horaSiguiente } from './fechas'
 import type { Lectura, Prediccion } from './series'
 
@@ -140,12 +140,12 @@ export function LecturaAMano({ estaciones, estados, descripcionDe, ocupado }: Pr
               lectura se manda con la hora siguiente: <span className="text-texto font-mono">{fechaHora(fecha)}</span>.
             </p>
           ) : (
-            <p className="text-aviso text-sm font-semibold">
+            <Advertencia>
               {estacion} todavía no tiene estado: no hay una «hora siguiente». Primero simula un día de esa estación o
               carga el escenario.
-            </p>
+            </Advertencia>
           )}
-          {ocupado && <p className="text-aviso text-sm font-semibold">Hay una simulación sin terminar: termínala o detenla antes.</p>}
+          {ocupado && <Advertencia>Hay una simulación sin terminar: termínala o detenla antes.</Advertencia>}
           <button type="submit" className="boton" disabled={fecha === null || a === null || b === null || ocupado || envio.isPending}>
             {envio.isPending ? 'Enviando…' : 'Enviar la lectura'}
           </button>

@@ -3,10 +3,13 @@ import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import { errorDeFetch, errorDeRespuesta } from '../api/errores'
 import {
+  Advertencia,
+  Aviso,
   Banda,
   BANDAS,
   Barrera,
   Cifra,
+  Dato,
   Desplegable,
   EnConstruccion,
   Estado,
@@ -239,6 +242,129 @@ describe('Estado', () => {
     expect(screen.getByText(/todavía no recibió lecturas/)).toBeInTheDocument()
     await userEvent.click(screen.getByRole('button', { name: 'Cargar el escenario' }))
     expect(cargar).toHaveBeenCalledOnce()
+  })
+})
+
+describe('Estado compacto', () => {
+  it('dentro de una tarjeta va sin su borde, con el mismo título, el mismo dibujo y la misma acción', async () => {
+    const reintentar = vi.fn()
+    render(
+      <Estado tipo="vacio" titulo="Todavía no hay eventos" compacto accion={{ etiqueta: 'Volver a pedir', alHacer: reintentar }}>
+        Aparecen cuando un nodo entra al pool.
+      </Estado>,
+    )
+
+    const estado = screen.getByRole('status')
+    expect(estado).toHaveAttribute('data-estado', 'vacio')
+    expect(estado).toHaveAttribute('data-compacto', 'true')
+    expect(estado.className).not.toMatch(/border/)
+    expect(within(estado).getByText('Todavía no hay eventos')).toBeInTheDocument()
+    expect(estado.querySelector('svg')).toBeInTheDocument()
+    await userEvent.click(within(estado).getByRole('button', { name: 'Volver a pedir' }))
+    expect(reintentar).toHaveBeenCalledOnce()
+  })
+
+  it('el de siempre lleva su borde y no se marca como compacto', () => {
+    render(<Estado tipo="cargando" />)
+
+    expect(screen.getByRole('status')).not.toHaveAttribute('data-compacto')
+    expect(screen.getByRole('status').className).toMatch(/border-dashed/)
+  })
+
+  it('un error compacto sigue interrumpiendo y ofreciendo reintentar', () => {
+    render(<EstadoDeError error={errorDeRespuesta(503, { error: 'MongoDB no disponible' }, true)} alReintentar={vi.fn()} compacto />)
+
+    expect(screen.getByRole('alert')).toHaveAttribute('data-compacto', 'true')
+    expect(screen.getByRole('button', { name: 'Reintentar' })).toBeInTheDocument()
+  })
+})
+
+describe('Aviso y Advertencia', () => {
+  it('un rechazo interrumpe (alert), con su título, las palabras de la API y su acción', async () => {
+    const reintentar = vi.fn()
+    render(
+      <Aviso tono="alerta" titulo="La API rechazó el pedido" accion={{ etiqueta: 'Reintentar', alHacer: reintentar }}>
+        <p>La API dice: «hay 2 nodos libres en el pool y se pidieron 4»</p>
+      </Aviso>,
+    )
+
+    const aviso = screen.getByRole('alert')
+    expect(aviso).toHaveAttribute('data-aviso', 'alerta')
+    expect(within(aviso).getByText('La API rechazó el pedido')).toBeInTheDocument()
+    expect(aviso).toHaveTextContent('hay 2 nodos libres en el pool y se pidieron 4')
+    expect(aviso.className).toMatch(/border-l-inca-cuidado/)
+    await userEvent.click(within(aviso).getByRole('button', { name: 'Reintentar' }))
+    expect(reintentar).toHaveBeenCalledOnce()
+  })
+
+  it('un aviso que no es un error no interrumpe (status) y lleva el tono «aviso»', () => {
+    render(<Aviso titulo="La sesión venció.">Vuelve a ingresar para seguir.</Aviso>)
+
+    const aviso = screen.getByRole('status')
+    expect(aviso).toHaveAttribute('data-aviso', 'aviso')
+    expect(aviso.className).toMatch(/border-l-aviso/)
+    expect(aviso).toHaveTextContent('La sesión venció.Vuelve a ingresar para seguir.')
+    expect(screen.queryByRole('button')).not.toBeInTheDocument()
+  })
+
+  it('solo con título no deja un hueco para el detalle', () => {
+    render(<Aviso tono="alerta" titulo="Usuario o clave incorrectos." />)
+
+    expect(screen.getByRole('alert')).toHaveTextContent(/^Usuario o clave incorrectos\.$/)
+    expect(screen.getByRole('alert').children).toHaveLength(1)
+  })
+
+  it('la acción se puede deshabilitar mientras se reintenta', () => {
+    render(<Aviso tono="alerta" titulo="La API no responde." accion={{ etiqueta: 'Reintentar', alHacer: vi.fn(), deshabilitada: true }} />)
+
+    expect(screen.getByRole('button', { name: 'Reintentar' })).toBeDisabled()
+  })
+
+  it('la advertencia es una línea en el tono «aviso», y acepta atributos data-', () => {
+    render(<Advertencia data-aviso="faltan-nodos">Hay 1 nodo libre y pides 2.</Advertencia>)
+
+    const linea = screen.getByText('Hay 1 nodo libre y pides 2.')
+    expect(linea.className).toMatch(/text-aviso/)
+    expect(linea).toHaveAttribute('data-aviso', 'faltan-nodos')
+  })
+
+  it('el tono «aviso» también sirve para una etiqueta, una frase y una tarjeta', () => {
+    render(
+      <Tarjeta acento="aviso" titulo="En pausa">
+        <Etiqueta tono="aviso">Detenida</Etiqueta>
+        <Frase tono="aviso">Solo difiere el régimen.</Frase>
+      </Tarjeta>,
+    )
+
+    expect(screen.getByText('Detenida').className).toMatch(/border-aviso/)
+    expect(screen.getByText('Detenida').className).toMatch(/text-aviso/)
+    expect(screen.getByText('Solo difiere el régimen.').className).toMatch(/border-l-aviso/)
+    expect(screen.getByRole('heading', { name: 'En pausa' }).closest('section')!.className).toMatch(/border-l-aviso/)
+  })
+})
+
+describe('Dato', () => {
+  it('muestra un dato escrito con su rótulo, en la monoespaciada de las cifras', () => {
+    render(
+      <Dato rotulo="Motivo de paro" titulo="Los centroides dejaron de moverse (tolerancia)">
+        Convergió
+      </Dato>,
+    )
+
+    expect(screen.getByText('Motivo de paro').className).toMatch(/rotulo/)
+    expect(screen.getByText('Convergió').className).toMatch(/font-mono/)
+    expect(screen.getByText('Convergió').closest('[title]')).toHaveAttribute('title', 'Los centroides dejaron de moverse (tolerancia)')
+  })
+
+  it('lleva un detalle chico debajo cuando se le da', () => {
+    render(
+      <Dato tamano="mediana" rotulo="Último estado recibido" detalle="CA-TAL-01 · llegó el 22 nov 2026, 00:28">
+        16 dic 2021, 00:00
+      </Dato>,
+    )
+
+    expect(screen.getByText('16 dic 2021, 00:00')).toBeInTheDocument()
+    expect(screen.getByText('CA-TAL-01 · llegó el 22 nov 2026, 00:28').className).toMatch(/text-xs/)
   })
 })
 

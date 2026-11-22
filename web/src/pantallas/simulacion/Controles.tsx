@@ -145,7 +145,7 @@ export function EstadoDelSistema({ tramo, consulta, revision, otrosDias }: Props
     )
   }
   if (consulta.cargando || !revision) {
-    return <Estado tipo="cargando" titulo="Consultando el estado de las estaciones…" className="py-5" />
+    return <Estado tipo="cargando" titulo="Consultando el estado de las estaciones…" compacto />
   }
   const n = tramo.estaciones.length
   if (revision.limpio) {
@@ -177,7 +177,7 @@ export function EstadoDelSistema({ tramo, consulta, revision, otrosDias }: Props
   const libres = otrosDias?.dias.filter((d) => diaDisponible(d, otrosDias.estados)) ?? []
   return (
     <div className="space-y-2" role="alert" data-sistema="no-limpio">
-      <Etiqueta tono="moderada">El sistema no está limpio para este tramo</Etiqueta>
+      <Etiqueta tono="aviso">El sistema no está limpio para este tramo</Etiqueta>
       <p className="text-suave text-sm leading-relaxed">
         <strong className="text-texto">El último estado de una estación no retrocede:</strong> una lectura más antigua que
         la guardada se predice y se responde, pero no cambia el estado ni mueve el panel.

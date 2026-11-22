@@ -15,6 +15,8 @@ interface Props {
   /** El detalle: por qué está vacío, qué dijo la API, qué se puede hacer. */
   children?: ReactNode
   accion?: Accion
+  /** Dentro de una tarjeta: sin su borde y con menos aire, porque la tarjeta ya lo enmarca. */
+  compacto?: boolean
   className?: string
 }
 
@@ -33,7 +35,7 @@ const COLORES: Record<TipoEstado, string> = {
 }
 
 // Cada estado tiene su dibujo además de su color y su título: no depende del color.
-function Icono({ tipo }: { tipo: TipoEstado }) {
+function Icono({ tipo, chico }: { tipo: TipoEstado; chico: boolean }) {
   const comun = {
     viewBox: '0 0 24 24',
     fill: 'none',
@@ -42,7 +44,7 @@ function Icono({ tipo }: { tipo: TipoEstado }) {
     strokeLinecap: 'round' as const,
     strokeLinejoin: 'round' as const,
     'aria-hidden': true,
-    className: `size-8 ${COLORES[tipo]} ${tipo === 'cargando' ? 'animate-spin' : ''}`,
+    className: `${chico ? 'size-6' : 'size-8'} ${COLORES[tipo]} ${tipo === 'cargando' ? 'animate-spin' : ''}`,
   }
   switch (tipo) {
     case 'cargando':
@@ -76,15 +78,18 @@ function Icono({ tipo }: { tipo: TipoEstado }) {
 }
 
 /** Cargando, vacío, error y sin permiso, con el mismo aspecto en toda la app. */
-export function Estado({ tipo, titulo, children, accion, className = '' }: Props) {
+export function Estado({ tipo, titulo, children, accion, compacto = false, className = '' }: Props) {
   return (
     <div
       // Un error interrumpe; lo demás se anuncia cuando el lector de pantalla pueda.
       role={tipo === 'error' ? 'alert' : 'status'}
       data-estado={tipo}
-      className={`border-borde bg-superficie flex flex-col items-center gap-3 rounded-xl border border-dashed px-6 py-10 text-center ${className}`}
+      data-compacto={compacto || undefined}
+      className={`flex flex-col items-center text-center ${
+        compacto ? 'gap-2 px-4 py-6' : 'border-borde bg-superficie gap-3 rounded-xl border border-dashed px-6 py-10'
+      } ${className}`}
     >
-      <Icono tipo={tipo} />
+      <Icono tipo={tipo} chico={compacto} />
       <p className="text-texto text-base font-semibold">{titulo ?? TITULOS[tipo]}</p>
       {children && <div className="text-suave max-w-prose text-sm">{children}</div>}
       {accion && (
@@ -101,12 +106,13 @@ export function Estado({ tipo, titulo, children, accion, className = '' }: Props
  * «sin permiso» para un 403 y «error» con reintento para lo demás. Qué se dice
  * de cada error lo decide api/errores.ts.
  */
-export function EstadoDeError({ error, alReintentar }: { error: unknown; alReintentar?: () => void }) {
+export function EstadoDeError({ error, alReintentar, compacto }: { error: unknown; alReintentar?: () => void; compacto?: boolean }) {
   const p = presentarError(error)
   return (
     <Estado
       tipo={p.estado === 'sin-permiso' ? 'sin-permiso' : 'error'}
       titulo={p.titulo}
+      compacto={compacto}
       accion={p.reintentable && alReintentar ? { etiqueta: 'Reintentar', alHacer: alReintentar } : undefined}
     >
       {p.detalle}

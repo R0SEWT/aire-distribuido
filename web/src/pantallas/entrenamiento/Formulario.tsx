@@ -5,7 +5,7 @@
 import { useId, useState, type FormEvent } from 'react'
 import type { components } from '../../api/contrato'
 import { errorDeExcepcion, presentarError, type TipoError } from '../../api/errores'
-import { Cifra, Etiqueta, Pildoras, Tarjeta } from '../../componentes/indice'
+import { Advertencia, Aviso, Cifra, Etiqueta, Pildoras, Tarjeta } from '../../componentes/indice'
 import { cuantosNodos, REPLICAS_MEDICION, SEMILLA_POR_OMISION, validar, type Campos, type Errores } from './formulario'
 import type { Pedido } from './seguimiento'
 
@@ -50,17 +50,16 @@ function Rechazo({ error }: { error: unknown }) {
   const e = errorDeExcepcion(error)
   const p = presentarError(e)
   return (
-    <div role="alert" className="bg-relieve border-l-inca-cuidado rounded-lg border-l-4 px-4 py-3 text-sm">
-      <p className="text-texto font-semibold">{TITULO_DE_RECHAZO[e.tipo] ?? p.titulo}</p>
+    <Aviso tono="alerta" titulo={TITULO_DE_RECHAZO[e.tipo] ?? p.titulo}>
       {e.detalle ? (
-        <p className="text-texto mt-1">
+        <p className="text-texto">
           La API dice: <span className="font-semibold">«{e.detalle}»</span>
         </p>
       ) : (
-        p.detalle && <p className="text-suave mt-1">{p.detalle}</p>
+        p.detalle && <p>{p.detalle}</p>
       )}
-      {QUE_HACER[e.tipo] && <p className="text-suave mt-1">{QUE_HACER[e.tipo]}</p>}
-    </div>
+      {QUE_HACER[e.tipo] && <p>{QUE_HACER[e.tipo]}</p>}
+    </Aviso>
   )
 }
 
@@ -199,15 +198,15 @@ export function Formulario({
         </p>
 
         {faltanNodos && (
-          <p className="text-aviso text-sm font-semibold" data-aviso="faltan-nodos">
+          <Advertencia data-aviso="faltan-nodos">
             Hay {cuantosNodos(libres.length)} {libres.length === 1 ? 'libre' : 'libres'} y pides {nodosPedidos}: la API lo va a
             rechazar.
-          </p>
+          </Advertencia>
         )}
         {sinTiempoReal && (
-          <p className="text-aviso text-sm font-semibold">
+          <Advertencia>
             El tiempo real está desconectado: las rondas no se verán llegar; se piden a la API cuando termine.
-          </p>
+          </Advertencia>
         )}
 
         {rechazo !== null && rechazo !== undefined && <Rechazo error={rechazo} />}
