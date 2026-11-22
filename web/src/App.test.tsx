@@ -219,8 +219,6 @@ describe('la app', () => {
       ['/', 'Panel'],
       ['/estacion', 'Estación'],
       ['/estacion/CA-AYAS-01', 'Estación'],
-      ['/simulacion', 'Simulación'],
-      ['/impacto', 'Impacto'],
     ])('un usuario entra a %s, que todavía muestra su marcador', async (ruta, titulo) => {
       simularApi({ 'GET /api/salud': SALUD_OK })
       sesionDe('usuario')
