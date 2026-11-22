@@ -7,7 +7,8 @@
 // el armazón lleva cada evento (api/enVivo.ts). Cada estado que entra en
 // claves.regimenes o en claves.regimen(id) queda anotado aquí, con su hora.
 //
-// Se guarda en sessionStorage, como la sesión: un F5 no borra la curva, y al
+// Se guarda en sessionStorage, como la sesión (agrupando las escrituras: a lo
+// sumo una cada medio segundo, y al ocultarse la página): un F5 no borra la curva, y al
 // cerrar la pestaña se va. Al terminar la sesión («Salir», vencimiento o 401)
 // la borra App.tsx con olvidarHistoria(), junto con todo lo demás de la sesión.
 //
@@ -60,9 +61,18 @@ function iguales(a: PuntoSesion, b: PuntoSesion): boolean {
   )
 }
 
+/**
+ * Cada cuánto, como mucho, se escribe en sessionStorage. A ritmo rápido llegan
+ * decenas de estados por segundo y lo guardado llega a pesar decenas de KB:
+ * escribirlo entero con cada uno eran cientos de escrituras por corrida.
+ */
+export const GUARDAR_CADA_MS = 500
+
 export class Historia {
   private readonly porEstacion = new Map<string, readonly PuntoSesion[]>()
   private readonly oyentes = new Set<() => void>()
+  /** El reloj de la escritura pendiente, si hay cambios sin guardar. */
+  private porGuardar: ReturnType<typeof setTimeout> | undefined
 
   constructor() {
     this.recuperar()
@@ -111,19 +121,36 @@ export class Historia {
 
   /** La sesión terminó: se olvida todo, también lo guardado, y se avisa a quien esté mirando. */
   vaciar() {
+    clearTimeout(this.porGuardar)
+    this.porGuardar = undefined
     this.porEstacion.clear()
     borrarLoGuardado()
     for (const oyente of [...this.oyentes]) oyente()
   }
 
-  /** Guarda y avisa a quien esté mirando. Se llama una vez por tanda de cambios. */
+  /**
+   * Avisa ya a quien esté mirando y deja programada la escritura. Se llama una
+   * vez por tanda de cambios; las escrituras se agrupan: una cada GUARDAR_CADA_MS.
+   */
   publicar() {
+    this.porGuardar ??= setTimeout(() => this.guardar(), GUARDAR_CADA_MS)
+    for (const oyente of [...this.oyentes]) oyente()
+  }
+
+  /**
+   * Escribe ya lo que estuviera pendiente; sin cambios pendientes no hace nada.
+   * Lo llama el reloj de publicar() y la página cuando se oculta o se va, para
+   * que un F5 a mitad de una ráfaga no pierda lo último.
+   */
+  guardar() {
+    if (this.porGuardar === undefined) return
+    clearTimeout(this.porGuardar)
+    this.porGuardar = undefined
     try {
       sessionStorage.setItem(CLAVE, JSON.stringify(Object.fromEntries(this.porEstacion)))
     } catch {
       // Sin sessionStorage (o lleno), la curva dura hasta recargar la página.
     }
-    for (const oyente of [...this.oyentes]) oyente()
   }
 
   private recuperar() {
@@ -193,6 +220,13 @@ export function historiaDe(consultas: QueryClient): Historia {
   cache.subscribe((evento) => {
     if (evento.type === 'updated' && evento.action.type === 'success') mirar(evento.query.queryKey, evento.query.state.data)
   })
+  // Lo pendiente se escribe antes de que la página se oculte o se vaya (un F5, cerrar la pestaña).
+  if (typeof window !== 'undefined') {
+    window.addEventListener('pagehide', () => nueva.guardar())
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'hidden') nueva.guardar()
+    })
+  }
   return nueva
 }
 

@@ -259,16 +259,28 @@ export function MapaPeru({ geo, lugares, marcas, enlaceDe, alSenalar, senalada, 
   const { departamentos, nodos } = useMemo(() => disponer(geo, lugares, medida, alinear), [geo, lugares, medida, alinear])
 
   // Dónde quedó lo que va encima del mapa, para no escribirle un rótulo encima.
+  // Se mide al montar y cuando cambia de tamaño el mapa o lo que lleva encima,
+  // no en cada dibujo: a ritmo rápido el mapa se vuelve a dibujar varias veces
+  // por segundo, y medir obliga al navegador a recalcular el maquetado cada vez.
   const [ocupado, setOcupado] = useState<readonly Caja[]>([])
   useLayoutEffect(() => {
-    const marco = caja.current?.getBoundingClientRect()
+    const marco = caja.current
     if (!marco) return
-    const cajas = [...(caja.current?.querySelectorAll('[data-sobre-mapa]') ?? [])].map((e) => {
-      const r = e.getBoundingClientRect()
-      return { x0: r.left - marco.left, y0: r.top - marco.top, x1: r.right - marco.left, y1: r.bottom - marco.top }
-    })
-    setOcupado((antes) => (JSON.stringify(antes) === JSON.stringify(cajas) ? antes : cajas))
-  }, [caja, medida, children])
+    const sobreElMapa = [...marco.querySelectorAll('[data-sobre-mapa]')]
+    const medir = () => {
+      const origen = marco.getBoundingClientRect()
+      const cajas = sobreElMapa.map((e) => {
+        const r = e.getBoundingClientRect()
+        return { x0: r.left - origen.left, y0: r.top - origen.top, x1: r.right - origen.left, y1: r.bottom - origen.top }
+      })
+      setOcupado((antes) => (JSON.stringify(antes) === JSON.stringify(cajas) ? antes : cajas))
+    }
+    medir()
+    if (typeof ResizeObserver === 'undefined' || sobreElMapa.length === 0) return
+    const tamano = new ResizeObserver(medir)
+    for (const e of sobreElMapa) tamano.observe(e)
+    return () => tamano.disconnect()
+  }, [caja, medida])
 
   // Los enlaces van en el orden de `marcas`, que es el del teclado: de la más
   // grave a la menos. Lo que no tenga marca no se dibuja.

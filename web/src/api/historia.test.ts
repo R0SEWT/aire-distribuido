@@ -1,8 +1,8 @@
 import { QueryClient } from '@tanstack/react-query'
-import { describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { estadoDe } from '../pantallas/panel/dobles'
 import { claves } from './cliente'
-import { Historia, historiaDe, olvidarHistoria } from './historia'
+import { GUARDAR_CADA_MS, Historia, historiaDe, olvidarHistoria } from './historia'
 
 const horas = (h: Historia, estacion: string) => h.leer(estacion).map((p) => p.fecha_hora.slice(11, 13))
 
@@ -57,6 +57,7 @@ describe('la historia de la sesión', () => {
     const h = new Historia()
     h.anotar('CA-HU-04', estadoDe('CA-HU-04', { hora: 10, pm10: 90 }))
     h.publicar()
+    h.guardar() // lo que hace la página al irse: no espera al reloj
 
     expect(horas(new Historia(), 'CA-HU-04')).toEqual(['10'])
     expect(localStorage.length).toBe(0)
@@ -67,6 +68,8 @@ describe('la historia de la sesión', () => {
     h.anotar('CA-HU-04', estadoDe('CA-HU-04', { hora: 10 }))
     h.anotar('CA-AYAS-01', estadoDe('CA-AYAS-01', { hora: 10 }))
     h.publicar()
+    h.guardar()
+    expect(sessionStorage.getItem('aire.curvas')).toContain('CA-HU-04')
     let avisos = 0
     h.suscribir(() => avisos++)
 
@@ -77,6 +80,97 @@ describe('la historia de la sesión', () => {
     expect(sessionStorage.getItem('aire.curvas')).toBeNull()
     expect(new Historia().leer('CA-HU-04')).toEqual([])
     expect(avisos).toBe(1)
+  })
+
+  describe('las escrituras en sessionStorage se agrupan', () => {
+    beforeEach(() => {
+      vi.useFakeTimers()
+    })
+    afterEach(() => {
+      vi.useRealTimers()
+    })
+
+    it('una ráfaga de estados avisa cada vez a quien mira, pero escribe una sola vez', () => {
+      const escribir = vi.spyOn(Storage.prototype, 'setItem')
+      const h = new Historia()
+      let avisos = 0
+      h.suscribir(() => avisos++)
+
+      // Una corrida a ritmo rápido: decenas de estados en menos de medio segundo.
+      for (let hora = 0; hora < 20; hora++) {
+        h.anotar('CA-HU-04', estadoDe('CA-HU-04', { hora }))
+        h.publicar()
+        vi.advanceTimersByTime(10)
+      }
+
+      expect(avisos).toBe(20)
+      expect(horas(h, 'CA-HU-04')).toHaveLength(20) // en memoria está todo, al instante
+      expect(escribir).not.toHaveBeenCalled()
+
+      vi.advanceTimersByTime(GUARDAR_CADA_MS)
+
+      expect(escribir).toHaveBeenCalledTimes(1)
+      expect(horas(new Historia(), 'CA-HU-04')).toHaveLength(20)
+    })
+
+    it('una corrida larga escribe a lo sumo una vez por intervalo, no una por estado', () => {
+      const escribir = vi.spyOn(Storage.prototype, 'setItem')
+      const h = new Historia()
+
+      // 600 estados en 6 segundos, como el escenario a ritmo rápido con 14 estaciones.
+      for (let i = 0; i < 600; i++) {
+        h.anotar(`CA-${i % 14}`, estadoDe(`CA-${i % 14}`, { hora: Math.floor(i / 14) % 24 }))
+        h.publicar()
+        vi.advanceTimersByTime(10)
+      }
+      vi.advanceTimersByTime(GUARDAR_CADA_MS)
+
+      expect(escribir.mock.calls.length).toBeLessThanOrEqual(6000 / GUARDAR_CADA_MS + 1)
+      expect(escribir.mock.calls.length).toBeGreaterThan(0)
+    })
+
+    it('guardar() escribe ya lo pendiente y no deja otra escritura programada; sin nada pendiente no escribe', () => {
+      const escribir = vi.spyOn(Storage.prototype, 'setItem')
+      const h = new Historia()
+      h.guardar()
+      expect(escribir).not.toHaveBeenCalled()
+
+      h.anotar('CA-HU-04', estadoDe('CA-HU-04', { hora: 10 }))
+      h.publicar()
+      h.guardar()
+      expect(escribir).toHaveBeenCalledTimes(1)
+
+      vi.advanceTimersByTime(GUARDAR_CADA_MS * 3)
+      expect(escribir).toHaveBeenCalledTimes(1)
+    })
+
+    it('al vaciarse con una escritura pendiente, esa escritura ya no ocurre', () => {
+      const h = new Historia()
+      h.anotar('CA-HU-04', estadoDe('CA-HU-04', { hora: 10 }))
+      h.publicar()
+
+      h.vaciar()
+      vi.advanceTimersByTime(GUARDAR_CADA_MS * 3)
+
+      expect(sessionStorage.getItem('aire.curvas')).toBeNull()
+    })
+
+    it('al ocultarse o irse la página se escribe lo pendiente: un F5 a mitad de una ráfaga no pierde lo último', () => {
+      const consultas = new QueryClient()
+      historiaDe(consultas)
+
+      consultas.setQueryData(claves.regimen('CA-HU-04'), estadoDe('CA-HU-04', { hora: 10 }))
+      expect(sessionStorage.getItem('aire.curvas')).toBeNull()
+      window.dispatchEvent(new Event('pagehide'))
+      expect(sessionStorage.getItem('aire.curvas')).toContain('CA-HU-04')
+
+      consultas.setQueryData(claves.regimen('CA-AYAS-01'), estadoDe('CA-AYAS-01', { hora: 10 }))
+      Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => 'hidden' })
+      document.dispatchEvent(new Event('visibilitychange'))
+      expect(sessionStorage.getItem('aire.curvas')).toContain('CA-AYAS-01')
+      Reflect.deleteProperty(document, 'visibilityState')
+      olvidarHistoria(consultas)
+    })
   })
 
   it('si lo guardado no se puede leer, empieza de cero', () => {
@@ -131,6 +225,7 @@ describe('la historia de la sesión', () => {
       const consultas = new QueryClient()
       const h = historiaDe(consultas)
       consultas.setQueryData(claves.regimen('CA-HU-04'), estadoDe('CA-HU-04', { hora: 10 }))
+      h.guardar()
       expect(sessionStorage.getItem('aire.curvas')).toContain('CA-HU-04')
 
       olvidarHistoria(consultas)

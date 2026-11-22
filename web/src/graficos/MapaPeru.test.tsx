@@ -4,7 +4,7 @@
 import { render, screen } from '@testing-library/react'
 import { geoArea, type ExtendedFeatureCollection } from 'd3'
 import { MemoryRouter } from 'react-router'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import crudo from '../../public/datos/peru.geojson?raw'
 import { MapaPeru, type LugarEnMapa, type MarcaEnMapa } from './MapaPeru'
 
@@ -94,6 +94,25 @@ describe('el mapa del Perú', () => {
     )
 
     expect(screen.getAllByRole('link').map((e) => e.getAttribute('data-estacion'))).toEqual(orden)
+  })
+
+  it('no vuelve a medir lo que lleva encima cada vez que se dibuja: solo al montar o al cambiar de tamaño', () => {
+    const medir = vi.spyOn(Element.prototype, 'getBoundingClientRect')
+    const mapa = (marcas: typeof MARCAS) => (
+      <MemoryRouter>
+        <MapaPeru geo={PERU} lugares={LUGARES} marcas={marcas} enlaceDe={(id) => `/estacion/${id}`} titulo="Mapa de prueba">
+          <div data-sobre-mapa>leyenda</div>
+        </MapaPeru>
+      </MemoryRouter>
+    )
+    const { rerender } = render(mapa(MARCAS))
+    const alMontar = medir.mock.calls.length
+    expect(alMontar).toBeGreaterThan(0)
+
+    // Llegan estados, como en una corrida a ritmo rápido: el mapa se vuelve a dibujar cada vez.
+    for (let i = 0; i < 10; i++) rerender(mapa(new Map(MARCAS)))
+
+    expect(medir.mock.calls.length).toBe(alMontar)
   })
 
   it('no usa estilos en línea: la política de contenido no los admite', () => {
