@@ -12,24 +12,23 @@
 // estaciones antes de empezar y se muestra lo que la API respondió contra lo
 // esperado del archivo.
 
-import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useQueryClient } from '@tanstack/react-query'
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
-import { api, claves, pedir } from '../api/cliente'
-import { EN_VIVO, pedirRegimenes } from '../api/enVivo'
-import { ErrorApi } from '../api/errores'
+import { claves } from '../api/cliente'
+import { useSeries, type Series } from '../api/datos'
+import { useEstaciones, useEstados } from '../api/estaciones'
 import { Desplegable, Estado, EstadoDeError, Frase, numero, Pildoras, Tarjeta, type Opcion, type Tono } from '../componentes/indice'
 import { SOLO_ADMIN, puede } from '../sesion/roles'
 import { useSesion } from '../sesion/useSesion'
 import { compararTramo, resumir, type Resumen } from './simulacion/comparar'
 import { Botones, ElegirRitmo, EstadoDelSistema, QueMandaElEscenario, QueMandaUnDia, TarjetaDeControles } from './simulacion/Controles'
-import { clavesDatos, DATOS_ESTATICOS, pedirDatos } from './simulacion/datos'
 import { enumerar } from './simulacion/fechas'
 import { LecturaAMano } from './simulacion/LecturaAMano'
 import { revisarSistema } from './simulacion/limpieza'
 import { Marcha } from './simulacion/Marcha'
 import { enMarcha, simulador as elDeLaApp, useCorrida, type Corrida, type Simulador } from './simulacion/motor'
 import { horasPorSegundoDe, ritmoDe, type Ritmo } from './simulacion/ritmos'
-import { esSeries, estacionesConPM, tramoDelDia, tramoDelEscenario, type Series, type Tramo } from './simulacion/series'
+import { estacionesConPM, tramoDelDia, tramoDelEscenario, type Tramo } from './simulacion/series'
 import { TablaComparacion } from './simulacion/TablaComparacion'
 
 type Modo = 'escenario' | 'dia' | 'mano'
@@ -40,15 +39,7 @@ interface Props {
 }
 
 export default function Simulacion({ simulador = elDeLaApp }: Props) {
-  const series = useQuery({
-    queryKey: clavesDatos.series,
-    ...DATOS_ESTATICOS,
-    queryFn: async ({ signal }) => {
-      const leido = await pedirDatos<unknown>('series.json', signal)
-      if (!esSeries(leido)) throw new ErrorApi('inesperado', 200, '/datos/series.json no tiene la forma esperada')
-      return leido
-    },
-  })
+  const series = useSeries()
 
   return (
     <div className="space-y-5">
@@ -92,16 +83,9 @@ function Mesa({ series, simulador }: { series: Series; simulador: Simulador }) {
   const corrida = useCorrida(simulador)
   const ocupado = enMarcha(corrida.fase)
 
-  const estados = useQuery({
-    queryKey: claves.regimenes,
-    meta: EN_VIVO,
-    queryFn: ({ signal }) => pedirRegimenes(consultas, () => pedir(api.GET('/api/regimenes', { signal }))),
-  })
+  const estados = useEstados()
   // Los nombres de las estaciones acompañan al código; si no llegan, queda el código.
-  const catalogo = useQuery({
-    queryKey: claves.estaciones,
-    queryFn: ({ signal }) => pedir(api.GET('/api/estaciones', { signal })),
-  })
+  const catalogo = useEstaciones()
   const descripcionDe = useCallback(
     (estacion: string) => {
       const e = catalogo.data?.find((x) => x.id === estacion)

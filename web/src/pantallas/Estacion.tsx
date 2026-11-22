@@ -6,6 +6,8 @@
 
 import { useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router'
+import { useImpacto, type Impacto } from '../api/datos'
+import { useEstaciones, useEstado, type Estacion as FichaEstacion, type RegimenEstacion } from '../api/estaciones'
 import { RUTAS } from '../armazon/menu'
 import {
   Banda,
@@ -23,7 +25,6 @@ import { CurvaSesion, type PuntoCurva } from '../graficos/CurvaSesion'
 import { Ficha } from './estacion/Ficha'
 import { useHistoria, useRegistroDeSesion, type PuntoSesion } from './estacion/historia'
 import { contaminanteInicial, fraseEstacion, NORMA, type Contaminante } from './estacion/norma'
-import { useEstaciones, useEstado, useImpacto, type Estacion as FichaEstacion, type Impacto, type RegimenEstacion } from './panel/datos'
 import { filaDe, MINIMO_LECTURAS, nombrePropio, tonoDe } from './panel/situacion'
 
 const enlaceDe = (id: string) => `${RUTAS.estacion}/${encodeURIComponent(id)}`

@@ -110,4 +110,8 @@ export const claves = {
   entrenamientos: ['entrenamientos'] as const,
   entrenamiento: (id: string) => ['entrenamientos', id] as const,
   metricas: ['metricas'] as const,
+  // Los archivos estáticos de /datos/ (api/datos.ts).
+  datosImpacto: ['datos', 'impacto'] as const,
+  datosSeries: ['datos', 'series'] as const,
+  datosMapa: ['datos', 'peru'] as const,
 }

@@ -10,7 +10,7 @@
 
 import { scaleLinear, select } from 'd3'
 import { numero } from '../componentes/formato'
-import type { Cuartiles } from '../pantallas/impacto/tipos'
+import type { Cuartiles } from '../api/datos'
 import { useDibujo, useMedidas } from './lienzoD3'
 
 export interface FilaDeAnticipacion {

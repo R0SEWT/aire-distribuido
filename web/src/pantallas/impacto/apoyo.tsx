@@ -3,7 +3,7 @@
 import type { ReactNode } from 'react'
 import { Desplegable, numero } from '../../componentes/indice'
 import { fechaDia } from '../simulacion/fechas'
-import type { Impacto } from './tipos'
+import type { Impacto } from '../../api/datos'
 
 interface PropsDeDondeSale {
   impacto: Impacto

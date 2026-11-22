@@ -9,7 +9,8 @@
 // de la alerta ni del INCA, que no dependen del modelo.
 
 import type { Seguimiento } from './motor'
-import type { Esperado, Tramo } from './series'
+import type { Esperado } from '../../api/datos'
+import type { Tramo } from './series'
 
 export type Campo =
   | 'lecturas_enviadas'

@@ -11,7 +11,7 @@ import { numero } from '../componentes/formato'
 import { fabricaDeEnchufes, respuesta } from '../pruebas/dobles'
 import { abrirSesion, cerrarSesion, recargarSesion } from '../sesion/almacen'
 import Impacto from './Impacto'
-import type { Impacto as DatosDeImpacto } from './impacto/tipos'
+import type { Impacto as DatosDeImpacto } from '../api/datos'
 
 const REAL = JSON.parse(crudoDeImpacto) as DatosDeImpacto
 const copia = () => JSON.parse(crudoDeImpacto) as DatosDeImpacto

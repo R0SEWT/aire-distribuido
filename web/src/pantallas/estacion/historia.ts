@@ -18,7 +18,7 @@ import { useEffect, useMemo, useSyncExternalStore } from 'react'
 import { claves } from '../../api/cliente'
 import type { EstadoEstacion } from '../../api/enVivo'
 import type { BandaINCA } from '../../componentes/indice'
-import type { RegimenEstacion } from '../panel/datos'
+import type { RegimenEstacion } from '../../api/estaciones'
 
 /** Un estado recibido de una estación: un punto de la curva. */
 export interface PuntoSesion {

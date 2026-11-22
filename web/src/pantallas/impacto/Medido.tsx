@@ -7,7 +7,7 @@ import { BarraBandas } from '../../graficos/BarraBandas'
 import { enumerar, fechaDia } from '../simulacion/fechas'
 import { DeDondeSale, Seccion } from './apoyo'
 import { DIAS_DE_CAMPANA_CORTA, lugar, porciento } from './textos'
-import type { DistritoDeImpacto, EstacionDeImpacto, Impacto, NombreDeBanda, TipoDeActividad } from './tipos'
+import type { DistritoDeImpacto, EstacionDeImpacto, Impacto, NombreDeBanda, TipoDeActividad } from '../../api/datos'
 
 const ORDEN: readonly NombreDeBanda[] = ['buena', 'moderada', 'mala', 'umbral_de_cuidado']
 

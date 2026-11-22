@@ -2,13 +2,14 @@
 // sistema está limpio para ese tramo y los botones de la corrida.
 
 import type { ReactNode } from 'react'
+import type { DiaDeSeries, EscenarioDeSeries } from '../../api/datos'
 import type { EstadoEstacion } from '../../api/enVivo'
 import { Estado, EstadoDeError, Etiqueta, fechaHora, numero, Pildoras, Tarjeta, type Opcion } from '../../componentes/indice'
 import { diasEnLlano, enumerar, fechaDia } from './fechas'
 import { diaDisponible, type Choque, type Revision, type TipoDeChoque } from './limpieza'
 import type { Fase } from './motor'
 import { horasPorSegundoDe, RITMOS, type Ritmo } from './ritmos'
-import { nombreDelCaso, type DiaDeSeries, type EscenarioDeSeries, type Tramo } from './series'
+import { nombreDelCaso, type Tramo } from './series'
 
 /** Lo que el escenario manda, con las cifras del archivo. */
 export function QueMandaElEscenario({ escenario }: { escenario: EscenarioDeSeries }) {

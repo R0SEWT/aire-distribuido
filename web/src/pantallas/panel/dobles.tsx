@@ -4,13 +4,14 @@
 import { render } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router'
 import { crearClienteDeConsultas } from '../../api/cliente'
+import type { Impacto, MapaDelPeru } from '../../api/datos'
 import type { EstadoEstacion } from '../../api/enVivo'
+import type { Estacion as FichaEstacion } from '../../api/estaciones'
 import { Proveedores } from '../../App'
 import { fabricaDeEnchufes, SALUD_OK, simularApi } from '../../pruebas/dobles'
 import { abrirSesion, type Rol } from '../../sesion/almacen'
 import Estacion from '../Estacion'
 import Panel from '../Panel'
-import type { Estacion as FichaEstacion, Impacto, MapaDelPeru } from './datos'
 
 const ficha = (id: string, distrito: string | null, tipo_actividad: string, lat: number, lon: number): FichaEstacion => ({
   id,
@@ -33,7 +34,13 @@ export const ESTACIONES: FichaEstacion[] = [
   ficha('CA-MAC-01', 'LA HUACA', 'no lo dice el nombre', -4.91, -80.85),
 ]
 
-export const IMPACTO: Impacto = {
+/** Lo que el Panel y la Estación leen de impacto.json; del resto, lo justo para que tenga su forma. */
+export const IMPACTO = {
+  metadatos: { reglas: {} },
+  totales: {},
+  distritos: [],
+  senales: {},
+  anticipacion: {},
   alcance: { estaciones_con_pm_horario: 5, estaciones_sin_pm_horario: ['CA-01'] },
   estaciones: [{ estacion: 'CA-HU-04', primera_fecha: '2021-12-10', ultima_fecha: '2021-12-20', dias_con_datos: 11 }],
   poblacion_distritos: [
@@ -46,7 +53,7 @@ export const IMPACTO: Impacto = {
       estaciones: ['CA-HU-04'],
     },
   ],
-}
+} as unknown as Impacto
 
 /** Un solo polígono, con el anillo en sentido horario como los de peru.geojson. */
 export const MAPA: MapaDelPeru = {

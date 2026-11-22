@@ -7,7 +7,8 @@ import { SERIES } from './apiDePrueba'
 import { compararEstacion, compararTramo, resumir } from './comparar'
 import { diaDisponible, revisarSistema } from './limpieza'
 import type { Seguimiento } from './motor'
-import { estacionesConPM, tramoDelDia, tramoDelEscenario, type Esperado, type Prediccion } from './series'
+import type { Esperado } from '../../api/datos'
+import { estacionesConPM, tramoDelDia, tramoDelEscenario, type Prediccion } from './series'
 import type { Punto } from './vistas'
 
 const DIA = SERIES.dias.find((d) => d.id === 'CA-ESP-01-2021-12-21')!

@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import { numero, Tarjeta } from '../../componentes/indice'
-import type { Estacion, Impacto } from '../panel/datos'
+import type { Impacto } from '../../api/datos'
+import type { Estacion } from '../../api/estaciones'
 import { nombrePropio } from '../panel/situacion'
 import { fechaDia } from './norma'
 

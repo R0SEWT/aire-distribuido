@@ -1,75 +1,12 @@
-// La forma de /datos/series.json (lo escribe scripts/impacto.py; spec §7.3) y lo
-// que la simulación saca de él: un «tramo» es lo que se manda de una vez, sea el
-// escenario (48 horas de varias estaciones) o un día suelto de una estación.
+// Lo que la simulación saca de /datos/series.json (su forma está en
+// api/datos.ts): un «tramo» es lo que se manda de una vez, sea el escenario
+// (48 horas de varias estaciones) o un día suelto de una estación.
 
 import type { components } from '../../api/contrato'
+import type { DiaDeSeries, EscenarioDeSeries, Esperado, Series } from '../../api/datos'
 
 export type Lectura = components['schemas']['Lectura']
 export type Prediccion = components['schemas']['Prediccion']
-export type BandaINCA = components['schemas']['BandaINCA']
-
-/** Lo que la API tiene que responder en la última lectura de una estación del tramo. */
-export interface Esperado {
-  fecha_hora: string
-  lecturas_enviadas: number
-  regimen: number
-  excede_eca: boolean
-  media_24h: { pm2_5: number | null; pm10: number | null; lecturas: number }
-  alerta: boolean
-  inca: BandaINCA
-  /** La fecha_hora de la primera lectura que devuelve media; null si ninguna. */
-  primera_media: string | null
-  /** La fecha_hora de la primera lectura que devuelve alerta = true; null si ninguna. */
-  primera_alerta: string | null
-}
-
-export interface ReglasDeSeries {
-  ventana_horas: number
-  minimo_lecturas: number
-  eca_pm2_5: number
-  eca_pm10: number
-  alerta: string
-  inca: { bandas: string[]; cortes_pm10: number[]; cortes_pm2_5: number[]; regla: string }
-  dia: string
-}
-
-export interface EscenarioDeSeries {
-  id: string
-  desde: string
-  hasta: string
-  dias: string[]
-  horas: number
-  criterio: string
-  estaciones: { estacion: string; lecturas: number; con_media_al_final: boolean }[]
-  estaciones_sin_lecturas: string[]
-  lecturas: Lectura[]
-  esperado: Record<string, Esperado>
-}
-
-export interface DiaDeSeries {
-  id: string
-  estacion: string
-  dia: string
-  caso: string
-  descripcion: string
-  desde: string
-  hasta: string
-  horas: number
-  huecos: number
-  lecturas: Lectura[]
-  esperado: Esperado
-}
-
-export interface Series {
-  metadatos: {
-    generado: string
-    generador: string
-    reglas: ReglasDeSeries
-    como_se_usa: { envio: string; esperado: string; regimen: string; orden: string }
-  }
-  escenario: EscenarioDeSeries
-  dias: DiaDeSeries[]
-}
 
 /** Lo que se manda de una vez a POST /api/predicciones, en el orden del archivo. */
 export interface Tramo {
@@ -139,11 +76,4 @@ export const CASOS: Record<string, string> = {
 
 export function nombreDelCaso(caso: string): string {
   return CASOS[caso] ?? caso.replaceAll('_', ' ')
-}
-
-/** Si lo leído tiene la forma mínima de series.json: lo demás se confía al script que lo escribe. */
-export function esSeries(x: unknown): x is Series {
-  if (typeof x !== 'object' || x === null) return false
-  const s = x as Partial<Series>
-  return Array.isArray(s.dias) && Array.isArray(s.escenario?.lecturas) && typeof s.metadatos?.reglas === 'object'
 }

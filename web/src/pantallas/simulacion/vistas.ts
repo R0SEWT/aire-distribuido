@@ -7,7 +7,7 @@
 
 import { useSyncExternalStore } from 'react'
 import { sesionActual, suscribir as suscribirASesion } from '../../sesion/almacen'
-import type { BandaINCA } from './series'
+import type { BandaINCA } from '../../componentes/bandas'
 
 /** Una lectura enviada y la respuesta de la API a esa lectura. */
 export interface Punto {

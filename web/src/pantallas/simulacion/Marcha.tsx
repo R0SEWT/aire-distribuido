@@ -3,13 +3,14 @@
 // va a mandar.
 
 import { useMemo, useState } from 'react'
+import type { Esperado, ReglasDeSeries } from '../../api/datos'
 import { presentarError } from '../../api/errores'
 import { Banda, BANDAS, Cifra, Etiqueta, fechaHora, Frase, hora, numero, Pildoras, Tarjeta, type Tono } from '../../componentes/indice'
 import { CurvaSimulacion, type Contaminante } from '../../graficos/CurvaSimulacion'
 import { RejillaEscenario, type FilaDeRejilla } from '../../graficos/RejillaEscenario'
 import { diaDeInstante, enumerar, horasEntre } from './fechas'
 import type { Corrida, Fase, Seguimiento } from './motor'
-import type { Esperado, ReglasDeSeries, Tramo } from './series'
+import type { Tramo } from './series'
 
 const FASES: Record<Fase, { palabra: string; tono: Tono }> = {
   lista: { palabra: 'Sin empezar', tono: 'neutro' },

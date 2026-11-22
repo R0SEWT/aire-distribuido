@@ -4,7 +4,7 @@
 // manda la API. Sirven para la línea del ECA, las franjas del INCA y la frase.
 
 import { numero } from '../../componentes/indice'
-import type { RegimenEstacion } from '../panel/datos'
+import type { RegimenEstacion } from '../../api/estaciones'
 import { MINIMO_LECTURAS } from '../panel/situacion'
 
 export type Contaminante = 'pm2_5' | 'pm10'

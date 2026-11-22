@@ -7,7 +7,8 @@
 // el panel no va a moverse con esas lecturas, y eso se dice antes de empezar.
 
 import type { EstadoEstacion } from '../../api/enVivo'
-import type { DiaDeSeries, Tramo } from './series'
+import type { DiaDeSeries } from '../../api/datos'
+import type { Tramo } from './series'
 
 /**
  * - dentro: el estado guardado cae en medio del tramo. Las lecturas hasta esa

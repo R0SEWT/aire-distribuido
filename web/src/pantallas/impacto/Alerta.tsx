@@ -7,7 +7,7 @@ import { SenalesAlerta } from '../../graficos/SenalesAlerta'
 import { enumerar } from '../simulacion/fechas'
 import { DeDondeSale, Seccion } from './apoyo'
 import { DIAS_DE_CAMPANA_CORTA, enHoras, enLetras, horas, lugar, proporcion } from './textos'
-import type { Cuartiles, Impacto } from './tipos'
+import type { Cuartiles, Impacto } from '../../api/datos'
 
 export function SirveLaAlerta({ impacto }: { impacto: Impacto }) {
   const s = impacto.senales

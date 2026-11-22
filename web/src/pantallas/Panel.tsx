@@ -7,8 +7,10 @@
 
 import { useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router'
-import { RUTAS } from '../armazon/menu'
+import { useImpacto, useMapaDelPeru, type Impacto } from '../api/datos'
 import type { EstadoEstacion } from '../api/enVivo'
+import { useEstaciones, useEstados, type Estacion } from '../api/estaciones'
+import { RUTAS } from '../armazon/menu'
 import {
   Banda,
   BANDAS,
@@ -28,7 +30,6 @@ import { MapaPeru, type LugarEnMapa, type MarcaEnMapa } from '../graficos/MapaPe
 import { SOLO_ADMIN, puede } from '../sesion/roles'
 import { useSesion } from '../sesion/useSesion'
 import { useRegistroDeSesion } from './estacion/historia'
-import { useEstaciones, useEstados, useImpacto, useMapaDelPeru, type Estacion, type Impacto } from './panel/datos'
 import { Leyenda } from './panel/Leyenda'
 import {
   detalleSinBanda,

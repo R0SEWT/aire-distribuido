@@ -6,7 +6,7 @@ import { scaleLinear, select } from 'd3'
 import { BANDAS } from '../componentes/bandas'
 import { numero } from '../componentes/formato'
 import { porciento } from '../pantallas/impacto/textos'
-import type { HorasPorBanda, NombreDeBanda } from '../pantallas/impacto/tipos'
+import type { HorasPorBanda, NombreDeBanda } from '../api/datos'
 import { useDibujo, useMedidas } from './lienzoD3'
 
 const ORDEN: readonly NombreDeBanda[] = ['buena', 'moderada', 'mala', 'umbral_de_cuidado']

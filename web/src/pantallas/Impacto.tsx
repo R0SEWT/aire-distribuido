@@ -7,25 +7,14 @@
 // Lo que §7.2 prohíbe afirmar no se afirma: la población va fila por fila, como
 // contexto, y no hay ninguna suma de personas.
 
-import { useQuery } from '@tanstack/react-query'
-import { ErrorApi } from '../api/errores'
+import { useImpacto, type Impacto as DatosDeImpacto } from '../api/datos'
 import { Estado, EstadoDeError, numero } from '../componentes/indice'
 import { ConCuantaAnticipacion, LoQueNoPuedeDecir, SirveLaAlerta } from './impacto/Alerta'
 import { CuantoTiempo, DondeYJuntoAQue, ElProblema, QuienViveAhi } from './impacto/Medido'
-import { esImpacto, type Impacto as DatosDeImpacto } from './impacto/tipos'
-import { clavesDatos, DATOS_ESTATICOS, pedirDatos } from './simulacion/datos'
 import { fechaDia } from './simulacion/fechas'
 
 export default function Impacto() {
-  const impacto = useQuery({
-    queryKey: clavesDatos.impacto,
-    ...DATOS_ESTATICOS,
-    queryFn: async ({ signal }) => {
-      const leido = await pedirDatos<unknown>('impacto.json', signal)
-      if (!esImpacto(leido)) throw new ErrorApi('inesperado', 200, '/datos/impacto.json no tiene la forma esperada')
-      return leido
-    },
-  })
+  const impacto = useImpacto()
 
   return (
     <div className="space-y-5">

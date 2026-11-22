@@ -8,9 +8,11 @@
 
 import { vi } from 'vitest'
 import crudoDeSeries from '../../../public/datos/series.json?raw'
+import type { Series } from '../../api/datos'
 import type { EstadoEstacion } from '../../api/enVivo'
+import type { BandaINCA } from '../../componentes/bandas'
 import { respuesta } from '../../pruebas/dobles'
-import type { BandaINCA, Lectura, Prediccion, Series } from './series'
+import type { Lectura, Prediccion } from './series'
 
 export const SERIES = JSON.parse(crudoDeSeries) as Series
 

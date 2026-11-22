@@ -5,7 +5,7 @@
 
 import type { EstadoEstacion } from '../../api/enVivo'
 import { BANDAS, estadoDeBanda, type EstadoBanda, type Tono } from '../../componentes/indice'
-import type { Estacion, RegimenEstacion } from './datos'
+import type { Estacion, RegimenEstacion } from '../../api/estaciones'
 
 /** Las lecturas que la ventana de 24 horas necesita para dar una media (contrato, Media24h). */
 export const MINIMO_LECTURAS = 18
