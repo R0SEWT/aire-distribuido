@@ -217,6 +217,17 @@ describe('la app', () => {
 
     it.each([
       ['/', 'Panel'],
+    ])('un usuario entra a %s', async (ruta, titulo) => {
+      simularApi({ 'GET /api/salud': SALUD_OK })
+      sesionDe('usuario')
+
+      montar(ruta)
+
+      expect(await screen.findByRole('heading', { name: titulo })).toBeInTheDocument()
+      expect(screen.queryByText('En construcción')).not.toBeInTheDocument()
+    })
+
+    it.each([
       ['/estacion', 'Estación'],
       ['/estacion/CA-AYAS-01', 'Estación'],
       ['/simulacion', 'Simulación'],
@@ -502,7 +513,10 @@ describe('la app', () => {
         ts: `2021-12-13T${hora}:00:02-05:00`,
       })
 
-      // Lo que haría el Panel: leer la lista de la caché, marcada en vivo. No se suscribe a nada.
+      // Se monta en una pantalla que no pide datos: en «/» está el Panel, que lee esta misma lista.
+      const SIN_DATOS = '/muestrario'
+
+      // Lo que hace el Panel: leer la lista de la caché, marcada en vivo. No se suscribe a nada.
       function Lista({ pedirLista }: { pedirLista: () => Promise<EstadoEstacion[]> }) {
         const consultas = useQueryClient()
         const lista = useQuery({
@@ -526,7 +540,7 @@ describe('la app', () => {
         simularApi({ 'GET /api/salud': SALUD_OK })
         sesionDe('usuario')
         const pedirLista = vi.fn(async () => [estadoDe('CA-A', 14), estadoDe('CA-B', 14)])
-        const { enchufes } = montar('/', <Lista pedirLista={pedirLista} />)
+        const { enchufes } = montar(SIN_DATOS, <Lista pedirLista={pedirLista} />)
         await waitFor(() => expect(filas()).toEqual(['CA-A sin alerta', 'CA-B sin alerta']))
         act(() => enchufes.ultimo().abrir())
         await waitFor(() => expect(pedirLista).toHaveBeenCalledTimes(2)) // al conectar se refresca
@@ -543,7 +557,7 @@ describe('la app', () => {
         sesionDe('usuario')
         let enLaApi = [estadoDe('CA-A', 14)]
         const pedirLista = vi.fn(async () => enLaApi)
-        const { enchufes } = montar('/', <Lista pedirLista={pedirLista} />)
+        const { enchufes } = montar(SIN_DATOS, <Lista pedirLista={pedirLista} />)
         act(() => enchufes.ultimo().abrir())
         await waitFor(() => expect(filas()).toEqual(['CA-A sin alerta']))
         // Un evento antes del corte: de CA-A «ya se sabe por eventos»… hasta que la conexión se cae.
@@ -566,7 +580,7 @@ describe('la app', () => {
         sesionDe('usuario')
         let responder!: (lista: EstadoEstacion[]) => void
         const pedirLista = vi.fn(() => new Promise<EstadoEstacion[]>((r) => (responder = r)))
-        const { enchufes } = montar('/', <Lista pedirLista={pedirLista} />)
+        const { enchufes } = montar(SIN_DATOS, <Lista pedirLista={pedirLista} />)
         await waitFor(() => expect(pedirLista).toHaveBeenCalled())
 
         // Abre y recibe en el mismo turno, sin dejar que React dibuje en el medio: la memoria
@@ -586,7 +600,7 @@ describe('la app', () => {
         sesionDe('usuario')
         let responder!: (lista: EstadoEstacion[]) => void
         const pedirLista = vi.fn(() => new Promise<EstadoEstacion[]>((r) => (responder = r)))
-        const { enchufes } = montar('/', <Lista pedirLista={pedirLista} />)
+        const { enchufes } = montar(SIN_DATOS, <Lista pedirLista={pedirLista} />)
         await waitFor(() => expect(pedirLista).toHaveBeenCalled())
         // El WebSocket conecta con el primer GET todavía en viaje: TanStack Query
         // no lo cancela (aún no hay datos), así que es ese mismo pedido el que sigue.
