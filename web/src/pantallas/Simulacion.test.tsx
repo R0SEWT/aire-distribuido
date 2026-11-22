@@ -202,6 +202,11 @@ describe('Simulación', () => {
       expect(api.lecturas).toEqual(d.lecturas)
       expect(screen.getByText(/1 de 1 estación quedó como dice el archivo/)).toBeInTheDocument()
       expect(screen.getByText(/supera el ECA, el de PM10 \(100\)\. Hay alerta desde el 21 dic\. 2021, 07:00/)).toBeInTheDocument()
+      // La marca de la curva dice por cuál contaminante es la alerta, también en la curva del que no la causó.
+      const curva = (contaminante: string) => screen.getByRole('img', { name: new RegExp(`Curva de ${contaminante} de CA-ESP-01`) })
+      expect(curva('PM10')).toHaveTextContent('alerta desde las 07:00, por PM10')
+      await userEvent.click(screen.getByRole('button', { name: 'PM2.5' }))
+      expect(curva('PM2\\.5')).toHaveTextContent('alerta desde las 07:00, por PM10')
       // Las cifras son las que respondió la API en la última lectura.
       expect(screen.getAllByText('131.9').length).toBeGreaterThan(0)
       expect(screen.getAllByText('22.6').length).toBeGreaterThan(0)

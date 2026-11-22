@@ -36,6 +36,12 @@ interface Props {
   /** La hora de la primera lectura con media y de la primera con alerta, según lo que respondió la API. */
   primeraMedia: string | null
   primeraAlerta: string | null
+  /**
+   * Por cuál contaminante se encendió la alerta («PM10», «PM2.5 y PM10»). La
+   * alerta es de la estación: la marca la lleva también la curva del
+   * contaminante que no la causó, y tiene que decir por cuál fue.
+   */
+  causaDeLaAlerta?: string
   /** El alto del gráfico, en rem. */
   alto?: number
 }
@@ -55,7 +61,19 @@ interface Marca {
 // Donde no hay con qué medir (las pruebas, en jsdom) se dibuja a este ancho.
 const POR_OMISION = { ancho: 760 }
 
-export function CurvaSimulacion({ estacion, horas, programadas, puntos, contaminante, eca, cortes, primeraMedia, primeraAlerta, alto: altoEnRem = 15.5 }: Props) {
+export function CurvaSimulacion({
+  estacion,
+  horas,
+  programadas,
+  puntos,
+  contaminante,
+  eca,
+  cortes,
+  primeraMedia,
+  primeraAlerta,
+  causaDeLaAlerta = '',
+  alto: altoEnRem = 15.5,
+}: Props) {
   const [contenedor, { ancho, rem }] = useMedida<HTMLDivElement>(POR_OMISION)
   const alto = altoEnRem * rem
   const nombre = contaminante === 'pm2_5' ? 'PM2.5' : 'PM10'
@@ -236,11 +254,12 @@ export function CurvaSimulacion({ estacion, horas, programadas, puntos, contamin
       const marcas: Marca[] = []
       const tMedia = primeraMedia === null ? null : Date.parse(primeraMedia)
       const tAlerta = primeraAlerta === null ? null : Date.parse(primeraAlerta)
+      const porCual = causaDeLaAlerta ? `, por ${causaDeLaAlerta}` : ''
       if (tMedia !== null && tMedia === tAlerta) {
-        marcas.push({ t: tMedia, texto: `media y alerta desde las ${horaEnLima(tMedia)}`, alerta: true })
+        marcas.push({ t: tMedia, texto: `media y alerta desde las ${horaEnLima(tMedia)}${porCual}`, alerta: true })
       } else {
         if (tMedia !== null) marcas.push({ t: tMedia, texto: `media desde las ${horaEnLima(tMedia)}`, alerta: false })
-        if (tAlerta !== null) marcas.push({ t: tAlerta, texto: `alerta desde las ${horaEnLima(tAlerta)}`, alerta: true })
+        if (tAlerta !== null) marcas.push({ t: tAlerta, texto: `alerta desde las ${horaEnLima(tAlerta)}${porCual}`, alerta: true })
       }
       raiz
         .select('.marcas')
@@ -271,7 +290,7 @@ export function CurvaSimulacion({ estacion, horas, programadas, puntos, contamin
             .text(m.texto)
         })
     },
-    [horas, programadas, puntos, contaminante, eca, cortes, primeraMedia, primeraAlerta, ancho, rem, alto],
+    [horas, programadas, puntos, contaminante, eca, cortes, primeraMedia, primeraAlerta, causaDeLaAlerta, ancho, rem, alto],
   )
 
   const conMedia = puntos.filter((p) => (contaminante === 'pm2_5' ? p.media_pm2_5 : p.media_pm10) !== null).length

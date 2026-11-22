@@ -24,7 +24,8 @@ import {
 import { CurvaSimulacion, type Contaminante } from '../../graficos/CurvaSimulacion'
 import { RejillaEscenario, type FilaDeRejilla } from '../../graficos/RejillaEscenario'
 import { horasEntre } from './fechas'
-import type { Corrida, Fase, Seguimiento } from './motor'
+import { causaDeLaAlerta, fraseDelDia, fraseDelEscenario } from './frases'
+import type { Corrida, Fase } from './motor'
 import type { Tramo } from './series'
 
 const FASES: Record<Fase, { palabra: string; tono: Tono }> = {
@@ -48,51 +49,6 @@ function contaminanteQueManda(esperado: Esperado | undefined, reglas: ReglasDeSe
   const a = (esperado?.media_24h.pm2_5 ?? 0) / reglas.eca_pm2_5
   const b = (esperado?.media_24h.pm10 ?? 0) / reglas.eca_pm10
   return a > b ? 'pm2_5' : 'pm10'
-}
-
-function fraseDelEscenario(tramo: Tramo, corrida: Corrida, reglas: ReglasDeSeries): { tono: Tono; texto: string } {
-  const seguimientos = Object.values(corrida.porEstacion)
-  const conMedia = seguimientos.filter((s) => s.ultima?.inca).length
-  const enAlerta = seguimientos.filter((s) => s.ultima?.alerta).map((s) => s.estacion)
-  const n = tramo.estaciones.length
-  const alertas =
-    enAlerta.length === 0
-      ? 'ninguna está en alerta'
-      : `${enAlerta.length === 1 ? 'está en alerta' : 'están en alerta'} ${enumerar(enAlerta)}`
-  if (conMedia === 0) {
-    return {
-      tono: 'acento',
-      texto: `Todavía ninguna estación tiene media de 24 horas: la API la da recién cuando la ventana junta ${reglas.minimo_lecturas} lecturas.`,
-    }
-  }
-  return {
-    tono: enAlerta.length > 0 ? 'alerta' : 'buena',
-    texto: `${conMedia} de ${n} estaciones tienen media de 24 horas y ${alertas}: su media supera el ECA.`,
-  }
-}
-
-function fraseDelDia(s: Seguimiento | undefined, reglas: ReglasDeSeries): { tono: Tono; texto: string } {
-  const r = s?.ultima
-  if (!s || !r) return { tono: 'acento', texto: 'Todavía no se mandó ninguna lectura.' }
-  if (r.media_24h.pm2_5 === null || r.media_24h.pm10 === null) {
-    const faltan = reglas.minimo_lecturas - r.media_24h.lecturas
-    return {
-      tono: 'acento',
-      texto: `La ventana de 24 horas tiene ${r.media_24h.lecturas} ${r.media_24h.lecturas === 1 ? 'lectura' : 'lecturas'}: ${
-        faltan === 1 ? 'falta 1' : `faltan ${faltan}`
-      } para que la API calcule la media. Sin media no hay alerta ni banda INCA.`,
-    }
-  }
-  const medias = `La media de las últimas 24 horas es ${numero(r.media_24h.pm2_5, 1)} µg/m³ de PM2.5 y ${numero(r.media_24h.pm10, 1)} µg/m³ de PM10`
-  if (!r.alerta) {
-    return { tono: 'buena', texto: `${medias}: no supera el ECA (${reglas.eca_pm2_5} y ${reglas.eca_pm10}).` }
-  }
-  const cual = [
-    r.media_24h.pm2_5 > reglas.eca_pm2_5 ? `el de PM2.5 (${reglas.eca_pm2_5})` : null,
-    r.media_24h.pm10 > reglas.eca_pm10 ? `el de PM10 (${reglas.eca_pm10})` : null,
-  ].filter((x): x is string => x !== null)
-  const desde = s.primeraAlerta ? ` Hay alerta desde el ${fechaHora(s.primeraAlerta)}.` : ''
-  return { tono: 'alerta', texto: `${medias}: supera el ECA, ${enumerar(cual)}.${desde}` }
 }
 
 /** La ventana de 24 horas, lectura por lectura: se ve cómo se llena y dónde aparece la media. */
@@ -197,6 +153,7 @@ export function Marcha({ tramo, corrida, reglas }: Props) {
       cortes={contaminante === 'pm2_5' ? reglas.inca.cortes_pm2_5 : reglas.inca.cortes_pm10}
       primeraMedia={seguimiento?.primeraMedia ?? null}
       primeraAlerta={seguimiento?.primeraAlerta ?? null}
+      causaDeLaAlerta={enumerar(causaDeLaAlerta(seguimiento?.puntos ?? [], seguimiento?.primeraAlerta ?? null, reglas))}
     />
   )
 
