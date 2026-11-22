@@ -106,7 +106,12 @@ export const claves = {
   regimen: (estacion: string) => ['regimenes', estacion] as const,
   modeloActivo: ['modelos', 'activo'] as const,
   nodos: ['cluster', 'nodos'] as const,
+  eventosCluster: ['cluster', 'eventos'] as const,
   entrenamientos: ['entrenamientos'] as const,
   entrenamiento: (id: string) => ['entrenamientos', id] as const,
   metricas: ['metricas'] as const,
+  // Los archivos estáticos de /datos/ (api/datos.ts).
+  datosImpacto: ['datos', 'impacto'] as const,
+  datosSeries: ['datos', 'series'] as const,
+  datosMapa: ['datos', 'peru'] as const,
 }

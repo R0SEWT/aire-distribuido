@@ -28,10 +28,12 @@
 // entre dos eventos manda el que llegó último, y entre un evento y un GET, el
 // evento.
 //
-// Al abrirse o reabrirse el WebSocket, esa memoria se vacía y se vuelven a
-// pedir las consultas EN_VIVO: mientras estuvo caído se perdieron eventos, y
-// lo que se sabía por eventos ya no es de fiar. Con eso tampoco importa el
-// orden al entrar: no hace falta abrir el WebSocket antes del primer GET.
+// Esa memoria vale mientras la conexión está abierta. En cuanto deja de
+// estarlo se vacía: sin WebSocket se pierden eventos, lo que se sabía por
+// eventos ya no es de fiar y manda lo que responda un GET. Y al abrirse o
+// reabrirse se vuelve a pedir todo lo que el WebSocket mantiene al día. Con eso
+// tampoco importa el orden al entrar: no hace falta abrir el WebSocket antes
+// del primer GET.
 
 import type { QueryClient } from '@tanstack/react-query'
 import { claves } from './cliente'
@@ -103,7 +105,31 @@ export function aplicarEstadoEstacion(consultas: QueryClient, estado: EstadoEsta
  */
 export function alConectarEnVivo(consultas: QueryClient): Promise<void> {
   eventosDe(consultas).clear()
-  return consultas.invalidateQueries({ predicate: (c) => c.meta?.enVivo === true })
+  // Además de lo marcado EN_VIVO, todo el estado de las estaciones: las entradas
+  // por estación que creó un evento (aplicarEstadoEstacion) no llevan `meta`
+  // hasta que una pantalla las pide, y quedarían con lo de antes del corte.
+  return consultas.invalidateQueries({ predicate: (c) => c.meta?.enVivo === true || c.queryKey[0] === claves.regimenes[0] })
+}
+
+/**
+ * La conexión dejó de estar abierta (se cortó, está reconectando o el servidor
+ * la cerró): desde ahora se pierden eventos. Se olvida de qué estaciones había
+ * eventos, para que un evento viejo no le gane a un GET más nuevo, y lo que la
+ * caché sabe de las estaciones queda marcado como viejo: la pantalla que se
+ * abra lo vuelve a pedir. No se pide nada ahora: eso es al reconectar.
+ */
+export function alDesconectarEnVivo(consultas: QueryClient): Promise<void> {
+  eventosDe(consultas).clear()
+  return consultas.invalidateQueries({ queryKey: claves.regimenes, refetchType: 'none' })
+}
+
+/**
+ * La sesión terminó: se olvida de qué estaciones había eventos. Si no, hasta
+ * que el WebSocket de la sesión siguiente quede abierto, un evento de la
+ * anterior seguiría valiendo más que la respuesta de la API.
+ */
+export function olvidarEventosEnVivo(consultas: QueryClient) {
+  eventosDe(consultas).clear()
 }
 
 /**

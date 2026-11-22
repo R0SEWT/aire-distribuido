@@ -7,8 +7,9 @@ import { BotonProyector } from '../armazon/BotonProyector'
 import { EstadoApi } from '../armazon/Indicadores'
 import { Marca } from '../armazon/Marca'
 import { puedeEntrar, RUTAS } from '../armazon/menu'
-import { useTitulo } from '../armazon/titulo'
 import { Pie } from '../armazon/Pie'
+import { useTitulo } from '../armazon/titulo'
+import { Aviso } from '../componentes/Aviso'
 import type { DesdeDonde } from '../sesion/guardas'
 import { useSesion } from '../sesion/useSesion'
 
@@ -69,9 +70,9 @@ export default function Ingreso() {
         </p>
 
         {motivo === 'vencida' && !error && (
-          <p role="status" className="border-aviso bg-relieve text-texto mt-5 rounded-lg border-l-4 px-4 py-3 text-sm">
-            <strong className="font-semibold">La sesión venció.</strong> Vuelve a ingresar para seguir.
-          </p>
+          <Aviso titulo="La sesión venció." className="mt-5">
+            Vuelve a ingresar para seguir.
+          </Aviso>
         )}
 
         <form
@@ -142,22 +143,16 @@ function ErrorDeIngreso({
 }) {
   // Usuario o clave incorrectos: se dice eso, sin más (ni cuál de los dos).
   if (error.tipo === 'credenciales') {
-    return (
-      <p role="alert" className="border-falla bg-relieve text-texto rounded-lg border-l-4 px-4 py-3 text-sm font-semibold">
-        Usuario o clave incorrectos.
-      </p>
-    )
+    return <Aviso tono="alerta" titulo="Usuario o clave incorrectos." />
   }
   const p = presentarError(error)
   return (
-    <div role="alert" className="border-falla bg-relieve text-texto rounded-lg border-l-4 px-4 py-3 text-sm">
-      <p className="font-semibold">{p.titulo}.</p>
-      {p.detalle && <p className="text-suave mt-1">{p.detalle}</p>}
-      {p.reintentable && (
-        <button type="button" className="pildora mt-3" onClick={alReintentar} disabled={enviando}>
-          Reintentar
-        </button>
-      )}
-    </div>
+    <Aviso
+      tono="alerta"
+      titulo={`${p.titulo}.`}
+      accion={p.reintentable ? { etiqueta: 'Reintentar', alHacer: alReintentar, deshabilitada: enviando } : undefined}
+    >
+      {p.detalle}
+    </Aviso>
   )
 }

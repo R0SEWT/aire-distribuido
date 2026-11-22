@@ -3,16 +3,18 @@ import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import { errorDeFetch, errorDeRespuesta } from '../api/errores'
 import {
+  Advertencia,
+  Aviso,
   Banda,
   BANDAS,
   Barrera,
   Cifra,
+  Dato,
   Desplegable,
-  EnConstruccion,
+  Encabezado,
   Estado,
   EstadoDeError,
   Etiqueta,
-  fechaHora,
   Frase,
   numero,
   Pildoras,
@@ -208,6 +210,33 @@ describe('Tabla', () => {
   })
 })
 
+describe('Encabezado', () => {
+  it('pone el título de la pantalla como h1, lo que lo acompaña a su lado y la bajada debajo', () => {
+    render(
+      <Encabezado titulo="Estación" junto={<p>CA-HU-04</p>} bajada="El último estado recibido de una estación.">
+        <button type="button">Elegir estación</button>
+      </Encabezado>,
+    )
+
+    const titulo = screen.getByRole('heading', { level: 1, name: 'Estación' })
+    const encabezado = titulo.closest('header')!
+    expect(encabezado).toHaveAttribute('data-encabezado')
+    expect(within(encabezado).getByText('CA-HU-04')).toBeInTheDocument()
+    expect(within(encabezado).getByRole('button', { name: 'Elegir estación' })).toBeInTheDocument()
+    // La bajada va después del renglón del título, no dentro de él.
+    const bajada = within(encabezado).getByText('El último estado recibido de una estación.')
+    expect(bajada.previousElementSibling).toContainElement(titulo)
+  })
+
+  it('solo con título no deja huecos', () => {
+    render(<Encabezado titulo="Impacto" />)
+
+    const encabezado = screen.getByRole('heading', { level: 1, name: 'Impacto' }).closest('header')!
+    expect(encabezado.children).toHaveLength(1)
+    expect(encabezado.querySelector('p')).toBeNull()
+  })
+})
+
 describe('Estado', () => {
   it.each([
     ['cargando', 'status', 'Cargando…'],
@@ -240,6 +269,129 @@ describe('Estado', () => {
     expect(screen.getByText(/todavía no recibió lecturas/)).toBeInTheDocument()
     await userEvent.click(screen.getByRole('button', { name: 'Cargar el escenario' }))
     expect(cargar).toHaveBeenCalledOnce()
+  })
+})
+
+describe('Estado compacto', () => {
+  it('dentro de una tarjeta va sin su borde, con el mismo título, el mismo dibujo y la misma acción', async () => {
+    const reintentar = vi.fn()
+    render(
+      <Estado tipo="vacio" titulo="Todavía no hay eventos" compacto accion={{ etiqueta: 'Volver a pedir', alHacer: reintentar }}>
+        Aparecen cuando un nodo entra al pool.
+      </Estado>,
+    )
+
+    const estado = screen.getByRole('status')
+    expect(estado).toHaveAttribute('data-estado', 'vacio')
+    expect(estado).toHaveAttribute('data-compacto', 'true')
+    expect(estado.className).not.toMatch(/border/)
+    expect(within(estado).getByText('Todavía no hay eventos')).toBeInTheDocument()
+    expect(estado.querySelector('svg')).toBeInTheDocument()
+    await userEvent.click(within(estado).getByRole('button', { name: 'Volver a pedir' }))
+    expect(reintentar).toHaveBeenCalledOnce()
+  })
+
+  it('el de siempre lleva su borde y no se marca como compacto', () => {
+    render(<Estado tipo="cargando" />)
+
+    expect(screen.getByRole('status')).not.toHaveAttribute('data-compacto')
+    expect(screen.getByRole('status').className).toMatch(/border-dashed/)
+  })
+
+  it('un error compacto sigue interrumpiendo y ofreciendo reintentar', () => {
+    render(<EstadoDeError error={errorDeRespuesta(503, { error: 'MongoDB no disponible' }, true)} alReintentar={vi.fn()} compacto />)
+
+    expect(screen.getByRole('alert')).toHaveAttribute('data-compacto', 'true')
+    expect(screen.getByRole('button', { name: 'Reintentar' })).toBeInTheDocument()
+  })
+})
+
+describe('Aviso y Advertencia', () => {
+  it('un rechazo interrumpe (alert), con su título, las palabras de la API y su acción', async () => {
+    const reintentar = vi.fn()
+    render(
+      <Aviso tono="alerta" titulo="La API rechazó el pedido" accion={{ etiqueta: 'Reintentar', alHacer: reintentar }}>
+        <p>La API dice: «hay 2 nodos libres en el pool y se pidieron 4»</p>
+      </Aviso>,
+    )
+
+    const aviso = screen.getByRole('alert')
+    expect(aviso).toHaveAttribute('data-aviso', 'alerta')
+    expect(within(aviso).getByText('La API rechazó el pedido')).toBeInTheDocument()
+    expect(aviso).toHaveTextContent('hay 2 nodos libres en el pool y se pidieron 4')
+    expect(aviso.className).toMatch(/border-l-inca-cuidado/)
+    await userEvent.click(within(aviso).getByRole('button', { name: 'Reintentar' }))
+    expect(reintentar).toHaveBeenCalledOnce()
+  })
+
+  it('un aviso que no es un error no interrumpe (status) y lleva el tono «aviso»', () => {
+    render(<Aviso titulo="La sesión venció.">Vuelve a ingresar para seguir.</Aviso>)
+
+    const aviso = screen.getByRole('status')
+    expect(aviso).toHaveAttribute('data-aviso', 'aviso')
+    expect(aviso.className).toMatch(/border-l-aviso/)
+    expect(aviso).toHaveTextContent('La sesión venció.Vuelve a ingresar para seguir.')
+    expect(screen.queryByRole('button')).not.toBeInTheDocument()
+  })
+
+  it('solo con título no deja un hueco para el detalle', () => {
+    render(<Aviso tono="alerta" titulo="Usuario o clave incorrectos." />)
+
+    expect(screen.getByRole('alert')).toHaveTextContent(/^Usuario o clave incorrectos\.$/)
+    expect(screen.getByRole('alert').children).toHaveLength(1)
+  })
+
+  it('la acción se puede deshabilitar mientras se reintenta', () => {
+    render(<Aviso tono="alerta" titulo="La API no responde." accion={{ etiqueta: 'Reintentar', alHacer: vi.fn(), deshabilitada: true }} />)
+
+    expect(screen.getByRole('button', { name: 'Reintentar' })).toBeDisabled()
+  })
+
+  it('la advertencia es una línea en el tono «aviso», y acepta atributos data-', () => {
+    render(<Advertencia data-aviso="faltan-nodos">Hay 1 nodo libre y pides 2.</Advertencia>)
+
+    const linea = screen.getByText('Hay 1 nodo libre y pides 2.')
+    expect(linea.className).toMatch(/text-aviso/)
+    expect(linea).toHaveAttribute('data-aviso', 'faltan-nodos')
+  })
+
+  it('el tono «aviso» también sirve para una etiqueta, una frase y una tarjeta', () => {
+    render(
+      <Tarjeta acento="aviso" titulo="En pausa">
+        <Etiqueta tono="aviso">Detenida</Etiqueta>
+        <Frase tono="aviso">Solo difiere el régimen.</Frase>
+      </Tarjeta>,
+    )
+
+    expect(screen.getByText('Detenida').className).toMatch(/border-aviso/)
+    expect(screen.getByText('Detenida').className).toMatch(/text-aviso/)
+    expect(screen.getByText('Solo difiere el régimen.').className).toMatch(/border-l-aviso/)
+    expect(screen.getByRole('heading', { name: 'En pausa' }).closest('section')!.className).toMatch(/border-l-aviso/)
+  })
+})
+
+describe('Dato', () => {
+  it('muestra un dato escrito con su rótulo, en la monoespaciada de las cifras', () => {
+    render(
+      <Dato rotulo="Motivo de paro" titulo="Los centroides dejaron de moverse (tolerancia)">
+        Convergió
+      </Dato>,
+    )
+
+    expect(screen.getByText('Motivo de paro').className).toMatch(/rotulo/)
+    expect(screen.getByText('Convergió').className).toMatch(/font-mono/)
+    expect(screen.getByText('Convergió').closest('[title]')).toHaveAttribute('title', 'Los centroides dejaron de moverse (tolerancia)')
+  })
+
+  it('lleva un detalle chico debajo cuando se le da', () => {
+    render(
+      <Dato tamano="mediana" rotulo="Último estado recibido" detalle="CA-TAL-01 · llegó el 22 nov 2026, 00:28">
+        16 dic 2021, 00:00
+      </Dato>,
+    )
+
+    expect(screen.getByText('16 dic 2021, 00:00')).toBeInTheDocument()
+    expect(screen.getByText('CA-TAL-01 · llegó el 22 nov 2026, 00:28').className).toMatch(/text-xs/)
   })
 })
 
@@ -281,39 +433,12 @@ describe('EstadoDeError', () => {
   })
 })
 
-describe('Desplegable y EnConstruccion', () => {
+describe('Desplegable', () => {
   it('el desplegable guarda la explicación detrás de su pregunta', () => {
     render(<Desplegable titulo="¿De dónde sale este número?">De la media de las últimas 24 horas.</Desplegable>)
 
     expect(screen.getByText('¿De dónde sale este número?').closest('details')).not.toHaveAttribute('open')
     expect(screen.getByText('De la media de las últimas 24 horas.')).toBeInTheDocument()
-  })
-
-  it('el marcador dice qué pantalla es, dónde está en la spec y en qué archivo se construye', () => {
-    render(
-      <EnConstruccion pantalla="Panel" seccion="§5.2" archivo="web/src/pantallas/Panel.tsx">
-        Aquí va el mapa.
-      </EnConstruccion>,
-    )
-
-    expect(screen.getByRole('heading', { name: 'Panel' })).toBeInTheDocument()
-    expect(screen.getByText('En construcción')).toBeInTheDocument()
-    expect(screen.getByText('web/src/pantallas/Panel.tsx')).toBeInTheDocument()
-    expect(screen.getByText(/§5\.2/)).toBeInTheDocument()
-  })
-})
-
-describe('formato', () => {
-  it('escribe los números con sus decimales y una raya cuando no hay', () => {
-    expect(numero(58.349, 1)).toBe('58.3')
-    expect(numero(1536)).toBe('1,536')
-    expect(numero(null)).toBe('—')
-    expect(numero(Number.NaN)).toBe('—')
-  })
-
-  it('escribe las fechas en la hora de Lima, esté donde esté el navegador', () => {
-    expect(fechaHora('2021-12-13T20:00:00Z')).toMatch(/13 dic.* 2021.* 15:00/)
-    expect(fechaHora('no es una fecha')).toBe('—')
   })
 })
 

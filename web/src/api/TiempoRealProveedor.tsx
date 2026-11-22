@@ -1,7 +1,7 @@
 import { useQueryClient } from '@tanstack/react-query'
 import { useContext, useEffect, useState, useSyncExternalStore, type ReactNode } from 'react'
 import { useSesion } from '../sesion/useSesion'
-import { alConectarEnVivo, aplicarEstadoEstacion } from './enVivo'
+import { alConectarEnVivo, alDesconectarEnVivo, aplicarEstadoEstacion } from './enVivo'
 import { ContextoTiempoReal, EnlaceTiempoReal, useEvento } from './tiempoReal'
 import type { OpcionesWS } from './ws'
 
@@ -33,7 +33,9 @@ export function TiempoRealProveedor({ children, opciones }: { children: ReactNod
  * El camino del WebSocket a la caché (api/enVivo.ts): cada `estacion.regimen`
  * actualiza la lista y la entrada de su estación, y cada vez que la conexión
  * queda abierta (la primera vez y después de un corte) se olvida de qué
- * estaciones había eventos y se vuelven a pedir las consultas EN_VIVO.
+ * estaciones había eventos y se vuelven a pedir las consultas EN_VIVO. Cuando
+ * deja de estar abierta también se olvidan: mientras no haya WebSocket, manda
+ * lo que responda la API.
  */
 function CacheEnVivo() {
   const consultas = useQueryClient()
@@ -50,6 +52,8 @@ function CacheEnVivo() {
     if (conexion.estado === 'conectada') alConectar()
     return conexion.alCambiar((estado) => {
       if (estado === 'conectada') alConectar()
+      // Sin conexión se pierden eventos: lo que se sabía por eventos deja de mandar sobre un GET.
+      else void alDesconectarEnVivo(consultas)
     })
   }, [conexion, consultas])
 

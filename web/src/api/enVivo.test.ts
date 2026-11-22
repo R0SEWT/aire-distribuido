@@ -3,9 +3,11 @@ import { describe, expect, it } from 'vitest'
 import { claves } from './cliente'
 import {
   alConectarEnVivo,
+  alDesconectarEnVivo,
   aplicarEstadoEstacion,
   EN_VIVO,
   fusionar,
+  olvidarEventosEnVivo,
   pedirRegimen,
   pedirRegimenes,
   type EstadoEstacion,
@@ -183,6 +185,57 @@ describe('la fusión del GET con los eventos', () => {
     expect(await pedirLista(consultas, async () => [estado('CA-B', 17, { alerta: true })])).toEqual([
       estado('CA-B', 17, { alerta: true }),
     ])
+  })
+
+  it('con el WebSocket caído, un evento viejo no le gana a un GET más nuevo', async () => {
+    const consultas = nuevaCache()
+    void alConectarEnVivo(consultas)
+    aplicarEstadoEstacion(consultas, estado('CA-B', 10))
+
+    // Se cae el WebSocket y otra sesión manda la lectura de las 11: ese evento no llega.
+    void alDesconectarEnVivo(consultas)
+
+    expect(await pedirLista(consultas, async () => [estado('CA-B', 11, { alerta: true })])).toEqual([estado('CA-B', 11, { alerta: true })])
+    expect(await pedirRegimen(consultas, 'CA-B', async () => estado('CA-B', 11, { alerta: true }))).toMatchObject({ alerta: true })
+  })
+
+  it('al caerse, lo que la caché sabe de las estaciones queda por volver a pedir, sin pedirlo todavía', async () => {
+    const consultas = nuevaCache()
+    const pedidos = { lista: 0 }
+    await consultas.prefetchQuery({ queryKey: claves.regimenes, meta: EN_VIVO, queryFn: async () => (pedidos.lista++, [estado('CA-A', 10)]) })
+    aplicarEstadoEstacion(consultas, estado('CA-B', 10))
+    expect(consultas.getQueryState(claves.regimen('CA-B'))?.isInvalidated).toBe(false)
+
+    await alDesconectarEnVivo(consultas)
+
+    expect(consultas.getQueryState(claves.regimenes)?.isInvalidated).toBe(true)
+    expect(consultas.getQueryState(claves.regimen('CA-B'))?.isInvalidated).toBe(true)
+    expect(pedidos.lista).toBe(1)
+  })
+
+  it('al reconectar también se marcan las entradas por estación que creó un evento, que no llevan meta', async () => {
+    const consultas = nuevaCache()
+    void alConectarEnVivo(consultas)
+    aplicarEstadoEstacion(consultas, estado('CA-B', 10))
+    expect(consultas.getQueryCache().find({ queryKey: claves.regimen('CA-B') })?.meta).toBeUndefined()
+
+    await alConectarEnVivo(consultas)
+
+    expect(consultas.getQueryState(claves.regimen('CA-B'))?.isInvalidated).toBe(true)
+  })
+
+  it('al terminar la sesión se olvidan los eventos: en la siguiente manda la API, también su 404', async () => {
+    const consultas = new QueryClient()
+    aplicarEstadoEstacion(consultas, estado('CA-A', 15, { alerta: true }))
+
+    olvidarEventosEnVivo(consultas)
+
+    expect(await pedirRegimenes(consultas, async () => [])).toEqual([])
+    await expect(
+      pedirRegimen(consultas, 'CA-A', async () => {
+        throw errorDeRespuesta(404, { error: 'la estación CA-A todavía no tiene un régimen registrado' }, true)
+      }),
+    ).rejects.toMatchObject({ tipo: 'no_encontrado' })
   })
 
   it('al reabrirse tras un reinicio limpio del sistema, la lista vacía del GET queda vacía', async () => {

@@ -14,12 +14,8 @@ export interface EventosWS {
   'entrenamiento.ronda': Esquemas['EventoRonda']
   /** Solo admin. El entrenamiento terminó (EventoFin) o abortó (EventoError, trae `error`). */
   'entrenamiento.fin': Esquemas['EventoFin'] | Esquemas['EventoError']
-  /**
-   * Para todos. El último estado de una estación cambió (spec §6). La API lo
-   * suma al contrato como EstadoEstacion junto con GET /api/regimenes; cuando
-   * esté en develop, `pnpm tipos` y esto pasa a ser Esquemas['EstadoEstacion'].
-   */
-  'estacion.regimen': Esquemas['RegimenEstacion'] & { estacion: string }
+  /** Para todos. El último estado de una estación cambió (spec §6): la misma entrada de GET /api/regimenes. */
+  'estacion.regimen': Esquemas['EstadoEstacion']
 }
 
 export type NombreEvento = keyof EventosWS

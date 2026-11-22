@@ -5,13 +5,17 @@ import { act, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link, MemoryRouter, Route, Routes } from 'react-router'
-import { lazy } from 'react'
+import { lazy, StrictMode, useState } from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { api, claves, crearClienteDeConsultas, pedir } from './api/cliente'
 import { EN_VIVO, pedirRegimenes, type EstadoEstacion } from './api/enVivo'
 import { useEvento } from './api/tiempoReal'
+import { anotarVista, lecturasVistas } from './api/vistas'
 import { Proveedores, Rutas } from './App'
 import { Armazon } from './armazon/Armazon'
+import { entrenamientoALaVista } from './pantallas/entrenamiento/almacen'
+import { simulador } from './pantallas/simulacion/motor'
+import type { Tramo } from './pantallas/simulacion/series'
 import { fabricaDeEnchufes, SALUD_OK, simularApi, tokenDe } from './pruebas/dobles'
 import { abrirSesion, cerrarSesion, recargarSesion, sesionActual, type Rol } from './sesion/almacen'
 
@@ -203,6 +207,30 @@ describe('la app', () => {
       expect(screen.queryByText('En construcción')).not.toBeInTheDocument()
     })
 
+    // Las seis pantallas de la spec (§5.2 a §5.7) ya están construidas: ninguna
+    // ruta muestra el marcador «En construcción» con que nació el andamiaje, y
+    // cada una se presenta con su encabezado y su bajada.
+    it.each([
+      ['/', 'Panel', 'usuario', 'El último estado recibido de cada estación, con su fecha.'],
+      ['/estacion', 'Estación', 'usuario', 'El último estado recibido de una estación,'],
+      ['/simulacion', 'Simulación', 'usuario', 'Lecturas reales de OEFA mandadas una por una a la API'],
+      ['/impacto', 'Impacto', 'usuario', 'Qué dicen las mediciones reales de OEFA'],
+      ['/entrenamiento', 'Entrenamiento', 'admin', 'El K-Means se reparte entre los nodos del clúster.'],
+      ['/cluster', 'Clúster', 'admin', 'Los nodos que entrenan, cómo se porta la API que los coordina'],
+    ] as const)('%s ya no muestra «En construcción»: es la pantalla de %s', async (ruta, titulo, rol, bajada) => {
+      simularApi({ 'GET /api/salud': SALUD_OK })
+      sesionDe(rol)
+
+      montar(ruta)
+
+      const encabezado = (await screen.findByRole('heading', { level: 1, name: titulo })).closest('[data-encabezado]')
+      expect(encabezado).toHaveTextContent(bajada)
+      expect(screen.queryByText('En construcción')).not.toBeInTheDocument()
+      expect(document.querySelector('[data-en-construccion]')).toBeNull()
+      // La pantalla dibuja algo propio debajo del encabezado, aunque la API de la prueba no le responda nada.
+      expect(encabezado!.parentElement!.children.length).toBeGreaterThan(1)
+    })
+
     it.each([
       ['/entrenamiento', 'Entrenamiento'],
       ['/cluster', 'Clúster'],
@@ -221,14 +249,14 @@ describe('la app', () => {
       ['/estacion/CA-AYAS-01', 'Estación'],
       ['/simulacion', 'Simulación'],
       ['/impacto', 'Impacto'],
-    ])('un usuario entra a %s, que todavía muestra su marcador', async (ruta, titulo) => {
+    ])('un usuario entra a %s', async (ruta, titulo) => {
       simularApi({ 'GET /api/salud': SALUD_OK })
       sesionDe('usuario')
 
       montar(ruta)
 
       expect(await screen.findByRole('heading', { name: titulo })).toBeInTheDocument()
-      expect(screen.getByText('En construcción')).toBeInTheDocument()
+      expect(screen.queryByText('En construcción')).not.toBeInTheDocument()
     })
 
     it('el muestrario de componentes está fuera del menú, en /muestrario', async () => {
@@ -252,6 +280,192 @@ describe('la app', () => {
   })
 
   describe('el fin de la sesión', () => {
+    describe('no deja nada para quien entre después en la misma pestaña', () => {
+      const ESTADO = {
+        estacion: 'CA-HU-04',
+        fecha_hora: '2021-12-15T10:00:00-05:00',
+        regimen: 2,
+        excede_eca: false,
+        media_24h: { pm2_5: 88.8, pm10: 120.7, lecturas: 24 },
+        alerta: true,
+        inca: 'mala',
+        ts: '2026-11-21T17:10:00-05:00',
+      }
+      const lecturaDe = (hora: number) => ({ estacion: 'CA-HU-04', fecha_hora: `2021-12-15T1${hora}:00:00-05:00`, pm2_5: 20, pm10: 90 })
+      const TRAMO: Tramo = {
+        id: 'dia-de-prueba',
+        tipo: 'dia',
+        titulo: 'CA-HU-04 · 15 dic 2021',
+        desde: lecturaDe(1).fecha_hora,
+        hasta: lecturaDe(3).fecha_hora,
+        lecturas: [lecturaDe(1), lecturaDe(2), lecturaDe(3)],
+        estaciones: ['CA-HU-04'],
+        esperado: {},
+        primera: { 'CA-HU-04': lecturaDe(1).fecha_hora },
+        ultima: { 'CA-HU-04': lecturaDe(3).fecha_hora },
+      }
+      const PREDICCION = {
+        estacion: 'CA-HU-04',
+        regimen: 2,
+        excede_eca: false,
+        media_24h: { pm2_5: 80, pm10: 119, lecturas: 24 },
+        alerta: true,
+        inca: 'mala',
+        pm2_5_medio_regimen: 24.4,
+        pm10_medio_regimen: 58.2,
+        modelo_id: 'sembrado-kmeans-json',
+        ms: 0.04,
+      }
+      const ENTRENAMIENTO = { id: 'e-1', estado: 'terminado', nodos: ['nodo-a'], replicas: 1, iteraciones: 1, ms_total: 50, rondas: [] }
+
+      afterEach(() => simulador.reiniciar())
+
+      /** Una sesión de admin que ya dejó de todo en la pestaña: curvas, lecturas enviadas, un entrenamiento a la vista y una simulación corriendo. */
+      async function sesionConDeTodo(rutas: Parameters<typeof simularApi>[0] = {}) {
+        simularApi({ 'GET /api/salud': SALUD_OK, 'POST /api/predicciones': { estado: 200, cuerpo: PREDICCION }, ...rutas })
+        sesionDe('admin')
+        const { enchufes } = montar('/muestrario')
+        await screen.findByRole('heading', { name: 'Muestrario de componentes' })
+        act(() => enchufes.ultimo().abrir())
+        // Un estado recibido: queda para la curva, también en sessionStorage.
+        act(() => enchufes.ultimo().recibir({ evento: 'estacion.regimen', datos: ESTADO }))
+        await waitFor(() => expect(sessionStorage.getItem('aire.curvas')).toContain('CA-HU-04'))
+        // Un entrenamiento abierto del historial, a la vista.
+        act(() => entrenamientoALaVista.despachar({ tipo: 'ver', detalle: ENTRENAMIENTO as never }))
+        // Y una simulación en curso, que ya mandó una lectura y espera para la siguiente.
+        act(() => simulador.iniciar(TRAMO, 1))
+        await waitFor(() => expect(lecturasVistas('CA-HU-04')).toHaveLength(1))
+        expect(simulador.leer().fase).toBe('en_curso')
+        expect(entrenamientoALaVista.leer().seguimiento.corrida?.id).toBe('e-1')
+      }
+
+      function nadaQueda() {
+        expect(sessionStorage.getItem('aire.curvas')).toBeNull()
+        expect(lecturasVistas('CA-HU-04')).toEqual([])
+        expect(entrenamientoALaVista.leer().seguimiento.corrida).toBeNull()
+        expect(simulador.leer()).toMatchObject({ fase: 'lista', tramo: null, enviadas: 0 })
+        expect(document.querySelector('[data-simulacion-en-curso]')).toBeNull()
+      }
+
+      it('«Salir» borra las curvas, las lecturas enviadas y el entrenamiento a la vista, y detiene la simulación', async () => {
+        await sesionConDeTodo()
+
+        await userEvent.click(screen.getByRole('button', { name: 'Salir' }))
+
+        await screen.findByRole('form', { name: 'Ingreso' })
+        nadaQueda()
+      })
+
+      it('lo mismo cuando la sesión vence', async () => {
+        await sesionConDeTodo()
+
+        act(() => cerrarSesion('vencida'))
+
+        await screen.findByRole('form', { name: 'Ingreso' })
+        expect(screen.getByText('La sesión venció.')).toBeInTheDocument()
+        nadaQueda()
+      })
+
+      it('lo mismo cuando la API responde 401 a un pedido', async () => {
+        await sesionConDeTodo({ 'GET /api/estaciones': { estado: 401, cuerpo: { error: 'token inválido' } } })
+
+        // El Panel pide el catálogo y la API ya no acepta el token.
+        await userEvent.click(within(screen.getByRole('navigation', { name: 'Pantallas' })).getByRole('link', { name: 'Panel' }))
+
+        await screen.findByRole('form', { name: 'Ingreso' })
+        expect(sesionActual()).toBeNull()
+        nadaQueda()
+      })
+
+      it('la simulación detenida no manda más lecturas con la sesión cerrada', async () => {
+        await sesionConDeTodo()
+        const predicciones = () => (globalThis.fetch as ReturnType<typeof simularApi>).mock.calls.filter((c) => c[0].url.endsWith('/api/predicciones')).length
+        const antes = predicciones()
+
+        await userEvent.click(screen.getByRole('button', { name: 'Salir' }))
+        await screen.findByRole('form', { name: 'Ingreso' })
+        // Pasa de sobra el segundo que el simulador esperaba para la lectura siguiente.
+        await new Promise((r) => setTimeout(r, 1200))
+
+        expect(predicciones()).toBe(antes)
+      })
+
+      it('quien entra después ve la curva de la estación vacía, no la del anterior', async () => {
+        await sesionConDeTodo({
+          'POST /api/auth/token': { estado: 200, cuerpo: tokenDe('usuario') },
+          'GET /api/estaciones': { estado: 200, cuerpo: [{ id: 'CA-HU-04', objeto_fiscalizado: 'Ladrilleras', tipo_actividad: 'ladrilleras', departamento: 'LIMA', provincia: 'LIMA', distrito: 'LURIGANCHO', lat: -11.99, lon: -76.92 }] },
+          'GET /datos/impacto.json': { estado: 200, cuerpo: { metadatos: { reglas: {} }, totales: {}, distritos: [], senales: {}, anticipacion: {}, alcance: { estaciones_sin_pm_horario: [] }, estaciones: [], poblacion_distritos: [] } },
+          'GET /api/estaciones/CA-HU-04/regimen': { estado: 404, cuerpo: { error: 'la estación CA-HU-04 todavía no tiene un régimen registrado' } },
+        })
+        await userEvent.click(screen.getByRole('button', { name: 'Salir' }))
+        await screen.findByRole('form', { name: 'Ingreso' })
+
+        await ingresarComo('demo', 'una-clave')
+        await screen.findByRole('navigation', { name: 'Pantallas' })
+        await userEvent.click(within(screen.getByRole('navigation', { name: 'Pantallas' })).getByRole('link', { name: 'Estación' }))
+        await userEvent.selectOptions(await screen.findByRole('combobox'), 'CA-HU-04')
+
+        expect(await screen.findByText(/Esta pestaña todavía no recibió ningún estado de CA-HU-04 ni le envió lecturas/)).toBeInTheDocument()
+        expect(document.querySelectorAll('[data-capa="curva"] [data-punto], [data-lectura]')).toHaveLength(0)
+      })
+
+      it('al arrancar sin sesión borra lo que una sesión vencida dejó guardado antes de recargar', async () => {
+        simularApi({ 'GET /api/salud': SALUD_OK })
+        sessionStorage.setItem('aire.curvas', JSON.stringify({ 'CA-HU-04': [{ fecha_hora: ESTADO.fecha_hora, t: Date.parse(ESTADO.fecha_hora), pm2_5: 88.8, pm10: 120.7, lecturas: 24, alerta: true, inca: 'mala' }] }))
+
+        montar('/ingreso')
+
+        await screen.findByRole('form', { name: 'Ingreso' })
+        await waitFor(() => expect(sessionStorage.getItem('aire.curvas')).toBeNull())
+      })
+
+      it('recargar la página con la sesión viva no borra las curvas, tampoco en desarrollo (StrictMode)', async () => {
+        simularApi({ 'GET /api/salud': SALUD_OK })
+        sesionDe('usuario')
+        sessionStorage.setItem('aire.curvas', JSON.stringify({ 'CA-HU-04': [{ fecha_hora: ESTADO.fecha_hora, t: Date.parse(ESTADO.fecha_hora), pm2_5: 88.8, pm10: 120.7, lecturas: 24, alerta: true, inca: 'mala' }] }))
+        const enchufes = fabricaDeEnchufes()
+
+        // Como main.tsx: con StrictMode, que en desarrollo desmonta y vuelve a montar todo al cargar.
+        render(
+          <StrictMode>
+            <Proveedores consultas={crearClienteDeConsultas()} tiempoReal={{ crearEnchufe: enchufes.crearEnchufe }}>
+              <MemoryRouter initialEntries={['/muestrario']}>
+                <Rutas />
+              </MemoryRouter>
+            </Proveedores>
+          </StrictMode>,
+        )
+
+        await screen.findByRole('heading', { name: 'Muestrario de componentes' })
+        expect(sessionStorage.getItem('aire.curvas')).toContain('CA-HU-04')
+        expect(sesionActual()).not.toBeNull()
+      })
+
+      it('y con StrictMode, «Salir» sigue limpiando todo', async () => {
+        simularApi({ 'GET /api/salud': SALUD_OK })
+        sesionDe('usuario')
+        sessionStorage.setItem('aire.curvas', JSON.stringify({ 'CA-HU-04': [] }))
+        const enchufes = fabricaDeEnchufes()
+        render(
+          <StrictMode>
+            <Proveedores consultas={crearClienteDeConsultas()} tiempoReal={{ crearEnchufe: enchufes.crearEnchufe }}>
+              <MemoryRouter initialEntries={['/muestrario']}>
+                <Rutas />
+              </MemoryRouter>
+            </Proveedores>
+          </StrictMode>,
+        )
+        await screen.findByRole('heading', { name: 'Muestrario de componentes' })
+        act(() => anotarVista('CA-HU-04', { fecha_hora: ESTADO.fecha_hora, pm2_5: 20, pm10: 90, media_pm2_5: null, media_pm10: null, lecturas: 1, alerta: false, inca: null, regimen: 0, excede_eca: false }))
+
+        await userEvent.click(screen.getByRole('button', { name: 'Salir' }))
+
+        await screen.findByRole('form', { name: 'Ingreso' })
+        expect(sessionStorage.getItem('aire.curvas')).toBeNull()
+        expect(lecturasVistas('CA-HU-04')).toEqual([])
+      })
+    })
+
     it('salir vuelve al ingreso y borra el token', async () => {
       simularApi({ 'GET /api/salud': SALUD_OK })
       sesionDe('admin')
@@ -502,7 +716,10 @@ describe('la app', () => {
         ts: `2021-12-13T${hora}:00:02-05:00`,
       })
 
-      // Lo que haría el Panel: leer la lista de la caché, marcada en vivo. No se suscribe a nada.
+      // Se monta en una pantalla que no pide datos: en «/» está el Panel, que lee esta misma lista.
+      const SIN_DATOS = '/muestrario'
+
+      // Lo que hace el Panel: leer la lista de la caché, marcada en vivo. No se suscribe a nada.
       function Lista({ pedirLista }: { pedirLista: () => Promise<EstadoEstacion[]> }) {
         const consultas = useQueryClient()
         const lista = useQuery({
@@ -526,7 +743,7 @@ describe('la app', () => {
         simularApi({ 'GET /api/salud': SALUD_OK })
         sesionDe('usuario')
         const pedirLista = vi.fn(async () => [estadoDe('CA-A', 14), estadoDe('CA-B', 14)])
-        const { enchufes } = montar('/', <Lista pedirLista={pedirLista} />)
+        const { enchufes } = montar(SIN_DATOS, <Lista pedirLista={pedirLista} />)
         await waitFor(() => expect(filas()).toEqual(['CA-A sin alerta', 'CA-B sin alerta']))
         act(() => enchufes.ultimo().abrir())
         await waitFor(() => expect(pedirLista).toHaveBeenCalledTimes(2)) // al conectar se refresca
@@ -543,7 +760,7 @@ describe('la app', () => {
         sesionDe('usuario')
         let enLaApi = [estadoDe('CA-A', 14)]
         const pedirLista = vi.fn(async () => enLaApi)
-        const { enchufes } = montar('/', <Lista pedirLista={pedirLista} />)
+        const { enchufes } = montar(SIN_DATOS, <Lista pedirLista={pedirLista} />)
         act(() => enchufes.ultimo().abrir())
         await waitFor(() => expect(filas()).toEqual(['CA-A sin alerta']))
         // Un evento antes del corte: de CA-A «ya se sabe por eventos»… hasta que la conexión se cae.
@@ -561,12 +778,48 @@ describe('la app', () => {
         expect(pedirLista).toHaveBeenCalledTimes(antes + 1)
       })
 
+      it('con el WebSocket caído, lo que responde la API manda sobre el evento de antes del corte', async () => {
+        vi.useFakeTimers({ shouldAdvanceTime: true })
+        simularApi({ 'GET /api/salud': SALUD_OK })
+        sesionDe('usuario')
+        let enLaApi = [estadoDe('CA-A', 9)]
+        const pedirLista = vi.fn(async () => enLaApi)
+        // Una pantalla que se puede cerrar y volver a abrir, como al navegar al Panel.
+        function ConLista() {
+          const [abierta, setAbierta] = useState(true)
+          return (
+            <>
+              <button type="button" onClick={() => setAbierta(!abierta)}>
+                {abierta ? 'cerrar la lista' : 'abrir la lista'}
+              </button>
+              {abierta && <Lista pedirLista={pedirLista} />}
+            </>
+          )
+        }
+        const { enchufes } = montar(SIN_DATOS, <ConLista />)
+        act(() => enchufes.ultimo().abrir())
+        await waitFor(() => expect(filas()).toEqual(['CA-A sin alerta']))
+        act(() => enchufes.ultimo().recibir({ evento: 'estacion.regimen', datos: estadoDe('CA-A', 10) }))
+
+        // Cae el WebSocket; otra sesión manda la lectura de las 11, que deja a CA-A en alerta. Ese evento no llega.
+        act(() => enchufes.ultimo().cerrarDesdeElServidor(1006))
+        await screen.findByText('Tiempo real: reconectando…')
+        enLaApi = [estadoDe('CA-A', 11, true)]
+
+        // Se navega a la pantalla sin haber reconectado: el GET trae las 11 y eso es lo que se ve.
+        await userEvent.click(screen.getByRole('button', { name: 'cerrar la lista' }))
+        await userEvent.click(screen.getByRole('button', { name: 'abrir la lista' }))
+
+        await waitFor(() => expect(filas()).toEqual(['CA-A en alerta']))
+        expect(screen.getByText('Tiempo real: reconectando…')).toBeInTheDocument()
+      })
+
       it('un evento que llega apenas se abre el WebSocket no se pierde al vaciar la memoria de la conexión', async () => {
         simularApi({ 'GET /api/salud': SALUD_OK })
         sesionDe('usuario')
         let responder!: (lista: EstadoEstacion[]) => void
         const pedirLista = vi.fn(() => new Promise<EstadoEstacion[]>((r) => (responder = r)))
-        const { enchufes } = montar('/', <Lista pedirLista={pedirLista} />)
+        const { enchufes } = montar(SIN_DATOS, <Lista pedirLista={pedirLista} />)
         await waitFor(() => expect(pedirLista).toHaveBeenCalled())
 
         // Abre y recibe en el mismo turno, sin dejar que React dibuje en el medio: la memoria
@@ -586,7 +839,7 @@ describe('la app', () => {
         sesionDe('usuario')
         let responder!: (lista: EstadoEstacion[]) => void
         const pedirLista = vi.fn(() => new Promise<EstadoEstacion[]>((r) => (responder = r)))
-        const { enchufes } = montar('/', <Lista pedirLista={pedirLista} />)
+        const { enchufes } = montar(SIN_DATOS, <Lista pedirLista={pedirLista} />)
         await waitFor(() => expect(pedirLista).toHaveBeenCalled())
         // El WebSocket conecta con el primer GET todavía en viaje: TanStack Query
         // no lo cancela (aún no hay datos), así que es ese mismo pedido el que sigue.
@@ -627,6 +880,132 @@ describe('la app', () => {
       expect(pie.getByRole('link', { name: 'API (Swagger)' })).toHaveAttribute('href', '/docs')
       expect(pie.getByRole('link', { name: 'Repositorio' })).toHaveAttribute('href', expect.stringContaining('github.com'))
       expect(pie.getByRole('link', { name: 'Informe' })).toBeInTheDocument()
+    })
+
+    it('anota lo que llega de cada estación desde cualquier pantalla, sin haber pasado por el Panel ni por la Estación', async () => {
+      simularApi({ 'GET /api/salud': SALUD_OK })
+      sesionDe('usuario')
+      // Como después de un F5 en una pantalla que no pide el estado de las estaciones.
+      const { enchufes } = montar('/muestrario')
+      await screen.findByRole('heading', { name: 'Muestrario de componentes' })
+      act(() => enchufes.ultimo().abrir())
+
+      act(() =>
+        enchufes.ultimo().recibir({
+          evento: 'estacion.regimen',
+          datos: {
+            estacion: 'CA-HU-04',
+            fecha_hora: '2021-12-15T10:00:00-05:00',
+            regimen: 2,
+            excede_eca: true,
+            media_24h: { pm2_5: 88.8, pm10: 120.7, lecturas: 24 },
+            alerta: true,
+            inca: 'mala',
+            ts: '2026-11-21T17:10:00-05:00',
+          },
+        }),
+      )
+
+      // Queda para la curva de la estación (api/historia.ts), que se guarda en sessionStorage.
+      await waitFor(() => expect(JSON.parse(sessionStorage.getItem('aire.curvas') ?? '{}')).toHaveProperty('CA-HU-04'))
+      expect(JSON.parse(sessionStorage.getItem('aire.curvas')!)['CA-HU-04']).toMatchObject([{ pm10: 120.7, alerta: true }])
+    })
+
+    describe('la simulación en curso', () => {
+      const lectura = (hora: number) => ({ estacion: 'CA-HU-04', fecha_hora: `2021-12-14T0${hora}:00:00-05:00`, pm2_5: 20, pm10: 90 })
+      const TRAMO: Tramo = {
+        id: 'dia-de-prueba',
+        tipo: 'dia',
+        titulo: 'CA-HU-04 · 2021-12-14',
+        desde: lectura(0).fecha_hora,
+        hasta: lectura(2).fecha_hora,
+        lecturas: [lectura(0), lectura(1), lectura(2)],
+        estaciones: ['CA-HU-04'],
+        esperado: {},
+        primera: { 'CA-HU-04': lectura(0).fecha_hora },
+        ultima: { 'CA-HU-04': lectura(2).fecha_hora },
+      }
+      const PREDICCION = {
+        estado: 200,
+        cuerpo: {
+          estacion: 'CA-HU-04',
+          regimen: 2,
+          excede_eca: false,
+          media_24h: { pm2_5: null, pm10: null, lecturas: 1 },
+          alerta: false,
+          inca: null,
+          pm2_5_medio_regimen: 24.4,
+          pm10_medio_regimen: 58.2,
+          modelo_id: 'sembrado-kmeans-json',
+          ms: 0.04,
+        },
+      }
+      const indicador = () => document.querySelector<HTMLElement>('[data-simulacion-en-curso]')
+
+      afterEach(() => simulador.reiniciar())
+
+      it('sin corrida, la barra no dice nada de la simulación', async () => {
+        simularApi({ 'GET /api/salud': SALUD_OK })
+        sesionDe('usuario')
+
+        montar('/muestrario')
+
+        await screen.findByRole('heading', { name: 'Muestrario de componentes' })
+        expect(indicador()).toBeNull()
+      })
+
+      it('mientras corre se ve desde cualquier pantalla, con su avance, y lleva a Simulación; al detenerla se va', async () => {
+        simularApi({ 'GET /api/salud': SALUD_OK, 'POST /api/predicciones': PREDICCION })
+        sesionDe('usuario')
+        montar('/muestrario')
+        await screen.findByRole('heading', { name: 'Muestrario de componentes' })
+
+        // Lo que hace la pantalla de Simulación: el simulador de la app, que vive fuera de React.
+        // A una hora simulada por segundo: manda la primera lectura y espera.
+        act(() => simulador.iniciar(TRAMO, 1))
+
+        const enlace = await screen.findByRole('link', { name: /Simulación en curso/ })
+        expect(enlace).toHaveAttribute('href', '/simulacion')
+        await waitFor(() => expect(indicador()).toHaveTextContent('Simulación en curso1/3'))
+        expect(indicador()).toHaveAttribute('data-simulacion-en-curso', 'en_curso')
+        expect(enlace).toHaveAttribute('title', expect.stringContaining('CA-HU-04 · 2021-12-14, 1 de 3 lecturas enviadas'))
+
+        act(() => simulador.pausar())
+        expect(indicador()).toHaveTextContent('Simulación en pausa')
+
+        await userEvent.click(within(indicador()!).getByRole('link', { name: /Simulación en pausa/ }))
+        expect(await screen.findByRole('heading', { name: 'Simulación' })).toBeInTheDocument()
+        expect(indicador()).not.toBeNull()
+
+        act(() => simulador.detener())
+        expect(indicador()).toBeNull()
+      })
+
+      it('si un pedido falla, dice que la simulación se detuvo por un error', async () => {
+        simularApi({ 'GET /api/salud': SALUD_OK, 'POST /api/predicciones': { estado: 503, cuerpo: { error: 'MongoDB no disponible' } } })
+        sesionDe('usuario')
+        montar('/muestrario')
+        await screen.findByRole('heading', { name: 'Muestrario de componentes' })
+
+        act(() => simulador.iniciar(TRAMO, 1))
+
+        await waitFor(() => expect(indicador()).toHaveAttribute('data-simulacion-en-curso', 'con_error'))
+        expect(indicador()).toHaveTextContent('Simulación detenida por un error0/3')
+      })
+
+      it('al salir de la sesión la corrida se corta y el indicador no queda para quien entre después', async () => {
+        simularApi({ 'GET /api/salud': SALUD_OK, 'POST /api/predicciones': PREDICCION })
+        sesionDe('usuario')
+        montar('/muestrario')
+        await screen.findByRole('heading', { name: 'Muestrario de componentes' })
+        act(() => simulador.iniciar(TRAMO, 1))
+        await waitFor(() => expect(indicador()).not.toBeNull())
+
+        await userEvent.click(screen.getByRole('button', { name: 'Salir' }))
+
+        await screen.findByRole('form', { name: 'Ingreso' })
+        expect(simulador.leer().fase).toBe('lista')
+      })
     })
 
     it('el modo proyector se pone y se quita, y se recuerda', async () => {
