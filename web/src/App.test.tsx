@@ -12,6 +12,8 @@ import { EN_VIVO, pedirRegimenes, type EstadoEstacion } from './api/enVivo'
 import { useEvento } from './api/tiempoReal'
 import { Proveedores, Rutas } from './App'
 import { Armazon } from './armazon/Armazon'
+import { simulador } from './pantallas/simulacion/motor'
+import type { Tramo } from './pantallas/simulacion/series'
 import { fabricaDeEnchufes, SALUD_OK, simularApi, tokenDe } from './pruebas/dobles'
 import { abrirSesion, cerrarSesion, recargarSesion, sesionActual, type Rol } from './sesion/almacen'
 
@@ -659,6 +661,103 @@ describe('la app', () => {
       // Queda para la curva de la estación (api/historia.ts), que se guarda en sessionStorage.
       await waitFor(() => expect(JSON.parse(sessionStorage.getItem('aire.curvas') ?? '{}')).toHaveProperty('CA-HU-04'))
       expect(JSON.parse(sessionStorage.getItem('aire.curvas')!)['CA-HU-04']).toMatchObject([{ pm10: 120.7, alerta: true }])
+    })
+
+    describe('la simulación en curso', () => {
+      const lectura = (hora: number) => ({ estacion: 'CA-HU-04', fecha_hora: `2021-12-14T0${hora}:00:00-05:00`, pm2_5: 20, pm10: 90 })
+      const TRAMO: Tramo = {
+        id: 'dia-de-prueba',
+        tipo: 'dia',
+        titulo: 'CA-HU-04 · 2021-12-14',
+        desde: lectura(0).fecha_hora,
+        hasta: lectura(2).fecha_hora,
+        lecturas: [lectura(0), lectura(1), lectura(2)],
+        estaciones: ['CA-HU-04'],
+        esperado: {},
+        primera: { 'CA-HU-04': lectura(0).fecha_hora },
+        ultima: { 'CA-HU-04': lectura(2).fecha_hora },
+      }
+      const PREDICCION = {
+        estado: 200,
+        cuerpo: {
+          estacion: 'CA-HU-04',
+          regimen: 2,
+          excede_eca: false,
+          media_24h: { pm2_5: null, pm10: null, lecturas: 1 },
+          alerta: false,
+          inca: null,
+          pm2_5_medio_regimen: 24.4,
+          pm10_medio_regimen: 58.2,
+          modelo_id: 'sembrado-kmeans-json',
+          ms: 0.04,
+        },
+      }
+      const indicador = () => document.querySelector<HTMLElement>('[data-simulacion-en-curso]')
+
+      afterEach(() => simulador.reiniciar())
+
+      it('sin corrida, la barra no dice nada de la simulación', async () => {
+        simularApi({ 'GET /api/salud': SALUD_OK })
+        sesionDe('usuario')
+
+        montar('/muestrario')
+
+        await screen.findByRole('heading', { name: 'Muestrario de componentes' })
+        expect(indicador()).toBeNull()
+      })
+
+      it('mientras corre se ve desde cualquier pantalla, con su avance, y lleva a Simulación; al detenerla se va', async () => {
+        simularApi({ 'GET /api/salud': SALUD_OK, 'POST /api/predicciones': PREDICCION })
+        sesionDe('usuario')
+        montar('/muestrario')
+        await screen.findByRole('heading', { name: 'Muestrario de componentes' })
+
+        // Lo que hace la pantalla de Simulación: el simulador de la app, que vive fuera de React.
+        // A una hora simulada por segundo: manda la primera lectura y espera.
+        act(() => simulador.iniciar(TRAMO, 1))
+
+        const enlace = await screen.findByRole('link', { name: /Simulación en curso/ })
+        expect(enlace).toHaveAttribute('href', '/simulacion')
+        await waitFor(() => expect(indicador()).toHaveTextContent('Simulación en curso1/3'))
+        expect(indicador()).toHaveAttribute('data-simulacion-en-curso', 'en_curso')
+        expect(enlace).toHaveAttribute('title', expect.stringContaining('CA-HU-04 · 2021-12-14, 1 de 3 lecturas enviadas'))
+
+        act(() => simulador.pausar())
+        expect(indicador()).toHaveTextContent('Simulación en pausa')
+
+        await userEvent.click(within(indicador()!).getByRole('link', { name: /Simulación en pausa/ }))
+        expect(await screen.findByRole('heading', { name: 'Simulación' })).toBeInTheDocument()
+        expect(indicador()).not.toBeNull()
+
+        act(() => simulador.detener())
+        expect(indicador()).toBeNull()
+      })
+
+      it('si un pedido falla, dice que la simulación se detuvo por un error', async () => {
+        simularApi({ 'GET /api/salud': SALUD_OK, 'POST /api/predicciones': { estado: 503, cuerpo: { error: 'MongoDB no disponible' } } })
+        sesionDe('usuario')
+        montar('/muestrario')
+        await screen.findByRole('heading', { name: 'Muestrario de componentes' })
+
+        act(() => simulador.iniciar(TRAMO, 1))
+
+        await waitFor(() => expect(indicador()).toHaveAttribute('data-simulacion-en-curso', 'con_error'))
+        expect(indicador()).toHaveTextContent('Simulación detenida por un error0/3')
+      })
+
+      it('al salir de la sesión la corrida se corta y el indicador no queda para quien entre después', async () => {
+        simularApi({ 'GET /api/salud': SALUD_OK, 'POST /api/predicciones': PREDICCION })
+        sesionDe('usuario')
+        montar('/muestrario')
+        await screen.findByRole('heading', { name: 'Muestrario de componentes' })
+        act(() => simulador.iniciar(TRAMO, 1))
+        await waitFor(() => expect(indicador()).not.toBeNull())
+
+        await userEvent.click(screen.getByRole('button', { name: 'Salir' }))
+
+        await screen.findByRole('form', { name: 'Ingreso' })
+        expect(simulador.leer().fase).toBe('lista')
+      })
     })
 
     it('el modo proyector se pone y se quita, y se recuerda', async () => {
