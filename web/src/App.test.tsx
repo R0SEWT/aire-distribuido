@@ -217,6 +217,8 @@ describe('la app', () => {
 
     it.each([
       ['/', 'Panel'],
+      ['/estacion', 'Estación'],
+      ['/estacion/CA-AYAS-01', 'Estación'],
     ])('un usuario entra a %s', async (ruta, titulo) => {
       simularApi({ 'GET /api/salud': SALUD_OK })
       sesionDe('usuario')
@@ -228,8 +230,6 @@ describe('la app', () => {
     })
 
     it.each([
-      ['/estacion', 'Estación'],
-      ['/estacion/CA-AYAS-01', 'Estación'],
       ['/simulacion', 'Simulación'],
       ['/impacto', 'Impacto'],
     ])('un usuario entra a %s, que todavía muestra su marcador', async (ruta, titulo) => {
