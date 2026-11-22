@@ -1,4 +1,6 @@
 // La pantalla de ingreso (spec §5.1): usuario y clave contra POST /api/auth/token.
+// No hay registro: debajo del formulario, «No pienso crearme una cuenta aquí»
+// abre el diálogo que deja entrar como invitado (ingreso/DialogoInvitado.tsx).
 
 import { useRef, useState, type FormEvent } from 'react'
 import { Navigate, useLocation } from 'react-router'
@@ -12,6 +14,7 @@ import { useTitulo } from '../armazon/titulo'
 import { Aviso } from '../componentes/Aviso'
 import type { DesdeDonde } from '../sesion/guardas'
 import { useSesion } from '../sesion/useSesion'
+import { DialogoInvitado } from './ingreso/DialogoInvitado'
 
 export default function Ingreso() {
   const { sesion, motivo, ingresar } = useSesion()
@@ -21,6 +24,8 @@ export default function Ingreso() {
   const [enviando, setEnviando] = useState(false)
   const [error, setError] = useState<ErrorApi | null>(null)
   const campoClave = useRef<HTMLInputElement>(null)
+  const [dialogoInvitado, setDialogoInvitado] = useState(false)
+  const botonInvitado = useRef<HTMLButtonElement>(null)
   useTitulo('Ingreso')
 
   if (sesion) {
@@ -48,6 +53,12 @@ export default function Ingreso() {
     } finally {
       setEnviando(false)
     }
+  }
+
+  function cerrarDialogoInvitado() {
+    setDialogoInvitado(false)
+    // El foco vuelve a donde estaba antes de abrirlo.
+    botonInvitado.current?.focus()
   }
 
   return (
@@ -120,6 +131,24 @@ export default function Ingreso() {
             {enviando ? 'Ingresando…' : 'Ingresar'}
           </button>
         </form>
+
+        {/* Secundario: no compite con «Ingresar», que es el único botón principal de la pantalla. En una
+            pantalla angosta con el modo proyector la frase no entra en un renglón: parte en dos, no desborda. */}
+        <div className="mt-4">
+          <button
+            type="button"
+            className="pildora max-w-full text-left whitespace-normal"
+            aria-haspopup="dialog"
+            ref={botonInvitado}
+            // Con un ingreso con clave en viaje no se ofrece el otro: la respuesta
+            // que llegara última reemplazaría la sesión de la primera.
+            disabled={enviando}
+            onClick={() => setDialogoInvitado(true)}
+          >
+            No pienso crearme una cuenta aquí
+          </button>
+        </div>
+        {dialogoInvitado && <DialogoInvitado alCerrar={cerrarDialogoInvitado} />}
 
         <p className="text-tenue mt-4 text-sm">
           Las cuentas las configura quien levanta el sistema. La sesión dura lo que dure el token y se cierra al cerrar

@@ -54,6 +54,34 @@ paths:
             application/json:
               schema: {$ref: '#/components/schemas/Error'}
               example: {error: usuario o clave incorrectos}
+  /api/auth/invitado:
+    post:
+      tags: [Autenticación]
+      operationId: ingresarComoInvitado
+      summary: Obtiene un JWT de la cuenta de invitado, sin credenciales, si el servidor la habilitó
+      description: |
+        El pedido no lleva cuerpo. La cuenta de invitado es un usuario de rol usuario que designa
+        quien levanta la API (variable de entorno API_INVITADO); su clave no sale del servidor.
+        La respuesta tiene la misma forma que la de POST /api/auth/token y el token vale lo mismo:
+        con él se puede todo lo del rol usuario, también POST /api/predicciones.
+        Si el servidor no designó una cuenta de invitado, responde 404.
+      security: []
+      responses:
+        '200':
+          description: Token de la cuenta de invitado, con expiración y rol. El token de ejemplo no es una credencial utilizable.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Token'}
+              example:
+                token: '<token>'
+                rol: usuario
+                expira: '2026-11-21T23:30:00-05:00'
+        '404':
+          description: El servidor no tiene habilitado el ingreso de invitado
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Error'}
+              example: {error: el ingreso de invitado no está habilitado}
   /api/salud:
     get:
       tags: [Salud]

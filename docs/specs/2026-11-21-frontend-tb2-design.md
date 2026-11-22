@@ -87,6 +87,12 @@ desde `/api/salud`), el menú en píldoras y, a la derecha, el modo proyector y 
 Usuario y clave contra `POST /api/auth/token`. Con un 401 dice «usuario o clave incorrectos», sin más. Si la
 API no responde, dice eso y ofrece reintentar: no deja la pantalla en blanco.
 
+No hay registro: las cuentas las configura quien levanta el sistema. Debajo del formulario, el botón «No
+pienso crearme una cuenta aquí» abre un diálogo («Perdón, era parte de la nota») que deja entrar igual, como
+invitado: `POST /api/auth/invitado` responde un token de la cuenta que el servidor designó con `API_INVITADO`,
+de rol `usuario`, y la sesión se abre por el mismo camino que el ingreso normal. Las credenciales de esa
+cuenta no pasan por el navegador. Si el servidor no la tiene (404), el diálogo lo dice.
+
 ### 5.2 Panel (inicio)
 
 - **Mapa del Perú** con las 33 estaciones en su lugar. Cada estación está en uno de tres estados, cada uno

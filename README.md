@@ -263,6 +263,13 @@ Para desarrollo, `go run ./cmd/api -demo` arranca sin `API_USUARIOS` con los usu
 demostración `demo`/`demo` (rol usuario) y `admin`/`admin` (rol admin), y lo avisa en el log.
 Solo en una máquina propia: con `-demo`, cualquiera que alcance el puerto entra como admin.
 
+La API no tiene registro: las cuentas son las de `API_USUARIOS`. `API_INVITADO=<usuario>` habilita
+el **ingreso de invitado**: `POST /api/auth/invitado` da, sin pedir clave, un token de ese usuario,
+que tiene que estar en `API_USUARIOS` con el rol `usuario` (si no existe o es `admin`, la API no
+arranca y dice por qué). Sin la variable, esa ruta responde 404; con `-demo`, el invitado es `demo`.
+Un invitado puede todo lo del rol `usuario`, también mandar lecturas: en una máquina pública,
+habilitarlo es una decisión.
+
 La API es también el **coordinador del clúster**: escucha a los nodos por TCP en el 7070
 (`-nodos-addr`) y, con el gold a mano (`-gold`, por omisión `data/gold/oefa_features.csv`), un
 admin lanza un entrenamiento distribuido por HTTP y sigue las rondas por WebSocket (`/ws`). Cada
@@ -342,7 +349,8 @@ Compose arriba (paso 6) ya está en <http://localhost:8081>: el servicio `web` e
 la UI compilada y pasa `/api`, `/ws`, `/docs` y `/openapi.yaml` a la API, todo en el mismo origen,
 con las cabeceras de seguridad de [`web/Caddyfile`](web/Caddyfile). Se entra con un usuario de
 `API_USUARIOS`; el token dura una hora y no se renueva (`JWT_DURACION=4h` en `.env` lo alarga para
-una demo).
+una demo). No hay registro: debajo del formulario, «No pienso crearme una cuenta aquí» deja pasar
+como invitado si el `.env` tiene `API_INVITADO` (paso 5).
 
 Para desarrollar, Vite sirve la UI en <http://localhost:5173> y pasa esas mismas rutas a la API
 local (la del paso 5 o la del Compose, en el 8080; otra, con `API_URL`). El gestor de paquetes es

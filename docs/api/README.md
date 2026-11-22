@@ -10,7 +10,7 @@ file**).
 
 ## Acceso
 
-Libres: token, salud, `/openapi.yaml` y `/docs`. Con rol `usuario` o `admin`: predicciones,
+Libres: token, ingreso de invitado, salud, `/openapi.yaml` y `/docs`. Con rol `usuario` o `admin`: predicciones,
 estaciones y su estado, modelo activo y `/ws`. Solo `admin`: nodos y eventos del clúster,
 entrenamientos y métricas;
 un `usuario` recibe 403. `x-roles` deja el rol escrito en cada operación. Por `/ws`, el estado de
@@ -34,6 +34,14 @@ los `admin`.
   de §7.1; un dato que falte en la fuente llega como `null`.
 - **Entrenamientos**: tres estados, `en_curso`, `terminado` y `abortado`. El listado no trae las
   rondas; se piden por id. `paro` es `tolerancia` o `max_iter`, los motivos de `kmeans`.
+- **Ingreso de invitado**: `POST /api/auth/invitado`, sin cuerpo y sin credenciales, responde un
+  token con la misma forma que `POST /api/auth/token`. Es de la cuenta que nombra la variable de
+  entorno `API_INVITADO`: un usuario de `API_USUARIOS` con el rol `usuario`; si no existe o es
+  `admin`, la API no arranca y dice por qué. Sin la variable, la ruta responde 404 («el ingreso de
+  invitado no está habilitado»). Con `-demo` y sin la variable, el invitado es `demo`. La clave de la
+  cuenta no sale del servidor, y al arrancar el log dice si el invitado está habilitado y con qué
+  usuario. Un invitado puede todo lo del rol `usuario`, también mandar lecturas
+  (`POST /api/predicciones`): habilitarlo en una máquina pública es una decisión, no un descuido.
 - **Errores**: siempre `{"error": "…"}`. 404 cuando no existe el recurso (para el régimen de una
   estación, también cuando todavía no tiene predicciones), 503 cuando no hay modelo activo o no
   responde el almacén de la ruta.

@@ -33,3 +33,22 @@ func LeerUsuarios(s string) (map[string]Usuario, error) {
 	}
 	return us, nil
 }
+
+// ValidarInvitado comprueba la cuenta del ingreso de invitado (Config.Invitado,
+// la variable de entorno API_INVITADO): tiene que ser uno de los usuarios y
+// tener el rol usuario. Quien entra como invitado no presenta ninguna clave,
+// así que nunca puede ser un admin. Con "" no hay invitado y no hay nada que
+// comprobar.
+func ValidarInvitado(usuarios map[string]Usuario, invitado string) error {
+	if invitado == "" {
+		return nil
+	}
+	u, existe := usuarios[invitado]
+	switch {
+	case !existe:
+		return fmt.Errorf("el invitado %q no está entre los usuarios: tiene que ser uno de API_USUARIOS, con el rol %s", invitado, RolUsuario)
+	case u.Rol != RolUsuario:
+		return fmt.Errorf("el invitado %q tiene el rol %s: entra sin clave, así que tiene que ser un usuario con el rol %s", invitado, u.Rol, RolUsuario)
+	}
+	return nil
+}

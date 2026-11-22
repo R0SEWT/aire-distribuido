@@ -49,6 +49,11 @@ type Config struct {
 	Modelo   *modelo.Modelo
 	Firmador *Firmador
 	Usuarios map[string]Usuario
+	// Invitado es el usuario con que entra quien pide POST /api/auth/invitado,
+	// sin presentar credenciales. Tiene que estar en Usuarios con el rol
+	// usuario (ValidarInvitado). Vacío: no hay ingreso de invitado y esa ruta
+	// responde 404.
+	Invitado string
 	// Catalogo son las estaciones que la API acepta: la ficha
 	// (reports/estaciones_ficha.csv), que es la única fuente del catálogo. Se
 	// guarda en memoria para validar una lectura sin consultar ninguna base.
@@ -99,6 +104,7 @@ type Servidor struct {
 	modelo       atomic.Pointer[modelo.Modelo]
 	firmador     *Firmador
 	usuarios     map[string]Usuario
+	invitado     string // "" = sin ingreso de invitado
 	catalogo     map[string]bool
 	idsCatalogo  []string // los códigos del catálogo, ordenados
 	estaciones   almacen.Estaciones
@@ -147,6 +153,9 @@ func Nuevo(cfg Config) (*Servidor, error) {
 	case cfg.TamCola <= 0:
 		return nil, fmt.Errorf("api: la cola de escritura tiene que tener búfer, tiene %d", cfg.TamCola)
 	}
+	if err := ValidarInvitado(cfg.Usuarios, cfg.Invitado); err != nil {
+		return nil, fmt.Errorf("api: %w", err)
+	}
 	log := cfg.Log
 	if log == nil {
 		log = slog.Default()
@@ -159,6 +168,7 @@ func Nuevo(cfg Config) (*Servidor, error) {
 	s := &Servidor{
 		firmador:    cfg.Firmador,
 		usuarios:    cfg.Usuarios,
+		invitado:    cfg.Invitado,
 		catalogo:    catalogo,
 		idsCatalogo: idsCatalogo,
 		estaciones:  cfg.Estaciones,
@@ -192,6 +202,7 @@ func Nuevo(cfg Config) (*Servidor, error) {
 
 	cualquiera := []string{RolUsuario, RolAdmin}
 	s.ruta("POST /api/auth/token", nil, s.crearToken)
+	s.ruta("POST /api/auth/invitado", nil, s.ingresarInvitado)
 	s.ruta("GET /api/salud", nil, s.salud)
 	s.ruta("POST /api/predicciones", cualquiera, s.predecir)
 	s.ruta("GET /api/estaciones", cualquiera, s.listarEstaciones)

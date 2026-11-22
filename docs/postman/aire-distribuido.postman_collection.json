@@ -316,6 +316,59 @@
           "response": []
         },
         {
+          "name": "Ingreso de invitado",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Una corrida va contra una sola API, que tiene el ingreso de invitado habilitado (API_INVITADO)",
+                  "// o no lo tiene: por eso este pedido acepta los dos casos y comprueba la forma del que tocó.",
+                  "const habilitado = pm.response.code === 200;",
+                  "pm.test('código HTTP 200 (invitado habilitado) o 404 (deshabilitado)', () => pm.expect(pm.response.code).to.be.oneOf([200, 404]));",
+                  "const esquemaToken = {\"type\":\"object\",\"required\":[\"token\",\"rol\",\"expira\"],\"properties\":{\"token\":{\"type\":\"string\",\"minLength\":1},\"rol\":{\"type\":\"string\",\"enum\":[\"usuario\",\"admin\"]},\"expira\":{\"type\":\"string\",\"format\":\"date-time\"}},\"additionalProperties\":false};",
+                  "const esquemaError = {\"type\":\"object\",\"required\":[\"error\"],\"properties\":{\"error\":{\"type\":\"string\",\"minLength\":1}},\"additionalProperties\":false};",
+                  "let datos;",
+                  "pm.test('forma de la respuesta: ' + (habilitado ? 'Token' : 'Error') + ' del contrato', () => {",
+                  "  datos = pm.response.json();",
+                  "  pm.expect(datos).to.have.jsonSchema(habilitado ? esquemaToken : esquemaError);",
+                  "});",
+                  "if (habilitado) {",
+                  "  pm.test('el token es un JWT de rol usuario y expira en el futuro', () => {",
+                  "    pm.expect(datos.rol).to.eql('usuario');",
+                  "    pm.expect(datos.token.split('.')).to.have.lengthOf(3);",
+                  "    pm.expect(Date.parse(datos.expira)).to.be.above(Date.now());",
+                  "  });",
+                  "} else {",
+                  "  pm.test('el error dice: el ingreso de invitado no está habilitado', () => pm.expect(datos.error).to.include(\"el ingreso de invitado no está habilitado\"));",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "auth": {
+              "type": "noauth"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/auth/invitado",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "invitado"
+              ]
+            },
+            "description": "Ruta libre, sin cuerpo y sin credenciales. Con API_INVITADO en el servidor responde 200 y un token de esa cuenta, de rol usuario; sin ella, 404. El pedido acepta los dos casos."
+          },
+          "response": []
+        },
+        {
           "name": "Predicción sin token",
           "event": [
             {
