@@ -399,4 +399,54 @@ describe('la pantalla del clúster', () => {
       expect(salud.getByText('Redis').nextElementSibling).toHaveTextContent('Sin dato')
     })
   })
+
+  describe('lo que no hay que pedir', () => {
+    const pedidosA = (fetch: ReturnType<typeof simularApi>, ruta: RegExp) => fetch.mock.calls.filter((c) => ruta.test(new URL(c[0].url).pathname)).length
+
+    it('sin un último entrenamiento, el fin de uno no dispara un GET /api/entrenamientos/{id} sin id', async () => {
+      let metricas = { ...METRICAS, ultimo_entrenamiento: null as string | null }
+      const fetch = api({
+        'GET /api/metricas': () => ({ estado: 200, cuerpo: metricas }),
+        'GET /api/entrenamientos/e-primero': { estado: 200, cuerpo: { id: 'e-primero', estado: 'terminado', nodos: ['nodo-a'], replicas: 1, rondas: [] } },
+      })
+      const { emitir } = montar()
+      await screen.findByRole('table', { name: 'Nodos del pool' })
+
+      // Termina el primer entrenamiento del sistema: las métricas recién ahora traen su id.
+      metricas = { ...METRICAS, ultimo_entrenamiento: 'e-primero' }
+      emitir('entrenamiento.fin', { id: 'e-primero', iteraciones: 44, paro: 'tolerancia', dif_secuencial: 0, ms_total: 50 })
+
+      await waitFor(() => expect(pedidosA(fetch, /^\/api\/entrenamientos\/e-primero$/)).toBeGreaterThanOrEqual(1))
+      // Ningún otro detalle: ni vacío, ni «null», ni el «{id}» literal de la ruta.
+      const detalles = fetch.mock.calls.map((c) => decodeURIComponent(new URL(c[0].url).pathname)).filter((ruta) => ruta.startsWith('/api/entrenamientos/'))
+      expect(new Set(detalles)).toEqual(new Set(['/api/entrenamientos/e-primero']))
+    })
+
+    it('si la API responde 403, las cifras dicen «sin permiso» y deja de pedir', async () => {
+      const SIN_PERMISO = { estado: 403, cuerpo: { error: 'se requiere el rol admin' } }
+      const fetch = api({ 'GET /api/cluster/nodos': SIN_PERMISO, 'GET /api/cluster/eventos': SIN_PERMISO, 'GET /api/metricas': SIN_PERMISO })
+      montar()
+
+      await waitFor(() => expect(cifra('Nodos en el pool')).toBe('—sin permiso'))
+      expect(cifra('CPU del proceso de la API')).toBe('—sin permiso')
+      expect(cifra('Latencia de la API · peor p99')).toBe('—sin permiso')
+      expect(cifra('Escrituras perdidas')).toBe('—sin permiso')
+      expect(document.querySelector('[data-resumen]')).not.toHaveTextContent('sin respuesta')
+      const antes = { nodos: pedidosA(fetch, /cluster\/nodos$/), metricas: pedidosA(fetch, /metricas$/), eventos: pedidosA(fetch, /cluster\/eventos$/) }
+
+      // Pasan de sobra los 2 y los 3 segundos del refresco.
+      await new Promise((r) => setTimeout(r, 3400))
+
+      expect({ nodos: pedidosA(fetch, /cluster\/nodos$/), metricas: pedidosA(fetch, /metricas$/), eventos: pedidosA(fetch, /cluster\/eventos$/) }).toEqual(antes)
+    }, 10_000)
+
+    it('si la API no responde, sí dice «sin respuesta» y sigue intentando', async () => {
+      const fetch = api({ 'GET /api/cluster/nodos': 'sin_respuesta', 'GET /api/metricas': 'sin_respuesta' })
+      montar()
+
+      await waitFor(() => expect(cifra('Nodos en el pool')).toBe('—sin respuesta'))
+      const antes = pedidosA(fetch, /cluster\/nodos$/)
+      await waitFor(() => expect(pedidosA(fetch, /cluster\/nodos$/)).toBeGreaterThan(antes), { timeout: 4000 })
+    }, 10_000)
+  })
 })

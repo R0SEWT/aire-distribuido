@@ -18,6 +18,7 @@ import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import { useState, type ReactNode } from 'react'
 import { api, claves, pedir } from '../api/cliente'
 import { EN_VIVO } from '../api/enVivo'
+import { ErrorApi } from '../api/errores'
 import { useEvento } from '../api/tiempoReal'
 import { Cifra, Encabezado, Estado, EstadoDeError, horaConSegundos, milisegundos, numero, Pildoras, Tarjeta } from '../componentes/indice'
 import { agregarMuestra, sinMedicionDeCpu, usoDeCpu, usoPromedio, type Proceso as Muestra } from './cluster/cpu'
@@ -49,6 +50,21 @@ function ConDatos<T>({ consulta, children }: { consulta: Consulta<T>; children: 
   return <EstadoDeError error={consulta.error} alReintentar={() => void consulta.refetch()} compacto />
 }
 
+/** Si el error es que el rol no alcanza (403): no es que la API no responda, y volver a pedir no lo arregla. */
+function esSinPermiso(error: unknown): boolean {
+  return error instanceof ErrorApi && error.tipo === 'sin_permiso'
+}
+
+/** Lo que se dice en lugar de una cifra que no se pudo pedir. */
+function porQueNoHay(error: unknown): string {
+  return esSinPermiso(error) ? 'sin permiso' : 'sin respuesta'
+}
+
+/** Cada cuánto se vuelve a pedir: nunca si la API dijo que el rol no alcanza. */
+function cada(ms: number) {
+  return (consulta: { state: { error: unknown } }) => (esSinPermiso(consulta.state.error) ? false : ms)
+}
+
 export default function Cluster() {
   const [limite, setLimite] = useState<Limite>('50')
   // Las muestras de proceso_api de esta visita: de cada par sale un punto del uso de CPU.
@@ -58,7 +74,7 @@ export default function Cluster() {
     queryKey: claves.nodos,
     meta: EN_VIVO,
     queryFn: ({ signal }) => pedir(api.GET('/api/cluster/nodos', { signal })),
-    refetchInterval: CADA_MS,
+    refetchInterval: cada(CADA_MS),
   })
   const metricas = useQuery({
     queryKey: claves.metricas,
@@ -68,13 +84,13 @@ export default function Cluster() {
       setMuestras((antes) => agregarMuestra(antes, m.proceso_api))
       return m
     },
-    refetchInterval: CADA_MS,
+    refetchInterval: cada(CADA_MS),
   })
   const eventos = useQuery({
     queryKey: [...claves.eventosCluster, limite] as const,
     meta: EN_VIVO,
     queryFn: ({ signal }) => pedir(api.GET('/api/cluster/eventos', { params: { query: { limite: Number(limite) } }, signal })),
-    refetchInterval: CADA_EVENTOS_MS,
+    refetchInterval: cada(CADA_EVENTOS_MS),
     // Al cambiar de 50 a 200 se siguen viendo los 50 hasta que lleguen los 200.
     placeholderData: keepPreviousData,
   })
@@ -100,7 +116,9 @@ export default function Cluster() {
     void nodos.refetch()
     void eventos.refetch()
     void metricas.refetch()
-    void ultimo.refetch()
+    // Sin id todavía no hay qué pedir: refetch() ignora `enabled` y saldría un GET /api/entrenamientos/ que responde 404.
+    // Si el que terminó es el primero, su id llega con las métricas y la consulta se pide sola.
+    if (ultimoId !== null) void ultimo.refetch()
   })
 
   const m = metricas.data
@@ -132,7 +150,7 @@ export default function Cluster() {
             rotulo="Nodos en el pool"
             valor={nodos.data?.length}
             unidad={libres === undefined ? undefined : libres === 1 ? '· 1 libre' : `· ${libres} libres`}
-            sinDato={nodos.isError ? 'sin respuesta' : 'consultando…'}
+            sinDato={nodos.isError ? porQueNoHay(nodos.error) : 'consultando…'}
           />
         </Tarjeta>
         <Tarjeta acento="acento">
@@ -142,7 +160,7 @@ export default function Cluster() {
             valor={actual && sinMedicionDeCpu(actual) ? null : uso?.porcentaje}
             decimales={1}
             unidad="% de un núcleo"
-            sinDato={actual ? 'no se mide aquí' : metricas.isError ? 'sin respuesta' : 'consultando…'}
+            sinDato={actual ? 'no se mide aquí' : metricas.isError ? porQueNoHay(metricas.error) : 'consultando…'}
           />
         </Tarjeta>
         <Tarjeta acento="acento">
@@ -152,7 +170,7 @@ export default function Cluster() {
             valor={rutas[0]?.p99_ms}
             decimales={rutas[0] && rutas[0].p99_ms < 10 ? 2 : 0}
             unidad="ms"
-            sinDato={m ? 'sin pedidos' : metricas.isError ? 'sin respuesta' : 'consultando…'}
+            sinDato={m ? 'sin pedidos' : metricas.isError ? porQueNoHay(metricas.error) : 'consultando…'}
           />
         </Tarjeta>
         <Tarjeta acento={perdidas ? 'alerta' : 'acento'}>
@@ -161,7 +179,7 @@ export default function Cluster() {
             rotulo="Escrituras perdidas"
             valor={perdidas}
             unidad={m ? `de ${numero(m.escritura.mongo.escritas + m.escritura.redis.escritas + (perdidas ?? 0))}` : undefined}
-            sinDato={metricas.isError ? 'sin respuesta' : 'consultando…'}
+            sinDato={metricas.isError ? porQueNoHay(metricas.error) : 'consultando…'}
           />
         </Tarjeta>
       </div>
