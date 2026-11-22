@@ -79,6 +79,23 @@ describe('el ingreso sin registro', () => {
       expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
     })
 
+    it('con un ingreso con clave en viaje, el botón no se ofrece: dos respuestas no se disputan la sesión', async () => {
+      const fetch = montar()
+      let soltar!: (r: Response) => void
+      const espera = new Promise<Response>((resolver) => (soltar = resolver))
+      vi.stubGlobal('fetch', (pedido: Request) =>
+        new URL(pedido.url).pathname === '/api/auth/token' ? espera : fetch(pedido),
+      )
+
+      await userEvent.type(await screen.findByLabelText('Usuario'), 'admin')
+      await userEvent.type(screen.getByLabelText('Clave'), 'una-clave')
+      await userEvent.click(screen.getByRole('button', { name: 'Ingresar' }))
+
+      expect(boton()).toBeDisabled()
+      soltar(respuesta(401, { error: 'usuario o clave incorrectos' }))
+      await waitFor(() => expect(boton()).toBeEnabled())
+    })
+
     it('no pide nada a la API hasta que se aprieta «Entrar igual»', async () => {
       const fetch = montar({ 'POST /api/auth/invitado': { estado: 200, cuerpo: tokenDe('usuario') } })
 

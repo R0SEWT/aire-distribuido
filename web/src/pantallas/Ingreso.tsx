@@ -140,6 +140,9 @@ export default function Ingreso() {
             className="pildora max-w-full text-left whitespace-normal"
             aria-haspopup="dialog"
             ref={botonInvitado}
+            // Con un ingreso con clave en viaje no se ofrece el otro: la respuesta
+            // que llegara última reemplazaría la sesión de la primera.
+            disabled={enviando}
             onClick={() => setDialogoInvitado(true)}
           >
             No pienso crearme una cuenta aquí
