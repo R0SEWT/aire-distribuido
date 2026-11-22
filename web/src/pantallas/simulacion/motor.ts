@@ -14,6 +14,9 @@
 //    no manda la siguiente. Detener cancela el pedido y termina la corrida.
 //  - Si un pedido falla, la corrida se queda en esa lectura: no la salta.
 //    continuar() la vuelve a mandar.
+//  - La corrida vive en la pestaña: recargarla o cerrarla la corta y deja el
+//    tramo a medias en el sistema. Mientras está en curso, el navegador pregunta
+//    antes de irse (`beforeunload`); en pausa, detenida o terminada, no.
 
 import { useSyncExternalStore } from 'react'
 import { api, pedir } from '../../api/cliente'
@@ -60,11 +63,19 @@ export interface Corrida {
   duracionMs: number
 }
 
+/** De la ventana del navegador, lo que hace falta para avisar antes de que se cierre o se recargue. */
+export interface VentanaQueAvisa {
+  addEventListener: (tipo: 'beforeunload', oyente: (evento: BeforeUnloadEvent) => void) => void
+  removeEventListener: (tipo: 'beforeunload', oyente: (evento: BeforeUnloadEvent) => void) => void
+}
+
 export interface Dependencias {
   enviar: (lectura: Lectura, signal: AbortSignal) => Promise<Prediccion>
   /** Espera `ms` o hasta que se corte; nunca rechaza. */
   esperar: (ms: number, signal: AbortSignal) => Promise<void>
   ahora: () => number
+  /** La ventana a la que se le pide avisar con una corrida en curso; null si no hay (fuera del navegador). */
+  ventana: VentanaQueAvisa | null
 }
 
 const VACIA: Corrida = {
@@ -97,6 +108,17 @@ const REALES: Dependencias = {
   enviar: (lectura, signal) => pedir(api.POST('/api/predicciones', { body: lectura, signal })),
   esperar: esperarDeVerdad,
   ahora: () => Date.now(),
+  ventana: typeof window === 'undefined' ? null : window,
+}
+
+/**
+ * Lo que oye `beforeunload` con una corrida en curso: le pide al navegador que
+ * pregunte antes de irse. El texto de la pregunta lo pone el navegador.
+ */
+function preguntarAntesDeSalir(evento: BeforeUnloadEvent) {
+  evento.preventDefault()
+  // Algunos navegadores solo preguntan si además se pone returnValue.
+  evento.returnValue = ''
 }
 
 export class Simulador {
@@ -118,6 +140,8 @@ export class Simulador {
   private corte = new AbortController()
   private acumulado = 0
   private desde: number | null = null
+  /** Si el aviso de `beforeunload` está puesto. */
+  private avisaAlSalir = false
 
   constructor(deps: Partial<Dependencias> = {}) {
     this.deps = { ...REALES, ...deps }
@@ -312,7 +336,17 @@ export class Simulador {
   }
 
   private avisar() {
+    this.vigilarLaSalida()
     for (const oyente of [...this.oyentes]) oyente()
+  }
+
+  /** Pone el aviso de `beforeunload` mientras la corrida está en curso y lo quita en cuanto deja de estarlo. */
+  private vigilarLaSalida() {
+    const enCurso = this.foto.fase === 'en_curso'
+    if (enCurso === this.avisaAlSalir) return
+    this.avisaAlSalir = enCurso
+    if (enCurso) this.deps.ventana?.addEventListener('beforeunload', preguntarAntesDeSalir)
+    else this.deps.ventana?.removeEventListener('beforeunload', preguntarAntesDeSalir)
   }
 }
 

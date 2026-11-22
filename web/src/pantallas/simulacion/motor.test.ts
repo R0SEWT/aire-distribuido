@@ -76,6 +76,7 @@ function armar(parcial: Partial<Dependencias> = {}) {
       esperas.push(ms)
     },
     ahora: () => 0,
+    ventana: null,
     ...parcial,
   }
   return { simulador: new Simulador(deps), enviadas, esperas }
@@ -353,5 +354,143 @@ describe('el simulador', () => {
     // Al empezar, después de cada hora y al terminar.
     expect(fotos.size).toBeGreaterThanOrEqual(3)
     expect([...fotos].at(-1)).toMatchObject({ fase: 'terminada', enviadas: 3 })
+  })
+
+  describe('el aviso antes de cerrar o recargar la pestaña', () => {
+    /** Una ventana de mentira que recuerda quién oye `beforeunload`. */
+    function ventanaFalsa() {
+      const oyentes = new Set<(evento: BeforeUnloadEvent) => void>()
+      return {
+        oyentes,
+        addEventListener: vi.fn((_tipo: 'beforeunload', oyente: (evento: BeforeUnloadEvent) => void) => void oyentes.add(oyente)),
+        removeEventListener: vi.fn((_tipo: 'beforeunload', oyente: (evento: BeforeUnloadEvent) => void) => void oyentes.delete(oyente)),
+      }
+    }
+
+    /** Un simulador cuya primera lectura queda en viaje hasta que se la suelte. */
+    function conLecturaEnViaje(ventana: ReturnType<typeof ventanaFalsa>) {
+      const enViaje: ReturnType<typeof aplazado<Prediccion>>[] = []
+      const { simulador } = armar({
+        ventana,
+        enviar: () => {
+          const a = aplazado<Prediccion>()
+          enViaje.push(a)
+          return a.promesa
+        },
+      })
+      return { simulador, enViaje }
+    }
+
+    it('sin corrida no hay aviso; al empezar se registra, una sola vez', async () => {
+      const ventana = ventanaFalsa()
+      const { simulador, enViaje } = conLecturaEnViaje(ventana)
+      expect(ventana.addEventListener).not.toHaveBeenCalled()
+
+      simulador.iniciar(tramoDe(['CA-A'], 3), 4)
+      await vi.waitFor(() => expect(enViaje).toHaveLength(1))
+
+      expect(ventana.addEventListener).toHaveBeenCalledTimes(1)
+      expect(ventana.addEventListener).toHaveBeenCalledWith('beforeunload', expect.any(Function))
+      expect(ventana.oyentes.size).toBe(1)
+      simulador.detener()
+    })
+
+    it('lo que se registra le pide al navegador que pregunte antes de salir', async () => {
+      const ventana = ventanaFalsa()
+      const { simulador, enViaje } = conLecturaEnViaje(ventana)
+      simulador.iniciar(tramoDe(['CA-A'], 3), 4)
+      await vi.waitFor(() => expect(enViaje).toHaveLength(1))
+      const evento = { preventDefault: vi.fn(), returnValue: undefined as unknown } as unknown as BeforeUnloadEvent
+
+      for (const oyente of ventana.oyentes) oyente(evento)
+
+      expect(evento.preventDefault).toHaveBeenCalledOnce()
+      expect(evento.returnValue).toBe('')
+      simulador.detener()
+    })
+
+    it('en pausa se retira, y al continuar vuelve', async () => {
+      const ventana = ventanaFalsa()
+      const { simulador, enViaje } = conLecturaEnViaje(ventana)
+      simulador.iniciar(tramoDe(['CA-A'], 3), 4)
+      await vi.waitFor(() => expect(enViaje).toHaveLength(1))
+
+      simulador.pausar()
+      expect(ventana.oyentes.size).toBe(0)
+      expect(ventana.removeEventListener).toHaveBeenCalledWith('beforeunload', ventana.addEventListener.mock.calls[0]![1])
+
+      simulador.continuar()
+      expect(ventana.oyentes.size).toBe(1)
+      simulador.detener()
+    })
+
+    it('al detener la corrida se retira', async () => {
+      const ventana = ventanaFalsa()
+      const { simulador, enViaje } = conLecturaEnViaje(ventana)
+      simulador.iniciar(tramoDe(['CA-A'], 3), 4)
+      await vi.waitFor(() => expect(enViaje).toHaveLength(1))
+
+      simulador.detener()
+
+      expect(simulador.leer().fase).toBe('detenida')
+      expect(ventana.oyentes.size).toBe(0)
+    })
+
+    it('al terminar la corrida se retira', async () => {
+      const ventana = ventanaFalsa()
+      const { simulador } = armar({ ventana })
+
+      simulador.iniciar(tramoDe(['CA-A', 'CA-B'], 3), 4)
+      expect(ventana.oyentes.size).toBe(1)
+      await hasta(simulador, () => simulador.leer().fase === 'terminada')
+
+      expect(ventana.oyentes.size).toBe(0)
+      expect(ventana.addEventListener).toHaveBeenCalledTimes(1)
+      expect(ventana.removeEventListener).toHaveBeenCalledTimes(1)
+    })
+
+    it('si un pedido falla, la corrida espera y el aviso se retira; al reintentar vuelve', async () => {
+      const ventana = ventanaFalsa()
+      let fallar = true
+      const { simulador } = armar({
+        ventana,
+        enviar: async (l) => {
+          if (fallar) throw new ErrorApi('sin_respuesta', null, null)
+          return prediccion(l, 1)
+        },
+      })
+
+      simulador.iniciar(tramoDe(['CA-A'], 2), 4)
+      await hasta(simulador, () => simulador.leer().fase === 'con_error')
+      expect(ventana.oyentes.size).toBe(0)
+
+      fallar = false
+      simulador.continuar()
+      expect(ventana.oyentes.size).toBe(1)
+      await hasta(simulador, () => simulador.leer().fase === 'terminada')
+      expect(ventana.oyentes.size).toBe(0)
+    })
+
+    it('al reiniciar (la sesión terminó) con una corrida en curso también se retira', async () => {
+      const ventana = ventanaFalsa()
+      const { simulador, enViaje } = conLecturaEnViaje(ventana)
+      simulador.iniciar(tramoDe(['CA-A'], 3), 4)
+      await vi.waitFor(() => expect(enViaje).toHaveLength(1))
+
+      simulador.reiniciar()
+
+      expect(simulador.leer().fase).toBe('lista')
+      expect(ventana.oyentes.size).toBe(0)
+    })
+
+    it('un tramo sin lecturas termina sin haber puesto ningún aviso', () => {
+      const ventana = ventanaFalsa()
+      const { simulador } = armar({ ventana })
+
+      simulador.iniciar({ ...tramoDe(['CA-A'], 1), lecturas: [] }, 4)
+
+      expect(simulador.leer().fase).toBe('terminada')
+      expect(ventana.addEventListener).not.toHaveBeenCalled()
+    })
   })
 })

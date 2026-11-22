@@ -4,7 +4,7 @@
 
 import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { crearClienteDeConsultas } from '../api/cliente'
 import type { EstadoEstacion } from '../api/enVivo'
 import { Proveedores } from '../App'
@@ -56,6 +56,46 @@ const terminar = () => screen.findByText('Terminó', {}, { timeout: LARGO })
 describe('Simulación', () => {
   beforeEach(() => recargarSesion())
   afterEach(() => cerrarSesion('salir'))
+
+  it('antes de empezar dice que la corrida vive en esta pestaña y qué pasa si se recarga o se cierra', async () => {
+    apiDePrueba()
+    montar('admin')
+
+    const aviso = (await screen.findByText('La corrida vive en esta pestaña:')).closest('p')!
+    expect(aviso).toHaveTextContent('recargar la página o cerrarla a mitad la corta y deja el tramo a medias en el sistema')
+    expect(aviso).toHaveTextContent('Mientras esté en curso, el navegador pregunta antes de salir.')
+    // Está a la vista antes de empezar: el botón todavía es el de cargar.
+    expect(await screen.findByRole('button', { name: 'Cargar el escenario' })).toBeInTheDocument()
+  })
+
+  it('con una corrida en curso el navegador pregunta antes de salir; al terminar, ya no', async () => {
+    const suelta = puerta()
+    apiDePrueba({ alPredecir: async (_l, n) => void (n === 3 && (await suelta.cerrada)) })
+    const poner = vi.spyOn(window, 'addEventListener')
+    const quitar = vi.spyOn(window, 'removeEventListener')
+    const avisos = (espia: typeof poner) => espia.mock.calls.filter((c) => c[0] === 'beforeunload')
+    montar('usuario')
+    await screen.findByRole('button', { name: 'Simular este día' })
+    expect(avisos(poner)).toHaveLength(0)
+
+    await userEvent.click(screen.getByRole('button', { name: 'Simular este día' }))
+
+    // En curso, con la tercera lectura en viaje: el aviso está puesto, y es de los que hacen preguntar.
+    await waitFor(() => expect(avisos(poner)).toHaveLength(1))
+    expect(avisos(quitar)).toHaveLength(0)
+    const evento = new Event('beforeunload', { cancelable: true })
+    window.dispatchEvent(evento)
+    expect(evento.defaultPrevented).toBe(true)
+
+    suelta.abrir()
+    await terminar()
+
+    expect(avisos(quitar)).toHaveLength(1)
+    expect(avisos(quitar)[0]![1]).toBe(avisos(poner)[0]![1])
+    const despues = new Event('beforeunload', { cancelable: true })
+    window.dispatchEvent(despues)
+    expect(despues.defaultPrevented).toBe(false)
+  }, LARGO)
 
   it('si no se pueden leer las series, lo dice y no deja la pantalla en blanco', async () => {
     apiDePrueba({ series: null })

@@ -212,6 +212,11 @@ function Mesa({ series, simulador }: { series: Series; simulador: Simulador }) {
                   <strong className="text-texto">Simular escribe estado compartido:</strong> el último estado de cada
                   estación cambia para todos los que tengan la app abierta.
                 </p>
+                <p className="text-suave text-sm leading-relaxed" data-vive-en-la-pestana>
+                  <strong className="text-texto">La corrida vive en esta pestaña:</strong> sigue si cambias de pantalla,
+                  pero recargar la página o cerrarla a mitad la corta y deja el tramo a medias en el sistema. Mientras
+                  esté en curso, el navegador pregunta antes de salir.
+                </p>
               </div>
             </TarjetaDeControles>
 
