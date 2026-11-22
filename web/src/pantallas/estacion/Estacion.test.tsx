@@ -120,6 +120,17 @@ describe('la Estación', () => {
       expect(document.body).not.toHaveTextContent(/\bahora\b/i)
     })
 
+    it('una media apenas sobre el ECA se ve de qué lado cae: 50.03, no «50.0» junto a «supera el ECA (50)»', async () => {
+      simularPanel([], { [REGIMEN('CA-HU-04')]: regimenDe('CA-HU-04', { pm2_5: 50.03, pm10: 100.04, alerta: true, inca: 'mala' }) })
+      montar('/estacion/CA-HU-04')
+      await screen.findByText('CA-HU-04 · último estado recibido')
+
+      expect(tarjeta('CA-HU-04').getByText('50.03')).toBeInTheDocument()
+      expect(tarjeta('CA-HU-04').getByText('100.04')).toBeInTheDocument()
+      expect(tarjeta('CA-HU-04').queryByText('50.0')).not.toBeInTheDocument()
+      expect(tarjeta('CA-HU-04').getByText(/PM2\.5 es 50\.03 µg\/m³ y la de PM10 es 100\.04 µg\/m³: las dos superan el ECA \(50 y 100\)/)).toBeInTheDocument()
+    })
+
     it('el «excede el ECA» del régimen es el del estado guardado: no se le pregunta al modelo activo', async () => {
       const fetch = simularPanel([], { [REGIMEN('CA-HU-04')]: regimenDe('CA-HU-04', { regimen: 1, excede_eca: true }) })
       montar('/estacion/CA-HU-04')

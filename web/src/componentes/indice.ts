@@ -12,6 +12,7 @@ export { Estado, EstadoDeError, type TipoEstado } from './Estado'
 export { Etiqueta } from './Etiqueta'
 export {
   compacto,
+  decimalesFrenteA,
   diaCorto,
   diaDeInstante,
   diasEnLlano,

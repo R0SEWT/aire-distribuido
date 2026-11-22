@@ -45,6 +45,29 @@ describe('el contaminante con que abre la curva', () => {
   })
 })
 
+describe('una media apenas sobre el umbral', () => {
+  it('no se escribe «50.0 µg/m³: supera el ECA (50)»: lleva los decimales que hagan falta', () => {
+    const frase = fraseEstacion(estadoDe('CA-HU-09', { pm2_5: 50.03, pm10: 73.5, alerta: true, inca: 'mala' }))
+
+    expect(frase).toBe(
+      'La media de las últimas 24 horas de PM2.5 es 50.03 µg/m³: supera el ECA (50). La de PM10 es 73.5 µg/m³: no lo supera (100).',
+    )
+  })
+
+  it('lo mismo con PM10 y con las dos', () => {
+    expect(fraseEstacion(estadoDe('CA-HU-04', { pm2_5: 20, pm10: 100.04, alerta: true, inca: 'moderada' }))).toContain(
+      'PM10 es 100.04 µg/m³: supera el ECA (100)',
+    )
+    expect(fraseEstacion(estadoDe('CA-HU-04', { pm2_5: 50.03, pm10: 100.04, alerta: true, inca: 'mala' }))).toContain(
+      'PM2.5 es 50.03 µg/m³ y la de PM10 es 100.04 µg/m³: las dos superan el ECA',
+    )
+  })
+
+  it('y apenas debajo: no dice «50.0: no supera el ECA (50)»', () => {
+    expect(fraseEstacion(estadoDe('CA-HU-04', { pm2_5: 49.96, pm10: 99.97 }))).toContain('PM2.5 es 49.96 µg/m³ y la de PM10 es 99.97 µg/m³: ninguna supera')
+  })
+})
+
 describe('fraseDelRegimen', () => {
   it('dice que el «excede el ECA» es del grupo de lecturas y no de la estación', () => {
     expect(fraseDelRegimen(false)).toBe(

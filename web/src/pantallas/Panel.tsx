@@ -16,6 +16,7 @@ import {
   BANDAS,
   Cifra,
   Dato,
+  decimalesFrenteA,
   Desplegable,
   Encabezado,
   Estado,
@@ -32,6 +33,7 @@ import {
 import { MapaPeru, type LugarEnMapa, type MarcaEnMapa } from '../graficos/MapaPeru'
 import { SOLO_ADMIN, puede } from '../sesion/roles'
 import { useSesion } from '../sesion/useSesion'
+import { NORMA, type Contaminante } from './estacion/norma'
 import { Leyenda } from './panel/Leyenda'
 import {
   detalleSinBanda,
@@ -73,6 +75,11 @@ function FechaEnDosLineas({ iso }: { iso: string }) {
   )
 }
 
+/** La media de 24 h con un decimal, o con los que hagan falta para que se vea de qué lado de su ECA cae. */
+function media(valor: number | null | undefined, contaminante: Contaminante): string {
+  return numero(valor, decimalesFrenteA(valor, NORMA[contaminante].eca))
+}
+
 const COLUMNAS: Columna<FilaEstacion>[] = [
   {
     clave: 'estacion',
@@ -96,7 +103,7 @@ const COLUMNAS: Columna<FilaEstacion>[] = [
       </>
     ),
     numerica: true,
-    celda: (f) => numero(f.estado?.media_24h.pm2_5, 1),
+    celda: (f) => media(f.estado?.media_24h.pm2_5, 'pm2_5'),
   },
   {
     clave: 'pm10',
@@ -108,7 +115,7 @@ const COLUMNAS: Columna<FilaEstacion>[] = [
       </>
     ),
     numerica: true,
-    celda: (f) => numero(f.estado?.media_24h.pm10, 1),
+    celda: (f) => media(f.estado?.media_24h.pm10, 'pm10'),
   },
   {
     clave: 'banda',

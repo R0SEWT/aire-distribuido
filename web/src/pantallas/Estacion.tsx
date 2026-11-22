@@ -14,6 +14,7 @@ import { RUTAS } from '../armazon/menu'
 import {
   Banda,
   Cifra,
+  decimalesFrenteA,
   Desplegable,
   Encabezado,
   Estado,
@@ -109,8 +110,21 @@ function TarjetaPrincipal({ estacion, estado, midePM }: { estacion: FichaEstacio
     >
       <div className="space-y-4">
         <div className="flex flex-wrap items-start gap-x-10 gap-y-4">
-          <Cifra rotulo="PM2.5 · media de 24 h" valor={pm2_5} decimales={1} unidad="µg/m³" sinDato="sin datos suficientes" />
-          <Cifra rotulo="PM10 · media de 24 h" valor={pm10} decimales={1} unidad="µg/m³" sinDato="sin datos suficientes" />
+          {/* Con un decimal, o con los que hagan falta para que se vea de qué lado del ECA cae (50.03, no 50.0). */}
+          <Cifra
+            rotulo="PM2.5 · media de 24 h"
+            valor={pm2_5}
+            decimales={decimalesFrenteA(pm2_5, NORMA.pm2_5.eca)}
+            unidad="µg/m³"
+            sinDato="sin datos suficientes"
+          />
+          <Cifra
+            rotulo="PM10 · media de 24 h"
+            valor={pm10}
+            decimales={decimalesFrenteA(pm10, NORMA.pm10.eca)}
+            unidad="µg/m³"
+            sinDato="sin datos suficientes"
+          />
           <dl className="grid grid-cols-[auto_1fr] items-center gap-x-3 gap-y-1.5 text-sm" data-estado-estacion>
             <dt className="rotulo">Banda</dt>
             <dd className="flex flex-wrap items-center gap-2">

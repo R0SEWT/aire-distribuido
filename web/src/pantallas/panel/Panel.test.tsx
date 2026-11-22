@@ -201,6 +201,20 @@ describe('el Panel', () => {
       expect(within(tabla).getByRole('row', { name: /CA-MAC-01/ })).toHaveTextContent('La Huaca · actividad sin clasificar')
     })
 
+    it('una media apenas sobre el ECA lleva en la tabla los decimales que hagan falta para verlo', async () => {
+      simularPanel([estadoDe('CA-HU-04', { pm2_5: 50.03, pm10: 100.04, alerta: true, inca: 'mala' }), estadoDe('CA-AYAS-01', { pm2_5: 8.26, pm10: 20 })])
+      montar('/')
+      const tabla = await screen.findByRole('table', { name: /por gravedad/ })
+
+      const enAlerta = within(tabla).getByRole('row', { name: /CA-HU-04/ })
+      expect(within(enAlerta).getByText('50.03')).toBeInTheDocument()
+      expect(within(enAlerta).getByText('100.04')).toBeInTheDocument()
+      // Lejos del umbral, un decimal como siempre.
+      const limpia = within(tabla).getByRole('row', { name: /CA-AYAS-01/ })
+      expect(within(limpia).getByText('8.3')).toBeInTheDocument()
+      expect(within(limpia).getByText('20.0')).toBeInTheDocument()
+    })
+
     it('el régimen y su «excede el ECA» son los del estado guardado', async () => {
       const fetch = simularPanel([estadoDe('CA-AYAS-01', { regimen: 1, excede_eca: true }), estadoDe('CA-HU-04', { regimen: 2 })])
       montar('/')

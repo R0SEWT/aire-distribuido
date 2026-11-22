@@ -3,7 +3,7 @@
 // no decide con ellos si hay alerta ni en qué banda está una estación: eso lo
 // manda la API. Sirven para la línea del ECA, las franjas del INCA y la frase.
 
-import { numero } from '../../componentes/indice'
+import { decimalesFrenteA, numero } from '../../componentes/indice'
 import type { RegimenEstacion } from '../../api/estaciones'
 import { MINIMO_LECTURAS } from '../panel/situacion'
 
@@ -41,12 +41,14 @@ export function fraseDelRegimen(excedeEca: boolean): string {
   return `La media de ese grupo de lecturas ${excedeEca ? 'excede' : 'no excede'} el ECA. Describe al grupo, no a esta estación: su alerta sale de su propia media de 24 h.`
 }
 
-const ug = (valor: number) => `${numero(valor, 1)} µg/m³`
+// Con un decimal, salvo que el redondeo deje el valor igual a su ECA: entonces, los que hagan falta para verlo.
+const ug = (valor: number, c: Contaminante) => `${numero(valor, decimalesFrenteA(valor, NORMA[c].eca))} µg/m³`
 
 /**
  * La frase en llano de la estación (spec §5.3): «La media de las últimas 24
  * horas de PM10 es 121.4 µg/m³: supera el ECA (100)». Va con un decimal: con
- * 50.3 redondeado a 50, «supera el ECA (50)» no se entendería.
+ * 50.3 redondeado a 50, «supera el ECA (50)» no se entendería. Y con los que
+ * hagan falta si un decimal tampoco alcanza: 50.03 no se escribe «50.0».
  */
 export function fraseEstacion(estado: RegimenEstacion): string {
   const { pm2_5, pm10, lecturas } = estado.media_24h
@@ -62,13 +64,13 @@ export function fraseEstacion(estado: RegimenEstacion): string {
       : 'La estación no está en alerta: su media de las últimas 24 horas no supera el ECA.'
   }
   if (s25 && s10) {
-    return `La media de las últimas 24 horas de PM2.5 es ${ug(pm2_5)} y la de PM10 es ${ug(pm10)}: las dos superan el ECA (${NORMA.pm2_5.eca} y ${NORMA.pm10.eca}).`
+    return `La media de las últimas 24 horas de PM2.5 es ${ug(pm2_5, 'pm2_5')} y la de PM10 es ${ug(pm10, 'pm10')}: las dos superan el ECA (${NORMA.pm2_5.eca} y ${NORMA.pm10.eca}).`
   }
   if (s10) {
-    return `La media de las últimas 24 horas de PM10 es ${ug(pm10)}: supera el ECA (${NORMA.pm10.eca}). La de PM2.5 es ${ug(pm2_5)}: no lo supera (${NORMA.pm2_5.eca}).`
+    return `La media de las últimas 24 horas de PM10 es ${ug(pm10, 'pm10')}: supera el ECA (${NORMA.pm10.eca}). La de PM2.5 es ${ug(pm2_5, 'pm2_5')}: no lo supera (${NORMA.pm2_5.eca}).`
   }
   if (s25) {
-    return `La media de las últimas 24 horas de PM2.5 es ${ug(pm2_5)}: supera el ECA (${NORMA.pm2_5.eca}). La de PM10 es ${ug(pm10)}: no lo supera (${NORMA.pm10.eca}).`
+    return `La media de las últimas 24 horas de PM2.5 es ${ug(pm2_5, 'pm2_5')}: supera el ECA (${NORMA.pm2_5.eca}). La de PM10 es ${ug(pm10, 'pm10')}: no lo supera (${NORMA.pm10.eca}).`
   }
-  return `La media de las últimas 24 horas de PM2.5 es ${ug(pm2_5)} y la de PM10 es ${ug(pm10)}: ninguna supera el ECA (${NORMA.pm2_5.eca} y ${NORMA.pm10.eca}).`
+  return `La media de las últimas 24 horas de PM2.5 es ${ug(pm2_5, 'pm2_5')} y la de PM10 es ${ug(pm10, 'pm10')}: ninguna supera el ECA (${NORMA.pm2_5.eca} y ${NORMA.pm10.eca}).`
 }

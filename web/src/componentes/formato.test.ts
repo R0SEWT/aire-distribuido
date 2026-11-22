@@ -3,6 +3,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   compacto,
+  decimalesFrenteA,
   diaCorto,
   diaDeInstante,
   diasEnLlano,
@@ -53,6 +54,27 @@ describe('los números', () => {
     expect(porciento(20, 64_748)).toBe('menos de 0.1 %')
     expect(porciento(1, 1000, 0)).toBe('menos de 1 %')
     expect(porciento(5, 0)).toBe('—')
+  })
+
+  it('decimalesFrenteA: los que hacen falta para que se vea de qué lado del umbral cae', () => {
+    // Lo normal: un decimal alcanza.
+    expect(decimalesFrenteA(50.3, 50)).toBe(1)
+    expect(decimalesFrenteA(120.7, 100)).toBe(1)
+    expect(decimalesFrenteA(49.9, 50)).toBe(1)
+    // Apenas arriba o apenas abajo: «50.0» diría lo contrario de «supera» o de «no supera».
+    expect(decimalesFrenteA(50.03, 50)).toBe(2)
+    expect(numero(50.03, decimalesFrenteA(50.03, 50))).toBe('50.03')
+    expect(numero(100.04, decimalesFrenteA(100.04, 100))).toBe('100.04')
+    expect(numero(49.96, decimalesFrenteA(49.96, 50))).toBe('49.96')
+    expect(numero(50.004, decimalesFrenteA(50.004, 50))).toBe('50.004')
+    // Exactamente el umbral no necesita más: es el umbral.
+    expect(decimalesFrenteA(50, 50)).toBe(1)
+    // Hay un tope: no se escribe una cola de ceros.
+    expect(decimalesFrenteA(50.0000001, 50)).toBe(4)
+    // Sin valor, los de siempre.
+    expect(decimalesFrenteA(null, 50)).toBe(1)
+    expect(decimalesFrenteA(undefined, 50, 0)).toBe(0)
+    expect(decimalesFrenteA(50.4, 50, 0)).toBe(1)
   })
 
   it('proporcion: de un valor entre 0 y 1', () => {

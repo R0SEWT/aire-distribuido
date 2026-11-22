@@ -26,6 +26,19 @@ export function numero(valor: number | null | undefined, decimales = 0): string 
   )
 }
 
+/**
+ * Cuántos decimales hacen falta para que se vea de qué lado de un umbral cae un
+ * valor. Con 50.03 contra 50, un decimal daría «50.0: supera el ECA (50)», que
+ * se lee como una contradicción: hacen falta dos. Devuelve `decimales` si con
+ * eso ya se distingue (o si el valor es exactamente el umbral), y a lo sumo `maximo`.
+ */
+export function decimalesFrenteA(valor: number | null | undefined, umbral: number, decimales = 1, maximo = 4): number {
+  if (valor === null || valor === undefined || !Number.isFinite(valor) || valor === umbral) return decimales
+  let hacenFalta = decimales
+  while (hacenFalta < maximo && numero(valor, hacenFalta) === numero(umbral, hacenFalta)) hacenFalta += 1
+  return hacenFalta
+}
+
 /** Un número grande en pocas letras, para un eje: 73 mil, 21.9 M. */
 export function compacto(valor: number): string {
   return new Intl.NumberFormat(LOCAL, { notation: 'compact', maximumFractionDigits: 1 }).format(valor)
