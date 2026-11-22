@@ -184,6 +184,20 @@ describe('el Panel', () => {
       expect(await codigosDeLaLista()).toEqual(['CA-HU-04', 'CA-AYAS-01', 'CA-MAC-01', 'CA-CG-02', 'CA-HUAR-01'])
     })
 
+    it('la lista va al lado del mapa recién cuando la tabla entra entera: a partir de 76 rem, no de 72', async () => {
+      // El maquetado no se puede medir aquí (jsdom no maqueta); se comprobó en el navegador entre 1280 y
+      // 1920 px en los dos modos. Esto cuida que no vuelva el punto de corte que cortaba «Estado del»
+      // en modo proyector a 1440 px (72,8 rem de ancho: la tabla necesita 48 junto a los 27 del mapa).
+      simularPanel(ESTADOS)
+      montar('/')
+      await screen.findByRole('table', { name: /por gravedad/ })
+
+      const clases = [...document.querySelectorAll('[data-zona], [data-cifras]')].map((e) => e.className).join(' ')
+      expect(clases).toContain('@[76rem]:col-start-2')
+      expect(clases).toContain('@[76rem]:grid-cols-')
+      expect(clases).not.toMatch(/@6xl:/)
+    })
+
     it('cada fila trae lo que pide el panel, con la fecha de ese estado', async () => {
       simularPanel(ESTADOS)
       montar('/')

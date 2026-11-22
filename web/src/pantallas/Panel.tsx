@@ -154,7 +154,7 @@ const COLUMNAS: Columna<FilaEstacion>[] = [
 function Cifras({ resumen }: { resumen: Resumen }) {
   const { ultimo } = resumen
   return (
-    <div className="grid gap-5 @6xl:grid-cols-[0.85fr_1.02fr_1.23fr]" data-cifras>
+    <div className="grid gap-5 @[76rem]:grid-cols-[0.85fr_1.02fr_1.23fr]" data-cifras>
       <Tarjeta acento={resumen.enAlerta > 0 ? 'alerta' : resumen.conEstado > 0 ? 'buena' : undefined} className="p-4!">
         <Cifra
           tamano="mediana"
@@ -232,7 +232,7 @@ function TarjetaDelMapa({ filas, lugares }: { filas: readonly FilaEstacion[]; lu
   const fila = senalada ? filas.find((f) => f.id === senalada) : undefined
 
   return (
-    <Tarjeta rotulo="Mapa" titulo={`Las ${filas.length} estaciones de OEFA`} className="@6xl:sticky @6xl:top-4">
+    <Tarjeta rotulo="Mapa" titulo={`Las ${filas.length} estaciones de OEFA`} className="@[76rem]:sticky @[76rem]:top-4">
       {mapa.data ? (
         <MapaPeru
           geo={mapa.data}
@@ -327,9 +327,12 @@ function Contenido({
   // Tres disposiciones, según el ancho en rem (que el modo proyector agranda):
   // en una columna; el mapa junto a las cifras y la lista debajo, a todo el
   // ancho; y, si hay sitio, el mapa a la izquierda con las cifras y la lista al lado.
+  // Esa última pide 76 rem y no los 72 de @6xl: la tabla necesita unos 48 rem
+  // junto a los 27 del mapa. Entre 72 y 76 (el modo proyector a 1440 px de
+  // ancho) la columna «Estado del» quedaba cortada.
   return (
     <div className="@container">
-      <div className="grid items-start gap-5 @4xl:grid-cols-[minmax(0,27rem)_minmax(0,1fr)] @6xl:grid-rows-[auto_1fr]">
+      <div className="grid items-start gap-5 @4xl:grid-cols-[minmax(0,27rem)_minmax(0,1fr)] @[76rem]:grid-rows-[auto_1fr]">
         <div className="space-y-5 @4xl:col-start-2 @4xl:row-start-1" data-zona="resumen">
           {resumen.ultimo === null ? (
             <SinEstados />
@@ -340,10 +343,10 @@ function Contenido({
             </>
           )}
         </div>
-        <div className="@4xl:col-start-1 @4xl:row-start-1 @6xl:row-span-2 @6xl:h-full" data-zona="mapa">
+        <div className="@4xl:col-start-1 @4xl:row-start-1 @[76rem]:row-span-2 @[76rem]:h-full" data-zona="mapa">
           <TarjetaDelMapa filas={filas} lugares={lugares} />
         </div>
-        <div className="@4xl:col-span-2 @6xl:col-span-1 @6xl:col-start-2 @6xl:row-start-2" data-zona="lista">
+        <div className="@4xl:col-span-2 @[76rem]:col-span-1 @[76rem]:col-start-2 @[76rem]:row-start-2" data-zona="lista">
           <Tarjeta titulo="Estaciones, de la más grave a la menos" aLaDerecha={`${miden.length} miden PM por hora`} className="p-4!">
             <Tabla
               titulo="Último estado recibido de cada estación, por gravedad"
