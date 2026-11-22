@@ -157,4 +157,39 @@ describe('el seguimiento de un entrenamiento', () => {
       expect(s.corrida?.fin).toEqual({ abortado: true, error: 'se cayó' })
     })
   })
+
+  describe('cuando la API ya no conoce el entrenamiento seguido', () => {
+    it('se suelta y queda dicho cuál era', () => {
+      const s = aplicar([
+        { tipo: 'lanzar', pedido: PEDIDO },
+        { tipo: 'aceptado', id: 'e-1' },
+        { tipo: 'ronda', evento: ronda('e-1', 1) },
+        { tipo: 'perdido', id: 'e-1' },
+      ])
+
+      expect(s.corrida).toBeNull()
+      expect(s.perdido).toBe('e-1')
+    })
+
+    it('si la respuesta es de otro entrenamiento (llegó tarde), no toca nada', () => {
+      const antes = aplicar([
+        { tipo: 'lanzar', pedido: PEDIDO },
+        { tipo: 'aceptado', id: 'e-2' },
+      ])
+
+      expect(reducir(antes, { tipo: 'perdido', id: 'e-1' })).toBe(antes)
+    })
+
+    it('el aviso se retira al lanzar otro, al abrir uno del historial o al seguir uno que llega', () => {
+      const perdido = aplicar([
+        { tipo: 'lanzar', pedido: PEDIDO },
+        { tipo: 'aceptado', id: 'e-1' },
+        { tipo: 'perdido', id: 'e-1' },
+      ])
+
+      expect(reducir(perdido, { tipo: 'lanzar', pedido: PEDIDO }).perdido).toBeNull()
+      expect(reducir(perdido, { tipo: 'ver', detalle: { id: 'e-9', estado: 'terminado', nodos: [], replicas: 1, rondas: [] } }).perdido).toBeNull()
+      expect(reducir(perdido, { tipo: 'ronda', evento: ronda('e-3', 1) }).perdido).toBeNull()
+    })
+  })
 })

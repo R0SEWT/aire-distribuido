@@ -59,15 +59,32 @@ function montar() {
   const consultas = crearClienteDeConsultas()
   consultas.setDefaultOptions({ queries: { ...consultas.getDefaultOptions().queries, retry: false } })
   render(
-    <Proveedores consultas={consultas} tiempoReal={{ crearEnchufe: enchufes.crearEnchufe }}>
+    <Proveedores consultas={consultas} tiempoReal={{ ...RECONEXION_RAPIDA, crearEnchufe: enchufes.crearEnchufe }}>
       <Entrenamiento />
     </Proveedores>,
   )
   act(() => enchufes.ultimo().abrir())
+  return conexionDe(enchufes)
+}
+
+// Tras un corte, el intento de reconexión sale enseguida: la prueba decide cuándo se abre.
+const RECONEXION_RAPIDA = { esperaBaseMs: 10, esperaMaximaMs: 10 }
+
+function conexionDe(enchufes: ReturnType<typeof fabricaDeEnchufes>) {
+  let cortado: ReturnType<typeof enchufes.ultimo> | null = null
   return {
     /** Llega un evento por el WebSocket. */
     emitir: (evento: string, datos: unknown) => act(() => enchufes.ultimo().recibir({ evento, datos })),
-    cortar: () => act(() => enchufes.ultimo().cerrarDesdeElServidor(1006)),
+    /** La conexión se cae (1006). La app reintenta sola, pero el nuevo WebSocket no se abre hasta reconectar(). */
+    cortar: () => {
+      cortado = enchufes.ultimo()
+      act(() => cortado!.cerrarDesdeElServidor(1006))
+    },
+    /** El WebSocket del reintento queda abierto. */
+    reconectar: async () => {
+      await waitFor(() => expect(enchufes.ultimo()).not.toBe(cortado))
+      act(() => enchufes.ultimo().abrir())
+    },
   }
 }
 
@@ -625,7 +642,7 @@ describe('la pantalla de entrenamiento', () => {
       const consultas = crearClienteDeConsultas()
       consultas.setDefaultOptions({ queries: { ...consultas.getDefaultOptions().queries, retry: false } })
       render(
-        <Proveedores consultas={consultas} tiempoReal={{ crearEnchufe: enchufes.crearEnchufe }}>
+        <Proveedores consultas={consultas} tiempoReal={{ ...RECONEXION_RAPIDA, crearEnchufe: enchufes.crearEnchufe }}>
           <MemoryRouter initialEntries={['/entrenamiento']}>
             <nav>
               <Link to="/entrenamiento">ir a entrenamiento</Link>
@@ -640,7 +657,7 @@ describe('la pantalla de entrenamiento', () => {
       )
       act(() => enchufes.ultimo().abrir())
       return {
-        emitir: (evento: string, datos: unknown) => act(() => enchufes.ultimo().recibir({ evento, datos })),
+        ...conexionDe(enchufes),
         irse: async () => {
           await userEvent.click(screen.getByRole('link', { name: 'ir a otra pantalla' }))
           await screen.findByRole('heading', { name: 'Otra pantalla' })
@@ -764,6 +781,100 @@ describe('la pantalla de entrenamiento', () => {
 
       expect(entrenamientoALaVista.leer().seguimiento.corrida).toBeNull()
       expect(entrenamientoALaVista.leer().velocidad).toBe('normal')
+    })
+  })
+
+  describe('si el fin del entrenamiento sale con el WebSocket caído', () => {
+    const EN_CURSO = { id: ID, estado: 'en_curso', nodos: ['nodo-a', 'nodo-b'], replicas: 1, rondas: [ronda(1), ronda(2)] }
+    const detalles = (fetch: ReturnType<typeof simularApi>) =>
+      fetch.mock.calls.filter((c) => c[0].method === 'GET' && c[0].url.endsWith(`/api/entrenamientos/${ID}`)).length
+
+    it('al reconectar pide el detalle y se entera: no queda «en curso» para siempre', async () => {
+      let enLaApi: unknown = EN_CURSO
+      const fetch = api({ [`GET /api/entrenamientos/${ID}`]: () => ({ estado: 200, cuerpo: enLaApi }) })
+      const { emitir, cortar, reconectar } = montar()
+      await screen.findByRole('list', { name: 'Nodos libres' })
+      await lanzar()
+      await screen.findByText('Cargando datos en los nodos')
+      emitir('entrenamiento.ronda', ronda(1))
+      emitir('entrenamiento.ronda', ronda(2))
+      await screen.findByText('En vivo · ronda 2')
+
+      // Un corte corto. Mientras dura, la API todavía dice «en curso»: el sondeo no ve el final.
+      cortar()
+      await waitFor(() => expect(detalles(fetch)).toBeGreaterThanOrEqual(1))
+      // El entrenamiento termina y su `entrenamiento.fin` sale con el WebSocket caído: se pierde.
+      enLaApi = DETALLE
+      // La conexión vuelve antes de que otro sondeo pregunte.
+      await reconectar()
+
+      expect(await screen.findByText('Terminado · 4 rondas')).toBeInTheDocument()
+      expect(await screen.findByText('Resultado')).toBeInTheDocument()
+      expect(screen.queryByText(/Hay un entrenamiento en curso/)).not.toBeInTheDocument()
+      // Y deja lanzar otro en cuanto los nodos vuelven: el botón no queda deshabilitado para siempre.
+      await waitFor(() => expect(formulario().getByRole('button', { name: 'Lanzar entrenamiento' })).toBeEnabled(), { timeout: 8000 })
+    }, 15_000)
+
+    it('con la pantalla cerrada también: al volver a ella pide el detalle y lo reconcilia', async () => {
+      let enLaApi: unknown = EN_CURSO
+      api({ [`GET /api/entrenamientos/${ID}`]: () => ({ estado: 200, cuerpo: enLaApi }) })
+      const enchufes = fabricaDeEnchufes()
+      const consultas = crearClienteDeConsultas()
+      consultas.setDefaultOptions({ queries: { ...consultas.getDefaultOptions().queries, retry: false } })
+      render(
+        <Proveedores consultas={consultas} tiempoReal={{ ...RECONEXION_RAPIDA, crearEnchufe: enchufes.crearEnchufe }}>
+          <MemoryRouter initialEntries={['/entrenamiento']}>
+            <Link to="/entrenamiento">ir a entrenamiento</Link>
+            <Link to="/otra">ir a otra pantalla</Link>
+            <Routes>
+              <Route path="/entrenamiento" element={<Entrenamiento />} />
+              <Route path="/otra" element={<h1>Otra pantalla</h1>} />
+            </Routes>
+          </MemoryRouter>
+        </Proveedores>,
+      )
+      act(() => enchufes.ultimo().abrir())
+      const { emitir, cortar, reconectar } = conexionDe(enchufes)
+      await screen.findByRole('list', { name: 'Nodos libres' })
+      await lanzar()
+      await screen.findByText('Cargando datos en los nodos')
+      emitir('entrenamiento.ronda', ronda(1))
+      await screen.findByText('En vivo · ronda 1')
+
+      await userEvent.click(screen.getByRole('link', { name: 'ir a otra pantalla' }))
+      await screen.findByRole('heading', { name: 'Otra pantalla' })
+      // Mientras se mira otra pantalla: corte, el entrenamiento termina y la conexión vuelve. El fin se perdió.
+      cortar()
+      enLaApi = DETALLE
+      await reconectar()
+      expect(entrenamientoALaVista.leer().seguimiento.corrida).toMatchObject({ id: ID, fin: null })
+
+      await userEvent.click(screen.getByRole('link', { name: 'ir a entrenamiento' }))
+
+      expect(await screen.findByText('Terminado · 4 rondas')).toBeInTheDocument()
+      expect(entrenamientoALaVista.leer().seguimiento.corrida?.fin).toMatchObject({ abortado: false, iteraciones: 4 })
+    })
+
+    it('si la API ya no conoce el entrenamiento (se reinició), lo suelta, lo dice y deja lanzar otro', async () => {
+      let enLaApi: { estado: number; cuerpo: unknown } = { estado: 200, cuerpo: EN_CURSO }
+      api({ [`GET /api/entrenamientos/${ID}`]: () => enLaApi })
+      const { emitir, cortar, reconectar } = montar()
+      await screen.findByRole('list', { name: 'Nodos libres' })
+      await lanzar()
+      await screen.findByText('Cargando datos en los nodos')
+      emitir('entrenamiento.ronda', ronda(1))
+      await screen.findByText('En vivo · ronda 1')
+
+      cortar()
+      enLaApi = { estado: 404, cuerpo: { error: `no hay un entrenamiento ${ID}` } }
+      await reconectar()
+
+      const aviso = (await screen.findByText(`El entrenamiento ${ID} ya no existe en la API`)).closest('[data-aviso]')!
+      expect(aviso).toHaveTextContent('se reinició')
+      expect(screen.queryByText('Rondas del entrenamiento')).not.toBeInTheDocument()
+      expect(screen.queryByText(/Hay un entrenamiento en curso/)).not.toBeInTheDocument()
+      expect(formulario().getByRole('button', { name: 'Lanzar entrenamiento' })).toBeEnabled()
+      expect(entrenamientoALaVista.leer().seguimiento).toMatchObject({ corrida: null, perdido: ID })
     })
   })
 })

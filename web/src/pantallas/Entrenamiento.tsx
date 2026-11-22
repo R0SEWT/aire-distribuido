@@ -11,17 +11,18 @@
 // iba, y con las rondas que llegaron mientras tanto.
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { api, claves, pedir } from '../api/cliente'
 import { EN_VIVO } from '../api/enVivo'
+import { ErrorApi } from '../api/errores'
 import { useEstadoWS, useEvento } from '../api/tiempoReal'
-import { Encabezado, Estado, EstadoDeError, Tarjeta } from '../componentes/indice'
+import { Aviso, Encabezado, Estado, EstadoDeError, Tarjeta } from '../componentes/indice'
 import { Formulario, type Bloqueo } from './entrenamiento/Formulario'
 import { Historial } from './entrenamiento/Historial'
 import { PanelDeRondas } from './entrenamiento/PanelDeRondas'
 import { Resultado } from './entrenamiento/Resultado'
 import { entrenamientoALaVista, useEntrenamientoALaVista } from './entrenamiento/almacen'
-import type { Corrida, Fin, Pedido } from './entrenamiento/seguimiento'
+import type { Corrida, Detalle, Fin, Pedido } from './entrenamiento/seguimiento'
 import { PASO_MS, useReproduccion, type Velocidad } from './entrenamiento/useReproduccion'
 import { useVentana } from './entrenamiento/useVentana'
 
@@ -76,28 +77,76 @@ export default function Entrenamiento() {
     // Con uno en curso que esta pantalla no sigue, se pregunta hasta verlo terminar.
     refetchInterval: (consulta) => (consulta.state.data?.[0]?.estado === 'en_curso' ? 2_000 : false),
   })
+  /** Lo que un entrenamiento cambia fuera de esta pantalla: historial, modelo activo, pool, métricas y eventos. */
+  function refrescar() {
+    // El historial, exacto: el detalle de cada entrenamiento cuelga de la misma clave y se pide aparte.
+    void consultas.invalidateQueries({ queryKey: claves.entrenamientos, exact: true })
+    for (const clave of [claves.modeloActivo, claves.nodos, claves.salud, claves.metricas, claves.eventosCluster]) {
+      void consultas.invalidateQueries({ queryKey: clave })
+    }
+  }
+
+  /**
+   * Pide el detalle de un entrenamiento y lo reconcilia con el que está a la
+   * vista: completa las rondas que el WebSocket haya perdido y, si ya terminó y
+   * su evento de fin no llegó, toma el fin del detalle. Un 404 es «ya no
+   * existe» (la API se reinició sin almacén): se suelta, y se dice.
+   */
+  async function pedirYReconciliar(id: string, signal?: AbortSignal): Promise<Detalle | null> {
+    const sinFin = entrenamientoALaVista.leer().seguimiento.corrida?.fin === null
+    let d: Detalle
+    try {
+      d = await pedirDetalle(id, signal)
+    } catch (error) {
+      if (error instanceof ErrorApi && error.tipo === 'no_encontrado') {
+        despachar({ tipo: 'perdido', id })
+        refrescar()
+        return null
+      }
+      throw error
+    }
+    despachar({ tipo: 'detalle', detalle: d, ahora: Date.now() })
+    // Si el fin se supo por aquí y no por su evento, lo demás de la pantalla también se entera.
+    if (sinFin && d.estado !== 'en_curso') refrescar()
+    return d
+  }
+
   // El detalle se pide al terminar (spec §5.5). Con el WebSocket caído se pide
   // también mientras corre: es la única forma de enterarse de las rondas y del fin.
   const detalle = useQuery({
     queryKey: claves.entrenamiento(corrida?.id ?? ''),
     enabled: corrida !== null && (corrida.fin !== null || tiempoReal !== 'conectada'),
-    queryFn: async ({ signal, queryKey }) => {
-      const d = await pedirDetalle(queryKey[1], signal)
-      despachar({ tipo: 'detalle', detalle: d, ahora: Date.now() })
-      return d
-    },
+    queryFn: ({ signal, queryKey }) => pedirYReconciliar(queryKey[1], signal),
     refetchInterval: enCurso ? 1_000 : false,
   })
 
-  /** Lo que un entrenamiento cambia fuera de esta pantalla: historial, modelo activo, pool, métricas y eventos. */
-  function refrescar() {
-    for (const clave of [claves.entrenamientos, claves.modeloActivo, claves.nodos, claves.salud, claves.metricas, claves.eventosCluster]) {
-      void consultas.invalidateQueries({ queryKey: clave })
-    }
-  }
+  // Y mientras no se sepa cómo terminó, se pide además en los dos momentos en
+  // que el `entrenamiento.fin` pudo haberse perdido: al volver a conectar (salió
+  // durante el corte, por corto que haya sido) y al montarse la pantalla (salió
+  // con el WebSocket caído mientras se miraba otra). Sin esto, si la conexión
+  // volvía antes de que un sondeo viera el final, quedaba «en curso» para siempre.
+  const idSinFin = enCurso ? corrida.id : null
+  const conectada = tiempoReal === 'conectada'
+  const estabaConectada = useRef<boolean | null>(null)
+  useEffect(() => {
+    const alMontar = estabaConectada.current === null
+    const reconecto = conectada && estabaConectada.current === false
+    estabaConectada.current = conectada
+    if (idSinFin === null || !(alMontar || reconecto)) return
+    void consultas
+      .fetchQuery({ queryKey: claves.entrenamiento(idSinFin), queryFn: ({ signal }) => pedirYReconciliar(idSinFin, signal), staleTime: 0 })
+      .catch(() => {
+        // Si la API no responde, lo dice la barra; se vuelve a intentar al reconectar.
+      })
+    // Solo al montar y al reconectar: un entrenamiento recién lanzado no se pide hasta que termine.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [conectada])
 
   // Las rondas y el fin llegan al almacén por su cuenta (App.tsx), esté o no esta pantalla a la vista.
-  useEvento('entrenamiento.fin', () => refrescar())
+  useEvento('entrenamiento.fin', (evento) => {
+    refrescar()
+    void consultas.invalidateQueries({ queryKey: claves.entrenamiento(evento.id) })
+  })
 
   const lanzar = useMutation({
     mutationFn: (pedido: Pedido) => pedir(api.POST('/api/entrenamientos', { body: pedido })),
@@ -134,7 +183,7 @@ export default function Entrenamiento() {
     }
   }
 
-  const delDetalle = detalle.data?.id === corrida?.id ? detalle.data : undefined
+  const delDetalle = detalle.data && detalle.data.id === corrida?.id ? detalle.data : undefined
   const nodosDeLaCorrida = delDetalle?.nodos ?? nodosDeLasRondas(corrida)
   const libres = nodos.data?.filter((n) => n.libre).length ?? 0
   // Cuántos nodos tienen que volver: los que usó el entrenamiento que acaba de terminar.
@@ -179,6 +228,12 @@ export default function Entrenamiento() {
 
         <div ref={panel} className="scroll-mt-4 space-y-5">
           {errorAlAbrir !== null && <EstadoDeError error={errorAlAbrir} />}
+          {seguimiento.perdido !== null && (
+            <Aviso titulo={`El entrenamiento ${seguimiento.perdido} ya no existe en la API`}>
+              La API responde que no lo conoce: se reinició y, sin un almacén, no guarda los entrenamientos anteriores.
+              Se dejó de seguir; se puede lanzar otro.
+            </Aviso>
+          )}
           {/* El resultado va arriba de las rondas: al terminar la reproducción es lo primero que se lee. */}
           {termino && (
             <Resultado

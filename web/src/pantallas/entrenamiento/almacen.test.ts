@@ -95,7 +95,7 @@ describe('el entrenamiento a la vista', () => {
 
     almacen.reiniciar()
 
-    expect(almacen.leer()).toEqual({ seguimiento: { lanzando: null, corrida: null, buzon: {} }, velocidad: 'normal' })
+    expect(almacen.leer()).toEqual({ seguimiento: { lanzando: null, corrida: null, buzon: {}, perdido: null }, velocidad: 'normal' })
     expect(almacen.memoria.leer('e-1')).toBeUndefined()
   })
 })

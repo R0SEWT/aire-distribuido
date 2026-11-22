@@ -65,9 +65,14 @@ export interface Seguimiento {
   corrida: Corrida | null
   /** Lo que llegó de entrenamientos todavía sin dueño, por id, mientras el pedido viaja. */
   buzon: Record<string, EnElBuzon>
+  /**
+   * El id del entrenamiento que se seguía y la API ya no conoce (se reinició
+   * sin almacén): se dejó de seguir, y se dice. null si no pasó.
+   */
+  perdido: string | null
 }
 
-export const SIN_SEGUIMIENTO: Seguimiento = { lanzando: null, corrida: null, buzon: {} }
+export const SIN_SEGUIMIENTO: Seguimiento = { lanzando: null, corrida: null, buzon: {}, perdido: null }
 
 export type Accion =
   | { tipo: 'lanzar'; pedido: Pedido }
@@ -77,6 +82,8 @@ export type Accion =
   | { tipo: 'fin'; evento: EventoFinal; ahora: number }
   | { tipo: 'ver'; detalle: Detalle }
   | { tipo: 'detalle'; detalle: Detalle; ahora: number }
+  /** La API respondió 404 al detalle del entrenamiento seguido: ya no existe. */
+  | { tipo: 'perdido'; id: string }
   | { tipo: 'cerrar' }
 
 /** El fin de un entrenamiento como lo trae el evento `entrenamiento.fin`. */
@@ -135,13 +142,14 @@ export function reducir(s: Seguimiento, a: Accion): Seguimiento {
   switch (a.tipo) {
     case 'lanzar':
       // La corrida anterior sigue a la vista hasta que la API acepte el pedido: si lo rechaza, no se pierde.
-      return { ...s, lanzando: a.pedido, buzon: {} }
+      return { ...s, lanzando: a.pedido, buzon: {}, perdido: null }
 
     case 'aceptado': {
       const llegado = s.buzon[a.id]
       return {
         lanzando: null,
         buzon: {},
+        perdido: null,
         corrida: {
           id: a.id,
           origen: 'propia',
@@ -159,7 +167,7 @@ export function reducir(s: Seguimiento, a: Accion): Seguimiento {
       const ids = Object.keys(s.buzon)
       const id = ids[ids.length - 1]
       if (id === undefined || !estaLibre(s)) return { ...s, lanzando: null, buzon: {} }
-      return { lanzando: null, buzon: {}, corrida: { id, origen: 'ajena', pedido: null, ...s.buzon[id]! } }
+      return { lanzando: null, buzon: {}, perdido: null, corrida: { id, origen: 'ajena', pedido: null, ...s.buzon[id]! } }
     }
 
     case 'ronda': {
@@ -174,7 +182,7 @@ export function reducir(s: Seguimiento, a: Accion): Seguimiento {
       }
       // Un entrenamiento que no lanzó esta pantalla: se sigue si no hay otro a medias.
       if (!estaLibre(s)) return s
-      return { ...s, corrida: { id, origen: 'ajena', pedido: null, rondas: conRonda([], a.evento), fin: null, finEn: null } }
+      return { ...s, perdido: null, corrida: { id, origen: 'ajena', pedido: null, rondas: conRonda([], a.evento), fin: null, finEn: null } }
     }
 
     case 'fin': {
@@ -196,6 +204,7 @@ export function reducir(s: Seguimiento, a: Accion): Seguimiento {
       const fin = finDeDetalle(a.detalle)
       return {
         ...s,
+        perdido: null,
         corrida: {
           id: a.detalle.id,
           // Uno en curso abierto desde el historial se sigue como ajeno: sus rondas siguen llegando.
@@ -228,6 +237,11 @@ export function reducir(s: Seguimiento, a: Accion): Seguimiento {
         },
       }
     }
+
+    case 'perdido':
+      // Solo si todavía es el que se sigue: la respuesta pudo llegar tarde.
+      if (s.corrida?.id !== a.id) return s
+      return { ...s, corrida: null, perdido: a.id }
 
     case 'cerrar':
       return { ...s, corrida: null }
