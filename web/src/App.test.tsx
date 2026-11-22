@@ -5,7 +5,7 @@ import { act, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link, MemoryRouter, Route, Routes } from 'react-router'
-import { lazy } from 'react'
+import { lazy, useState } from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { api, claves, crearClienteDeConsultas, pedir } from './api/cliente'
 import { EN_VIVO, pedirRegimenes, type EstadoEstacion } from './api/enVivo'
@@ -741,6 +741,42 @@ describe('la app', () => {
         // Al reabrirse se olvidó el evento viejo de CA-A: manda lo que responde el GET.
         await waitFor(() => expect(filas()).toEqual(['CA-A en alerta']))
         expect(pedirLista).toHaveBeenCalledTimes(antes + 1)
+      })
+
+      it('con el WebSocket caído, lo que responde la API manda sobre el evento de antes del corte', async () => {
+        vi.useFakeTimers({ shouldAdvanceTime: true })
+        simularApi({ 'GET /api/salud': SALUD_OK })
+        sesionDe('usuario')
+        let enLaApi = [estadoDe('CA-A', 9)]
+        const pedirLista = vi.fn(async () => enLaApi)
+        // Una pantalla que se puede cerrar y volver a abrir, como al navegar al Panel.
+        function ConLista() {
+          const [abierta, setAbierta] = useState(true)
+          return (
+            <>
+              <button type="button" onClick={() => setAbierta(!abierta)}>
+                {abierta ? 'cerrar la lista' : 'abrir la lista'}
+              </button>
+              {abierta && <Lista pedirLista={pedirLista} />}
+            </>
+          )
+        }
+        const { enchufes } = montar(SIN_DATOS, <ConLista />)
+        act(() => enchufes.ultimo().abrir())
+        await waitFor(() => expect(filas()).toEqual(['CA-A sin alerta']))
+        act(() => enchufes.ultimo().recibir({ evento: 'estacion.regimen', datos: estadoDe('CA-A', 10) }))
+
+        // Cae el WebSocket; otra sesión manda la lectura de las 11, que deja a CA-A en alerta. Ese evento no llega.
+        act(() => enchufes.ultimo().cerrarDesdeElServidor(1006))
+        await screen.findByText('Tiempo real: reconectando…')
+        enLaApi = [estadoDe('CA-A', 11, true)]
+
+        // Se navega a la pantalla sin haber reconectado: el GET trae las 11 y eso es lo que se ve.
+        await userEvent.click(screen.getByRole('button', { name: 'cerrar la lista' }))
+        await userEvent.click(screen.getByRole('button', { name: 'abrir la lista' }))
+
+        await waitFor(() => expect(filas()).toEqual(['CA-A en alerta']))
+        expect(screen.getByText('Tiempo real: reconectando…')).toBeInTheDocument()
       })
 
       it('un evento que llega apenas se abre el WebSocket no se pierde al vaciar la memoria de la conexión', async () => {
