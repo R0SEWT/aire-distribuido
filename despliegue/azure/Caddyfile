@@ -1,6 +1,0 @@
-# Caddy saca y renueva el certificado de {$DOMINIO} con Let's Encrypt. Con DOMINIO=localhost
-# usa un certificado propio, para probar en la laptop.
-{$DOMINIO} {
-	encode zstd gzip
-	reverse_proxy api:8080
-}
