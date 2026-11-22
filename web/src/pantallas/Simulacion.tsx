@@ -264,7 +264,11 @@ function Veredicto({ resumen, corrida }: { resumen: Resumen; corrida: Corrida })
       : `${resumen.enAlerta.length === 1 ? 'Terminó en alerta' : 'Terminaron en alerta'} ${enumerar(resumen.enAlerta)}.`
   const tono: Tono = resumen.difieren > 0 ? 'alerta' : resumen.soloRegimen > 0 ? 'moderada' : 'buena'
   const partes = [
-    `${de(resumen.coinciden)} ${resumen.coinciden === 1 ? 'quedó' : 'quedaron'} como dice el archivo: la misma media de 24 horas, la misma alerta, la misma banda INCA y el mismo régimen.`,
+    resumen.coinciden === 0
+      ? n === 1
+        ? 'La estación no quedó como dice el archivo.'
+        : `Ninguna de las ${n} estaciones quedó como dice el archivo.`
+      : `${de(resumen.coinciden)} ${resumen.coinciden === 1 ? 'quedó' : 'quedaron'} como dice el archivo: la misma media de 24 horas, la misma alerta, la misma banda INCA y el mismo régimen.`,
     resumen.soloRegimen > 0
       ? `En ${resumen.soloRegimen} solo difiere el régimen: el esperado vale para el modelo sembrado y el activo es ${corrida.modeloId ?? 'otro'}.`
       : null,
