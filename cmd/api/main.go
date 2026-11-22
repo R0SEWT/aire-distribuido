@@ -21,6 +21,11 @@
 //   - JWT_SECRETO: la clave HS256, de al menos 32 bytes.
 //   - API_USUARIOS: «usuario:clave:rol» separados por comas, con rol usuario o
 //     admin.
+//   - API_INVITADO: el usuario con que entra quien pide POST /api/auth/invitado,
+//     sin presentar clave (el «Entrar igual» de la pantalla de ingreso). Tiene
+//     que estar en API_USUARIOS con el rol usuario; si no, la API no arranca.
+//     Sin ella no hay ingreso de invitado y esa ruta responde 404. Un invitado
+//     puede todo lo del rol usuario, también mandar lecturas.
 //   - CORS_ORIGENES: los orígenes que pueden llamar a la API desde un
 //     navegador, separados por comas («http://localhost:5173»), o «*». Sin
 //     ella, solo el mismo origen (Swagger UI). La necesita la SPA del TB2.
@@ -38,7 +43,8 @@
 //
 // Para desarrollo, -demo arranca sin API_USUARIOS con los usuarios de
 // demostración demo/demo (usuario) y admin/admin (admin), con un aviso en el
-// log. No es para una API que se pueda alcanzar desde otra máquina.
+// log, y deja a demo como invitado si API_INVITADO no dice otro. No es para una
+// API que se pueda alcanzar desde otra máquina.
 //
 // Con -salud no levanta la API: pide /api/salud a la que ya corre en -addr y
 // sale con 0 si responde. Es el healthcheck de Docker (spec §8), porque la
@@ -62,6 +68,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -72,6 +79,9 @@ import (
 )
 
 const usuariosDemo = "demo:demo:usuario,admin:admin:admin"
+
+// invitadoDemo es el invitado por omisión cuando los usuarios son los de -demo.
+const invitadoDemo = "demo"
 
 // plazoPedidos es lo que el apagado espera a los pedidos en curso.
 const plazoPedidos = 5 * time.Second
@@ -138,7 +148,7 @@ func leerOpciones(args []string) (opciones, error) {
 	fs.DurationVar(&op.plazoCarga, "plazo-carga", 30*time.Second, "lo que los nodos tienen para cargar su rango del gold")
 	fs.DurationVar(&op.plazoRonda, "plazo-ronda", 10*time.Second, "plazo común de cada ronda de un entrenamiento")
 	fs.IntVar(&op.maxFilas, "max-filas", cluster.MaxFilasPorOmision, "tope de filas por nodo, el -max-filas de los nodos: acota replicas")
-	fs.BoolVar(&op.demo, "demo", false, "sin API_USUARIOS, usar los usuarios de demostración demo/demo y admin/admin (solo desarrollo)")
+	fs.BoolVar(&op.demo, "demo", false, "sin API_USUARIOS, usar los usuarios de demostración demo/demo y admin/admin, con demo de invitado (solo desarrollo)")
 	if err := fs.Parse(args); err != nil {
 		return opciones{}, err
 	}
@@ -168,12 +178,18 @@ func armar(op opciones, getenv func(string) string, log *slog.Logger, nodos net.
 		return nil, nil, err
 	}
 	listaUsuarios := getenv("API_USUARIOS")
+	// El invitado es el de API_INVITADO; con los usuarios de -demo y sin esa
+	// variable, demo.
+	invitado := strings.TrimSpace(getenv("API_INVITADO"))
 	switch {
 	case listaUsuarios != "" && op.demo:
 		log.Warn("-demo no tiene efecto: API_USUARIOS está definida")
 	case listaUsuarios == "" && op.demo:
 		log.Warn("-demo: usuarios de demostración demo/demo (usuario) y admin/admin (admin); solo para desarrollo")
 		listaUsuarios = usuariosDemo
+		if invitado == "" {
+			invitado = invitadoDemo
+		}
 	case listaUsuarios == "":
 		return nil, nil, errors.New("falta la variable de entorno API_USUARIOS (usuario:clave:rol separados por comas; " +
 			"para desarrollo, -demo usa los usuarios de demostración)")
@@ -181,6 +197,9 @@ func armar(op opciones, getenv func(string) string, log *slog.Logger, nodos net.
 	usuarios, err := api.LeerUsuarios(listaUsuarios)
 	if err != nil {
 		return nil, nil, err
+	}
+	if err := api.ValidarInvitado(usuarios, invitado); err != nil {
+		return nil, nil, fmt.Errorf("API_INVITADO: %w", err)
 	}
 	m, err := modelo.Sembrar(modelo.Archivos{Kmeans: op.kmeans, Regimenes: op.regimenes, Estandarizacion: op.estandarizacion})
 	if err != nil {
@@ -222,6 +241,7 @@ func armar(op opciones, getenv func(string) string, log *slog.Logger, nodos net.
 		Modelo:         alm.modeloActivo(m, log),
 		Firmador:       firmador,
 		Usuarios:       usuarios,
+		Invitado:       invitado,
 		Catalogo:       ficha,
 		Estaciones:     alm.estaciones,
 		Predicciones:   alm.predicciones,
@@ -243,6 +263,12 @@ func armar(op opciones, getenv func(string) string, log *slog.Logger, nodos net.
 	srv.RecuperarEntrenamientos(plazoArranque)
 	if len(origenes) > 0 {
 		log.Info("CORS", "origenes", origenes)
+	}
+	if invitado != "" {
+		// Un aviso y no una nota: quien alcance la API entra sin clave.
+		log.Warn("ingreso de invitado habilitado: POST /api/auth/invitado da un token sin pedir clave", "usuario", invitado, "rol", api.RolUsuario)
+	} else {
+		log.Info("ingreso de invitado deshabilitado: POST /api/auth/invitado responde 404 (se habilita con API_INVITADO)")
 	}
 	return srv, alm.cerrar, nil
 }

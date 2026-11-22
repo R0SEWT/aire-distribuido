@@ -24,6 +24,30 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/auth/invitado": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Obtiene un JWT de la cuenta de invitado, sin credenciales, si el servidor la habilitó
+         * @description El pedido no lleva cuerpo. La cuenta de invitado es un usuario de rol usuario que designa
+         *     quien levanta la API (variable de entorno API_INVITADO); su clave no sale del servidor.
+         *     La respuesta tiene la misma forma que la de POST /api/auth/token y el token vale lo mismo:
+         *     con él se puede todo lo del rol usuario, también POST /api/predicciones.
+         *     Si el servidor no designó una cuenta de invitado, responde 404.
+         */
+        post: operations["ingresarComoInvitado"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/salud": {
         parameters: {
             query?: never;
@@ -880,6 +904,47 @@ export interface operations {
                     /**
                      * @example {
                      *       "error": "usuario o clave incorrectos"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    ingresarComoInvitado: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Token de la cuenta de invitado, con expiración y rol. El token de ejemplo no es una credencial utilizable. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "token": "<token>",
+                     *       "rol": "usuario",
+                     *       "expira": "2026-11-21T23:30:00-05:00"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Token"];
+                };
+            };
+            /** @description El servidor no tiene habilitado el ingreso de invitado */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": "el ingreso de invitado no está habilitado"
                      *     }
                      */
                     "application/json": components["schemas"]["Error"];

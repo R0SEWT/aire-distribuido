@@ -742,6 +742,11 @@ func TestNuevoExigeLoNecesario(t *testing.T) {
 	if _, err := Nuevo(base()); err != nil {
 		t.Fatalf("la configuración base tiene que valer: %v", err)
 	}
+	conInvitado := base()
+	conInvitado.Invitado = "a"
+	if _, err := Nuevo(conInvitado); err != nil {
+		t.Fatalf("con un invitado de rol usuario tiene que valer: %v", err)
+	}
 	for nombre, cambiar := range map[string]func(*Config){
 		"sin firmador":     func(c *Config) { c.Firmador = nil },
 		"sin usuarios":     func(c *Config) { c.Usuarios = nil },
@@ -751,6 +756,12 @@ func TestNuevoExigeLoNecesario(t *testing.T) {
 		"sin caché":        func(c *Config) { c.Cache = nil },
 		"sin contrato":     func(c *Config) { c.OpenAPI = nil },
 		"cola de 0":        func(c *Config) { c.TamCola = 0 },
+		// El invitado entra sin clave: un usuario que existe, y nunca un admin.
+		"invitado que no existe": func(c *Config) { c.Invitado = "nadie" },
+		"invitado admin": func(c *Config) {
+			c.Usuarios = map[string]Usuario{"a": {"b", RolUsuario}, "jefa": {"c", RolAdmin}}
+			c.Invitado = "jefa"
+		},
 	} {
 		cfg := base()
 		cambiar(&cfg)

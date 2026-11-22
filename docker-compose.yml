@@ -39,6 +39,9 @@ services:
       # Sin valor, la API no arranca y dice cuál falta (docker compose logs api).
       JWT_SECRETO: ${JWT_SECRETO:-}
       API_USUARIOS: ${API_USUARIOS:-}
+      # Opcional: el usuario con que se entra sin clave («Entrar igual» en la
+      # pantalla de ingreso). Vacía, no hay ingreso de invitado (.env.example).
+      API_INVITADO: ${API_INVITADO:-}
       MONGO_URI: mongodb://mongo:27017
       MONGO_DB: aire_distribuido
       REDIS_ADDR: redis:6379
