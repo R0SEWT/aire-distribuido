@@ -2,7 +2,8 @@
 // administrador («uso CPU, latencia, número de nodos, logs»), cada cosa con su
 // nombre verdadero:
 //
-//   - nodos            GET /api/cluster/nodos
+//   - nodos            GET /api/cluster/nodos, y lo que tardó cada uno por ronda
+//                      en el último entrenamiento (lo único que se mide de su carga)
 //   - uso de CPU       el del PROCESO DE LA API, que es el coordinador; no el de
 //                      los nodos, que el protocolo no transporta. /api/metricas
 //                      publica el CPU acumulado y el uso sale de dos consultas
@@ -27,7 +28,7 @@ import { horaConSegundos } from './cluster/formato'
 import { Latencia } from './cluster/Latencia'
 import { Nodos } from './cluster/Nodos'
 import { Proceso } from './cluster/Proceso'
-import { rutasPorLatencia } from './cluster/resumen'
+import { respuestaPorRonda, rutasPorLatencia } from './cluster/resumen'
 import { Salud } from './cluster/Salud'
 
 const CADA_MS = 2_000
@@ -86,11 +87,22 @@ export default function Cluster() {
     retry: false,
   })
 
+  // De la carga de cada nodo solo se mide lo que tardó en responder cada ronda: sale del último entrenamiento.
+  const ultimoId = metricas.data?.ultimo_entrenamiento ?? null
+  const ultimo = useQuery({
+    queryKey: claves.entrenamiento(ultimoId ?? ''),
+    enabled: ultimoId !== null,
+    queryFn: ({ signal }) => pedir(api.GET('/api/entrenamientos/{id}', { params: { path: { id: ultimoId! } }, signal })),
+    // Mientras corre, sus rondas van cambiando; terminado, ya no cambia.
+    refetchInterval: (consulta) => (consulta.state.data?.estado === 'en_curso' ? CADA_MS : false),
+  })
+
   // Un entrenamiento que termina mueve los nodos y deja eventos: no se espera al próximo refresco.
   useEvento('entrenamiento.fin', () => {
     void nodos.refetch()
     void eventos.refetch()
     void metricas.refetch()
+    void ultimo.refetch()
   })
 
   const m = metricas.data
@@ -162,7 +174,9 @@ export default function Cluster() {
       <div className="grid items-start gap-5 lg:grid-cols-2">
         <div className="space-y-5">
           <Tarjeta rotulo="Número de nodos" titulo="Nodos del pool">
-            <ConDatos consulta={nodos}>{(datos) => <Nodos nodos={datos} />}</ConDatos>
+            <ConDatos consulta={nodos}>
+              {(datos) => <Nodos nodos={datos} respuesta={ultimo.data ? respuestaPorRonda(ultimo.data) : null} />}
+            </ConDatos>
           </Tarjeta>
           <Tarjeta rotulo="GET /api/salud" titulo="Salud de cada componente">
             <Salud salud={salud.isError ? undefined : salud.data} consultando={salud.isPending} />

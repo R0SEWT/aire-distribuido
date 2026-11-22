@@ -139,10 +139,46 @@ describe('la pantalla del clúster', () => {
         .slice(1)
         .map((f) => within(f).getAllByRole('cell').map((c) => c.textContent))
       expect(filas).toEqual([
-        ['nodo-a', '10.0.0.1:5000', '4', '0.19', 'Libre'],
-        ['nodo-b', '10.0.0.2:5000', '8', '0.28', 'En un entrenamiento'],
+        ['nodo-a10.0.0.1:5000', '4', '0.19', '—', 'Libre'],
+        ['nodo-b10.0.0.2:5000', '8', '0.28', '—', 'Entrenando'],
       ])
       expect(cifra('Nodos en el pool')).toBe('2· 1 libre')
+      // El contrato del doble no tiene el último entrenamiento: la nota lo dice sin inventar tiempos.
+      expect(document.querySelector('[data-nota-nodos]')).toHaveTextContent('su CPU no viaja por el protocolo')
+    })
+
+    it('muestra lo que tardó cada nodo por ronda en el último entrenamiento, que es lo que se mide de su carga', async () => {
+      const ronda = (iter: number, a: number, b: number) => ({ iter, inercia: 1, ms_ronda: 1, ms_fusion: 0, ms_por_nodo: { 'nodo-a': a, 'nodo-b': b } })
+      api({
+        'GET /api/entrenamientos/e-20261119-1530': {
+          estado: 200,
+          cuerpo: {
+            id: 'e-20261119-1530',
+            estado: 'terminado',
+            nodos: ['nodo-a', 'nodo-b'],
+            replicas: 300,
+            iteraciones: 2,
+            paro: 'tolerancia',
+            dif_secuencial: 0,
+            ms_total: 90,
+            rondas: [ronda(1, 30, 50), ronda(2, 40, 70)],
+          },
+        },
+      })
+      montar()
+
+      const tabla = await tarjeta('Nodos del pool').findByRole('table', { name: 'Nodos del pool' })
+      await waitFor(() =>
+        expect(
+          within(tabla)
+            .getAllByRole('row')
+            .slice(1)
+            .map((f) => within(f).getAllByRole('cell')[3]!.textContent),
+        ).toEqual(['35', '60']),
+      )
+      expect(document.querySelector('[data-nota-nodos]')).toHaveTextContent(
+        'en el último entrenamiento (e-20261119-1530, 300 réplicas, 2 rondas), medido desde la API y con la red incluida',
+      )
     })
   })
 

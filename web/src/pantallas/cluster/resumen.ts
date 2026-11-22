@@ -6,6 +6,7 @@ import { milisegundos } from '../../graficos/ejeDeRondas'
 import { OBJETIVO_MS } from '../../graficos/LatenciaPorRuta'
 
 type Metricas = components['schemas']['Metricas']
+type Entrenamiento = components['schemas']['Entrenamiento']
 
 export interface LatenciaDeRuta {
   ruta: string
@@ -70,4 +71,37 @@ export function decirEscrituras(m: Pick<Metricas, 'escritura' | 'escrituras_desc
     }
   }
   return { tono: 'buena', texto: 'No se perdió ninguna escritura: todo lo que la API encoló llegó a su almacén.' }
+}
+
+export interface RespuestaDeNodo {
+  /** La media de lo que tardó en responder cada ronda, en ms. */
+  media: number
+  maximo: number
+}
+
+export interface RespuestaPorRonda {
+  /** El entrenamiento del que salen los tiempos. */
+  id: string
+  replicas: number
+  rondas: number
+  porNodo: Record<string, RespuestaDeNodo>
+}
+
+/**
+ * Lo que tardó cada nodo en responder las rondas de un entrenamiento
+ * (ms_por_nodo, medido desde la API y con la red incluida). Es lo que se sabe
+ * de la carga de un nodo: su CPU no viaja por el protocolo. null si el
+ * entrenamiento no completó ninguna ronda.
+ */
+export function respuestaPorRonda(e: Entrenamiento): RespuestaPorRonda | null {
+  if (e.rondas.length === 0) return null
+  const tiempos: Record<string, number[]> = {}
+  for (const ronda of e.rondas) {
+    for (const [nodo, ms] of Object.entries(ronda.ms_por_nodo)) (tiempos[nodo] ??= []).push(ms)
+  }
+  const porNodo: Record<string, RespuestaDeNodo> = {}
+  for (const [nodo, ms] of Object.entries(tiempos)) {
+    porNodo[nodo] = { media: ms.reduce((a, b) => a + b, 0) / ms.length, maximo: Math.max(...ms) }
+  }
+  return { id: e.id, replicas: e.replicas, rondas: e.rondas.length, porNodo }
 }
