@@ -4,6 +4,7 @@
 | Método y ruta | Qué hace | Acceso |
 |:---|:---|:---|
 | `POST /api/auth/token` | Obtiene un JWT HS256 para un usuario de demostración | libre |
+| `POST /api/auth/invitado` | Obtiene un JWT de la cuenta de invitado, sin credenciales, si el servidor la habilitó | libre |
 | `GET /api/salud` | Consulta la API, sus almacenes, el pool y el modelo activo | libre |
 | `POST /api/predicciones` | Asigna una lectura al régimen más cercano del modelo activo | usuario o admin |
 | `GET /api/estaciones` | Lista las estaciones almacenadas en MongoDB | usuario o admin |

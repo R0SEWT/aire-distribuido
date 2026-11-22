@@ -3,5 +3,5 @@
 ::: {#lst-activar}
 ![](generado/imagenes/frag_activar.png){width=13.2cm}
 
-El modelo activo se reemplaza entero, sin candado en el camino de la predicción (`api/servidor.go`, líneas 373–380)
+El modelo activo se reemplaza entero, sin candado en el camino de la predicción (`api/servidor.go`, líneas 384–391)
 :::
