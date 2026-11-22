@@ -205,6 +205,30 @@ describe('la app', () => {
       expect(screen.queryByText('En construcción')).not.toBeInTheDocument()
     })
 
+    // Las seis pantallas de la spec (§5.2 a §5.7) ya están construidas: ninguna
+    // ruta muestra el marcador «En construcción» con que nació el andamiaje, y
+    // cada una se presenta con su encabezado y su bajada.
+    it.each([
+      ['/', 'Panel', 'usuario', 'El último estado recibido de cada estación, con su fecha.'],
+      ['/estacion', 'Estación', 'usuario', 'El último estado recibido de una estación,'],
+      ['/simulacion', 'Simulación', 'usuario', 'Lecturas reales de OEFA mandadas una por una a la API'],
+      ['/impacto', 'Impacto', 'usuario', 'Qué dicen las mediciones reales de OEFA'],
+      ['/entrenamiento', 'Entrenamiento', 'admin', 'El K-Means se reparte entre los nodos del clúster.'],
+      ['/cluster', 'Clúster', 'admin', 'Los nodos que entrenan, cómo se porta la API que los coordina'],
+    ] as const)('%s ya no muestra «En construcción»: es la pantalla de %s', async (ruta, titulo, rol, bajada) => {
+      simularApi({ 'GET /api/salud': SALUD_OK })
+      sesionDe(rol)
+
+      montar(ruta)
+
+      const encabezado = (await screen.findByRole('heading', { level: 1, name: titulo })).closest('[data-encabezado]')
+      expect(encabezado).toHaveTextContent(bajada)
+      expect(screen.queryByText('En construcción')).not.toBeInTheDocument()
+      expect(document.querySelector('[data-en-construccion]')).toBeNull()
+      // La pantalla dibuja algo propio debajo del encabezado, aunque la API de la prueba no le responda nada.
+      expect(encabezado!.parentElement!.children.length).toBeGreaterThan(1)
+    })
+
     it.each([
       ['/entrenamiento', 'Entrenamiento'],
       ['/cluster', 'Clúster'],

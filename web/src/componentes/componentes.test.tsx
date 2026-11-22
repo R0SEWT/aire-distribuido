@@ -12,7 +12,6 @@ import {
   Dato,
   Desplegable,
   Encabezado,
-  EnConstruccion,
   Estado,
   EstadoDeError,
   Etiqueta,
@@ -434,25 +433,12 @@ describe('EstadoDeError', () => {
   })
 })
 
-describe('Desplegable y EnConstruccion', () => {
+describe('Desplegable', () => {
   it('el desplegable guarda la explicación detrás de su pregunta', () => {
     render(<Desplegable titulo="¿De dónde sale este número?">De la media de las últimas 24 horas.</Desplegable>)
 
     expect(screen.getByText('¿De dónde sale este número?').closest('details')).not.toHaveAttribute('open')
     expect(screen.getByText('De la media de las últimas 24 horas.')).toBeInTheDocument()
-  })
-
-  it('el marcador dice qué pantalla es, dónde está en la spec y en qué archivo se construye', () => {
-    render(
-      <EnConstruccion pantalla="Panel" seccion="§5.2" archivo="web/src/pantallas/Panel.tsx">
-        Aquí va el mapa.
-      </EnConstruccion>,
-    )
-
-    expect(screen.getByRole('heading', { name: 'Panel' })).toBeInTheDocument()
-    expect(screen.getByText('En construcción')).toBeInTheDocument()
-    expect(screen.getByText('web/src/pantallas/Panel.tsx')).toBeInTheDocument()
-    expect(screen.getByText(/§5\.2/)).toBeInTheDocument()
   })
 })
 
