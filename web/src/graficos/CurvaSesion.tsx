@@ -15,9 +15,10 @@
 // en línea. El color no va solo: cada franja lleva su palabra, el ECA su
 // rótulo, y un punto sobre el ECA está, además, por encima de su línea.
 
-import { line, scaleLinear, scaleTime } from 'd3'
+import { line, scaleLinear } from 'd3'
 import { useMemo } from 'react'
 import { diaCorto, hora, numero } from '../componentes/formato'
+import { marcasEnHoraDeLima } from './ejeDeHoras'
 import { useMedida } from './medida'
 import { partirPorHuecos } from './tramos'
 
@@ -80,7 +81,8 @@ export function CurvaSesion({ puntos, lecturas = SIN_LECTURAS, eca, cortes, titu
     // Con pocas horas recibidas se muestra un día entero, que es lo que promedia la media.
     const hasta = hayAlgo ? Math.max(...instantes) : 0
     const desde = Math.min(hayAlgo ? Math.min(...instantes) : 0, hasta - 23 * HORA)
-    const x = scaleTime()
+    // El tiempo, en milisegundos: la posición de un instante no depende de ninguna zona horaria.
+    const x = scaleLinear()
       .domain([desde, hasta])
       .range([margen.izquierda + 6 * k, ancho - margen.derecha - 10 * k])
 
@@ -91,10 +93,12 @@ export function CurvaSesion({ puntos, lecturas = SIN_LECTURAS, eca, cortes, titu
       return abajo < yMax ? { ...f, y0: y(arriba), y1: y(abajo) } : null
     }).filter((f) => f !== null)
 
-    const marcasX = x.ticks(Math.max(2, Math.floor((ancho - margen.izquierda - margen.derecha) / (92 * k)))).map((fecha, i, todas) => {
-      const dia = diaCorto(fecha)
+    // Las marcas, en horas redondas de Lima aunque el navegador esté en otra zona.
+    const cuantas = Math.max(2, Math.floor((ancho - margen.izquierda - margen.derecha) / (92 * k)))
+    const marcasX = marcasEnHoraDeLima(desde, hasta, cuantas).map((t, i, todas) => {
+      const dia = diaCorto(t)
       const anterior = todas[i - 1]
-      return { t: fecha.getTime(), x: x(fecha), hora: hora(fecha), dia: !anterior || diaCorto(anterior) !== dia ? dia : null }
+      return { t, x: x(t), hora: hora(t), dia: anterior === undefined || diaCorto(anterior) !== dia ? dia : null }
     })
 
     // La línea une solo lo que es continuo: se corta donde no hubo media y donde
