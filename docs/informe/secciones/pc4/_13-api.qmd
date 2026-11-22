@@ -188,6 +188,16 @@ las últimas 24 horas. El ECA de material particulado [@minam2017eca] y el Índi
 (INCA) [@minam2016inca] son normas de 24 horas, y un régimen no es una media de 24 horas
 (@sec-eca-inca).
 
+Los umbrales no se tomaron de segunda mano: salen del texto oficial de las dos normas. La
+@fig-norma-eca es el anexo del decreto que fija el ECA, con los 50 µg/m³ de PM2,5 y los 100 µg/m³ de
+PM10 para 24 horas; la @fig-norma-inca, las tablas de la resolución que define el INCA, con los
+cortes de concentración de cada banda. Son los valores que usa `ventana/` y que comprueban sus
+pruebas.
+
+![Anexo del Decreto Supremo N.° 003-2017-MINAM, publicado en El Peruano el 7 de junio de 2017: los Estándares de Calidad Ambiental para Aire. Captura del PDF oficial [@minam2017eca]](capturas/normas/eca-ds-003-2017-minam.png){#fig-norma-eca width=15cm}
+
+![Tabla 3 de la Resolución Ministerial N.° 181-2016-MINAM: cálculo del Índice de Calidad del Aire para PM10 y PM2,5 en promedio de 24 horas, con el intervalo de concentraciones de cada banda. Captura del PDF oficial [@minam2016inca]](capturas/normas/inca-rm-181-2016-minam.png){#fig-norma-inca width=13cm}
+
 La separación no es un gusto: se midió sobre el gold antes de decidirla (@tbl-alerta).
 
 {{< include generado/tablas/alerta_24h.md >}}

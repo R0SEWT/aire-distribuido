@@ -42,6 +42,10 @@ else
   exit 1
 fi
 
+# Los listados de código y de terminal pasan a imagen (una línea larga se parte mal en Word).
+# Solo en el informe de la PC4.
+if [ "$ENTREGA" = pc4 ]; then python3 listados_imagen.py; fi
+
 echo "→ generado/local/"
 mkdir -p generado/local
 if [ -f equipo.local.yml ]; then
