@@ -7,6 +7,7 @@
 
 @import './tokens.css';
 @import './proyector.css';
+@import './dialogo-vidrio.css';
 
 @layer base {
   :root {

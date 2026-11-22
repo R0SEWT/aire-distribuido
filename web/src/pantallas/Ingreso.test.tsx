@@ -99,9 +99,8 @@ describe('el ingreso sin registro', () => {
       expect(d).toHaveAttribute('open')
       expect(d).toHaveAttribute('aria-modal', 'true')
       expect(within(d).getByRole('heading', { name: TITULO })).toBeInTheDocument()
-      expect(d).toHaveAccessibleDescription(
-        'El enunciado pide ingreso con usuario y clave, así que no hay registro. Igual puedes pasar como invitado, con el rol «usuario».',
-      )
+      // Solo el título, la foto y los botones: sin explicación.
+      expect(d).not.toHaveTextContent('El enunciado pide')
       const foto = within(d).getByRole('img', { name: /gato .* lágrimas/ })
       // Con el tamaño declarado, el diálogo no salta al cargar la imagen.
       expect(foto).toHaveAttribute('width', '635')
@@ -254,8 +253,6 @@ describe('el ingreso sin registro', () => {
       // No repite las palabras de la API ni ofrece reintentar lo que no va a cambiar.
       expect(alerta).not.toHaveTextContent('no está habilitado')
       // Y deja de ofrecer lo que no hay.
-      expect(d).not.toHaveTextContent('Igual puedes pasar como invitado')
-      expect(d).toHaveAccessibleDescription('El enunciado pide ingreso con usuario y clave, así que no hay registro.')
       expect(within(d).queryByRole('button', { name: /Entrar igual|Entrando/ })).not.toBeInTheDocument()
       const cerrar = within(d).getByRole('button', { name: 'Cerrar' })
       expect(cerrar).toHaveFocus()

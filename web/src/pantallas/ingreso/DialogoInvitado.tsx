@@ -34,7 +34,6 @@ export function DialogoInvitado({ alCerrar }: { alCerrar: () => void }) {
   const [entrando, setEntrando] = useState(false)
   const [error, setError] = useState<ErrorApi | null>(null)
   const idTitulo = useId()
-  const idExplicacion = useId()
   // La API no tiene cuenta de invitado: pedirlo otra vez no cambia nada.
   const sinInvitado = error?.tipo === 'no_encontrado'
 
@@ -104,8 +103,7 @@ export function DialogoInvitado({ alCerrar }: { alCerrar: () => void }) {
       ref={dialogo}
       aria-modal="true"
       aria-labelledby={idTitulo}
-      aria-describedby={idExplicacion}
-      className="border-borde bg-superficie text-texto backdrop:bg-fondo/80 m-auto w-[calc(100%-2rem)] max-w-md rounded-xl border p-0"
+      className="dialogo-vidrio m-auto w-[calc(100%-2rem)] max-w-md p-0"
       onClose={alCerrarse}
       onKeyDown={darLaVuelta}
       onMouseDown={(e) => {
@@ -115,8 +113,8 @@ export function DialogoInvitado({ alCerrar }: { alCerrar: () => void }) {
         if (esFuera(e) && apretoFuera.current) cerrar()
       }}
     >
-      <div className="space-y-4 p-5">
-        <h2 id={idTitulo} className="text-xl font-semibold">
+      <div className="space-y-5 p-6">
+        <h2 id={idTitulo} className="dialogo-vidrio-titulo">
           Perdón, era parte de la nota
         </h2>
         <img
@@ -124,12 +122,8 @@ export function DialogoInvitado({ alCerrar }: { alCerrar: () => void }) {
           width={ANCHO_GATO}
           height={ALTO_GATO}
           alt="Un gato blanco con los ojos llenos de lágrimas, en una foto borrosa."
-          className="border-borde h-auto w-full rounded-lg border"
+          className="dialogo-vidrio-foto"
         />
-        <p id={idExplicacion} className="text-suave leading-relaxed">
-          El enunciado pide ingreso con usuario y clave, así que no hay registro.
-          {!sinInvitado && ' Igual puedes pasar como invitado, con el rol «usuario».'}
-        </p>
 
         {error && <ErrorDeInvitado error={error} />}
 
@@ -139,7 +133,7 @@ export function DialogoInvitado({ alCerrar }: { alCerrar: () => void }) {
             // y dentro de un diálogo modal no hay a dónde vaya. entrar() ya ignora el segundo clic.
             <button
               type="button"
-              className="boton aria-disabled:cursor-not-allowed aria-disabled:opacity-50"
+              className="dialogo-vidrio-boton dialogo-vidrio-boton-principal aria-disabled:cursor-not-allowed aria-disabled:opacity-50"
               ref={botonEntrar}
               onClick={() => void entrar()}
               aria-disabled={entrando}
@@ -147,7 +141,7 @@ export function DialogoInvitado({ alCerrar }: { alCerrar: () => void }) {
               {entrando ? 'Entrando…' : 'Entrar igual'}
             </button>
           )}
-          <button type="button" className="pildora" ref={botonCerrar} onClick={cerrar}>
+          <button type="button" className="dialogo-vidrio-boton" ref={botonCerrar} onClick={cerrar}>
             Cerrar
           </button>
         </div>
