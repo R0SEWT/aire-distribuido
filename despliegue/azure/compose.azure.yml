@@ -1,0 +1,55 @@
+# Lo que cambia para una máquina virtual chica y expuesta a internet (ver README.md de esta
+# carpeta). Se usa encima del Compose del repo:
+#
+#   docker compose -f docker-compose.yml -f despliegue/azure/compose.azure.yml up -d --build --scale nodo=2
+#
+# - Caddy recibe el tráfico web (80 y 443), saca el certificado solo y lo pasa a la API; el
+#   WebSocket pasa por el mismo camino.
+# - La API, MongoDB y Redis dejan de publicar puertos en la máquina: solo se ven dentro de la red
+#   de Compose. El puerto de los nodos (7070) tampoco sale.
+# - MongoDB con la caché acotada, para que entre en 1 GiB de RAM junto con lo demás.
+# - Todo se levanta solo si la máquina se reinicia.
+services:
+  caddy:
+    image: caddy:2.10-alpine
+    restart: unless-stopped
+    ports:
+      - "${PUERTO_HTTP:-80}:80"
+      - "${PUERTO_HTTPS:-443}:443"
+    environment:
+      DOMINIO: ${DOMINIO:?falta DOMINIO en .env, el nombre público de la máquina}
+    volumes:
+      - ./despliegue/azure/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      api:
+        condition: service_healthy
+    mem_limit: 64m
+
+  api:
+    restart: unless-stopped
+    ports: !reset []
+    environment:
+      CORS_ORIGENES: ${CORS_ORIGENES:-}
+    mem_limit: 192m
+
+  nodo:
+    restart: unless-stopped
+    mem_limit: 96m
+
+  mongo:
+    restart: unless-stopped
+    command: ["mongod", "--wiredTigerCacheSizeGB", "0.25"]
+    ports: !reset []
+    mem_limit: 448m
+
+  redis:
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes", "--maxmemory", "48mb", "--maxmemory-policy", "noeviction"]
+    ports: !reset []
+    mem_limit: 64m
+
+volumes:
+  caddy_data:
+  caddy_config:

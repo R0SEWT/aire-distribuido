@@ -1,0 +1,70 @@
+{
+  "_id": "sintetico-e-20261116-2200",
+  "inicio": "2026-11-16T22:00:00-05:00",
+  "fin": "2026-11-16T22:00:00.031200-05:00",
+  "estado": "terminado",
+  "parametros": {
+    "nodos": 4,
+    "replicas": 1,
+    "semilla": 42
+  },
+  "nodos": [
+    {
+      "nombre": "nodo-sintetico-01",
+      "direccion": "192.0.2.1:5001",
+      "workers": 4,
+      "rango": {
+        "desde": 0,
+        "hasta": 16469
+      }
+    },
+    {
+      "nombre": "nodo-sintetico-02",
+      "direccion": "192.0.2.2:5002",
+      "workers": 4,
+      "rango": {
+        "desde": 16469,
+        "hasta": 32937
+      }
+    },
+    {
+      "nombre": "nodo-sintetico-03",
+      "direccion": "192.0.2.3:5003",
+      "workers": 4,
+      "rango": {
+        "desde": 32937,
+        "hasta": 49405
+      }
+    },
+    {
+      "nombre": "nodo-sintetico-04",
+      "direccion": "192.0.2.4:5004",
+      "workers": 4,
+      "rango": {
+        "desde": 49405,
+        "hasta": 65873
+      }
+    }
+  ],
+  "rondas": [
+    {
+      "iter": 44,
+      "inercia": 50950.36689106275,
+      "ms_ronda": 0.61,
+      "ms_fusion": 0.003,
+      "ms_por_nodo": {
+        "nodo-sintetico-01": 0.11,
+        "nodo-sintetico-02": 0.12,
+        "nodo-sintetico-03": 0.11,
+        "nodo-sintetico-04": 0.13
+      }
+    }
+  ],
+  "iteraciones": 44,
+  "paro": "tolerancia",
+  "dif_secuencial": 0.0,
+  "ms_total": 31.2,
+  "modelo_id": "entrenado-sintetico-e-20261116-2200",
+  "aviso": null,
+  "error": null
+}

@@ -1,0 +1,84 @@
+<!-- j) Anexos del informe de la PC4: repositorio, Kanban, historial de git, participación y uso de IA.
+Las letras A a D son las mismas del informe de la PC3, que sus secciones citan. -->
+
+# Anexos {.unnumbered}
+
+## Anexo A. Repositorio y datos {.unnumbered}
+
+- **Repositorio (público):** <https://github.com/R0SEWT/aire-distribuido>. La versión que se entrega
+  es la rama `main` en el tag `pc4`, a la que se llega por `release/pc4`. El Entregable 1 es el tag
+  `pc3.1`.
+- **Cómo levantarlo:** `README.md` de la raíz. Con Docker: copiar `.env.example` a `.env`, completar
+  la clave del JWT y los usuarios, y `docker compose up --build --scale nodo=3`; la documentación de
+  la API queda en `http://localhost:8080/docs`.
+- **Contrato de la API:** `docs/api/openapi.yaml`. **Pruebas de Postman y datos de prueba:**
+  `docs/postman/`. **Diseño de este entregable:** `docs/specs/2026-11-14-pc4-design.md`.
+- **Video:** este entregable no lleva video (el docente aclaró el 03/11 que el video es del
+  entregable final). El de la PC3, complementario, sigue en
+  <https://drive.google.com/open?id=1IpKF7mfue0Jxyfyar0dkHH2SfThXBw54>.
+- **Datos:** no se versionan (1,3 GB). Ficha y descarga en la Plataforma Nacional de Datos Abiertos
+  [@oefa2026aire]; instrucciones en `data/README.md`.
+- **Archivo que produjo los resultados** (de `generado/limpieza.json`):
+  {{< meta cifras.limpieza.entrada >}}, {{< meta cifras.limpieza.bytes >}} bytes, sha256
+  {{< meta cifras.limpieza.sha256 >}}.
+- **Configuración usada:** `configs/limpieza.json`, sha256
+  {{< meta cifras.limpieza.sha256_config_limpieza >}}; `configs/kmeans.json`, sha256
+  {{< meta cifras.limpieza.sha256_config_kmeans >}}.
+- **Experimento de laboratorio en GPU** (@sec-gpu): sus resultados están en `reports/mapa/` y
+  `reports/kmeans_gpu/`; el código del entrenamiento en 20 GPU está en la solicitud de cambios #52,
+  sin fusionar, y no forma parte del sistema entregado.
+
+## Anexo B. Tablero Kanban {.unnumbered}
+
+Las tareas de la PC4 se siguieron en el mismo tablero Kanban de GitHub Projects de la PC3, público y
+enlazado al repositorio: <https://github.com/users/R0SEWT/projects/8>. Cada tarea del plan de este
+entregable tiene su tarjeta y la solicitud de cambios que la cierra.
+
+![Tablero Kanban del proyecto con las tarjetas de la PC4](capturas/pc4/kanban.png){#fig-kanban-pc4 width=16cm}
+
+:::: {si-falta="capturas/pc4/kanban.png"}
+::: {.callout-warning title="PENDIENTE"}
+Captura real de pantalla: El tablero <https://github.com/users/R0SEWT/projects/8> el día de la entrega, con las tarjetas de la PC4 en «Hecho». Va en `docs/informe/capturas/pc4/kanban.png` (guion: `docs/informe/capturas/pc4/GUION.md`).
+:::
+::::
+
+La @fig-kanban es el mismo tablero al entregar la PC3.
+
+![Tablero Kanban del proyecto en GitHub Projects al entregar la PC3](capturas/kanban.png){#fig-kanban width=16cm}
+
+## Anexo C. Historial de versiones por integrante {.unnumbered}
+
+{{< include generado/local/historial.md >}}
+
+El historial sale de `git` tal cual (`generar-historial.sh`) y no se reescribe: por eso aparecen
+mensajes de herramientas y ramas con otros prefijos. Las solicitudes de cambio se listan desde
+GitHub (`gh pr list`), porque varias se fusionaron sin commit de merge y no aparecen en
+`git log --merges`.
+
+## Anexo D. Reporte de participación {.unnumbered}
+
+{{< include generado/local/_participacion-pc4.md >}}
+
+## Anexo E. Declaración de uso de inteligencia artificial {.unnumbered}
+
+El sílabo del curso incorpora la ingeniería de prompts como herramienta, siempre contrastada con la
+teoría. En este trabajo el equipo usó asistentes de IA generativa en el desarrollo y en la
+redacción, en las tareas de la @tbl-uso-ia. Todo lo producido con ellos fue revisado por el equipo
+y validado contra el código, las pruebas y las corridas reales, que son la fuente de las cifras de
+este informe: ninguna cifra sale de la redacción.
+
+::: {#tbl-uso-ia tbl-colwidths="[30,24,46]"}
+| Tarea | Herramienta | Cómo se verificó |
+|:---|:---|:---|
+| Código en Go (clúster, API, almacén, comandos), sus pruebas, el Compose y los scripts | Claude Code (Anthropic) | `go test -race`, `go vet` y `gofmt` en la integración continua; las pruebas de integración contra MongoDB y Redis reales; la colección de Postman contra la API levantada; revisión de cada solicitud de cambios |
+| Especificación de diseño y contrato de la API | Claude Code (Anthropic) | Revisión del equipo; el contrato se comprueba contra las rutas del código en cada render de este informe |
+| Redacción y maquetación del informe, tablas y diagramas | Claude Code (Anthropic) | Revisión del equipo; las tablas y las cifras se generan desde los reportes, el contrato y el código (`tablas.py`), no desde la redacción |
+| Experimentos de laboratorio en GPU (código en Python) | Claude Code (Anthropic) | Los resultados se comparan con el modelo de Go; se presentan como experimentos fuera del sistema |
+| Ejemplos y diagrama de entidades, configuración de MongoDB y Redis y sus evidencias (Dayana Gómez) | ChatGPT y Codex (OpenAI) | Revisión de cada solicitud de cambios; los registros se comprobaron contra las bases del Compose levantado |
+| Borrador del contrato OpenAPI y colección de Postman (Julio Meza) | ChatGPT (OpenAI) | Revisión de cada solicitud de cambios; el contrato se corrigió contra el código y la colección se corrió contra la API real |
+
+Uso de IA generativa en el Entregable 2
+:::
+
+Los commits del repositorio no llevan marca de coautoría de IA: el uso se declara únicamente en
+este anexo, así que el historial del Anexo C no basta para rastrearlo.

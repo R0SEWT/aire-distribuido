@@ -1,0 +1,870 @@
+{
+  "nota": "72 lecturas horarias seguidas del silver (µg/m³) en las que la alerta cambia, con lo esperado calculado aparte. Se regenera con go test ./ventana -run TramoReal -actualizar.",
+  "estacion": "CA-AYAS-01",
+  "lecturas": [
+    {
+      "fecha_hora": "2022-06-27T02:00:00-05:00",
+      "pm2_5": 9.5,
+      "pm10": 40.5,
+      "esperado": {
+        "lecturas": 1,
+        "pm2_5": null,
+        "pm10": null,
+        "alerta": false,
+        "inca": null
+      }
+    },
+    {
+      "fecha_hora": "2022-06-27T03:00:00-05:00",
+      "pm2_5": 9.5,
+      "pm10": 36.5,
+      "esperado": {
+        "lecturas": 2,
+        "pm2_5": null,
+        "pm10": null,
+        "alerta": false,
+        "inca": null
+      }
+    },
+    {
+      "fecha_hora": "2022-06-27T04:00:00-05:00",
+      "pm2_5": 9.3,
+      "pm10": 37.4,
+      "esperado": {
+        "lecturas": 3,
+        "pm2_5": null,
+        "pm10": null,
+        "alerta": false,
+        "inca": null
+      }
+    },
+    {
+      "fecha_hora": "2022-06-27T05:00:00-05:00",
+      "pm2_5": 11.3,
+      "pm10": 45.4,
+      "esperado": {
+        "lecturas": 4,
+        "pm2_5": null,
+        "pm10": null,
+        "alerta": false,
+        "inca": null
+      }
+    },
+    {
+      "fecha_hora": "2022-06-27T06:00:00-05:00",
+      "pm2_5": 11.5,
+      "pm10": 44.6,
+      "esperado": {
+        "lecturas": 5,
+        "pm2_5": null,
+        "pm10": null,
+        "alerta": false,
+        "inca": null
+      }
+    },
+    {
+      "fecha_hora": "2022-06-27T07:00:00-05:00",
+      "pm2_5": 9.5,
+      "pm10": 39.2,
+      "esperado": {
+        "lecturas": 6,
+        "pm2_5": null,
+        "pm10": null,
+        "alerta": false,
+        "inca": null
+      }
+    },
+    {
+      "fecha_hora": "2022-06-27T08:00:00-05:00",
+      "pm2_5": 19.6,
+      "pm10": 50,
+      "esperado": {
+        "lecturas": 7,
+        "pm2_5": null,
+        "pm10": null,
+        "alerta": false,
+        "inca": null
+      }
+    },
+    {
+      "fecha_hora": "2022-06-27T09:00:00-05:00",
+      "pm2_5": 11.1,
+      "pm10": 41.8,
+      "esperado": {
+        "lecturas": 8,
+        "pm2_5": null,
+        "pm10": null,
+        "alerta": false,
+        "inca": null
+      }
+    },
+    {
+      "fecha_hora": "2022-06-27T10:00:00-05:00",
+      "pm2_5": 11.2,
+      "pm10": 40.9,
+      "esperado": {
+        "lecturas": 9,
+        "pm2_5": null,
+        "pm10": null,
+        "alerta": false,
+        "inca": null
+      }
+    },
+    {
+      "fecha_hora": "2022-06-27T11:00:00-05:00",
+      "pm2_5": 7.3,
+      "pm10": 23,
+      "esperado": {
+        "lecturas": 10,
+        "pm2_5": null,
+        "pm10": null,
+        "alerta": false,
+        "inca": null
+      }
+    },
+    {
+      "fecha_hora": "2022-06-27T12:00:00-05:00",
+      "pm2_5": 6.2,
+      "pm10": 20.6,
+      "esperado": {
+        "lecturas": 11,
+        "pm2_5": null,
+        "pm10": null,
+        "alerta": false,
+        "inca": null
+      }
+    },
+    {
+      "fecha_hora": "2022-06-27T13:00:00-05:00",
+      "pm2_5": 9,
+      "pm10": 18.9,
+      "esperado": {
+        "lecturas": 12,
+        "pm2_5": null,
+        "pm10": null,
+        "alerta": false,
+        "inca": null
+      }
+    },
+    {
+      "fecha_hora": "2022-06-27T14:00:00-05:00",
+      "pm2_5": 3.5,
+      "pm10": 15,
+      "esperado": {
+        "lecturas": 13,
+        "pm2_5": null,
+        "pm10": null,
+        "alerta": false,
+        "inca": null
+      }
+    },
+    {
+      "fecha_hora": "2022-06-27T15:00:00-05:00",
+      "pm2_5": 2.6,
+      "pm10": 14.5,
+      "esperado": {
+        "lecturas": 14,
+        "pm2_5": null,
+        "pm10": null,
+        "alerta": false,
+        "inca": null
+      }
+    },
+    {
+      "fecha_hora": "2022-06-27T16:00:00-05:00",
+      "pm2_5": 2.7,
+      "pm10": 17.2,
+      "esperado": {
+        "lecturas": 15,
+        "pm2_5": null,
+        "pm10": null,
+        "alerta": false,
+        "inca": null
+      }
+    },
+    {
+      "fecha_hora": "2022-06-27T17:00:00-05:00",
+      "pm2_5": 9.8,
+      "pm10": 70.8,
+      "esperado": {
+        "lecturas": 16,
+        "pm2_5": null,
+        "pm10": null,
+        "alerta": false,
+        "inca": null
+      }
+    },
+    {
+      "fecha_hora": "2022-06-27T18:00:00-05:00",
+      "pm2_5": 10.7,
+      "pm10": 58.5,
+      "esperado": {
+        "lecturas": 17,
+        "pm2_5": null,
+        "pm10": null,
+        "alerta": false,
+        "inca": null
+      }
+    },
+    {
+      "fecha_hora": "2022-06-27T19:00:00-05:00",
+      "pm2_5": 10.8,
+      "pm10": 48.4,
+      "esperado": {
+        "lecturas": 18,
+        "pm2_5": 9.172222222222222,
+        "pm10": 36.84444444444444,
+        "alerta": false,
+        "inca": "buena"
+      }
+    },
+    {
+      "fecha_hora": "2022-06-27T20:00:00-05:00",
+      "pm2_5": 3.7,
+      "pm10": 13.9,
+      "esperado": {
+        "lecturas": 19,
+        "pm2_5": 8.884210526315789,
+        "pm10": 35.636842105263156,
+        "alerta": false,
+        "inca": "buena"
+      }
+    },
+    {
+      "fecha_hora": "2022-06-27T21:00:00-05:00",
+      "pm2_5": 4.3,
+      "pm10": 18.6,
+      "esperado": {
+        "lecturas": 20,
+        "pm2_5": 8.655,
+        "pm10": 34.785,
+        "alerta": false,
+        "inca": "buena"
+      }
+    },
+    {
+      "fecha_hora": "2022-06-27T22:00:00-05:00",
+      "pm2_5": 10,
+      "pm10": 67.1,
+      "esperado": {
+        "lecturas": 21,
+        "pm2_5": 8.719047619047618,
+        "pm10": 36.32380952380952,
+        "alerta": false,
+        "inca": "buena"
+      }
+    },
+    {
+      "fecha_hora": "2022-06-27T23:00:00-05:00",
+      "pm2_5": 5.7,
+      "pm10": 21.5,
+      "esperado": {
+        "lecturas": 22,
+        "pm2_5": 8.58181818181818,
+        "pm10": 35.65,
+        "alerta": false,
+        "inca": "buena"
+      }
+    },
+    {
+      "fecha_hora": "2022-06-28T00:00:00-05:00",
+      "pm2_5": 8.2,
+      "pm10": 27.1,
+      "esperado": {
+        "lecturas": 23,
+        "pm2_5": 8.565217391304346,
+        "pm10": 35.278260869565216,
+        "alerta": false,
+        "inca": "buena"
+      }
+    },
+    {
+      "fecha_hora": "2022-06-28T01:00:00-05:00",
+      "pm2_5": 5.9,
+      "pm10": 21.5,
+      "esperado": {
+        "lecturas": 24,
+        "pm2_5": 8.454166666666666,
+        "pm10": 34.704166666666666,
+        "alerta": false,
+        "inca": "buena"
+      }
+    },
+    {
+      "fecha_hora": "2022-06-28T02:00:00-05:00",
+      "pm2_5": 7.6,
+      "pm10": 28,
+      "esperado": {
+        "lecturas": 24,
+        "pm2_5": 8.374999999999998,
+        "pm10": 34.18333333333333,
+        "alerta": false,
+        "inca": "buena"
+      }
+    },
+    {
+      "fecha_hora": "2022-06-28T03:00:00-05:00",
+      "pm2_5": 7.8,
+      "pm10": 26.4,
+      "esperado": {
+        "lecturas": 24,
+        "pm2_5": 8.304166666666665,
+        "pm10": 33.762499999999996,
+        "alerta": false,
+        "inca": "buena"
+      }
+    },
+    {
+      "fecha_hora": "2022-06-28T04:00:00-05:00",
+      "pm2_5": 8.1,
+      "pm10": 26.1,
+      "esperado": {
+        "lecturas": 24,
+        "pm2_5": 8.254166666666666,
+        "pm10": 33.291666666666664,
+        "alerta": false,
+        "inca": "buena"
+      }
+    },
+    {
+      "fecha_hora": "2022-06-28T05:00:00-05:00",
+      "pm2_5": 10,
+      "pm10": 34.4,
+      "esperado": {
+        "lecturas": 24,
+        "pm2_5": 8.2,
+        "pm10": 32.833333333333336,
+        "alerta": false,
+        "inca": "buena"
+      }
+    },
+    {
+      "fecha_hora": "2022-06-28T06:00:00-05:00",
+      "pm2_5": 7.8,
+      "pm10": 25.9,
+      "esperado": {
+        "lecturas": 24,
+        "pm2_5": 8.045833333333333,
+        "pm10": 32.05416666666667,
+        "alerta": false,
+        "inca": "buena"
+      }
+    },
+    {
+      "fecha_hora": "2022-06-28T07:00:00-05:00",
+      "pm2_5": 9.9,
+      "pm10": 31.7,
+      "esperado": {
+        "lecturas": 24,
+        "pm2_5": 8.0625,
+        "pm10": 31.741666666666664,
+        "alerta": false,
+        "inca": "buena"
+      }
+    },
+    {
+      "fecha_hora": "2022-06-28T08:00:00-05:00",
+      "pm2_5": 14.1,
+      "pm10": 44.1,
+      "esperado": {
+        "lecturas": 24,
+        "pm2_5": 7.833333333333335,
+        "pm10": 31.495833333333334,
+        "alerta": false,
+        "inca": "buena"
+      }
+    },
+    {
+      "fecha_hora": "2022-06-28T09:00:00-05:00",
+      "pm2_5": 15.2,
+      "pm10": 36.1,
+      "esperado": {
+        "lecturas": 24,
+        "pm2_5": 8.004166666666668,
+        "pm10": 31.258333333333336,
+        "alerta": false,
+        "inca": "buena"
+      }
+    },
+    {
+      "fecha_hora": "2022-06-28T10:00:00-05:00",
+      "pm2_5": 5.4,
+      "pm10": 19,
+      "esperado": {
+        "lecturas": 24,
+        "pm2_5": 7.762499999999999,
+        "pm10": 30.345833333333335,
+        "alerta": false,
+        "inca": "buena"
+      }
+    },
+    {
+      "fecha_hora": "2022-06-28T11:00:00-05:00",
+      "pm2_5": 6.3,
+      "pm10": 17,
+      "esperado": {
+        "lecturas": 24,
+        "pm2_5": 7.720833333333334,
+        "pm10": 30.095833333333335,
+        "alerta": false,
+        "inca": "buena"
+      }
+    },
+    {
+      "fecha_hora": "2022-06-28T12:00:00-05:00",
+      "pm2_5": 4.7,
+      "pm10": 15.1,
+      "esperado": {
+        "lecturas": 24,
+        "pm2_5": 7.658333333333332,
+        "pm10": 29.86666666666667,
+        "alerta": false,
+        "inca": "buena"
+      }
+    },
+    {
+      "fecha_hora": "2022-06-28T13:00:00-05:00",
+      "pm2_5": 4.9,
+      "pm10": 15.4,
+      "esperado": {
+        "lecturas": 24,
+        "pm2_5": 7.4875,
+        "pm10": 29.720833333333335,
+        "alerta": false,
+        "inca": "buena"
+      }
+    },
+    {
+      "fecha_hora": "2022-06-28T14:00:00-05:00",
+      "pm2_5": 3.1,
+      "pm10": 12.3,
+      "esperado": {
+        "lecturas": 24,
+        "pm2_5": 7.470833333333332,
+        "pm10": 29.608333333333334,
+        "alerta": false,
+        "inca": "buena"
+      }
+    },
+    {
+      "fecha_hora": "2022-06-28T15:00:00-05:00",
+      "pm2_5": 2.8,
+      "pm10": 14.7,
+      "esperado": {
+        "lecturas": 24,
+        "pm2_5": 7.479166666666667,
+        "pm10": 29.61666666666667,
+        "alerta": false,
+        "inca": "buena"
+      }
+    },
+    {
+      "fecha_hora": "2022-06-28T16:00:00-05:00",
+      "pm2_5": 3.3,
+      "pm10": 17.8,
+      "esperado": {
+        "lecturas": 24,
+        "pm2_5": 7.504166666666667,
+        "pm10": 29.641666666666666,
+        "alerta": false,
+        "inca": "buena"
+      }
+    },
+    {
+      "fecha_hora": "2022-06-28T17:00:00-05:00",
+      "pm2_5": 11,
+      "pm10": 70.7,
+      "esperado": {
+        "lecturas": 24,
+        "pm2_5": 7.554166666666667,
+        "pm10": 29.6375,
+        "alerta": false,
+        "inca": "buena"
+      }
+    },
+    {
+      "fecha_hora": "2022-06-28T18:00:00-05:00",
+      "pm2_5": 25.9,
+      "pm10": 200,
+      "esperado": {
+        "lecturas": 24,
+        "pm2_5": 8.187500000000002,
+        "pm10": 35.53333333333333,
+        "alerta": false,
+        "inca": "buena"
+      }
+    },
+    {
+      "fecha_hora": "2022-06-28T19:00:00-05:00",
+      "pm2_5": 8.9,
+      "pm10": 62.1,
+      "esperado": {
+        "lecturas": 24,
+        "pm2_5": 8.108333333333334,
+        "pm10": 36.104166666666664,
+        "alerta": false,
+        "inca": "buena"
+      }
+    },
+    {
+      "fecha_hora": "2022-06-28T20:00:00-05:00",
+      "pm2_5": 6.4,
+      "pm10": 28.8,
+      "esperado": {
+        "lecturas": 24,
+        "pm2_5": 8.220833333333335,
+        "pm10": 36.725,
+        "alerta": false,
+        "inca": "buena"
+      }
+    },
+    {
+      "fecha_hora": "2022-06-28T21:00:00-05:00",
+      "pm2_5": 2.9,
+      "pm10": 9.9,
+      "esperado": {
+        "lecturas": 24,
+        "pm2_5": 8.162500000000001,
+        "pm10": 36.362500000000004,
+        "alerta": false,
+        "inca": "buena"
+      }
+    },
+    {
+      "fecha_hora": "2022-06-28T22:00:00-05:00",
+      "pm2_5": 35.6,
+      "pm10": 251.6,
+      "esperado": {
+        "lecturas": 24,
+        "pm2_5": 9.229166666666668,
+        "pm10": 44.04999999999999,
+        "alerta": false,
+        "inca": "buena"
+      }
+    },
+    {
+      "fecha_hora": "2022-06-28T23:00:00-05:00",
+      "pm2_5": 36.2,
+      "pm10": 259.4,
+      "esperado": {
+        "lecturas": 24,
+        "pm2_5": 10.5,
+        "pm10": 53.9625,
+        "alerta": false,
+        "inca": "buena"
+      }
+    },
+    {
+      "fecha_hora": "2022-06-29T00:00:00-05:00",
+      "pm2_5": 62.4,
+      "pm10": 408.4,
+      "esperado": {
+        "lecturas": 24,
+        "pm2_5": 12.758333333333333,
+        "pm10": 69.85000000000001,
+        "alerta": false,
+        "inca": "moderada"
+      }
+    },
+    {
+      "fecha_hora": "2022-06-29T01:00:00-05:00",
+      "pm2_5": 75.4,
+      "pm10": 523.2,
+      "esperado": {
+        "lecturas": 24,
+        "pm2_5": 15.654166666666669,
+        "pm10": 90.75416666666668,
+        "alerta": false,
+        "inca": "moderada"
+      }
+    },
+    {
+      "fecha_hora": "2022-06-29T02:00:00-05:00",
+      "pm2_5": 14.7,
+      "pm10": 97.5,
+      "esperado": {
+        "lecturas": 24,
+        "pm2_5": 15.950000000000001,
+        "pm10": 93.65000000000002,
+        "alerta": false,
+        "inca": "moderada"
+      }
+    },
+    {
+      "fecha_hora": "2022-06-29T03:00:00-05:00",
+      "pm2_5": 4.4,
+      "pm10": 11.8,
+      "esperado": {
+        "lecturas": 24,
+        "pm2_5": 15.80833333333333,
+        "pm10": 93.04166666666667,
+        "alerta": false,
+        "inca": "moderada"
+      }
+    },
+    {
+      "fecha_hora": "2022-06-29T04:00:00-05:00",
+      "pm2_5": 7.4,
+      "pm10": 28.4,
+      "esperado": {
+        "lecturas": 24,
+        "pm2_5": 15.779166666666667,
+        "pm10": 93.13750000000003,
+        "alerta": false,
+        "inca": "moderada"
+      }
+    },
+    {
+      "fecha_hora": "2022-06-29T05:00:00-05:00",
+      "pm2_5": 10.6,
+      "pm10": 46.8,
+      "esperado": {
+        "lecturas": 24,
+        "pm2_5": 15.804166666666662,
+        "pm10": 93.65416666666668,
+        "alerta": false,
+        "inca": "moderada"
+      }
+    },
+    {
+      "fecha_hora": "2022-06-29T06:00:00-05:00",
+      "pm2_5": 15.7,
+      "pm10": 85.7,
+      "esperado": {
+        "lecturas": 24,
+        "pm2_5": 16.13333333333333,
+        "pm10": 96.14583333333336,
+        "alerta": false,
+        "inca": "moderada"
+      }
+    },
+    {
+      "fecha_hora": "2022-06-29T07:00:00-05:00",
+      "pm2_5": 25.6,
+      "pm10": 91.5,
+      "esperado": {
+        "lecturas": 24,
+        "pm2_5": 16.787499999999998,
+        "pm10": 98.63750000000003,
+        "alerta": false,
+        "inca": "moderada"
+      }
+    },
+    {
+      "fecha_hora": "2022-06-29T08:00:00-05:00",
+      "pm2_5": 34,
+      "pm10": 120.6,
+      "esperado": {
+        "lecturas": 24,
+        "pm2_5": 17.616666666666667,
+        "pm10": 101.825,
+        "alerta": true,
+        "inca": "moderada"
+      }
+    },
+    {
+      "fecha_hora": "2022-06-29T09:00:00-05:00",
+      "pm2_5": 27.2,
+      "pm10": 86.9,
+      "esperado": {
+        "lecturas": 24,
+        "pm2_5": 18.116666666666667,
+        "pm10": 103.94166666666666,
+        "alerta": true,
+        "inca": "moderada"
+      }
+    },
+    {
+      "fecha_hora": "2022-06-29T10:00:00-05:00",
+      "pm2_5": 8.7,
+      "pm10": 23.1,
+      "esperado": {
+        "lecturas": 24,
+        "pm2_5": 18.254166666666666,
+        "pm10": 104.1125,
+        "alerta": true,
+        "inca": "moderada"
+      }
+    },
+    {
+      "fecha_hora": "2022-06-29T11:00:00-05:00",
+      "pm2_5": 12.1,
+      "pm10": 56.7,
+      "esperado": {
+        "lecturas": 24,
+        "pm2_5": 18.495833333333334,
+        "pm10": 105.76666666666665,
+        "alerta": true,
+        "inca": "moderada"
+      }
+    },
+    {
+      "fecha_hora": "2022-06-29T12:00:00-05:00",
+      "pm2_5": 9.2,
+      "pm10": 44,
+      "esperado": {
+        "lecturas": 24,
+        "pm2_5": 18.683333333333334,
+        "pm10": 106.97083333333332,
+        "alerta": true,
+        "inca": "moderada"
+      }
+    },
+    {
+      "fecha_hora": "2022-06-29T13:00:00-05:00",
+      "pm2_5": 13.1,
+      "pm10": 71.4,
+      "esperado": {
+        "lecturas": 24,
+        "pm2_5": 19.025000000000002,
+        "pm10": 109.30416666666666,
+        "alerta": true,
+        "inca": "moderada"
+      }
+    },
+    {
+      "fecha_hora": "2022-06-29T14:00:00-05:00",
+      "pm2_5": 5.3,
+      "pm10": 29.4,
+      "esperado": {
+        "lecturas": 24,
+        "pm2_5": 19.116666666666667,
+        "pm10": 110.01666666666667,
+        "alerta": true,
+        "inca": "moderada"
+      }
+    },
+    {
+      "fecha_hora": "2022-06-29T15:00:00-05:00",
+      "pm2_5": 13.5,
+      "pm10": 81.5,
+      "esperado": {
+        "lecturas": 24,
+        "pm2_5": 19.5625,
+        "pm10": 112.8,
+        "alerta": true,
+        "inca": "moderada"
+      }
+    },
+    {
+      "fecha_hora": "2022-06-29T16:00:00-05:00",
+      "pm2_5": 3.8,
+      "pm10": 13.1,
+      "esperado": {
+        "lecturas": 24,
+        "pm2_5": 19.583333333333332,
+        "pm10": 112.60416666666667,
+        "alerta": true,
+        "inca": "moderada"
+      }
+    },
+    {
+      "fecha_hora": "2022-06-29T17:00:00-05:00",
+      "pm2_5": 8.9,
+      "pm10": 57.1,
+      "esperado": {
+        "lecturas": 24,
+        "pm2_5": 19.495833333333334,
+        "pm10": 112.03749999999998,
+        "alerta": true,
+        "inca": "moderada"
+      }
+    },
+    {
+      "fecha_hora": "2022-06-29T18:00:00-05:00",
+      "pm2_5": 32.8,
+      "pm10": 217.2,
+      "esperado": {
+        "lecturas": 24,
+        "pm2_5": 19.783333333333335,
+        "pm10": 112.75416666666665,
+        "alerta": true,
+        "inca": "moderada"
+      }
+    },
+    {
+      "fecha_hora": "2022-06-29T19:00:00-05:00",
+      "pm2_5": 12.5,
+      "pm10": 35.9,
+      "esperado": {
+        "lecturas": 24,
+        "pm2_5": 19.933333333333334,
+        "pm10": 111.66249999999998,
+        "alerta": true,
+        "inca": "moderada"
+      }
+    },
+    {
+      "fecha_hora": "2022-06-29T20:00:00-05:00",
+      "pm2_5": 4.1,
+      "pm10": 11.1,
+      "esperado": {
+        "lecturas": 24,
+        "pm2_5": 19.837500000000002,
+        "pm10": 110.925,
+        "alerta": true,
+        "inca": "moderada"
+      }
+    },
+    {
+      "fecha_hora": "2022-06-29T21:00:00-05:00",
+      "pm2_5": 5.8,
+      "pm10": 17.6,
+      "esperado": {
+        "lecturas": 24,
+        "pm2_5": 19.95833333333334,
+        "pm10": 111.24583333333332,
+        "alerta": true,
+        "inca": "moderada"
+      }
+    },
+    {
+      "fecha_hora": "2022-06-29T22:00:00-05:00",
+      "pm2_5": 9.1,
+      "pm10": 42,
+      "esperado": {
+        "lecturas": 24,
+        "pm2_5": 18.854166666666668,
+        "pm10": 102.51249999999999,
+        "alerta": true,
+        "inca": "moderada"
+      }
+    },
+    {
+      "fecha_hora": "2022-06-29T23:00:00-05:00",
+      "pm2_5": 10.2,
+      "pm10": 47.1,
+      "esperado": {
+        "lecturas": 24,
+        "pm2_5": 17.770833333333336,
+        "pm10": 93.66666666666664,
+        "alerta": false,
+        "inca": "moderada"
+      }
+    },
+    {
+      "fecha_hora": "2022-06-30T00:00:00-05:00",
+      "pm2_5": 11.9,
+      "pm10": 68.5,
+      "esperado": {
+        "lecturas": 24,
+        "pm2_5": 15.666666666666666,
+        "pm10": 79.50416666666666,
+        "alerta": false,
+        "inca": "moderada"
+      }
+    },
+    {
+      "fecha_hora": "2022-06-30T01:00:00-05:00",
+      "pm2_5": 13,
+      "pm10": 93,
+      "esperado": {
+        "lecturas": 24,
+        "pm2_5": 13.066666666666668,
+        "pm10": 61.57916666666666,
+        "alerta": false,
+        "inca": "moderada"
+      }
+    }
+  ]
+}
