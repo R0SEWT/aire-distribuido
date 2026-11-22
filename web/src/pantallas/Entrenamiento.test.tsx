@@ -877,4 +877,52 @@ describe('la pantalla de entrenamiento', () => {
       expect(entrenamientoALaVista.leer().seguimiento).toMatchObject({ corrida: null, perdido: ID })
     })
   })
+
+  describe('si la sesión termina con un pedido en viaje', () => {
+    /** Deja en espera los pedidos que cumplan `cuales` hasta que se llame a soltar(). */
+    function retener(cuales: (pedido: Request) => boolean) {
+      const base = globalThis.fetch as unknown as (pedido: Request) => Promise<Response>
+      let soltar!: () => void
+      const puerta = new Promise<void>((r) => (soltar = r))
+      vi.stubGlobal('fetch', async (pedido: Request) => {
+        if (cuales(pedido)) await puerta
+        return base(pedido)
+      })
+      return { soltar: () => act(async () => void (soltar(), await new Promise((r) => setTimeout(r, 30)))) }
+    }
+    const otraSesion = () => act(() => abrirSesion({ usuario: 'beto', token: 'token-de-otro-admin', rol: 'admin', expira: Date.now() + 3_600_000 }))
+
+    it('la respuesta tardía del lanzamiento no deja un entrenamiento en curso al admin siguiente', async () => {
+      api()
+      const { soltar } = retener((p) => p.method === 'POST' && p.url.endsWith('/api/entrenamientos'))
+      montar()
+      await screen.findByRole('list', { name: 'Nodos libres' })
+      await lanzar()
+      await screen.findByRole('button', { name: 'Enviando el pedido…' })
+
+      // «Salir» con el POST en viaje; después entra otro admin en la misma pestaña.
+      act(() => cerrarSesion('salir'))
+      otraSesion()
+      await soltar()
+
+      expect(entrenamientoALaVista.leer().seguimiento).toMatchObject({ corrida: null, lanzando: null })
+      expect(screen.queryByText(/Hay un entrenamiento en curso/)).not.toBeInTheDocument()
+      await waitFor(() => expect(formulario().getByRole('button', { name: 'Lanzar entrenamiento' })).toBeEnabled())
+    })
+
+    it('lo mismo si lo que estaba en viaje era abrir uno del historial', async () => {
+      api({ 'GET /api/entrenamientos': { estado: 200, cuerpo: [{ ...DETALLE, rondas: undefined }] } })
+      montar()
+      const ver = await screen.findByRole('button', { name: `Ver las rondas de ${ID}` })
+      const { soltar } = retener((p) => p.method === 'GET' && p.url.endsWith(`/api/entrenamientos/${ID}`))
+      await userEvent.click(ver)
+
+      act(() => cerrarSesion('salir'))
+      otraSesion()
+      await soltar()
+
+      expect(entrenamientoALaVista.leer().seguimiento.corrida).toBeNull()
+      expect(screen.queryByText('Rondas del entrenamiento')).not.toBeInTheDocument()
+    })
+  })
 })

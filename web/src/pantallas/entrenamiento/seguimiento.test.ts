@@ -192,4 +192,11 @@ describe('el seguimiento de un entrenamiento', () => {
       expect(reducir(perdido, { tipo: 'ronda', evento: ronda('e-3', 1) }).perdido).toBeNull()
     })
   })
+
+  describe('una respuesta que llega sin un pedido en viaje', () => {
+    it('no crea un entrenamiento: es la respuesta tardía de una sesión que ya terminó', () => {
+      expect(reducir(SIN_SEGUIMIENTO, { tipo: 'aceptado', id: 'e-1' })).toBe(SIN_SEGUIMIENTO)
+      expect(reducir(SIN_SEGUIMIENTO, { tipo: 'rechazado' })).toBe(SIN_SEGUIMIENTO)
+    })
+  })
 })

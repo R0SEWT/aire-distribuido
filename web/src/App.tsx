@@ -21,6 +21,7 @@ import { Barrera } from './componentes/Barrera'
 import { entrenamientoALaVista } from './pantallas/entrenamiento/almacen'
 import Ingreso from './pantallas/Ingreso'
 import { simulador } from './pantallas/simulacion/motor'
+import { avanzarEpoca } from './sesion/epoca'
 import { RequiereRol, RequiereSesion } from './sesion/guardas'
 import { SOLO_ADMIN } from './sesion/roles'
 import { useSesion } from './sesion/useSesion'
@@ -76,6 +77,8 @@ export function Rutas() {
  * fuera de sus componentes se suma aquí.
  */
 function limpiarLoDeLaSesion(consultas: QueryClient) {
+  // Antes que nada: la respuesta de un pedido que quedó en viaje ya no es de la sesión vigente.
+  avanzarEpoca()
   // Primero lo que sigue haciendo cosas: una simulación en curso se corta (lo ya enviado queda en el sistema).
   simulador.reiniciar()
   // Lo visto: las lecturas enviadas y los estados recibidos (estos, también de sessionStorage).

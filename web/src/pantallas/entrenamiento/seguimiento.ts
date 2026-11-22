@@ -145,6 +145,8 @@ export function reducir(s: Seguimiento, a: Accion): Seguimiento {
       return { ...s, lanzando: a.pedido, buzon: {}, perdido: null }
 
     case 'aceptado': {
+      // Sin un pedido en viaje no hay nada que aceptar: es la respuesta tardía de una sesión que ya terminó.
+      if (s.lanzando === null) return s
       const llegado = s.buzon[a.id]
       return {
         lanzando: null,
@@ -162,6 +164,7 @@ export function reducir(s: Seguimiento, a: Accion): Seguimiento {
     }
 
     case 'rechazado': {
+      if (s.lanzando === null) return s
       // Si mientras tanto llegaron rondas, son de otro entrenamiento (el que
       // causó el 409, por ejemplo): se muestra ese, si la pantalla está libre.
       const ids = Object.keys(s.buzon)

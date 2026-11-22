@@ -10,6 +10,7 @@ import type { EstadoEstacion } from '../../api/enVivo'
 import { presentarError } from '../../api/errores'
 import { anotarVista } from '../../api/vistas'
 import { Advertencia, Banda, Cifra, Estado, Etiqueta, fechaHora, Frase, numero, Tarjeta } from '../../componentes/indice'
+import { marcarSesion } from '../../sesion/epoca'
 import { horaSiguiente } from './fechas'
 import type { Lectura, Prediccion } from './series'
 
@@ -53,7 +54,10 @@ export function LecturaAMano({ estaciones, estados, descripcionDe, ocupado }: Pr
 
   const envio = useMutation({
     mutationFn: (lectura: Lectura) => pedir(api.POST('/api/predicciones', { body: lectura })),
-    onSuccess: (r, lectura) => {
+    // Si la sesión termina con la lectura en viaje, su respuesta no se anota en la sesión siguiente.
+    onMutate: () => ({ sigue: marcarSesion() }),
+    onSuccess: (r, lectura, contexto) => {
+      if (!contexto.sigue()) return
       anotarVista(lectura.estacion, {
         fecha_hora: lectura.fecha_hora,
         pm2_5: lectura.pm2_5,

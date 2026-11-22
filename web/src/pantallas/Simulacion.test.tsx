@@ -2,11 +2,12 @@
 // ventana de 24 horas: qué se manda y en qué orden, la pausa, un error a mitad
 // de camino, la comparación con lo esperado y el aviso de sistema no limpio.
 
-import { render, screen, waitFor, within } from '@testing-library/react'
+import { act, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { crearClienteDeConsultas } from '../api/cliente'
 import type { EstadoEstacion } from '../api/enVivo'
+import { lecturasVistas } from '../api/vistas'
 import { Proveedores } from '../App'
 import { fabricaDeEnchufes, respuesta } from '../pruebas/dobles'
 import { abrirSesion, cerrarSesion, recargarSesion, type Rol } from '../sesion/almacen'
@@ -96,6 +97,27 @@ describe('Simulación', () => {
     window.dispatchEvent(despues)
     expect(despues.defaultPrevented).toBe(false)
   }, LARGO)
+
+  it('una lectura a mano que responde después de «Salir» no queda anotada para la sesión siguiente', async () => {
+    const ESTACION = 'CA-AYAS-01'
+    const suelta = puerta()
+    apiDePrueba({ estados: [estadoDe(ESTACION, '2021-12-15T10:00:00-05:00')], alPredecir: async () => void (await suelta.cerrada) })
+    montar('usuario')
+    await userEvent.click(await screen.findByRole('button', { name: 'Una lectura a mano' }))
+    await userEvent.selectOptions(screen.getByLabelText('Estación'), ESTACION)
+    await userEvent.type(screen.getByLabelText('PM2.5 (µg/m³)'), '70.2')
+    await userEvent.type(screen.getByLabelText('PM10 (µg/m³)'), '190.5')
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Enviar la lectura' })).toBeEnabled())
+    await userEvent.click(screen.getByRole('button', { name: 'Enviar la lectura' }))
+    await screen.findByRole('button', { name: 'Enviando…' })
+
+    // «Salir» con el POST en viaje; la respuesta llega cuando la sesión ya no existe.
+    act(() => cerrarSesion('salir'))
+    suelta.abrir()
+    await act(() => new Promise((r) => setTimeout(r, 50)))
+
+    expect(lecturasVistas(ESTACION)).toEqual([])
+  })
 
   it('si no se pueden leer las series, lo dice y no deja la pantalla en blanco', async () => {
     apiDePrueba({ series: null })

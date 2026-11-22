@@ -17,6 +17,7 @@ import { EN_VIVO } from '../api/enVivo'
 import { ErrorApi } from '../api/errores'
 import { useEstadoWS, useEvento } from '../api/tiempoReal'
 import { Aviso, Encabezado, Estado, EstadoDeError, Tarjeta } from '../componentes/indice'
+import { marcarSesion } from '../sesion/epoca'
 import { Formulario, type Bloqueo } from './entrenamiento/Formulario'
 import { Historial } from './entrenamiento/Historial'
 import { PanelDeRondas } from './entrenamiento/PanelDeRondas'
@@ -94,17 +95,20 @@ export default function Entrenamiento() {
    */
   async function pedirYReconciliar(id: string, signal?: AbortSignal): Promise<Detalle | null> {
     const sinFin = entrenamientoALaVista.leer().seguimiento.corrida?.fin === null
+    const sigue = marcarSesion()
     let d: Detalle
     try {
       d = await pedirDetalle(id, signal)
     } catch (error) {
-      if (error instanceof ErrorApi && error.tipo === 'no_encontrado') {
+      if (sigue() && error instanceof ErrorApi && error.tipo === 'no_encontrado') {
         despachar({ tipo: 'perdido', id })
         refrescar()
         return null
       }
       throw error
     }
+    // La sesión que lo pidió terminó mientras viajaba: no se anota nada en la siguiente.
+    if (!sigue()) return d
     despachar({ tipo: 'detalle', detalle: d, ahora: Date.now() })
     // Si el fin se supo por aquí y no por su evento, lo demás de la pantalla también se entera.
     if (sinFin && d.estado !== 'en_curso') refrescar()
@@ -150,12 +154,18 @@ export default function Entrenamiento() {
 
   const lanzar = useMutation({
     mutationFn: (pedido: Pedido) => pedir(api.POST('/api/entrenamientos', { body: pedido })),
-    onMutate: (pedido) => despachar({ tipo: 'lanzar', pedido }),
-    onSuccess: (aceptado) => {
+    onMutate: (pedido) => {
+      despachar({ tipo: 'lanzar', pedido })
+      // Si la sesión termina con el pedido en viaje, su respuesta no es de la sesión siguiente.
+      return { sigue: marcarSesion() }
+    },
+    onSuccess: (aceptado, _pedido, contexto) => {
+      if (!contexto.sigue()) return
       despachar({ tipo: 'aceptado', id: aceptado.id })
       refrescar()
     },
-    onError: () => {
+    onError: (_error, _pedido, contexto) => {
+      if (!contexto?.sigue()) return
       despachar({ tipo: 'rechazado' })
       refrescar()
     },
@@ -172,8 +182,10 @@ export default function Entrenamiento() {
   async function ver(id: string) {
     setAbriendo(id)
     setErrorAlAbrir(null)
+    const sigue = marcarSesion()
     try {
       const d = await consultas.fetchQuery({ queryKey: claves.entrenamiento(id), queryFn: () => pedirDetalle(id), staleTime: 0 })
+      if (!sigue()) return
       despachar({ tipo: 'ver', detalle: d })
       panel.current?.scrollIntoView?.({ behavior: 'smooth', block: 'start' })
     } catch (error) {
