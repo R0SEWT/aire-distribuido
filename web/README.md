@@ -155,7 +155,16 @@ registros, los dos fuera de React:
   (`anotarVista()`). Vive en memoria: se pierde al recargar. Se lee con `useLecturasVistas(estacion)`.
 
 El simulador (`pantallas/simulacion/motor.ts`) también vive fuera de React: una corrida sigue aunque se cambie de
-pantalla, y mientras no termina la barra lo dice con `<SimulacionEnCurso>` (`armazon/Indicadores.tsx`).
+pantalla, y mientras no termina la barra lo dice con `<SimulacionEnCurso>` (`armazon/Indicadores.tsx`). Vive en la
+pestaña: mientras está en curso, el navegador pregunta antes de recargarla o cerrarla (`beforeunload`).
+
+Lo mismo el entrenamiento a la vista (`pantallas/entrenamiento/almacen.ts`): el que se lanzó o se abrió del
+historial sigue ahí al volver a la pantalla, y sus rondas le llegan aunque no esté montada (`App.tsx`).
+
+**Todo lo que una sesión deja en la pestaña se limpia en un solo lugar**, `limpiarLoDeLaSesion()` en `App.tsx`,
+cuando el token deja de estar («Salir», vencimiento o 401): la caché de consultas, los eventos de la caché en
+vivo, los dos registros de arriba, el entrenamiento a la vista y el simulador, que se detiene. Lo que una pantalla
+guarde fuera de sus componentes se suma ahí; no se suscribe por su cuenta al fin de la sesión.
 
 ### Otros eventos
 
