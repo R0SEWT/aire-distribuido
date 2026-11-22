@@ -19,8 +19,11 @@ import { useSeries, type Series } from '../api/datos'
 import { useEstaciones, useEstados } from '../api/estaciones'
 import {
   Desplegable,
+  duracion,
+  Encabezado,
   enumerar,
   Estado,
+  fechaDia,
   EstadoDeError,
   Frase,
   nombrePropio,
@@ -56,12 +59,12 @@ export default function Simulacion({ simulador = elDeLaApp }: Props) {
     <div className="space-y-5">
       {series.isPending ? (
         <>
-          <Encabezado />
+          <EncabezadoDeSimulacion />
           <Estado tipo="cargando" titulo="Cargando las series…" />
         </>
       ) : series.isError ? (
         <>
-          <Encabezado />
+          <EncabezadoDeSimulacion />
           <EstadoDeError error={series.error} alReintentar={() => void series.refetch()} />
         </>
       ) : (
@@ -72,18 +75,14 @@ export default function Simulacion({ simulador = elDeLaApp }: Props) {
 }
 
 /** El título de la pantalla y, a su derecha, qué se simula. */
-function Encabezado({ children }: { children?: ReactNode }) {
+function EncabezadoDeSimulacion({ children }: { children?: ReactNode }) {
   return (
-    <header className="space-y-1">
-      <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2">
-        <h1 className="text-texto text-2xl font-semibold">Simulación</h1>
-        {children}
-      </div>
-      <p className="text-suave">
-        Lecturas reales de OEFA mandadas una por una a la API: cómo se llena la ventana de 24 horas y cuándo se enciende
-        la alerta.
-      </p>
-    </header>
+    <Encabezado
+      titulo="Simulación"
+      bajada="Lecturas reales de OEFA mandadas una por una a la API: cómo se llena la ventana de 24 horas y cuándo se enciende la alerta."
+    >
+      {children}
+    </Encabezado>
   )
 }
 
@@ -154,12 +153,10 @@ function Mesa({ series, simulador }: { series: Series; simulador: Simulador }) {
 
   return (
     <>
-      <Encabezado>
-        <div className="flex flex-wrap items-center gap-3">
-          {!esAdmin && <p className="text-tenue text-sm">Cargar el escenario es de quien administra.</p>}
-          <Pildoras etiqueta="Qué se simula" opciones={modos} valor={modo} alCambiar={setModo} />
-        </div>
-      </Encabezado>
+      <EncabezadoDeSimulacion>
+        {!esAdmin && <p className="text-tenue text-sm">Cargar el escenario es de quien administra.</p>}
+        <Pildoras etiqueta="Qué se simula" opciones={modos} valor={modo} alCambiar={setModo} />
+      </EncabezadoDeSimulacion>
 
       {modo === 'mano' ? (
         <LecturaAMano estaciones={estacionesConPM(series)} estados={estados.data} descripcionDe={descripcionDe} ocupado={ocupado} />
@@ -231,7 +228,8 @@ function Mesa({ series, simulador }: { series: Series; simulador: Simulador }) {
                   <p>{series.metadatos.como_se_usa.regimen}</p>
                   <p>
                     Regla de la alerta: {series.metadatos.reglas.alerta}. Banda INCA: {series.metadatos.reglas.inca.regla}.
-                    El archivo lo escribe <code className="font-mono">{series.metadatos.generador}</code> ({series.metadatos.generado}).
+                    El archivo lo escribe <code className="font-mono">{series.metadatos.generador}</code> (generado el{' '}
+                    {fechaDia(series.metadatos.generado)}).
                   </p>
                 </Desplegable>
               </div>
@@ -273,7 +271,7 @@ function Veredicto({ resumen, corrida }: { resumen: Resumen; corrida: Corrida })
       <Frase tono={tono}>{partes.join(' ')}</Frase>
       {corrida.fase === 'terminada' && (
         <p className="text-tenue text-sm">
-          {numero(corrida.enviadas)} lecturas en {numero(corrida.duracionMs / 1000, 1)} segundos, con el modelo{' '}
+          {numero(corrida.enviadas)} lecturas en {duracion(corrida.duracionMs)}, con el modelo{' '}
           <span className="font-mono">{corrida.modeloId}</span>.
         </p>
       )}

@@ -8,7 +8,7 @@
 // contexto, y no hay ninguna suma de personas.
 
 import { useImpacto, type Impacto as DatosDeImpacto } from '../api/datos'
-import { Estado, EstadoDeError, fechaDia, numero } from '../componentes/indice'
+import { Encabezado, Estado, EstadoDeError, fechaDia, numero } from '../componentes/indice'
 import { ConCuantaAnticipacion, LoQueNoPuedeDecir, SirveLaAlerta } from './impacto/Alerta'
 import { CuantoTiempo, DondeYJuntoAQue, ElProblema, QuienViveAhi } from './impacto/Medido'
 
@@ -17,13 +17,10 @@ export default function Impacto() {
 
   return (
     <div className="space-y-5">
-      <header>
-        <h1 className="text-texto text-2xl font-semibold">Impacto</h1>
-        <p className="text-suave mt-1">
-          Qué dicen las mediciones reales de OEFA sobre el aire junto a las actividades que fiscaliza, y qué no pueden
-          decir.
-        </p>
-      </header>
+      <Encabezado
+        titulo="Impacto"
+        bajada="Qué dicen las mediciones reales de OEFA sobre el aire junto a las actividades que fiscaliza, y qué no pueden decir."
+      />
       {impacto.isPending ? (
         <Estado tipo="cargando" titulo="Cargando los datos de impacto…" />
       ) : impacto.isError ? (

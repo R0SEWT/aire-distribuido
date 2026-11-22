@@ -44,7 +44,7 @@ export function SirveLaAlerta({ impacto }: { impacto: Impacto }) {
           <Cifra tamano="mediana" rotulo="Lectura horaria · cobertura" valor={s.lectura_horaria.cobertura * 100} decimales={1} unidad="%" />
         </div>
       </div>
-      <Frase tono="moderada">
+      <Frase tono="aviso">
         El régimen alto acierta el {proporcion(s.regimen_alto.precision, 0)} de las veces que suena (precisión) y detecta el{' '}
         {proporcion(s.regimen_alto.cobertura, 0)} de las horas sobre el ECA (cobertura). La lectura horaria detecta más (
         {proporcion(s.lectura_horaria.cobertura, 0)}) y acierta menos ({proporcion(s.lectura_horaria.precision, 0)}): por
@@ -158,7 +158,7 @@ export function ConCuantaAnticipacion({ impacto }: { impacto: Impacto }) {
         </div>
       </div>
       {lh.horas_antes && lh.horas_seguidas && reg.horas_antes && reg.horas_seguidas && (
-        <Frase tono="moderada">
+        <Frase tono="aviso">
           La señal se prende y se apaga. En la mitad de los {numero(t.episodios)} episodios, la lectura horaria había pasado
           el umbral por primera vez {enHoras(lh.horas_antes.mediana)} antes del cruce o más; pero en la mitad llevaba
           encendida sin interrupción {enHoras(lh.horas_seguidas.mediana)} o menos. Con el régimen alto,{' '}

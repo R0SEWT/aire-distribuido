@@ -15,6 +15,7 @@ import {
   Banda,
   Cifra,
   Desplegable,
+  Encabezado,
   Estado,
   EstadoDeError,
   Etiqueta,
@@ -107,7 +108,7 @@ function TarjetaPrincipal({ estacion, estado, midePM }: { estacion: FichaEstacio
       }
     >
       <div className="space-y-4">
-        <div className="flex flex-wrap items-end gap-x-10 gap-y-4">
+        <div className="flex flex-wrap items-start gap-x-10 gap-y-4">
           <Cifra rotulo="PM2.5 · media de 24 h" valor={pm2_5} decimales={1} unidad="µg/m³" sinDato="sin datos suficientes" />
           <Cifra rotulo="PM10 · media de 24 h" valor={pm10} decimales={1} unidad="µg/m³" sinDato="sin datos suficientes" />
           <dl className="grid grid-cols-[auto_1fr] items-center gap-x-3 gap-y-1.5 text-sm" data-estado-estacion>
@@ -190,7 +191,7 @@ function Detalle({ estacion, impacto }: { estacion: FichaEstacion; impacto: Impa
   const estado = useEstado(estacion.id)
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
       {estado.data ? (
         <TarjetaPrincipal estacion={estacion} estado={estado.data} midePM={midePM} />
       ) : estado.isError ? (
@@ -212,7 +213,7 @@ function Detalle({ estacion, impacto }: { estacion: FichaEstacion; impacto: Impa
           estado. Que no mida no quiere decir que ahí el aire esté limpio.
         </Estado>
       )}
-      <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,24rem)]">
+      <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,24rem)]">
         {(midePM || estado.data) && <TarjetaCurva id={estacion.id} estado={estado.data ?? null} />}
         <div className={midePM || estado.data ? '' : 'lg:col-span-2'}>
           <Ficha estacion={estacion} impacto={impacto} midePM={midePM} />
@@ -232,14 +233,14 @@ export default function Estacion() {
   const estacion = id ? estaciones.data?.find((e) => e.id === id) : undefined
 
   return (
-    <div className="space-y-4">
-      <header className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3">
-        <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-          <h1 className="text-texto text-2xl font-semibold">Estación</h1>
-          {estacion && <p className="text-acento-claro font-mono text-xl font-semibold">{estacion.id}</p>}
-        </div>
+    <div className="space-y-5">
+      <Encabezado
+        titulo="Estación"
+        junto={estacion && <p className="text-acento-claro font-mono text-xl font-semibold">{estacion.id}</p>}
+        bajada="El último estado recibido de una estación, la curva de lo que esta sesión vio de ella y su ficha."
+      >
         {estaciones.data && impacto.data && <Selector estaciones={estaciones.data} sinPM={sinPM} elegida={id} />}
-      </header>
+      </Encabezado>
       {fallida ? (
         <EstadoDeError
           error={fallida.error}

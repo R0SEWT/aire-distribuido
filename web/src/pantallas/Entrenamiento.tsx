@@ -11,7 +11,7 @@ import { useReducer, useRef, useState } from 'react'
 import { api, claves, pedir } from '../api/cliente'
 import { EN_VIVO } from '../api/enVivo'
 import { useEstadoWS, useEvento } from '../api/tiempoReal'
-import { Estado, EstadoDeError, Tarjeta } from '../componentes/indice'
+import { Encabezado, Estado, EstadoDeError, Tarjeta } from '../componentes/indice'
 import { Formulario, type Bloqueo } from './entrenamiento/Formulario'
 import { Historial } from './entrenamiento/Historial'
 import { PanelDeRondas } from './entrenamiento/PanelDeRondas'
@@ -155,13 +155,10 @@ export default function Entrenamiento() {
 
   return (
     <div className="space-y-5">
-      <header>
-        <h1 className="text-texto text-2xl font-semibold">Entrenamiento</h1>
-        <p className="text-suave mt-1">
-          El K-Means se reparte entre los nodos del clúster. Un entrenamiento real dura unos 50 milisegundos: sus rondas
-          se reproducen aquí más despacio.
-        </p>
-      </header>
+      <Encabezado
+        titulo="Entrenamiento"
+        bajada="El K-Means se reparte entre los nodos del clúster. Un entrenamiento real dura unos 50 milisegundos: sus rondas se reproducen aquí más despacio."
+      />
 
       <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,22rem)_minmax(0,1fr)]">
         <Formulario

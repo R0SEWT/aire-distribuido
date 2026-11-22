@@ -151,7 +151,7 @@ const COLUMNAS_DE_ESTACION: Columna<EstacionDeImpacto>[] = [
         <p>{midio(e.primera_fecha, e.ultima_fecha)}</p>
         <p className="text-tenue mt-0.5 flex flex-wrap items-center gap-1.5 text-xs">
           {numero(e.dias_con_datos)} días con datos
-          {e.dias_con_datos < DIAS_DE_CAMPANA_CORTA && <Etiqueta tono="moderada">campaña corta</Etiqueta>}
+          {e.dias_con_datos < DIAS_DE_CAMPANA_CORTA && <Etiqueta tono="aviso">campaña corta</Etiqueta>}
         </p>
       </div>
     ),
@@ -239,7 +239,7 @@ export function DondeYJuntoAQue({ impacto }: { impacto: Impacto }) {
       ) : (
         <Tabla titulo="Lo medido por tipo de actividad" columnas={COLUMNAS_DE_TIPO} filas={tipos} claveDe={(t) => t.tipo_actividad} />
       )}
-      <Frase tono="moderada">
+      <Frase tono="aviso">
         Las horas sobre el ECA de una estación describen las semanas en que midió, no un año: {numero(cortas)} de las{' '}
         {numero(impacto.estaciones.length)} son campañas cortas (menos de {DIAS_DE_CAMPANA_CORTA} días con datos). En{' '}
         {numero(sinHoras)} la media de 24 horas nunca superó el ECA.

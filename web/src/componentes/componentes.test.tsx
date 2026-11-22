@@ -11,6 +11,7 @@ import {
   Cifra,
   Dato,
   Desplegable,
+  Encabezado,
   EnConstruccion,
   Estado,
   EstadoDeError,
@@ -207,6 +208,33 @@ describe('Tabla', () => {
     )
 
     expect(screen.getByRole('cell', { name: 'Ninguna estación tiene estado todavía.' })).toHaveAttribute('colspan', '3')
+  })
+})
+
+describe('Encabezado', () => {
+  it('pone el título de la pantalla como h1, lo que lo acompaña a su lado y la bajada debajo', () => {
+    render(
+      <Encabezado titulo="Estación" junto={<p>CA-HU-04</p>} bajada="El último estado recibido de una estación.">
+        <button type="button">Elegir estación</button>
+      </Encabezado>,
+    )
+
+    const titulo = screen.getByRole('heading', { level: 1, name: 'Estación' })
+    const encabezado = titulo.closest('header')!
+    expect(encabezado).toHaveAttribute('data-encabezado')
+    expect(within(encabezado).getByText('CA-HU-04')).toBeInTheDocument()
+    expect(within(encabezado).getByRole('button', { name: 'Elegir estación' })).toBeInTheDocument()
+    // La bajada va después del renglón del título, no dentro de él.
+    const bajada = within(encabezado).getByText('El último estado recibido de una estación.')
+    expect(bajada.previousElementSibling).toContainElement(titulo)
+  })
+
+  it('solo con título no deja huecos', () => {
+    render(<Encabezado titulo="Impacto" />)
+
+    const encabezado = screen.getByRole('heading', { level: 1, name: 'Impacto' }).closest('header')!
+    expect(encabezado.children).toHaveLength(1)
+    expect(encabezado.querySelector('p')).toBeNull()
   })
 })
 

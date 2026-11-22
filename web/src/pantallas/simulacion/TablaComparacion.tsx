@@ -44,7 +44,7 @@ function Veredicto({ c }: { c: Comparacion }) {
     case 'coincide':
       return <Etiqueta tono="buena">Coincide</Etiqueta>
     case 'solo_regimen':
-      return <Etiqueta tono="moderada">Solo difiere el régimen</Etiqueta>
+      return <Etiqueta tono="aviso">Solo difiere el régimen</Etiqueta>
     case 'difiere':
       return (
         <span className="inline-flex flex-col items-start gap-1">

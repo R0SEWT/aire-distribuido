@@ -4,6 +4,7 @@
 
 import type { components } from '../../api/contrato'
 import type { DiaDeSeries, EscenarioDeSeries, Esperado, Series } from '../../api/datos'
+import { fechaDia } from '../../componentes/formato'
 
 export type Lectura = components['schemas']['Lectura']
 export type Prediccion = components['schemas']['Prediccion']
@@ -50,7 +51,7 @@ export function tramoDelDia(dia: DiaDeSeries): Tramo {
   return armarTramo({
     id: dia.id,
     tipo: 'dia',
-    titulo: `${dia.estacion} · ${dia.dia}`,
+    titulo: `${dia.estacion} · ${fechaDia(dia.dia)}`,
     desde: dia.desde,
     hasta: dia.hasta,
     lecturas: dia.lecturas,

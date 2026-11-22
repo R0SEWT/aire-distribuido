@@ -19,7 +19,7 @@ import { useState, type ReactNode } from 'react'
 import { api, claves, pedir } from '../api/cliente'
 import { EN_VIVO } from '../api/enVivo'
 import { useEvento } from '../api/tiempoReal'
-import { Cifra, Estado, EstadoDeError, horaConSegundos, milisegundos, numero, Pildoras, Tarjeta } from '../componentes/indice'
+import { Cifra, Encabezado, Estado, EstadoDeError, horaConSegundos, milisegundos, numero, Pildoras, Tarjeta } from '../componentes/indice'
 import { agregarMuestra, sinMedicionDeCpu, usoDeCpu, usoPromedio, type Proceso as Muestra } from './cluster/cpu'
 import { Escrituras } from './cluster/Escrituras'
 import { Eventos } from './cluster/Eventos'
@@ -113,22 +113,19 @@ export default function Cluster() {
 
   return (
     <div className="space-y-5">
-      <header className="flex flex-wrap items-end justify-between gap-x-6 gap-y-2">
-        <div>
-          <h1 className="text-texto text-2xl font-semibold">Clúster</h1>
-          <p className="text-suave mt-1 max-w-3xl">
-            Los nodos que entrenan, cómo se porta la API que los coordina y lo que fue pasando con ellos.
-          </p>
-        </div>
+      <Encabezado
+        titulo="Clúster"
+        bajada="Los nodos que entrenan, cómo se porta la API que los coordina y lo que fue pasando con ellos."
+      >
         <p role="status" className="text-tenue text-sm" data-actualizado>
           {metricas.dataUpdatedAt > 0
             ? `Actualizado a las ${horaConSegundos(metricas.dataUpdatedAt)} · se refresca cada ${CADA_MS / 1000} s`
             : 'Consultando la API…'}
           {metricas.isError && m !== undefined && <span className="text-falla font-semibold"> · el último refresco falló</span>}
         </p>
-      </header>
+      </Encabezado>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4" data-resumen>
+      <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4" data-resumen>
         <Tarjeta acento="acento">
           <Cifra
             tamano="mediana"

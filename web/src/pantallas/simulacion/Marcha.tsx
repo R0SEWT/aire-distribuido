@@ -238,8 +238,8 @@ export function Marcha({ tramo, corrida, reglas }: Props) {
               </>
             ) : (
               <>
-                <Cifra tamano="mediana" rotulo="PM2.5 · media 24 h" valor={unica?.ultima?.media_24h.pm2_5} decimales={1} unidad="µg/m³" sinDato="sin media" />
-                <Cifra tamano="mediana" rotulo="PM10 · media 24 h" valor={unica?.ultima?.media_24h.pm10} decimales={1} unidad="µg/m³" sinDato="sin media" />
+                <Cifra tamano="mediana" rotulo="PM2.5 · media de 24 h" valor={unica?.ultima?.media_24h.pm2_5} decimales={1} unidad="µg/m³" sinDato="sin media" />
+                <Cifra tamano="mediana" rotulo="PM10 · media de 24 h" valor={unica?.ultima?.media_24h.pm10} decimales={1} unidad="µg/m³" sinDato="sin media" />
               </>
             )}
           </div>

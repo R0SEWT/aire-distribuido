@@ -8,6 +8,7 @@ export { Cifra } from './Cifra'
 export { Dato } from './Dato'
 export { Desplegable } from './Desplegable'
 export { EnConstruccion } from './EnConstruccion'
+export { Encabezado } from './Encabezado'
 export { Estado, EstadoDeError, type TipoEstado } from './Estado'
 export { Etiqueta } from './Etiqueta'
 export {

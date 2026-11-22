@@ -198,7 +198,7 @@ describe('la Estación', () => {
       await screen.findByText('CA-HU-04 · último estado recibido')
 
       const curva = screen.getByRole('img', { name: /Media de 24 horas de PM10/ })
-      expect(curva).toHaveTextContent('ECA 100 µg/m³')
+      expect(curva).toHaveTextContent('ECA de 24 h: 100 µg/m³')
       expect([...curva.querySelectorAll('[data-franja]')].map((f) => f.getAttribute('data-franja'))).toEqual(['buena', 'moderada'])
       expect(curva).toHaveTextContent('Buena')
       expect(curva.querySelector('[data-punto="sobre-eca"]')).not.toBeNull()
@@ -206,7 +206,7 @@ describe('la Estación', () => {
       await userEvent.click(screen.getByRole('button', { name: 'PM2.5' }))
 
       const otra = screen.getByRole('img', { name: /Media de 24 horas de PM2.5/ })
-      expect(otra).toHaveTextContent('ECA 50 µg/m³')
+      expect(otra).toHaveTextContent('ECA de 24 h: 50 µg/m³')
       expect(otra.querySelectorAll('[data-franja]')).toHaveLength(3)
     })
 

@@ -173,19 +173,19 @@ export function CurvaSesion({ puntos, lecturas = SIN_LECTURAS, eca, cortes, titu
             x2={derecha}
             y1={dibujo.yEca}
             y2={dibujo.yEca}
-            className="stroke-texto"
+            className="stroke-falla"
             strokeWidth={1.5}
-            strokeDasharray={`${6 * k} ${4 * k}`}
+            strokeDasharray={`${7 * k} ${4 * k}`}
           />
           <text
             x={margen.izquierda + 8 * k}
             y={dibujo.yEca - 9 * k}
             dominantBaseline="central"
-            className="fill-texto stroke-superficie text-xs font-semibold [paint-order:stroke]"
+            className="fill-falla stroke-superficie text-xs font-semibold [paint-order:stroke]"
             strokeWidth={3 * k}
             strokeLinejoin="round"
           >
-            ECA {numero(eca)} µg/m³
+            ECA de 24 h: {numero(eca)} µg/m³
           </text>
         </g>
 

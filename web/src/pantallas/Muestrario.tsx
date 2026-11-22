@@ -12,6 +12,7 @@ import {
   Cifra,
   Dato,
   Desplegable,
+  Encabezado,
   Estado,
   EstadoDeError,
   Etiqueta,
@@ -55,13 +56,15 @@ export default function Muestrario() {
   const [contaminante, setContaminante] = useState<'pm2_5' | 'pm10'>('pm10')
   return (
     <div className="space-y-5">
-      <header>
-        <h1 className="text-texto text-2xl font-semibold">Muestrario de componentes</h1>
-        <p className="text-suave mt-1">
-          Los componentes base de <code className="font-mono">src/componentes/</code>, con los números de los ejemplos
-          del contrato. No son datos de ninguna estación.
-        </p>
-      </header>
+      <Encabezado
+        titulo="Muestrario de componentes"
+        bajada={
+          <>
+            Los componentes base de <code className="font-mono">src/componentes/</code>, con los números de los ejemplos
+            del contrato. No son datos de ninguna estación.
+          </>
+        }
+      />
 
       <div className="grid gap-5 lg:grid-cols-[minmax(0,26rem)_minmax(0,1fr)]">
         <Tarjeta acento="mala" rotulo="CA-AYAS-01 · media de 24 horas" titulo="Tarjeta con borde de acento">

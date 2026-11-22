@@ -17,6 +17,7 @@ import {
   Cifra,
   Dato,
   Desplegable,
+  Encabezado,
   Estado,
   EstadoDeError,
   Etiqueta,
@@ -42,7 +43,7 @@ import {
 } from './panel/situacion'
 
 // El mapa ocupa lo que queda de la pantalla bajo la barra, para que entre entero sin desplazarse.
-const ALTO_DEL_MAPA = 'h-[clamp(21rem,calc(100dvh-19rem),42rem)]'
+const ALTO_DEL_MAPA = 'h-[clamp(21rem,calc(100dvh-21rem),42rem)]'
 
 const enlaceDe = (id: string) => `${RUTAS.estacion}/${encodeURIComponent(id)}`
 
@@ -127,10 +128,10 @@ const COLUMNAS: Columna<FilaEstacion>[] = [
     titulo: 'Régimen',
     celda: (f) =>
       f.estado ? (
-        <div className="whitespace-nowrap">
+        <div>
           <span className="font-mono font-semibold tabular-nums">{f.estado.regimen}</span>
           {/* Lo dice del grupo de lecturas, no de la estación: puede no coincidir con su alerta. */}
-          {f.estado.excede_eca && <p className="text-suave mt-0.5 text-xs">el grupo excede el ECA</p>}
+          {f.estado.excede_eca && <p className="text-suave mt-0.5 w-22 text-xs">el grupo excede el ECA</p>}
         </div>
       ) : (
         '—'
@@ -146,7 +147,7 @@ const COLUMNAS: Columna<FilaEstacion>[] = [
 function Cifras({ resumen }: { resumen: Resumen }) {
   const { ultimo } = resumen
   return (
-    <div className="grid gap-4 @6xl:grid-cols-[0.85fr_1.1fr_1.15fr]" data-cifras>
+    <div className="grid gap-5 @6xl:grid-cols-[0.85fr_1.02fr_1.23fr]" data-cifras>
       <Tarjeta acento={resumen.enAlerta > 0 ? 'alerta' : resumen.conEstado > 0 ? 'buena' : undefined} className="p-4!">
         <Cifra
           tamano="mediana"
@@ -321,8 +322,8 @@ function Contenido({
   // ancho; y, si hay sitio, el mapa a la izquierda con las cifras y la lista al lado.
   return (
     <div className="@container">
-      <div className="grid items-start gap-4 @4xl:grid-cols-[minmax(0,27rem)_minmax(0,1fr)] @6xl:grid-rows-[auto_1fr]">
-        <div className="space-y-4 @4xl:col-start-2 @4xl:row-start-1" data-zona="resumen">
+      <div className="grid items-start gap-5 @4xl:grid-cols-[minmax(0,27rem)_minmax(0,1fr)] @6xl:grid-rows-[auto_1fr]">
+        <div className="space-y-5 @4xl:col-start-2 @4xl:row-start-1" data-zona="resumen">
           {resumen.ultimo === null ? (
             <SinEstados />
           ) : (
@@ -360,13 +361,11 @@ export default function Panel() {
   const fallida = consultas.find((c) => c.data === undefined && c.isError)
 
   return (
-    <div className="space-y-4">
-      <header className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
-        <h1 className="text-texto text-2xl font-semibold">Panel</h1>
-        <p className="text-suave text-sm">
-          El último estado recibido de cada estación, con su fecha. Se actualiza solo cuando llega uno nuevo.
-        </p>
-      </header>
+    <div className="space-y-5">
+      <Encabezado
+        titulo="Panel"
+        bajada="El último estado recibido de cada estación, con su fecha. Se actualiza solo cuando llega uno nuevo."
+      />
       {fallida ? (
         <EstadoDeError
           error={fallida.error}

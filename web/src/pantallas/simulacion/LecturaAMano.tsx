@@ -107,7 +107,8 @@ export function LecturaAMano({ estaciones, estados, descripcionDe, ocupado }: Pr
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label htmlFor={`${id}-pm25`} className="rotulo mb-1 block">
-                PM2.5 (µg/m³)
+                {/* La unidad no va en mayúsculas: «ΜG/M³» se leería como miligramos. */}
+                PM2.5 (<span className="normal-case">µg/m³</span>)
               </label>
               <input
                 id={`${id}-pm25`}
@@ -120,7 +121,7 @@ export function LecturaAMano({ estaciones, estados, descripcionDe, ocupado }: Pr
             </div>
             <div>
               <label htmlFor={`${id}-pm10`} className="rotulo mb-1 block">
-                PM10 (µg/m³)
+                PM10 (<span className="normal-case">µg/m³</span>)
               </label>
               <input
                 id={`${id}-pm10`}
