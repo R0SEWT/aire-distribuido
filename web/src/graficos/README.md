@@ -33,6 +33,8 @@ Lo que comparten:
 - **`tramos.ts`**: `partirPorHuecos()`, dónde se corta la línea de una serie horaria. `CurvaSesion` no une dos
   puntos de la media separados por más de `HUECO_QUE_CORTA_H` horas (6): la media de 24 h no es continua a través
   de un hueco así.
+- **`ejeDeHoras.ts`**: `marcasEnHoraDeLima()`, las marcas de un eje de tiempo en horas redondas de Lima, esté
+  donde esté el navegador. No se usa `scaleTime().ticks()`, que redondea en la zona del navegador.
 - **`ejeDeRondas.ts`**: el eje horizontal que comparten `InerciaPorRonda` y `TiemposPorNodo`, para que una ronda
   quede en la misma vertical en los dos.
 

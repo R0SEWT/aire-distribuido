@@ -136,8 +136,10 @@ Si el GET traía algo más nuevo, su evento viene detrás por el WebSocket, que 
 que llegó último. De ahí sale lo demás:
 
 - **Un evento con el GET en viaje**, o anterior al GET: `pedirRegimenes` y `pedirRegimen` conservan el evento.
-- **Un corte**: en el instante en que el WebSocket se abre o se reabre se olvida de qué estaciones había eventos
-  (mientras estuvo caído se perdieron otros) y se vuelven a pedir todas las consultas marcadas `EN_VIVO`.
+- **Un corte**: en cuanto la conexión deja de estar abierta se olvida de qué estaciones había eventos (sin
+  WebSocket se pierden otros): mientras no vuelva, manda lo que responda un GET, y lo que la caché sabe de las
+  estaciones queda marcado para volver a pedirse al abrir una pantalla. Al abrirse o reabrirse el WebSocket se
+  vuelven a pedir todas las consultas marcadas `EN_VIVO` y todo el estado de las estaciones.
 - **El orden al entrar**: no hay que abrir el WebSocket antes de pedir. La primera conexión también refresca.
 
 Los tipos de `GET /api/regimenes` y de `EstadoEstacion` salen del contrato: si el contrato cambia, `pnpm tipos`.
@@ -149,7 +151,8 @@ registros, los dos fuera de React:
 
 - **`api/historia.ts`**, los estados recibidos. Mira la caché en vivo y anota cada estado que entra, por un GET
   o por un evento. Lo enciende el armazón (`useRegistroDeSesion()` en `armazon/Armazon.tsx`), así que anota desde
-  cualquier pantalla. Se guarda en `sessionStorage`: sobrevive a un F5. Se lee con `useHistoria(estacion)`.
+  cualquier pantalla. Se guarda en `sessionStorage`: sobrevive a un F5. Las escrituras se agrupan (a lo sumo una
+  cada medio segundo, y al ocultarse la página). Se lee con `useHistoria(estacion)`.
 - **`api/vistas.ts`**, las lecturas enviadas. El evento `estacion.regimen` no trae la lectura horaria: solo se
   conocen las que esta sesión mandó desde Simulación, y aquí quedan con lo que la API respondió a cada una
   (`anotarVista()`). Vive en memoria: se pierde al recargar. Se lee con `useLecturasVistas(estacion)`.
@@ -164,7 +167,14 @@ historial sigue ahí al volver a la pantalla, y sus rondas le llegan aunque no e
 **Todo lo que una sesión deja en la pestaña se limpia en un solo lugar**, `limpiarLoDeLaSesion()` en `App.tsx`,
 cuando el token deja de estar («Salir», vencimiento o 401): la caché de consultas, los eventos de la caché en
 vivo, los dos registros de arriba, el entrenamiento a la vista y el simulador, que se detiene. Lo que una pantalla
-guarde fuera de sus componentes se suma ahí; no se suscribe por su cuenta al fin de la sesión.
+guarde fuera de sus componentes se suma ahí; no se suscribe por su cuenta al fin de la sesión. La limpieza
+escucha al almacén de la sesión, no al desmontaje de un componente: con StrictMode (`pnpm dev`) React desmonta y
+vuelve a montar todo al cargar, y eso no es que la sesión haya terminado.
+
+**La respuesta de un pedido puede llegar cuando su sesión ya terminó.** Quien escriba en uno de esos almacenes
+con la respuesta de un pedido toma la marca de la sesión antes de pedir y la comprueba al responder
+(`marcarSesion()` en `sesion/epoca.ts`); `limpiarLoDeLaSesion()` la avanza. Si no, el siguiente que entre en la
+pestaña hereda lo que respondió tarde.
 
 ### Otros eventos
 
@@ -204,6 +214,8 @@ ellos marca su consulta `EN_VIVO` para volver a pedirla al reconectar.
   `diaDeInstante` para un instante; `fechaDia` y `diasEnLlano` para un día sin hora (`2021-12-14`); `lapso` y
   `duracion`; `numero`, `milisegundos`, `compacto`, `porciento` y `proporcion`; `enumerar` y `nombrePropio`. Si
   falta uno, se agrega ahí con su prueba (`formato.test.ts`), no en la carpeta de la pantalla.
+- **Un valor junto a su umbral se escribe de modo que se vea de qué lado cae**: `decimalesFrenteA(valor, umbral)`
+  da los decimales que hacen falta. 50.03 no se escribe «50.0» al lado de «supera el ECA (50)».
 - **Las mismas palabras para lo mismo**: «último estado recibido» (no hay un «ahora»), «media de 24 h» en un
   rótulo y «media de 24 horas» en una frase, «en alerta» y «sin alerta», «ECA de 24 h». El «excede el ECA» de un
   régimen se dice del grupo de lecturas, nunca de la estación.
@@ -215,3 +227,20 @@ ellos marca su consulta `EN_VIVO` para volver a pedirla al reconectar.
   (`pruebas/contraste.test.ts` lo comprueba sobre los tokens). El botón principal usa `bg-boton text-boton-texto`,
   no el acento con blanco.
 - **Sin `changeOrigin` en el proxy de Vite**: la API compara el origen y el WebSocket respondería 403.
+
+## Limitaciones conocidas
+
+- **El uso de CPU justo después de reiniciar la API.** `/api/metricas` publica el CPU acumulado del proceso y el
+  uso sale de dos consultas seguidas (`pantallas/cluster/cpu.ts`). Si la API se reinicia entre dos consultas y el
+  proceso nuevo ya lleva más tiempo y más CPU que la muestra anterior, las dos muestras parecen del mismo proceso
+  y ese punto de la curva sale mal. No hay con qué distinguirlo: las métricas no traen un identificador de
+  arranque. Se corrige solo con la consulta siguiente.
+- **«Sistema limpio» no mira la ventana de 24 horas.** Antes de simular, Simulación dice que el sistema está
+  limpio para un tramo si ninguna de sus estaciones tiene un estado de esas horas o posterior
+  (`pantallas/simulacion/limpieza.ts`). Un estado anterior al tramo por menos de 24 horas no impide simular, pero
+  sus lecturas siguen en la ventana de la API: las primeras medias del tramo las incluyen y pueden no coincidir
+  con lo esperado del archivo.
+- **Las lecturas horarias de la curva de la Estación no sobreviven a un F5** (`api/vistas.ts` vive en memoria);
+  los estados recibidos, sí.
+- **El formulario de Entrenamiento vuelve a sus valores por omisión** al salir de la pantalla y volver; el
+  entrenamiento a la vista, no.
