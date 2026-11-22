@@ -9,7 +9,8 @@ import { hora as horaEnLima, numero } from '../componentes/formato'
 import { diaCorto, horaDeLima } from '../pantallas/simulacion/fechas'
 import type { Lectura } from '../pantallas/simulacion/series'
 import type { Punto } from '../pantallas/simulacion/vistas'
-import { useDibujo, useMedidas } from './lienzoD3'
+import { useDibujo } from './dibujo'
+import { useMedida } from './medida'
 
 const HORA_MS = 3_600_000
 const ORDEN: readonly EstadoBanda[] = ['buena', 'moderada', 'mala', 'umbral_de_cuidado']
@@ -50,8 +51,11 @@ interface Marca {
   alerta: boolean
 }
 
+// Donde no hay con qué medir (las pruebas, en jsdom) se dibuja a este ancho.
+const POR_OMISION = { ancho: 760 }
+
 export function CurvaSimulacion({ estacion, horas, programadas, puntos, contaminante, eca, cortes, primeraMedia, primeraAlerta, alto: altoEnRem = 15.5 }: Props) {
-  const [contenedor, { ancho, rem }] = useMedidas<HTMLDivElement>()
+  const [contenedor, { ancho, rem }] = useMedida<HTMLDivElement>(POR_OMISION)
   const alto = altoEnRem * rem
   const nombre = contaminante === 'pm2_5' ? 'PM2.5' : 'PM10'
 

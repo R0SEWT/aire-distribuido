@@ -3,9 +3,8 @@
 // no los nodos.
 
 import { area, line, scaleLinear } from 'd3'
-import { useRef } from 'react'
 import { numero } from '../componentes/formato'
-import { useMedidas } from './medirAncho'
+import { useMedida } from './medida'
 
 export interface PuntoDeCpu {
   /** Segundos desde que arrancó la API. */
@@ -29,9 +28,11 @@ function topeRedondo(maximo: number): number {
   return pasos.find((p) => p >= maximo) ?? Math.ceil(maximo / 1000) * 1000
 }
 
+// Donde no hay con qué medir (las pruebas, en jsdom) se dibuja a este ancho.
+const POR_OMISION = { ancho: 640 }
+
 export function UsoDeCpuEnElTiempo({ serie, ventanaS }: Props) {
-  const caja = useRef<HTMLDivElement>(null)
-  const { ancho, rem } = useMedidas(caja)
+  const [caja, { ancho, rem }] = useMedida<HTMLDivElement>(POR_OMISION)
   const alto = ALTO_REM * rem
   const arriba = 1.25 * rem
   const abajo = alto - 1.25 * rem

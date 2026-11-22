@@ -11,7 +11,8 @@ import { BANDAS, estadoDeBanda } from '../componentes/bandas'
 import { fechaHora, numero } from '../componentes/formato'
 import { diaCorto, horaDeLima } from '../pantallas/simulacion/fechas'
 import type { Punto } from '../pantallas/simulacion/vistas'
-import { useDibujo, useMedidas } from './lienzoD3'
+import { useDibujo } from './dibujo'
+import { useMedida } from './medida'
 
 const HORA_MS = 3_600_000
 
@@ -61,8 +62,11 @@ function descripcion(c: Celda, minimo: number): string {
   return `${c.estacion} · ${cuando}: ${medida}. Media de 24 h: PM2.5 ${numero(p.media_pm2_5, 1)} y PM10 ${numero(p.media_pm10, 1)}. ${palabras(p, minimo)}`
 }
 
+// Donde no hay con qué medir (las pruebas, en jsdom) se dibuja a este ancho.
+const POR_OMISION = { ancho: 760 }
+
 export function RejillaEscenario({ horas, filas, minimo, cursor, elegida, alElegir }: Props) {
-  const [contenedor, { ancho, rem }] = useMedidas<HTMLDivElement>()
+  const [contenedor, { ancho, rem }] = useMedida<HTMLDivElement>(POR_OMISION)
 
   const izquierda = 6.25 * rem
   const derecha = 9.25 * rem

@@ -6,10 +6,9 @@
 // salen de los tokens por clases (stroke-acento-claro…): nada en línea.
 
 import { line, scaleLinear } from 'd3'
-import { useRef } from 'react'
 import { numero } from '../componentes/formato'
 import { compacto, ejeDeRondas, milisegundos } from './ejeDeRondas'
-import { useMedidas } from './medirAncho'
+import { useMedida } from './medida'
 
 export interface PuntoDeInercia {
   iter: number
@@ -28,9 +27,11 @@ interface Props {
 
 const ALTO_REM = 11.5
 
+// Donde no hay con qué medir (las pruebas, en jsdom) se dibuja a este ancho.
+const POR_OMISION = { ancho: 640 }
+
 export function InerciaPorRonda({ rondas, mostradas, total }: Props) {
-  const caja = useRef<HTMLDivElement>(null)
-  const { ancho, rem } = useMedidas(caja)
+  const [caja, { ancho, rem }] = useMedida<HTMLDivElement>(POR_OMISION)
   const alto = ALTO_REM * rem
   const arriba = 1.5 * rem
   const abajo = alto - 2 * rem

@@ -4,7 +4,8 @@
 
 import { scaleLinear, select } from 'd3'
 import { numero } from '../componentes/formato'
-import { useDibujo, useMedidas } from './lienzoD3'
+import { useDibujo } from './dibujo'
+import { useMedida } from './medida'
 
 export interface SenalDibujada {
   nombre: string
@@ -26,8 +27,11 @@ interface Barra {
   primera: boolean
 }
 
+// Donde no hay con qué medir (las pruebas, en jsdom) se dibuja a este ancho.
+const POR_OMISION = { ancho: 760 }
+
 export function SenalesAlerta({ senales }: { senales: readonly SenalDibujada[] }) {
-  const [contenedor, { ancho, rem }] = useMedidas<HTMLDivElement>()
+  const [contenedor, { ancho, rem }] = useMedida<HTMLDivElement>(POR_OMISION)
   const altoFila = 1.7 * rem
   const altoNombre = 1.6 * rem
   const entreGrupos = 0.9 * rem

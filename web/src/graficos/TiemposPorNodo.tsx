@@ -6,9 +6,8 @@
 // no es el CPU del nodo, que el protocolo no transporta.
 
 import { scaleLinear } from 'd3'
-import { useRef } from 'react'
 import { ejeDeRondas, milisegundos } from './ejeDeRondas'
-import { useMedidas } from './medirAncho'
+import { useMedida } from './medida'
 
 export interface RondaConTiempos {
   iter: number
@@ -34,9 +33,11 @@ function recortar(nombre: string): string {
   return nombre.length <= LETRAS_DEL_NOMBRE ? nombre : `${nombre.slice(0, LETRAS_DEL_NOMBRE - 1)}…`
 }
 
+// Donde no hay con qué medir (las pruebas, en jsdom) se dibuja a este ancho.
+const POR_OMISION = { ancho: 640 }
+
 export function TiemposPorNodo({ nodos, rondas, mostradas, total }: Props) {
-  const caja = useRef<HTMLDivElement>(null)
-  const { ancho, rem } = useMedidas(caja)
+  const [caja, { ancho, rem }] = useMedida<HTMLDivElement>(POR_OMISION)
   const eje = ejeDeRondas(Math.max(total ?? 0, rondas.length), ancho, rem)
 
   const fila = FILA_REM * rem

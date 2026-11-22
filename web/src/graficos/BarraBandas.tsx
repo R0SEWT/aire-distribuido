@@ -7,7 +7,8 @@ import { BANDAS } from '../componentes/bandas'
 import { numero } from '../componentes/formato'
 import { porciento } from '../pantallas/impacto/textos'
 import type { HorasPorBanda, NombreDeBanda } from '../api/datos'
-import { useDibujo, useMedidas } from './lienzoD3'
+import { useDibujo } from './dibujo'
+import { useMedida } from './medida'
 
 const ORDEN: readonly NombreDeBanda[] = ['buena', 'moderada', 'mala', 'umbral_de_cuidado']
 
@@ -26,8 +27,11 @@ interface Tramo {
   ancho: number
 }
 
+// Donde no hay con qué medir (las pruebas, en jsdom) se dibuja a este ancho.
+const POR_OMISION = { ancho: 760 }
+
 export function BarraBandas({ horas, de, alto = 0.75 }: Props) {
-  const [contenedor, { ancho, rem }] = useMedidas<HTMLDivElement>()
+  const [contenedor, { ancho, rem }] = useMedida<HTMLDivElement>(POR_OMISION)
   const total = ORDEN.reduce((suma, b) => suma + horas[b], 0)
   const altoPx = alto * rem
 

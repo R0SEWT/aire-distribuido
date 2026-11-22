@@ -11,7 +11,8 @@
 import { scaleLinear, select } from 'd3'
 import { numero } from '../componentes/formato'
 import type { Cuartiles } from '../api/datos'
-import { useDibujo, useMedidas } from './lienzoD3'
+import { useDibujo } from './dibujo'
+import { useMedida } from './medida'
 
 export interface FilaDeAnticipacion {
   /** La señal: «Lectura horaria», «Régimen alto». */
@@ -55,8 +56,11 @@ function pilas(horas: readonly number[]): Map<number, number> {
   return cuenta
 }
 
+// Donde no hay con qué medir (las pruebas, en jsdom) se dibuja a este ancho.
+const POR_OMISION = { ancho: 760 }
+
 export function AnticipacionEpisodios({ medidas, tope }: Props) {
-  const [contenedor, { ancho, rem }] = useMedidas<HTMLDivElement>()
+  const [contenedor, { ancho, rem }] = useMedida<HTMLDivElement>(POR_OMISION)
   const radio = 0.22 * rem
   const paso = 2 * radio + 1.5
   const altoTitulo = 1.7 * rem
