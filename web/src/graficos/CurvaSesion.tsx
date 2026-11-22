@@ -47,7 +47,7 @@ export function CurvaSesion({ puntos, eca, cortes, titulo, className = '' }: Pro
   const { ancho, alto, escala: k } = medida
 
   const dibujo = useMemo(() => {
-    const margen = { arriba: 22 * k, derecha: 124 * k, abajo: 40 * k, izquierda: 44 * k }
+    const margen = { arriba: 30 * k, derecha: 124 * k, abajo: 40 * k, izquierda: 44 * k }
     const conMedia = puntos.filter((p): p is { t: number; valor: number } => p.valor !== null)
     const ultimo = puntos[puntos.length - 1]
     const primero = puntos[0]
@@ -128,7 +128,7 @@ export function CurvaSesion({ puntos, eca, cortes, titulo, className = '' }: Pro
               </text>
             </g>
           ))}
-          <text x={margen.izquierda - 8 * k} y={10 * k} textAnchor="end" dominantBaseline="central" className="fill-tenue">
+          <text x={margen.izquierda - 8 * k} y={9 * k} textAnchor="end" dominantBaseline="central" className="fill-tenue">
             µg/m³
           </text>
           {dibujo.marcasX.map((m) => (

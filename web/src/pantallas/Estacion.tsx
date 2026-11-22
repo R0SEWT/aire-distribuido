@@ -73,8 +73,8 @@ function DeDondeSale() {
         {NORMA.pm2_5.eca} µg/m³ de PM2.5 o más de {NORMA.pm10.eca} µg/m³ de PM10.
       </p>
       <p>
-        La <strong>banda INCA</strong> (RM 181-2016-MINAM) se informa aparte del ECA y es la peor entre la de PM10 (hasta{' '}
-        {NORMA.pm10.cortes.join(', hasta ')} y más) y la de PM2.5 (hasta {NORMA.pm2_5.cortes.join(', hasta ')} y más).
+        La <strong>banda INCA</strong> (RM 181-2016-MINAM) se informa aparte del ECA y es la peor entre la de PM10 (cortes
+        en {NORMA.pm10.cortes.join(', ')} µg/m³) y la de PM2.5 (cortes en {NORMA.pm2_5.cortes.join(', ')} µg/m³).
       </p>
       <p>
         El <strong>régimen</strong> no es la alerta: es el grupo al que el modelo asignó la última lectura horaria. Que un
