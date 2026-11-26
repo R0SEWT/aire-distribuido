@@ -1,6 +1,4 @@
-<!-- h) Recomendaciones. -->
-
-# Recomendaciones
+<!-- h) Recomendaciones.  El título «# Recomendaciones» lo pone el esqueleto (informe.qmd o informe-pc4.qmd). -->
 
 ## Para el cargador: validar el tamaño de bloque
 

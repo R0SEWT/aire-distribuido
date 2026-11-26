@@ -1,0 +1,49 @@
+name: Web
+
+# La UI (web/): lint, pruebas y build. Sin filtros de paths, como el de Go: una
+# de sus pruebas compara web/Caddyfile con la página de /docs que sirve la API
+# (api/rutas.go), así que un cambio fuera de web/ también puede romperlo.
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  web:
+    runs-on: ubuntu-latest
+    name: web
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      # La versión de pnpm sale de packageManager, en web/package.json.
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          package_json_file: web/package.json
+
+      - name: Setup Node
+        uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: web/pnpm-lock.yaml
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Test
+        run: pnpm test
+
+      # tsc -b (TypeScript estricto) y vite build.
+      - name: Build
+        run: pnpm build

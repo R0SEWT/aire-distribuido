@@ -4,3 +4,8 @@
 # Las huellas de configuración se registran byte a byte en los reportes de Go.
 # Conservar LF evita que un checkout de Windows cambie esas huellas.
 configs/*.json text eol=lf
+
+# Evidencia historica: conservar los bytes CRLF del JSON cuyo hash muestran las capturas.
+# Solo estos dos archivos: las configuraciones siguen usando LF.
+reports/benchmark_cargador_windows.json -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
+docs/informe/generado/benchmark_cargador_windows.json -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol

@@ -48,6 +48,14 @@ type Enlace struct {
 	// descartaron. Es una métrica del panel de administración.
 	Rezagados int
 
+	// TiempoRonda es lo que tardó este nodo en la última ronda, medido en el
+	// coordinador: desde que empezó a enviarle su ITERAR hasta que llegó su
+	// PARCIAL (cómputo del nodo más la ida y vuelta por la red). Lo escribe la
+	// goroutine del nodo dentro de Ronda; se lee cuando Ronda ya volvió. Es lo
+	// que el panel muestra por nodo en vez del porcentaje de CPU, que el
+	// protocolo v1 no transmite (spec de la PC4, §5.2 y §13.2).
+	TiempoRonda time.Duration
+
 	ultimaIter int // última ronda enviada por esta conexión
 }
 
@@ -205,6 +213,8 @@ func (e *Enlace) ronda(iter, k int, centroides []float64, limite time.Time, plaz
 	// Se marca antes de enviar: desde este momento, cualquier PARCIAL de una
 	// ronda anterior es un rezagado.
 	e.ultimaIter = iter
+	inicio := time.Now()
+	defer func() { e.TiempoRonda = time.Since(inicio) }()
 	if err := e.enviar(Mensaje{Tipo: Iterar, Iter: iter, Centroides: centroides}, limite); err != nil {
 		return Mensaje{}, e.fallo("enviar ITERAR: %w", err)
 	}

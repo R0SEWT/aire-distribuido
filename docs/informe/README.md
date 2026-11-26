@@ -1,3 +1,60 @@
+# Informes de la PC3 y de la PC4 (Quarto → Word)
+
+Dos informes salen de esta carpeta. El de la **PC4** (`informe-pc4.qmd`, Entregable 2) **contiene el de la
+PC3**: incluye las secciones de `secciones/` tal como se entregaron y agrega las de `secciones/pc4/`
+(distribución, API, bases de datos, evidencias, y su carátula, resumen, objetivos, conclusiones,
+recomendaciones y anexos). El de la PC3 (`informe.qmd`) se sigue pudiendo renderizar igual que cuando
+se entregó.
+
+```bash
+bash render.sh                           # PC4: los tres 1ACC0065_PC4_202610_Informe_<código>.docx + participación
+ENTREGA=pc3 bash render.sh               # PC3, como se entregó
+./empaquetar-pc4.sh --preliminar         # prueba de la entrega de la PC4 en salida/entrega-pc4/
+./empaquetar-pc4.sh pc4                  # la entrega final, con el tag pc4 en el checkout
+```
+
+## Lo propio de la PC4
+
+**De dónde salen sus cifras.** `tablas.py` no copia nada a `generado/`: lee directo de `reports/` y del
+repositorio, y deja lo que falta o no cuadra en `generado/tablas/_estado_pc4.md` (el informe de la PC3
+no se entera). `--entrega pc4` hace que eso cuente para `--estricto` y `--final`.
+
+| Qué | Lo lee de | Lo escribe |
+|---|---|---|
+| La barrera en el laboratorio (`smoke`) | `reports/smoke_lab_*.json` | `cmd/smoke` |
+| K-Means distribuido frente a `cmd/entrenar` (`distribuido`) | `reports/kmeans_distribuido_*.json` (los `_local_` son en loopback; uno con nodos de otra dirección se rotula «laboratorio») | `cmd/distribuido` |
+| Latencia de la predicción (`api_latencia`) | `reports/api_latencia.json` | `cmd/carga` |
+| Por qué la alerta sale de la media de 24 h (`alerta`) | `reports/alerta_24h.json` | `go test ./ventana -run LaVentanaSobreElGold -actualizar` (necesita el gold) |
+| Experimentos de GPU, fuera del sistema (`gpu`, `mapa`) | `reports/kmeans_gpu/*.json`, `reports/mapa/lab_d56_*.json` | `lab/gpu/kmeans_gpu.py`; `cmd/mapa-coord` (PR #52, sin fusionar: aquí solo están sus evidencias) |
+| Rutas de la API (`api`) | `docs/api/openapi.yaml`, comprobado contra `api/servidor.go` | el equipo |
+| Entidades de MongoDB y Redis (`datos`) | `docs/datos/ejemplos/*.json`, `docs/datos/seed.js`, `reports/estaciones_ficha.csv` | el equipo |
+| Datos de prueba (`datos_prueba`) | `docs/postman/lecturas_prueba.csv` | `docs/postman/generar_lecturas.py` |
+| Pruebas por paquete (`pruebas`) | los `_test.go` | — |
+| Constantes que cita la prosa (`pc4`) | el código, `docker-compose.yml` y `go.mod` (`CONSTANTES` en `tablas.py`) | — |
+| Fragmentos de Go (`frag_*.md`) | el código (`FRAGMENTOS_PC4`) | — |
+| Salidas reales en texto (`salida_*.md`) | `capturas/pc4/*.txt` (`SALIDAS`) | la corrida de evidencias |
+
+Una cifra cuyo archivo todavía no existe sale en la prosa como `[PENDIENTE]`, a la vista; su tabla y su
+listado, con un aviso PENDIENTE. `empaquetar-pc4.sh` no arma la entrega final mientras quede alguno.
+
+**Capturas.** Van en `capturas/pc4/` con los nombres de `capturas/pc4/GUION.md` (más `kanban.png`, el
+tablero el día de la entrega). Cada una tiene en el informe su aviso `si-falta`, que desaparece cuando
+llega el PNG. Las evidencias del experimento de las 20 GPU están en `capturas/mapa/`.
+
+**Diagramas.** `../diagramas/entidades.png` (el modelo de datos, hecho en draw.io) y `despliegue.png`, con
+su `.drawio`; las posiciones del de despliegue salen de `../diagramas/generar-despliegue.py`. El de entidades
+es apaisado y en el informe va girado a página completa: `render.sh` arma la copia girada en
+`generado/local/entidades-girado.png` con ImageMagick, sin tocar el original.
+
+**Participación y uso de IA.** `_participacion-pc4.md` es la plantilla del Anexo D (la llenada va en
+`participacion-pc4.local.md`, no versionada; para el `.docx` suelto en el formato del curso,
+`participacion-pc4.local.yml` más `recursos/plantilla-participacion.docx`). El Anexo E declara el uso de
+IA y tiene un aviso PENDIENTE para completarlo con el equipo.
+
+**Antes de entregar la PC4**: traer `develop` con las evidencias, `equipo.local.yml` con los códigos
+reales, las capturas del guion, la participación llenada, el Anexo E revisado, `FETCH=1 bash render.sh`
+y `./empaquetar-pc4.sh pc4`.
+
 # Informe de la PC3 (Quarto → Word)
 
 Informe del Entregable 1 del Trabajo Final (PC3), en Quarto, renderizado a `.docx` como pide el
@@ -13,7 +70,7 @@ FETCH=1 bash render.sh                   # además hace git fetch antes del hist
 ```
 
 Requisitos: Quarto ≥ 1.4 (probado con 1.10.19), Python 3 con pandas (o `uv`, que lo instala al
-vuelo: `uv run tablas.py`; `render.sh` lo usa solo si el `python3` del sistema no tiene pandas) y git. Para renderizar no hace falta Jupyter ni LaTeX; para **regenerar las figuras** en
+vuelo: `uv run tablas.py`; `render.sh` lo usa solo si el `python3` del sistema no tiene pandas) y git. El informe de la PC4 pasa además los listados a imagen (`listados_imagen.py`): para eso usa Chrome (`google-chrome`) y pygments, que `render.sh` toma del `python3` del sistema o de `uv`; si falta alguno avisa y deja los listados como texto. Para renderizar no hace falta Jupyter ni LaTeX; para **regenerar las figuras** en
 local sí: los notebooks se corren con `jupyter nbconvert` (ver `notebooks/README.md`). El índice es un
 campo de Word: `render.sh` marca el `.docx` para que Word pregunte al abrirlo si actualiza los
 campos; hay que aceptar (o clic derecho sobre el índice → Actualizar campo).

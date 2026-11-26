@@ -1,0 +1,75 @@
+<mxGraphModel dx="1700" dy="1050" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1750" pageHeight="1100" math="0" shadow="0">
+  <root>
+    <mxCell id="0"/>
+    <mxCell id="1" parent="0"/>
+    <mxCell id="title" value="&lt;b&gt;Modelo de datos · PC4&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:13px&quot;&gt;Calidad del aire distribuida · persistencia MongoDB y caché Redis&lt;/font&gt;" style="text;html=1;align=left;verticalAlign=middle;fontSize=24;fontColor=#172B4D;" vertex="1" parent="1">
+      <mxGeometry x="40" y="20" width="930" height="60" as="geometry"/>
+    </mxCell>
+    <mxCell id="legend" value="&lt;b&gt;Notación&lt;/b&gt; &amp;nbsp; PK = identificador &amp;nbsp; FK = referencia lógica &amp;nbsp; → relación &amp;nbsp; ⇢ copia/derivación en caché" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F7F9FC;strokeColor=#A5ADBA;fontColor=#42526E;fontSize=12;align=left;spacingLeft=12;" vertex="1" parent="1">
+      <mxGeometry x="1010" y="28" width="650" height="44" as="geometry"/>
+    </mxCell>
+
+    <mxCell id="mongo_zone" value="&lt;b&gt;MongoDB · persistencia&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px&quot;&gt;Base aire_distribuido · documentos BSON durables&lt;/font&gt;" style="swimlane;html=1;startSize=58;rounded=1;fontSize=18;fontColor=#123D2A;fillColor=#EAF7EF;swimlaneFillColor=#FAFFFC;strokeColor=#2E7D4F;strokeWidth=2;horizontal=1;collapsible=0;" vertex="1" parent="1">
+      <mxGeometry x="40" y="100" width="1620" height="555" as="geometry"/>
+    </mxCell>
+
+    <mxCell id="estaciones" value="&lt;div style=&quot;text-align:left&quot;&gt;&lt;b style=&quot;font-size:16px&quot;&gt;estaciones&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#5E6C84&quot;&gt;Catálogo sembrado desde CSV&lt;/font&gt;&lt;hr&gt;&lt;b&gt;PK _id&lt;/b&gt;: código de estación (string)&lt;br&gt;objeto_fiscalizado: string | null&lt;br&gt;tipo_actividad: string | null&lt;br&gt;departamento, provincia, distrito&lt;br&gt;lat, lon: number&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacing=12;fillColor=#FFFFFF;strokeColor=#2E7D4F;strokeWidth=2;fontColor=#172B4D;fontSize=12;shadow=1;" vertex="1" parent="1">
+      <mxGeometry x="70" y="180" width="285" height="245" as="geometry"/>
+    </mxCell>
+    <mxCell id="predicciones" value="&lt;div style=&quot;text-align:left&quot;&gt;&lt;b style=&quot;font-size:16px&quot;&gt;predicciones&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#5E6C84&quot;&gt;Una lectura clasificada&lt;/font&gt;&lt;hr&gt;&lt;b&gt;PK _id&lt;/b&gt;: ObjectId&lt;br&gt;&lt;b&gt;FK estacion&lt;/b&gt;: estaciones._id&lt;br&gt;&lt;b&gt;FK modelo_id&lt;/b&gt;: modelos._id&lt;br&gt;ts, fecha_hora: Date&lt;br&gt;pm2_5, pm10, regimen, excede_eca&lt;br&gt;media_24h {pm2_5, pm10, lecturas}&lt;br&gt;alerta, inca, ms&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacing=12;fillColor=#FFFFFF;strokeColor=#2E7D4F;strokeWidth=2;fontColor=#172B4D;fontSize=12;shadow=1;" vertex="1" parent="1">
+      <mxGeometry x="385" y="180" width="300" height="270" as="geometry"/>
+    </mxCell>
+    <mxCell id="modelos" value="&lt;div style=&quot;text-align:left&quot;&gt;&lt;b style=&quot;font-size:16px&quot;&gt;modelos&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#5E6C84&quot;&gt;Modelo sembrado o entrenado&lt;/font&gt;&lt;hr&gt;&lt;b&gt;PK _id&lt;/b&gt;: id del modelo (string)&lt;br&gt;&lt;b&gt;FK origen&lt;/b&gt;: “sembrado” | entrenamiento._id&lt;br&gt;creado: Date · activo: boolean&lt;br&gt;receta · gold_sha256 · estandarizacion&lt;br&gt;centroides_std[][] · centroides[][]&lt;br&gt;regimenes[] · inercia · iteraciones&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacing=12;fillColor=#FFFFFF;strokeColor=#2E7D4F;strokeWidth=2;fontColor=#172B4D;fontSize=12;shadow=1;" vertex="1" parent="1">
+      <mxGeometry x="715" y="180" width="300" height="270" as="geometry"/>
+    </mxCell>
+    <mxCell id="entrenamientos" value="&lt;div style=&quot;text-align:left&quot;&gt;&lt;b style=&quot;font-size:16px&quot;&gt;entrenamientos&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#5E6C84&quot;&gt;Ejecución distribuida&lt;/font&gt;&lt;hr&gt;&lt;b&gt;PK _id&lt;/b&gt;: id del entrenamiento (string)&lt;br&gt;inicio, fin: Date · estado&lt;br&gt;parametros {nodos, replicas, semilla}&lt;br&gt;nodos[] {nombre, direccion, workers, rango}&lt;br&gt;rondas[] {iter, inercia, tiempos}&lt;br&gt;iteraciones, paro, dif_secuencial, ms_total&lt;br&gt;&lt;b&gt;FK modelo_id&lt;/b&gt;: modelos._id | null&lt;br&gt;aviso, error&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacing=12;fillColor=#FFFFFF;strokeColor=#2E7D4F;strokeWidth=2;fontColor=#172B4D;fontSize=12;shadow=1;" vertex="1" parent="1">
+      <mxGeometry x="1045" y="180" width="300" height="305" as="geometry"/>
+    </mxCell>
+    <mxCell id="eventos" value="&lt;div style=&quot;text-align:left&quot;&gt;&lt;b style=&quot;font-size:16px&quot;&gt;eventos_cluster&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#5E6C84&quot;&gt;Ciclo de vida de nodos&lt;/font&gt;&lt;hr&gt;&lt;b&gt;PK _id&lt;/b&gt;: ObjectId&lt;br&gt;ts: Date&lt;br&gt;tipo: alta | baja | error&lt;br&gt;&lt;b&gt;REF nodo&lt;/b&gt;: nombre lógico del nodo&lt;br&gt;detalle: string&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacing=12;fillColor=#FFFFFF;strokeColor=#2E7D4F;strokeWidth=2;fontColor=#172B4D;fontSize=12;shadow=1;" vertex="1" parent="1">
+      <mxGeometry x="1375" y="180" width="255" height="220" as="geometry"/>
+    </mxCell>
+
+    <mxCell id="mongo_note" value="&lt;b&gt;Índices&lt;/b&gt; · modelos: activo, creado &amp;nbsp;|&amp;nbsp; entrenamientos: inicio &amp;nbsp;|&amp;nbsp; predicciones: {estacion, ts} &amp;nbsp;|&amp;nbsp; eventos_cluster: ts" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#DFF2E6;strokeColor=#6FB98F;fontColor=#245B3D;fontSize=12;align=center;" vertex="1" parent="1">
+      <mxGeometry x="220" y="585" width="1260" height="42" as="geometry"/>
+    </mxCell>
+
+    <mxCell id="redis_zone" value="&lt;b&gt;Redis · caché&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px&quot;&gt;Valores JSON sin expiración · acceso rápido y arranque en caliente&lt;/font&gt;" style="swimlane;html=1;startSize=58;rounded=1;fontSize=18;fontColor=#7A1E2D;fillColor=#FDECEF;swimlaneFillColor=#FFF9FA;strokeColor=#C23B50;strokeWidth=2;horizontal=1;collapsible=0;" vertex="1" parent="1">
+      <mxGeometry x="40" y="695" width="1620" height="330" as="geometry"/>
+    </mxCell>
+    <mxCell id="redis_regimen" value="&lt;div style=&quot;text-align:left&quot;&gt;&lt;b style=&quot;font-size:16px&quot;&gt;estacion:{id}:regimen&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#5E6C84&quot;&gt;Una clave por estación&lt;/font&gt;&lt;hr&gt;&lt;b&gt;id&lt;/b&gt; = estaciones._id&lt;br&gt;fecha_hora, ts&lt;br&gt;regimen, excede_eca&lt;br&gt;media_24h {pm2_5, pm10, lecturas}&lt;br&gt;alerta, inca&lt;br&gt;&lt;font color=&quot;#7A1E2D&quot;&gt;Solo conserva la lectura más reciente.&lt;/font&gt;&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacing=12;fillColor=#FFFFFF;strokeColor=#C23B50;strokeWidth=2;fontColor=#172B4D;fontSize=12;shadow=1;" vertex="1" parent="1">
+      <mxGeometry x="220" y="780" width="340" height="215" as="geometry"/>
+    </mxCell>
+    <mxCell id="redis_modelo" value="&lt;div style=&quot;text-align:left&quot;&gt;&lt;b style=&quot;font-size:16px&quot;&gt;modelo:activo&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#5E6C84&quot;&gt;Clave única · arranque en caliente&lt;/font&gt;&lt;hr&gt;&lt;b&gt;_id&lt;/b&gt; = modelos._id&lt;br&gt;creado, origen, receta, gold_sha256&lt;br&gt;estandarizacion, centroides_std[][]&lt;br&gt;centroides[][], regimenes[]&lt;br&gt;inercia, iteraciones, activo&lt;br&gt;&lt;font color=&quot;#7A1E2D&quot;&gt;Copia JSON del modelo activo.&lt;/font&gt;&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacing=12;fillColor=#FFFFFF;strokeColor=#C23B50;strokeWidth=2;fontColor=#172B4D;fontSize=12;shadow=1;" vertex="1" parent="1">
+      <mxGeometry x="680" y="780" width="340" height="215" as="geometry"/>
+    </mxCell>
+    <mxCell id="redis_punto" value="&lt;div style=&quot;text-align:left&quot;&gt;&lt;b style=&quot;font-size:16px&quot;&gt;entrenamiento:{id}:punto&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#5E6C84&quot;&gt;Una clave por entrenamiento&lt;/font&gt;&lt;hr&gt;&lt;b&gt;id&lt;/b&gt; = entrenamientos._id&lt;br&gt;iter: integer&lt;br&gt;centroides: number[][]&lt;br&gt;&lt;font color=&quot;#7A1E2D&quot;&gt;Última ronda completa; registro de checkpoint, sin reanudación en PC4.&lt;/font&gt;&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacing=12;fillColor=#FFFFFF;strokeColor=#C23B50;strokeWidth=2;fontColor=#172B4D;fontSize=12;shadow=1;" vertex="1" parent="1">
+      <mxGeometry x="1140" y="780" width="340" height="190" as="geometry"/>
+    </mxCell>
+
+    <mxCell id="e_station_prediction" value="1 → N&lt;br&gt;estacion" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=ERmany;startArrow=ERone;strokeColor=#2E7D4F;strokeWidth=2;fontColor=#245B3D;fontSize=11;labelBackgroundColor=#FFFFFF;exitX=1;exitY=0.42;entryX=0;entryY=0.42;" edge="1" source="estaciones" target="predicciones" parent="1">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+    <mxCell id="e_model_prediction" value="1 → N&lt;br&gt;modelo_id" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=ERmany;startArrow=ERone;strokeColor=#2E7D4F;strokeWidth=2;fontColor=#245B3D;fontSize=11;labelBackgroundColor=#FFFFFF;exitX=0;exitY=0.72;entryX=1;entryY=0.72;" edge="1" source="modelos" target="predicciones" parent="1">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+    <mxCell id="e_training_model" value="0..1 modelo producido&lt;br&gt;modelo_id / origen" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=ERone;startArrow=ERone;dashed=0;strokeColor=#2E7D4F;strokeWidth=2;fontColor=#245B3D;fontSize=11;labelBackgroundColor=#FFFFFF;exitX=0;exitY=0.55;entryX=1;entryY=0.55;" edge="1" source="entrenamientos" target="modelos" parent="1">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+    <mxCell id="e_node_event" value="nodo ↔ nodos[].nombre" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=open;startArrow=open;dashed=1;dashPattern=4 3;strokeColor=#2E7D4F;strokeWidth=2;fontColor=#245B3D;fontSize=11;labelBackgroundColor=#FFFFFF;exitX=0;exitY=0.65;entryX=1;entryY=0.65;" edge="1" source="eventos" target="entrenamientos" parent="1">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+    <mxCell id="e_cache_regimen" value="último régimen por estación" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=open;dashed=1;dashPattern=5 4;strokeColor=#C23B50;strokeWidth=2;fontColor=#7A1E2D;fontSize=11;labelBackgroundColor=#FFFFFF;exitX=0.5;exitY=0;entryX=0.5;entryY=1;" edge="1" source="redis_regimen" target="predicciones" parent="1">
+      <mxGeometry relative="1" as="geometry">
+        <Array as="points"><mxPoint x="390" y="680"/><mxPoint x="535" y="680"/></Array>
+      </mxGeometry>
+    </mxCell>
+    <mxCell id="e_cache_model" value="copia del activo" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=open;dashed=1;dashPattern=5 4;strokeColor=#C23B50;strokeWidth=2;fontColor=#7A1E2D;fontSize=11;labelBackgroundColor=#FFFFFF;exitX=0.5;exitY=0;entryX=0.5;entryY=1;" edge="1" source="redis_modelo" target="modelos" parent="1">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+    <mxCell id="e_cache_checkpoint" value="checkpoint por ronda" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=open;dashed=1;dashPattern=5 4;strokeColor=#C23B50;strokeWidth=2;fontColor=#7A1E2D;fontSize=11;labelBackgroundColor=#FFFFFF;exitX=0.5;exitY=0;entryX=0.5;entryY=1;" edge="1" source="redis_punto" target="entrenamientos" parent="1">
+      <mxGeometry relative="1" as="geometry">
+        <Array as="points"><mxPoint x="1310" y="680"/><mxPoint x="1195" y="680"/></Array>
+      </mxGeometry>
+    </mxCell>
+  </root>
+</mxGraphModel>

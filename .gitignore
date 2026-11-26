@@ -27,6 +27,7 @@ data/*
 *.parquet
 *.csv
 !data/sample/*.csv
+!docs/postman/*.csv
 
 # Go
 /bin/
@@ -39,3 +40,5 @@ coverage.*
 
 docs/video/build/
 entrega-pc3/
+
+.DS_Store

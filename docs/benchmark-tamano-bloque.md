@@ -8,7 +8,9 @@ El piloto con `data/sample/oefa_real_muestra.csv` sirvió para probar el script 
 
 ## Resultados con el CSV completo
 
-La fuente es [`reports/benchmark_cargador_windows.json`](../reports/benchmark_cargador_windows.json), con una copia idéntica en `docs/informe/generado/`. Los cuatro registros conservan los tiempos originales y sus metadatos: binario compilado del commit `f49e4ca`, con el árbol modificado por un overlay temporal que omitía la llamada Linux a `Getrusage`. El cargador no usa esa función. Así se midió; al integrarse la compatibilidad de Windows de la PR #50, ya no hará falta ese overlay para reproducir.
+La fuente es [`reports/benchmark_cargador_windows.json`](../reports/benchmark_cargador_windows.json), con una copia idéntica en `docs/informe/generado/`. Los cuatro registros conservan los tiempos originales y sus metadatos: binario compilado del commit `f49e4ca`, con el árbol modificado por un overlay temporal que omitía la llamada Linux a `Getrusage`. El cargador no usa esa función. Así se midió. La compatibilidad de Windows de la PR #50 ya está integrada: las reproducciones actuales se compilan sin ese overlay; los metadatos de la medición histórica se conservan.
+
+Los dos JSON conservan los bytes de la evidencia de Windows, incluidos sus saltos CRLF. Las reglas específicas `-text` de `.gitattributes` impiden que Git los normalice y cambie el SHA-256 que muestran las capturas al clonar en otro sistema. Las configuraciones de Go siguen usando LF.
 
 Las tablas se generan desde esos registros con `tablas.py`:
 
@@ -27,6 +29,24 @@ Se necesita Python 3.11 o posterior y el binario de `cmd/cargar` compilado local
 go build -o /tmp/aire-cargar ./cmd/cargar
 python3 scripts/benchmark-bloques.py /tmp/aire-cargar data/bronze/oefa.csv /tmp/aire-bloques --tamanos 64,16,128
 ```
+
+En Windows, con Go y `uv` instalados, desde la raíz del repo:
+
+```powershell
+$cargadorBenchmark = Join-Path $env:TEMP 'aire-cargar.exe'
+$salidaBenchmark = Join-Path $env:TEMP ('aire-bloques-' + (Get-Date -Format 'yyyyMMdd-HHmmss'))
+go build -tags timetzdata -o $cargadorBenchmark ./cmd/cargar
+if ($LASTEXITCODE -ne 0) { throw 'No se pudo compilar el cargador' }
+uv run --quiet scripts/benchmark-bloques.py $cargadorBenchmark data/bronze/oefa.csv $salidaBenchmark --tamanos 64,16,128
+```
+
+La etiqueta `timetzdata` incorpora las zonas horarias en el ejecutable, incluida
+`America/Lima`; así no depende de encontrar `zoneinfo.zip` de Go al ejecutarlo
+en otro Windows.
+
+Para comprobar el control del piloto sin medir el CSV completo, añade `--piloto` al
+último comando; no sustituye la medición histórica del informe. Cada ejecución debe
+usar un directorio de salida nuevo.
 
 `--piloto` usa la muestra y tamaños en KiB. El script verifica el SHA-256 del CSV completo y las salidas, rechaza scripts `.bat`/`.cmd`, aplica un plazo por tamaño (`--timeout`, 600 segundos por defecto), guarda los JSON y `terminal.txt`, y registra el orden usado en `resumen.md`. El directorio de salida debe ser nuevo.
 

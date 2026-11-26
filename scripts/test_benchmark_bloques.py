@@ -44,6 +44,13 @@ class BenchmarkWindows(unittest.TestCase):
         informe.benchmark_cargador_windows()
         return informe
 
+    def test_fuente_historica_conserva_bytes_y_huella_de_la_captura(self):
+        fuente = RAIZ / "reports/benchmark_cargador_windows.json"
+        copia = RAIZ / "docs/informe/generado/benchmark_cargador_windows.json"
+        self.assertEqual(fuente.read_bytes(), copia.read_bytes())
+        self.assertEqual(benchmark.sha256(fuente),
+                         "12b54adc85696aea67f0d0c9e6d94bb6982e3ef17686604bd433fcdb4cd7022b")
+
     def test_orden_de_json_no_cambia_cifras_ni_tablas(self):
         original = self.informe(self.datos)
         tabla = (self.ruta / "benchmark_cargador_windows_workers.md").read_text(encoding="utf-8")
@@ -127,7 +134,7 @@ class BenchmarkWindows(unittest.TestCase):
 
         def cargador_simulado(comando, **opciones):
             self.assertEqual(comando[0], "cargar")
-            self.assertEqual(opciones["executable"], argv[1])
+            self.assertEqual(Path(opciones["executable"]), Path(argv[1]).resolve())
             bloques.append(comando[comando.index("-bloque") + 1])
             self.assertIs(opciones["shell"], False)
             self.assertEqual(opciones["timeout"], 600)

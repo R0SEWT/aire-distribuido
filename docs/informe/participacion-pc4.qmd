@@ -1,0 +1,10 @@
+---
+# Reporte de participación de la PC4, suelto: el archivo que sube el coordinador junto con su informe.
+# El contenido es el del Anexo D. _participacion-pc4.md es la plantilla versionada; la llenada va en
+# participacion-pc4.local.md, que no se versiona. render.sh copia la que corresponda a
+# generado/local/_participacion-pc4.md.
+lang: es
+number-sections: false
+---
+
+{{< include generado/local/_participacion-pc4.md >}}

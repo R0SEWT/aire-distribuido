@@ -334,6 +334,20 @@ memoria y responde `LISTO {n, huella}`.
 - **Tamaño de los rangos**: iguales en la línea base. Proporcionales al rendimiento medido de cada nodo
   (filas por segundo en una ronda de calibración) es una extensión: iguala el tiempo de cómputo, pero no la
   latencia (§4.5).
+- **Réplicas virtuales [decisión de la PC4]**: para medir el clúster con datos grandes sin escribir un CSV
+  enorme, el coordinador acepta `-replicas r` y reparte una **tabla virtual** de $r \cdot N$ filas, donde la
+  fila $i$ es la fila $i \bmod N$ del gold. Los rangos de `CARGAR` se dan sobre esa tabla, la huella sigue
+  siendo la del gold real y el nodo arma su rango tomando cada fila con módulo, copiándola en memoria: el
+  cómputo por ronda es el de $r \cdot N$ filas de verdad. No cambia el formato de ningún mensaje (los nodos
+  con GPU en Python hablan el mismo protocolo): la convención es solo que un `CARGAR` puede pedir filas más
+  allá del final del gold, y todo nodo tiene que aceptarlo. Con $r$ réplicas cada fila aparece $r$ veces, así
+  que sumas y conteos se multiplican por $r$: los centroides y las iteraciones son los de $r = 1$ salvo
+  redondeo, la inercia es $r$ veces y cada cluster tiene $r$ veces sus filas (lo comprueba
+  `TestReplicasVirtualesDanLosMismosCentroides`). Lo que cambia es el costo, que es lo que se quiere medir.
+  Como el nodo copia sus filas, cada uno tiene un **tope de filas** por `CARGAR` (`-max-filas`, 25 millones
+  por omisión: 400 MB con dos features, y ×300 réplicas del gold entran en un solo nodo). Un rango más
+  grande se responde con `ERROR` sin reservar memoria, y el coordinador rechaza antes de esperar a los nodos
+  un `-replicas` que pasaría ese tope, con el máximo en el error.
 
 ### 4.4 Una iteración
 
@@ -405,11 +419,11 @@ aplican a ese tipo. Implementado en [`protocolo/`](../protocolo/).
 | Tipo | Sentido | Campos | Cuándo | Qué comprueba quien lo recibe |
 |---|---|---|---|---|
 | `HOLA` | nodo → coord. | `version`, `nodo`, `workers` | al conectarse | versión igual a `protocolo.Version`; si no, responde `ERROR` y lo rechaza |
-| `CARGAR` | coord. → nodo | `rango {desde, hasta}`, `huella` | una vez por corrida | el nodo verifica que su gold tenga esa huella y ese rango |
+| `CARGAR` | coord. → nodo | `rango {desde, hasta}`, `huella` | una vez por corrida | el nodo verifica que su gold tenga esa huella; las filas desde $N$ en adelante las toma con módulo (réplicas virtuales, §4.3); un rango de más filas que su tope lo rechaza con `ERROR` |
 | `LISTO` | nodo → coord. | `n`, `huella` | con el rango en memoria | `n = hasta − desde` y la misma huella |
 | `ITERAR` | coord. → nodo | `iter`, `centroides` (k·D) | cada ronda | `iter` positivo, centroides finitos |
 | `PARCIAL` | nodo → coord. | `iter`, `sumas` (k·D), `conteos` (k), `inercia` | respuesta a `ITERAR` | ronda en curso; forma; conteos que suman el rango |
-| `FIN` | coord. → nodo | — | fin de la corrida | el nodo libera el rango y espera otro `CARGAR` |
+| `FIN` | coord. → nodo | — | fin de la corrida | el nodo libera el rango y termina la sesión: la conexión se cierra y el nodo vuelve a llamar (otro `HOLA`) |
 | `PING` / `PONG` | coord. ↔ nodo | — | fuera de las rondas | latencia (`Latido`) y que el nodo sigue vivo |
 | `ERROR` | ambos | `mensaje` | cuando algo falla | aborta lo que se estaba haciendo |
 
@@ -429,12 +443,20 @@ Estados del nodo:
 ```
              HOLA                  CARGAR / LISTO
  conectado ───────▶  libre  ───────────────────────▶  cargado  ◀──┐
-                       ▲                                 │  │      │
-                       └──────────────── FIN ────────────┘  └──────┘
-                                                  ITERAR / PARCIAL, una vez por ronda
+                      │ ▲                             │  │  │     │
+                      │ └─ CARGAR que falla / ERROR ──┘  │  └─────┘
+                      │                                  │    ITERAR / PARCIAL, una vez por ronda
+                      └────────────── FIN ───────────────┤    (o un CARGAR nuevo que sale bien)
+                                                         ▼
+                              fin de la sesión: se cierra la conexión y el nodo
+                              vuelve a llamar y se presenta con otro HOLA
 
- En cualquier estado: PING → PONG.  ERROR o cierre de la conexión: fin de la sesión.
+ En cualquier estado: PING → PONG.  ERROR del coordinador o cierre de la conexión: fin de la sesión.
 ```
+
+`FIN` no devuelve al nodo al estado libre de la misma conexión: `cluster.Terminar` manda el `FIN` y cierra,
+y `Nodo.Correr` vuelve a llamar. Varias corridas seguidas sobre las mismas conexiones (otra semilla) son
+varios Lloyd antes del `FIN`, con o sin un `CARGAR` nuevo entre ellos.
 
 Reglas:
 
@@ -483,6 +505,7 @@ ronda 1 abortada: nodo "mudo": no envió su PARCIAL dentro del plazo (100ms): le
 
 | Falla | Qué ve el coordinador | Qué pasa |
 |---|---|---|
+| Nodo que se apaga después de su `HOLA`, mientras se espera a los demás | no responde el `PING` con que se cierra la espera de nodos | se suelta y la espera sigue con otro nodo hasta el plazo |
 | Nodo caído, sesión de Colab muerta | fin de la conexión o plazo vencido | la ronda se aborta; el error nombra al nodo |
 | Nodo lento | plazo vencido; su `PARCIAL` llega después | la ronda se aborta; el rezagado se descarta por su `iter` |
 | Red partida | plazo vencido | igual que un nodo caído |
@@ -616,8 +639,16 @@ compila `cargar` y `entrenar`; Docker Compose completo llega con la PC4.
   escritura vencido cierra la conexión; `Ronda` rechaza un límite vencido y nodos fuera de orden sin escribir
   nada; versión, huella, forma y conservación se verifican.
 
-Lo que **no** existe todavía, y es la PC4: el listener TCP, el binario del nodo, el bucle de Lloyd sobre
-`Ronda`, el reparto de rangos, la reasignación y el modelo en Promela.
+Lo que la PC4 agregó encima, en `cluster/`: el nodo (`cmd/nodo`: `CARGAR` con la huella, `ITERAR` con su
+pool de workers en orden de chunk, `FIN`), la espera de nodos, el reparto en rangos contiguos iguales, la
+carga con su barrera y Lloyd sobre `Ronda`, que fusiona en orden de nodo y cierra cada iteración con
+`kmeans.CerrarIteracion`, la misma función que en una máquina. `cmd/distribuido` es el coordinador de
+línea de comandos: escribe `reports/kmeans_distribuido.json` con el modelo, los rangos, el tiempo de cada
+ronda separado del de la fusión y la diferencia contra `reports/kmeans.json`. Con un nodo y el chunk de la
+receta el resultado es el de `cmd/entrenar` bit a bit; con más nodos, igual salvo los últimos bits.
+
+Lo que **no** existe todavía: la reasignación de rangos, el paralelismo por semillas sobre el clúster y
+el modelo en Promela.
 
 ## Referencias
 

@@ -68,7 +68,8 @@ entra en un nivel alto de PM2,5 y PM10, y con cuánta anticipación eso avisa de
 supera el Estándar de Calidad Ambiental (ECA)**. La PC3 responde el dónde y el cuándo; la
 anticipación se mide en el TB2.
 
-El sistema tiene las cuatro partes del enunciado, todas en Go con la biblioteca estándar:
+El sistema tiene las cuatro partes del enunciado, todas en Go con la biblioteca estándar (la única
+dependencia son los drivers de MongoDB y Redis, confinados en `almacen/mongo` y `almacen/redis`):
 
 | Parte | Qué hace | Entregable |
 |---|---|---|
@@ -190,7 +191,7 @@ capa.
 
 | Entregable | Qué lleva | Semana | Estado |
 |---|---|---:|---|
-| PC3 · Entregable 1 | Cargador concurrente, K-Means paralelo, diseño distribuido e informe | 11 | Entregada: tag [`pc3.1`](https://github.com/R0SEWT/aire-distribuido/tree/pc3.1) |
+| PC3 · Entregable 1 | Cargador concurrente, K-Means paralelo, diseño distribuido e informe | 11 | Entregada: tag [`pc3.1`](https://github.com/R0SEWT/aire-distribuido/tree/pc3.1) · [diapositivas](https://uni.rosewt.dev/concurrente/pc3/) |
 | PC4 · Entregable 2 | Clúster de nodos por TCP, API coordinadora, Docker Compose y el protocolo verificado con Spin | 13 | Pendiente |
 | TB2 · Entregable final | Frontend con el mapa y las alertas, anticipación de los episodios, video | 15 | Pendiente |
 
@@ -202,7 +203,7 @@ Las tareas viven en el [tablero Kanban](https://github.com/users/R0SEWT/projects
 
 ## Empezar
 
-**Requisitos:** Go 1.26. Docker es opcional. Para renderizar el informe hacen falta además
+**Requisitos:** Go 1.26. Docker es opcional. Para la UI (paso 9), Node 22 y pnpm. Para renderizar el informe hacen falta además
 [Quarto](https://quarto.org) y Python con pandas, o [uv](https://docs.astral.sh/uv/).
 
 **1. Pruebas.** Toda prueba de concurrencia corre con el detector de carreras:
@@ -243,8 +244,75 @@ go run ./cmd/cargar -entrada data/bronze/oefa.csv -bench 10 -workers 1,2,4,8,12
 go run ./cmd/benchmark -workers 1,2,4,8,12
 ```
 
-**5. En Docker.** La imagen final es distroless y corre sin root, así que las carpetas montadas
-tienen que admitir escritura:
+**5. La API de la PC4.** Siembra el modelo desde `reports/` y sirve Swagger UI en
+<http://localhost:8080/docs>. Una predicción trae el régimen de la lectura y, aparte, la media de
+24 h de su estación con la alerta frente al ECA y la banda INCA. No arranca sin el secreto del JWT
+ni sin usuarios (`usuario:clave:rol`, con rol `usuario` o `admin`):
+
+```bash
+export JWT_SECRETO=$(openssl rand -hex 32)
+export API_USUARIOS='ana:una-clave-larga:admin,demo:otra-clave:usuario'
+go run ./cmd/api
+```
+
+Así guarda en memoria. Con `MONGO_URI` (y `MONGO_DB`) guarda las predicciones y el modelo en
+MongoDB, y con `REDIS_ADDR`, el último régimen de cada estación y el modelo activo en Redis;
+`/api/salud` dice si cada base responde. Con Docker Compose ya vienen puestas (paso 6).
+
+Para desarrollo, `go run ./cmd/api -demo` arranca sin `API_USUARIOS` con los usuarios de
+demostración `demo`/`demo` (rol usuario) y `admin`/`admin` (rol admin), y lo avisa en el log.
+Solo en una máquina propia: con `-demo`, cualquiera que alcance el puerto entra como admin.
+
+La API no tiene registro: las cuentas son las de `API_USUARIOS`. `API_INVITADO=<usuario>` habilita
+el **ingreso de invitado**: `POST /api/auth/invitado` da, sin pedir clave, un token de ese usuario,
+que tiene que estar en `API_USUARIOS` con el rol `usuario` (si no existe o es `admin`, la API no
+arranca y dice por qué). Sin la variable, esa ruta responde 404; con `-demo`, el invitado es `demo`.
+Un invitado puede todo lo del rol `usuario`, también mandar lecturas: en una máquina pública,
+habilitarlo es una decisión.
+
+La API es también el **coordinador del clúster**: escucha a los nodos por TCP en el 7070
+(`-nodos-addr`) y, con el gold a mano (`-gold`, por omisión `data/gold/oefa_features.csv`), un
+admin lanza un entrenamiento distribuido por HTTP y sigue las rondas por WebSocket (`/ws`). Cada
+nodo necesita el mismo gold:
+
+```bash
+go run ./cmd/nodo -coordinador localhost:7070 -nombre nodo-1 -gold data/gold/oefa_features.csv
+```
+
+```bash
+curl -s -X POST localhost:8080/api/entrenamientos -H "Authorization: Bearer $TOKEN" -d '{"nodos": 3, "replicas": 1, "semilla": 42}'
+```
+
+Con `replicas = 1` el modelo entrenado pasa a ser el activo, siempre que su diferencia con el
+K-Means secuencial (`dif_secuencial`) no pase de 1e-9; con un solo nodo es el de
+`reports/kmeans.json` bit a bit. Al terminar un entrenamiento la API cierra las conexiones y los
+nodos vuelven a llamar solos después de su pausa entre intentos (`-espera`, 2 s): durante esos
+2 s el pool está vacío y otro `POST` recibe 422. Cada nodo necesita un nombre único; sin `-nombre`
+usa el del equipo más su PID. La UI del TB2 (paso 9) se sirve desde el mismo origen que la API y
+no necesita CORS; `CORS_ORIGENES` (por ejemplo `http://localhost:5173`) queda para llamarla desde
+otro origen.
+
+**6. En Docker.** `docker-compose.yml` levanta la UI, la API, los nodos de cómputo, MongoDB y
+Redis; el seed crea las colecciones y carga las estaciones en cada arranque. La API y los nodos leen el gold
+de `data/gold` (o de `GOLD_DIR`), montado de solo lectura, y los nodos llaman a la API por la red
+interna del Compose:
+
+```bash
+cp .env.example .env                       # y completar JWT_SECRETO y API_USUARIOS
+docker compose up --build --scale nodo=3   # UI en http://localhost:8081, API en http://localhost:8080/docs
+```
+
+Un entrenamiento lanzado por HTTP queda en MongoDB con sus rondas; el modelo que activa se guarda
+en MongoDB y en Redis, y la API vuelve a arrancar con él.
+
+La API responde cada predicción sin esperar a las bases: la encola y la escribe por lotes. Si una
+cola se llena, la predicción responde igual pero no se guarda, y `/api/metricas` lo cuenta en
+`escrituras_descartadas`. El Compose arranca la API con `-cola 32768` (por omisión son 1024) para
+que una ráfaga de decenas de miles de predicciones quepa entera.
+
+Qué guarda cada base, cómo consultarla y cómo correr las pruebas de integración está en
+[`docs/datos/README.md`](docs/datos/README.md). La misma imagen sirve suelta para los comandos de
+la PC3; es distroless y corre sin root, así que las carpetas montadas tienen que admitir escritura:
 
 ```bash
 docker build -t aire-distribuido .
@@ -252,11 +320,58 @@ docker run --rm -v "$PWD/data:/app/data" -v "$PWD/reports:/app/reports" \
   aire-distribuido cargar -entrada data/bronze/oefa.csv
 ```
 
-**6. El informe.** Deja un `.docx` por integrante en `docs/informe/salida/`:
+**7. Las evidencias de la API.** Con el Compose arriba y tres nodos, `cmd/carga` mide
+`POST /api/predicciones` del lado del cliente con 1, 4, 16 y 64 clientes concurrentes y escribe
+`reports/api_latencia.json` (p50, p95, p99, máximo, pedidos por segundo y errores por nivel); sale
+con 1 si algún nivel tiene errores o un p99 de 100 ms o más. La API responde antes de escribir en
+las bases, así que la latencia no dice si lo predicho quedó guardado: con la clave de un admin,
+`cmd/carga` lee `/api/metricas` antes y después y deja en el informe cuántas predicciones se
+escribieron, se descartaron y fallaron en MongoDB y en Redis durante la corrida:
+
+```bash
+CARGA_CLAVE=<la clave de demo en API_USUARIOS> CARGA_CLAVE_ADMIN=<la de admin> go run ./cmd/carga
+```
+
+La colección de Postman prueba cada ruta contra el contrato (código, forma de la respuesta y
+menos de 100 ms) y el Runner recorre `docs/postman/lecturas_prueba.csv`, 78 lecturas reales con
+el régimen, la media de 24 h, la alerta y el INCA esperados. Cómo usarla, en Postman o con
+`newman`, está en [`docs/postman/README.md`](docs/postman/README.md); las salidas de una corrida
+real y el guion de las capturas, en [`docs/informe/capturas/pc4/`](docs/informe/capturas/pc4/).
+
+**8. El informe.** Deja un `.docx` por integrante en `docs/informe/salida/`:
 
 ```bash
 bash docs/informe/render.sh
 ```
+
+**9. La UI (TB2).** `web/` es la SPA: React, Vite, TypeScript y Tailwind, con pnpm. Con el
+Compose arriba (paso 6) ya está en <http://localhost:8081>: el servicio `web` es un Caddy que sirve
+la UI compilada y pasa `/api`, `/ws`, `/docs` y `/openapi.yaml` a la API, todo en el mismo origen,
+con las cabeceras de seguridad de [`web/Caddyfile`](web/Caddyfile). Se entra con un usuario de
+`API_USUARIOS`; el token dura una hora y no se renueva (`JWT_DURACION=4h` en `.env` lo alarga para
+una demo). No hay registro: debajo del formulario, «No pienso crearme una cuenta aquí» deja pasar
+como invitado si el `.env` tiene `API_INVITADO` (paso 5).
+
+Para desarrollar, Vite sirve la UI en <http://localhost:5173> y pasa esas mismas rutas a la API
+local (la del paso 5 o la del Compose, en el 8080; otra, con `API_URL`). El gestor de paquetes es
+pnpm, no npm: el lockfile es `web/pnpm-lock.yaml`.
+
+```bash
+cd web
+pnpm install
+pnpm dev          # la UI con recarga en caliente
+pnpm test         # Vitest y Testing Library
+pnpm lint && pnpm build
+pnpm tipos        # regenera src/api/contrato.d.ts desde docs/api/openapi.yaml
+```
+
+Los tipos de la API se generan del contrato y se versionan: después de cambiar
+`docs/api/openapi.yaml` se corre `pnpm tipos`. Los datos estáticos de la UI (`impacto.json`,
+`series.json` y `peru.geojson`) están en `web/public/datos/`, los escriben `scripts/impacto.py` y
+`scripts/mapa_peru.py`, y su [`README.md`](web/public/datos/README.md) dice de dónde sale cada uno.
+Cada pantalla vive en su archivo de `web/src/pantallas/` y [`web/README.md`](web/README.md) explica
+cómo construirla; el diseño de todo está en
+[`docs/specs/2026-11-21-frontend-tb2-design.md`](docs/specs/2026-11-21-frontend-tb2-design.md).
 
 <p align="right">(<a href="#inicio">volver arriba</a>)</p>
 
@@ -269,11 +384,16 @@ bash docs/informe/render.sh
 | `datos/`, `cmd/cargar/` | Parte A: el cargador concurrente. Bloques por bytes, workers, recolector en orden, pivot por estación y z-score por chunk. |
 | `kmeans/`, `cmd/entrenar/`, `cmd/benchmark/` | Parte B: el K-Means secuencial y el paralelo, las semillas, los regímenes frente al ECA, el codo y el benchmark. |
 | `protocolo/` | Los mensajes entre el coordinador y los nodos, su codificación y la barrera de una ronda, con pruebas. |
+| `cluster/`, `cmd/nodo/`, `cmd/distribuido/`, `cmd/smoke/`, `lab/` | El clúster de la PC4: el nodo que llama al coordinador y calcula su rango, el K-Means distribuido (rangos contiguos, una barrera de red por iteración, fusión en orden de nodo, `reports/kmeans_distribuido.json`), el smoke test de latidos y el paquete para los Windows del laboratorio. |
 | `configs/` | `limpieza.json` (columnas, unidades, centinelas y rangos) y `kmeans.json` (la receta congelada). |
 | `reports/` | Lo que escriben los comandos: conteos, estandarización, modelo, regímenes, benchmarks y auditoría. |
+| `api/`, `modelo/`, `ventana/`, `almacen/`, `cmd/api/`, `docs/api/` | Parte C: la API coordinadora. JWT HS256, latencia por ruta, el modelo sembrado desde `reports/` y la predicción con el contrato de `kmeans`, la media de 24 h por estación con la alerta frente al ECA y la banda INCA, el almacén detrás de interfaces (con un doble en memoria) y el contrato OpenAPI que se sirve tal cual. |
+| `cmd/carga/`, `docs/postman/` | Las evidencias de la parte C: la prueba de carga de la predicción, la colección de Postman y los datos de prueba con lo que la API tiene que responder. |
+| `web/` | La UI del TB2: la SPA (el armazón, la sesión, el cliente de la API con los tipos del contrato y el WebSocket, los componentes base y una pantalla por archivo) y la imagen con Caddy que la sirve en Docker Compose. |
 | `notebooks/` | El laboratorio en Colab: EDA, calibración, auditoría y figuras, procedencia y mapa. |
 | `docs/informe/` | El informe en Quarto, con su plantilla de Word, el filtro y el empaquetado de la entrega. |
 | `docs/diagramas/` | Los diagramas en draw.io y sus PNG. |
+| `docs/presentacion/` | La exposición: la historia en sencillo, el deck en Quarto, reveal.js y D3, y cómo se publica en uni.rosewt.dev/concurrente/. |
 | `docs/diseno.md`, `docs/specs/` | El diseño del sistema y las specs de cada parte. |
 | `data/` | Solo el README y la muestra; el resto no se versiona. |
 

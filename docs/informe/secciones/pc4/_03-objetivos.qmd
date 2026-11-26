@@ -1,0 +1,53 @@
+<!-- e) Objetivos del informe de la PC4. Los del Entregable 1 se copian tal como se entregaron
+(secciones/_03-objetivos.qmd, que sigue siendo la sección del informe de la PC3). -->
+
+# Objetivos
+
+## Objetivo general
+
+Construir en Go un sistema de alertas de calidad del aire sobre las lecturas de la red de OEFA: un
+cargador concurrente que las limpie y estandarice, un K-Means que las agrupe en regímenes de
+contaminación entrenado en un clúster de nodos, y una API que coordine ese clúster, asigne cada
+lectura nueva a su régimen en menos de 100 milisegundos y diga si la estación supera el ECA, con sus
+datos en MongoDB y Redis y todo desplegado con Docker Compose.
+
+## Objetivos específicos del Entregable 2 (PC4)
+
+1. Ejecutar el K-Means en un clúster de nodos que se comunican por sockets TCP con el protocolo
+   diseñado en la PC3, con el reparto de la tabla en rangos, una barrera con plazo por iteración y la
+   fusión de los parciales en un orden fijo.
+2. Justificar la topología de red con mediciones sobre equipos reales, y comprobar que el modelo
+   distribuido es el de una sola máquina: bit a bit con un nodo y dentro de una tolerancia con
+   varios.
+3. Decidir y probar qué pasa cuando un nodo cae o no responde: que la corrida aborte con un error
+   que lo nombre y no publique un modelo a medias.
+4. Desarrollar una API REST en Go, documentada con Swagger y protegida con JWT, que prediga el
+   régimen de una lectura en menos de 100 milisegundos, con la latencia medida.
+5. Hacer de la API el coordinador del clúster: lanzar un entrenamiento distribuido por HTTP, seguirlo
+   ronda por ronda y activar el modelo nuevo sin detener las predicciones.
+6. Diseñar las entidades de MongoDB y de Redis, y dejar en ellas registros reales escritos por el
+   sistema.
+7. Evidenciar el funcionamiento con pruebas automáticas, datos de prueba, una colección de Postman y
+   capturas de corridas reales, y desplegar todo con Docker Compose.
+
+## Objetivos específicos del Entregable 1 (PC3)
+
+Son los del informe de la PC3, que este contiene; sus resultados están de la @sec-caso a la
+@sec-evidencias.
+
+1. Cargar, pivotar, limpiar y estandarizar las filas largas del CSV de OEFA con un cargador
+   concurrente (goroutines y canales), contando lo que descarta cada regla y verificando que las
+   filas leídas sean las procesadas más las descartadas.
+2. Medir el speedup del cargador con 1, 2, 4, 8 y 12 workers sobre el archivo completo, con mediana de
+   varias repeticiones e intervalo de confianza.
+3. Portar del Trabajo Parcial el K-Means (Lloyd con inicialización k-means++) y ejecutarlo en
+   paralelo con un worker pool, con un resultado idéntico bit a bit para cualquier número de
+   workers, probado con `go test -race`.
+4. Calibrar las features y el número de clusters en un laboratorio aparte (Colab) y congelar la
+   receta en `configs/kmeans.json`, que Go lee sin decidir nada.
+5. Caracterizar cada régimen: su perfil en unidades originales, su etiqueta frente al ECA y su
+   distribución por estación y por hora del día.
+6. Diseñar el K-Means distribuido y el protocolo entre el coordinador y los nodos (sumas parciales,
+   barrera por iteración, timeout) que la PC4 implementa.
+7. Documentar la arquitectura de las cuatro partes del sistema y llevar el proyecto en GitHub con
+   Git Flow y un tablero Kanban.

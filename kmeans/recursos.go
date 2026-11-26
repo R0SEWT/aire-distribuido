@@ -1,9 +1,6 @@
 package kmeans
 
-import (
-	"runtime"
-	"syscall"
-)
+import "runtime"
 
 // Recursos es una foto del consumo del proceso. Se toma entre fases para poder
 // decir cuál de ellas mueve la aguja: el RSS máximo del proceso puede venir del
@@ -17,12 +14,18 @@ type Recursos struct {
 	NumGC           uint32  `json:"num_gc"`
 	CPUUsuarioS     float64 `json:"cpu_usuario_s"`
 	CPUSistemaS     float64 `json:"cpu_sistema_s"`
+	// NoDisponible nombra, con su nombre en el JSON, los campos que esta
+	// plataforma no puede medir y quedaron en 0: en Windows, el RSS máximo y el
+	// tiempo de CPU (recursos_otros.go). En Linux y los demás Unix se mide todo,
+	// queda vacío y no se escribe, así que el JSON de siempre no cambia.
+	NoDisponible []string `json:"no_disponible,omitempty"`
 }
 
-// MedirRecursos combina las estadísticas del runtime de Go con las del sistema.
-// Getrusage da el máximo histórico de RSS y el tiempo de CPU consumido, que es
-// lo que permite comparar tiempo de CPU contra tiempo de pared y ver cuánto
-// paralelismo hubo de verdad.
+// MedirRecursos combina las estadísticas del runtime de Go, que existen en
+// todas las plataformas, con las del sistema operativo (medirSistema), que
+// dependen de él: en Unix, Getrusage da el máximo histórico de RSS y el tiempo
+// de CPU consumido, que es lo que permite comparar tiempo de CPU contra tiempo
+// de pared y ver cuánto paralelismo hubo de verdad.
 func MedirRecursos() Recursos {
 	var m runtime.MemStats
 	runtime.ReadMemStats(&m)
@@ -33,12 +36,9 @@ func MedirRecursos() Recursos {
 		SistemaMB:       float64(m.Sys) / (1 << 20),
 		NumGC:           m.NumGC,
 	}
-	var ru syscall.Rusage
-	if err := syscall.Getrusage(syscall.RUSAGE_SELF, &ru); err == nil {
-		// En Linux, ru_maxrss viene en kilobytes.
-		r.MaxRSSMB = float64(ru.Maxrss) / 1024
-		r.CPUUsuarioS = float64(ru.Utime.Sec) + float64(ru.Utime.Usec)/1e6
-		r.CPUSistemaS = float64(ru.Stime.Sec) + float64(ru.Stime.Usec)/1e6
-	}
+	medirSistema(&r)
 	return r
 }
+
+// camposDelSistema son los campos que llena medirSistema, con su nombre en el JSON.
+var camposDelSistema = []string{"max_rss_mb", "cpu_usuario_s", "cpu_sistema_s"}
