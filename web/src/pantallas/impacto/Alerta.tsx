@@ -28,12 +28,14 @@ export function SirveLaAlerta({ impacto }: { impacto: Impacto }) {
     },
   ]
   return (
-    <Seccion id="sirve-la-alerta" pregunta="¿Sirve la alerta?" titulo="La alerta del sistema es la norma misma; las señales hora a hora aciertan menos">
+    <Seccion id="sirve-la-alerta" pregunta="¿Sirve la alerta?" titulo="La alerta compara la media con el ECA; las señales horarias se evalúan aparte">
       <p className="text-texto leading-relaxed">
-        La alerta del sistema sale de la media de 24 horas: es la norma misma, no una predicción, y por eso no falla ni se
-        adelanta. Hay dos señales que se encienden hora a hora: que la estación entre al{' '}
+        La alerta del sistema aplica la regla del ECA a la media de 24 horas de las lecturas disponibles. No es una
+        predicción de horas futuras ni garantiza que las mediciones estén libres de errores. Aquí se comparan dos
+        señales horarias con esa misma regla: que la lectura pertenezca al{' '}
         <strong>régimen alto</strong> del modelo, y que la <strong>lectura de la hora</strong> pase de {numero(r.eca_pm2_5)}{' '}
-        µg/m³ de PM2.5 o de {numero(r.eca_pm10)} de PM10. Esto es lo que acertarían si se usaran como alerta.
+        µg/m³ de PM2.5 o de {numero(r.eca_pm10)} de PM10. Los porcentajes describen su coincidencia con la media sobre el
+        ECA en el conjunto histórico analizado; no son una validación con datos nuevos.
       </p>
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,24rem)] lg:items-start">
         <SenalesAlerta senales={senales} />
@@ -50,8 +52,12 @@ export function SirveLaAlerta({ impacto }: { impacto: Impacto }) {
         {proporcion(s.lectura_horaria.cobertura, 0)}) y acierta menos ({proporcion(s.lectura_horaria.precision, 0)}): por
         eso el régimen se muestra como dato y la alerta es la de la media de 24 horas.
       </Frase>
-      <DeDondeSale impacto={impacto} fuentes={['gold', 'asignaciones', 'regimenes']}>
-        <p>{s.nota}</p>
+      <DeDondeSale impacto={impacto} fuentes={['gold', 'asignaciones', 'regimenes', 'alerta_24h']}>
+        <p>
+          Se consideran solo horas-estación con media de 24 horas calculable. La precisión divide los aciertos entre
+          las horas con la señal encendida; la cobertura divide esos mismos aciertos entre todas las horas sobre el
+          ECA. Son denominadores distintos y no describen personas ni territorio cubierto.
+        </p>
         <p>
           Régimen alto: encendido en {numero(s.regimen_alto.horas)} horas, {numero(s.regimen_alto.aciertos)} de ellas con
           la media sobre el ECA. Lectura horaria: {numero(s.lectura_horaria.horas)} horas y{' '}
@@ -130,9 +136,11 @@ export function ConCuantaAnticipacion({ impacto }: { impacto: Impacto }) {
   return (
     <Seccion id="anticipacion" pregunta="¿Con cuánta anticipación?" titulo="Depende de cómo se cuente: las dos medidas van juntas">
       <p className="text-texto leading-relaxed">
-        Un <strong>episodio</strong> es una vez que la media de 24 horas de una estación cruza el ECA. Hubo{' '}
-        <strong>{numero(t.episodios)}</strong> en todo el gold. Para cada uno se mira, en las 24 horas anteriores, cuánto
-        antes ya estaba encendida cada señal, de dos maneras.
+        Un <strong>episodio</strong> agrupa las horas sobre el ECA de una estación. Empieza al registrar una superación
+        tras {impacto.metadatos.reglas.ventana_horas} horas sin otra superación registrada con media calculable. Hubo{' '}
+        <strong>{numero(t.episodios)}</strong> episodios en las lecturas analizadas; cada subida no cuenta necesariamente
+        como uno nuevo. Para cada episodio se mira dentro de su ventana de {impacto.metadatos.reglas.ventana_horas} horas
+        cuánto antes ya estaba encendida cada señal, de dos maneras.
       </p>
       <div className="grid gap-4 md:grid-cols-2">
         <div className="border-borde bg-relieve rounded-lg border p-4">
@@ -194,7 +202,7 @@ export function ConCuantaAnticipacion({ impacto }: { impacto: Impacto }) {
         <Tabla titulo="Anticipación por estación: mediana y rango, en horas" columnas={COLUMNAS_POR_ESTACION} filas={conEpisodios} claveDe={(f) => f.estacion} />
         <p>
           Cada celda es la mediana de la estación y, debajo, su mínimo y su máximo. Con uno o dos episodios, la mediana
-          dice poco. En las otras {numero(sinEpisodios)} estaciones la media de 24 horas nunca cruzó el ECA.
+          dice poco. En las otras {numero(sinEpisodios)} estaciones no se registraron episodios en las lecturas analizadas.
         </p>
       </Desplegable>
       <DeDondeSale impacto={impacto} fuentes={['gold', 'asignaciones', 'regimenes']}>
@@ -262,11 +270,12 @@ export function LoQueNoPuedeDecir({ impacto }: { impacto: Impacto }) {
         <li>
           <strong>No dice nada de donde no se mide.</strong> Solo entran las {numero(alcance.estaciones_con_pm_horario)}{' '}
           estaciones con PM por hora, de {numero(alcance.estaciones_en_la_ficha)}. Un distrito sin estación, o con una que
-          no mide PM por hora, no es un distrito con aire limpio.
+          no mide PM por hora, no permite afirmar que el aire esté limpio.
         </li>
         <li>
-          <strong>No cuenta expuestos.</strong> A la pregunta de a cuántas personas podría beneficiar se responde con
-          quiénes tendrían un aviso que hoy no tienen, no con cuántos estuvieron expuestos.
+          <strong>No cuenta expuestos ni beneficiarios.</strong> El posible beneficio es facilitar la consulta de
+          mediciones y avisos de las estaciones disponibles, no contar cuántos estuvieron expuestos ni demostrar un
+          beneficio sanitario.
         </li>
         <li>
           <strong>No es un pronóstico.</strong> El sistema clasifica y avisa sobre lo ya medido; la anticipación de arriba

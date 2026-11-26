@@ -214,7 +214,7 @@ describe('la app', () => {
       ['/', 'Panel', 'usuario', 'El último estado recibido de cada estación, con su fecha.'],
       ['/estacion', 'Estación', 'usuario', 'El último estado recibido de una estación,'],
       ['/simulacion', 'Simulación', 'usuario', 'Lecturas reales de OEFA mandadas una por una a la API'],
-      ['/impacto', 'Impacto', 'usuario', 'Qué dicen las mediciones reales de OEFA'],
+        ['/impacto', 'Impacto', 'usuario', 'Qué dicen las mediciones históricas de OEFA'],
       ['/entrenamiento', 'Entrenamiento', 'admin', 'El K-Means se reparte entre los nodos del clúster.'],
       ['/cluster', 'Clúster', 'admin', 'Los nodos que entrenan, cómo se porta la API que los coordina'],
     ] as const)('%s ya no muestra «En construcción»: es la pantalla de %s', async (ruta, titulo, rol, bajada) => {

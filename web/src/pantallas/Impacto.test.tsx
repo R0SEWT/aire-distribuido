@@ -61,8 +61,8 @@ describe('Impacto', () => {
       'Qué es el ECA y qué es el INCA',
       'Las horas en que la media de 24 horas superó el ECA',
       'Cada estación vigila una actividad: esa es la unidad honesta',
-      'Quiénes tendrían un aviso que hoy no tienen',
-      'La alerta del sistema es la norma misma; las señales hora a hora aciertan menos',
+      'Dónde podría servir esta información',
+      'La alerta compara la media con el ECA; las señales horarias se evalúan aparte',
       'Depende de cómo se cuente: las dos medidas van juntas',
       'Lo que este dato no puede decir',
     ])
@@ -71,7 +71,7 @@ describe('Impacto', () => {
   describe('la población', () => {
     it('va fila por fila, con su distrito y el enlace a su fuente', async () => {
       montar()
-      const tabla = within(await seccion(/Quiénes tendrían un aviso/)).getByRole('table')
+      const tabla = within(await seccion(/Dónde podría servir esta información/)).getByRole('table')
 
       const conDistrito = REAL.distritos.filter((d) => d.distrito !== null)
       expect(conDistrito).toHaveLength(REAL.alcance.distritos_con_pm_horario)
@@ -87,7 +87,7 @@ describe('Impacto', () => {
 
     it('no se suma: ninguna suma de poblaciones aparece en la página', async () => {
       montar()
-      await seccion(/Quiénes tendrían un aviso/)
+      await seccion(/Dónde podría servir esta información/)
       await userEvent.click(screen.getByRole('button', { name: 'Por tipo de actividad' }))
 
       const sumar = (valores: (number | null | undefined)[]) => valores.reduce<number>((s, v) => s + (v ?? 0), 0)
@@ -113,7 +113,7 @@ describe('Impacto', () => {
 
     it('la tabla de distritos no tiene fila de total ni pie', async () => {
       montar()
-      const tabla = within(await seccion(/Quiénes tendrían un aviso/)).getByRole('table')
+      const tabla = within(await seccion(/Dónde podría servir esta información/)).getByRole('table')
 
       expect(within(tabla).getAllByRole('row')).toHaveLength(REAL.distritos.length + 1)
       expect(tabla.querySelector('tfoot')).toBeNull()
@@ -135,7 +135,7 @@ describe('Impacto', () => {
 
   it('en Lurigancho hay tres estaciones horarias, y la página lo dice así', async () => {
     montar()
-    const distritos = within(await seccion(/Quiénes tendrían un aviso/)).getByRole('table')
+    const distritos = within(await seccion(/Dónde podría servir esta información/)).getByRole('table')
 
     const fila = within(distritos).getByText('Lurigancho').closest('tr')!
     expect(fila).toHaveTextContent('CA-HU-04, CA-HU-09, CA-RZC-02')
@@ -188,7 +188,7 @@ describe('Impacto', () => {
 
   it('¿sirve la alerta?: la precisión y la cobertura de cada señal, con las horas de las que salen', async () => {
     montar()
-    const parte = await seccion(/La alerta del sistema es la norma misma/)
+    const parte = await seccion(/La alerta compara la media con el ECA/)
 
     const cifra = (rotulo: string) => within(parte).getByText(rotulo).parentElement!
     expect(cifra('Régimen alto · precisión')).toHaveTextContent('35.0%')
@@ -196,7 +196,7 @@ describe('Impacto', () => {
     expect(cifra('Lectura horaria · precisión')).toHaveTextContent('21.6%')
     expect(cifra('Lectura horaria · cobertura')).toHaveTextContent('54.8%')
     expect(parte).toHaveTextContent('El régimen alto acierta el 35 % de las veces que suena (precisión) y detecta el 44 % de las horas sobre el ECA (cobertura)')
-    expect(parte).toHaveTextContent('es la norma misma, no una predicción')
+    expect(parte).toHaveTextContent('No es una predicción de horas futuras')
     expect(parte).toHaveTextContent('encendido en 1,497 horas, 524 de ellas con la media sobre el ECA')
     expect(within(parte).getByRole('img', { name: /Precisión y cobertura de cada señal/ })).toHaveAccessibleName(
       /Régimen alto \(régimen 1\): precisión 35\.0 % y cobertura 44\.3 %; Lectura horaria sobre el umbral: precisión 21\.6 % y cobertura 54\.8 %/,
@@ -282,33 +282,33 @@ describe('Impacto', () => {
       montar(otro)
 
       const tiempo = await seccion(/Las horas en que la media de 24 horas superó el ECA/)
-      expect(tiempo).toHaveTextContent('4,321horas sobre el ECA')
-      expect(tiempo).toHaveTextContent('50,000horas · 8.6 %')
+      expect(tiempo).toHaveTextContent('4,321horas-estación sobre el ECA')
+      expect(tiempo).toHaveTextContent('50,000horas-estación · 8.6 %')
       expect(tiempo).toHaveTextContent('40,000horas · 80.0 %')
       expect(tiempo).toHaveTextContent('10horas · menos de 0.1 %')
-      expect(tiempo).toHaveTextContent('Son las de 15 estaciones')
-      expect(await seccion(/ECA y qué es el INCA/)).toHaveTextContent('37 µg/m³ de PM2.5 ni de 88 µg/m³ de PM10')
+      expect(tiempo).toHaveTextContent('Se suman las observaciones de 15 estaciones')
+      expect(await seccion(/ECA y qué es el INCA/)).toHaveTextContent('37 µg/m³ de PM2.5 y 88 µg/m³ de PM10')
 
-      const alerta = await seccion(/La alerta del sistema es la norma misma/)
+      const alerta = await seccion(/La alerta compara la media con el ECA/)
       expect(alerta).toHaveTextContent('acierta el 51 % de las veces que suena (precisión) y detecta el 68 %')
       expect(alerta).toHaveTextContent('51.2%')
       expect(alerta).toHaveTextContent('98.8%')
       expect(alerta).toHaveTextContent('pase de 37 µg/m³ de PM2.5 o de 88 de PM10')
 
       const anticipacion = await seccion(/las dos medidas van juntas/)
-      expect(anticipacion).toHaveTextContent('Hubo 31 en todo el gold')
+      expect(anticipacion).toHaveTextContent('Hubo 31 episodios en las lecturas analizadas')
       expect(anticipacion).toHaveTextContent('7 horas antes del cruce o más; pero en la mitad llevaba encendida sin interrupción 2.5 horas o menos')
       expect(anticipacion).toHaveTextContent('Con el régimen alto, 6 horas y 3 horas')
       expect(anticipacion).toHaveTextContent('No es un aviso sostenido de 7 horas')
       expect(anticipacion).toHaveTextContent('Una nota distinta, escrita para la prueba.')
 
       expect(within(await seccion(/Cada estación vigila/)).getByText('CA-HU-04').closest('tr')).toHaveTextContent('111de 237')
-      expect(within(await seccion(/Quiénes tendrían un aviso/)).getByText('Lurigancho').closest('tr')).toHaveTextContent('123,456')
-      expect(await seccion(/Quiénes tendrían un aviso/)).toHaveTextContent('en los 9 distritos')
+      expect(within(await seccion(/Dónde podría servir esta información/)).getByText('Lurigancho').closest('tr')).toHaveTextContent('123,456')
+      expect(await seccion(/Dónde podría servir esta información/)).toHaveTextContent('en los 9 distritos')
 
       // Nada de lo que traía el archivo real quedó escrito en la pantalla.
       const pagina = texto()
-      for (const vieja of ['1,184horas sobre el ECA', '64,748horas', '65,873 lecturas horarias', '35.0', '44.3', '21.6', '54.8', 'No es un aviso sostenido de 20']) {
+      for (const vieja of ['1,184horas-estación sobre el ECA', '64,748horas-estación', '65,873 lecturas horarias', '35.0', '44.3', '21.6', '54.8', 'No es un aviso sostenido de 20']) {
         expect(pagina).not.toContain(vieja)
       }
       expect(pagina).not.toContain(REAL.anticipacion.lo_que_no_es)
@@ -321,8 +321,8 @@ describe('Impacto', () => {
       const partes = [
         /Las horas en que la media de 24 horas superó el ECA/,
         /Cada estación vigila una actividad/,
-        /Quiénes tendrían un aviso/,
-        /La alerta del sistema es la norma misma/,
+        /Dónde podría servir esta información/,
+        /La alerta compara la media con el ECA/,
         /las dos medidas van juntas/,
       ]
       for (const nombre of partes) {
@@ -349,8 +349,8 @@ describe('Impacto', () => {
     expect(limites).toHaveTextContent('No hay un total de personas')
     expect(limites).toHaveTextContent('10 de las 17 estaciones son campañas de pocas semanas')
     expect(limites).toHaveTextContent('Solo entran las 17 estaciones con PM por hora, de 33')
-    expect(limites).toHaveTextContent('no es un distrito con aire limpio')
-    expect(limites).toHaveTextContent('no con cuántos estuvieron expuestos')
+    expect(limites).toHaveTextContent('no permite afirmar que el aire esté limpio')
+    expect(limites).toHaveTextContent('no contar cuántos estuvieron expuestos')
     expect(within(limites).getByText(/Las 16 estaciones que no entran en ninguna cifra/).closest('details')).toHaveTextContent(
       REAL.alcance.estaciones_sin_pm_horario.join(', '),
     )

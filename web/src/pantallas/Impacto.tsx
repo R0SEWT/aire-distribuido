@@ -19,7 +19,7 @@ export default function Impacto() {
     <div className="space-y-5">
       <Encabezado
         titulo="Impacto"
-        bajada="Qué dicen las mediciones reales de OEFA sobre el aire junto a las actividades que fiscaliza, y qué no pueden decir."
+        bajada="Qué dicen las mediciones históricas de OEFA junto a las actividades que fiscaliza. No son lecturas en vivo ni una medición de la exposición de la población."
       />
       {impacto.isPending ? (
         <Estado tipo="cargando" titulo="Cargando los datos de impacto…" />

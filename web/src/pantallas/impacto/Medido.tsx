@@ -29,9 +29,9 @@ export function ElProblema({ impacto }: { impacto: Impacto }) {
   return (
     <Seccion id="el-problema" pregunta="El problema" titulo="Qué es el ECA y qué es el INCA">
       <p className="text-texto leading-relaxed">
-        El <strong>ECA</strong> (Estándar de Calidad Ambiental, DS 003-2017-MINAM) es el límite legal del aire: la media
-        de 24 horas no debe pasar de <strong>{numero(r.eca_pm2_5)} µg/m³ de PM2.5</strong> ni de{' '}
-        <strong>{numero(r.eca_pm10)} µg/m³ de PM10</strong>, el polvo y el humo finos que se respiran.
+        El <strong>ECA</strong> (Estándar de Calidad Ambiental, DS 003-2017-MINAM) aporta los valores de referencia que
+        usa este análisis para la media de 24 horas: <strong>{numero(r.eca_pm2_5)} µg/m³ de PM2.5</strong> y{' '}
+        <strong>{numero(r.eca_pm10)} µg/m³ de PM10</strong>, dos tamaños de partículas suspendidas en el aire.
       </p>
       <p className="text-texto leading-relaxed">
         El <strong>INCA</strong> (Índice de Calidad del Aire, RM 181-2016-MINAM) pone esa misma media en una de cuatro
@@ -44,7 +44,8 @@ export function ElProblema({ impacto }: { impacto: Impacto }) {
       </div>
       <p className="text-suave text-sm leading-relaxed">
         Las estaciones de OEFA miden junto a actividades fiscalizadas: una mina, una refinería, una zona de ladrilleras.
-        Este sistema calcula la media de 24 horas con cada lectura que recibe y avisa cuando supera el ECA.
+        Este sistema compara la media de 24 horas con el ECA cuando reúne al menos {r.minimo_lecturas} lecturas en la
+        ventana. Si no alcanza ese mínimo, no hay media calculable: no equivale a estar bajo el ECA.
       </p>
     </Seccion>
   )
@@ -56,13 +57,14 @@ export function CuantoTiempo({ impacto }: { impacto: Impacto }) {
   return (
     <Seccion id="cuanto-tiempo" pregunta="¿Cuánto tiempo?" titulo="Las horas en que la media de 24 horas superó el ECA">
       <div className="flex flex-wrap items-end gap-x-10 gap-y-4">
-        <Cifra valor={t.horas_sobre_eca} unidad="horas sobre el ECA" />
-        <Cifra tamano="mediana" rotulo="De las horas con media calculable" valor={t.horas_calculables} unidad={`horas · ${porciento(t.horas_sobre_eca, t.horas_calculables)}`} />
+        <Cifra valor={t.horas_sobre_eca} unidad="horas-estación sobre el ECA" />
+        <Cifra tamano="mediana" rotulo="De las horas con media calculable" valor={t.horas_calculables} unidad={`horas-estación · ${porciento(t.horas_sobre_eca, t.horas_calculables)}`} />
       </div>
       <Frase tono="mala">
-        De cada 100 horas con media de 24 horas, {numero((100 * t.horas_sobre_eca) / t.horas_calculables, 1)} superaron el
-        ECA. Son las de {numero(impacto.alcance.estaciones_con_pm_horario)} estaciones, cada una en las semanas en que
-        midió: no es un promedio del país.
+        De cada 100 horas-estación con media de 24 horas calculable, {numero((100 * t.horas_sobre_eca) / t.horas_calculables, 1)}{' '}
+        superaron el ECA. Una misma hora medida en dos estaciones cuenta dos veces. Se suman las observaciones de{' '}
+        {numero(impacto.alcance.estaciones_con_pm_horario)} estaciones en sus periodos medidos: no es un promedio del país
+        ni la duración de un único episodio.
       </Frase>
       <div>
         <p className="rotulo mb-2">Cómo se reparten esas {numero(t.horas_calculables)} horas entre las bandas INCA</p>
@@ -85,7 +87,8 @@ export function CuantoTiempo({ impacto }: { impacto: Impacto }) {
       <DeDondeSale impacto={impacto} fuentes={['gold', 'silver', 'alerta_24h']}>
         <p>
           {r.lectura} De {numero(t.lecturas)} lecturas, {numero(t.horas_calculables)} tienen media de 24 horas: la
-          ventana {r.ventana} necesita {r.minimo_lecturas} lecturas o más.
+          ventana {r.ventana} necesita {r.minimo_lecturas} lecturas o más. El porcentaje divide las horas-estación sobre
+          el ECA entre las que tienen media calculable; las horas sin media no entran en ese denominador.
         </p>
         <p>
           Una hora está sobre el ECA si se cumple la regla de la alerta: {r.alerta}. La banda INCA es {r.inca.regla}, con
@@ -242,7 +245,7 @@ export function DondeYJuntoAQue({ impacto }: { impacto: Impacto }) {
       <Frase tono="aviso">
         Las horas sobre el ECA de una estación describen las semanas en que midió, no un año: {numero(cortas)} de las{' '}
         {numero(impacto.estaciones.length)} son campañas cortas (menos de {DIAS_DE_CAMPANA_CORTA} días con datos). En{' '}
-        {numero(sinHoras)} la media de 24 horas nunca superó el ECA.
+        {numero(sinHoras)} no se registraron superaciones entre las medias de 24 horas calculables de ese periodo.
       </Frase>
       <DeDondeSale impacto={impacto} fuentes={['gold', 'ficha', 'poblacion']}>
         <p>
@@ -303,11 +306,12 @@ const COLUMNAS_DE_DISTRITO: Columna<DistritoDeImpacto>[] = [
 export function QuienViveAhi({ impacto }: { impacto: Impacto }) {
   const distritos = [...impacto.distritos].sort((a, b) => (a.distrito ?? '￿').localeCompare(b.distrito ?? '￿'))
   return (
-    <Seccion id="quien-vive-ahi" pregunta="¿Quién vive ahí?" titulo="Quiénes tendrían un aviso que hoy no tienen">
+    <Seccion id="quien-vive-ahi" pregunta="¿Quién vive ahí?" titulo="Dónde podría servir esta información">
       <p className="text-texto leading-relaxed">
-        El enunciado pregunta a cuántas personas podría beneficiar. Lo que se puede responder es <strong>dónde</strong>: en
-        los {numero(impacto.alcance.distritos_con_pm_horario)} distritos que tienen una estación con PM por hora, quien vive
-        ahí tendría un aviso cuando la media de 24 horas supere el ECA. No es cuántos estuvieron expuestos.
+        El posible beneficio es facilitar la consulta de mediciones y avisos de las estaciones en los{' '}
+        {numero(impacto.alcance.distritos_con_pm_horario)} distritos con PM por hora. La población censada ubica el contexto
+        de esas estaciones; no mide cuántas personas usan el sistema, recibieron avisos o estuvieron expuestas. Estos
+        datos tampoco permiten afirmar que antes no tuvieran otra fuente de avisos.
       </p>
       <Tabla titulo="La población de cada distrito con una estación de PM por hora, fila por fila" columnas={COLUMNAS_DE_DISTRITO} filas={distritos} claveDe={(d) => d.ubigeo ?? 'sin-distrito'} />
       <Frase tono="acento">
@@ -317,7 +321,8 @@ export function QuienViveAhi({ impacto }: { impacto: Impacto }) {
       <DeDondeSale impacto={impacto} fuentes={['poblacion', 'ficha']}>
         <p>
           Es la población censada del distrito de cada estación; el enlace de cada fila abre la página del INEI de donde
-          sale. El cruce es por ubigeo, no por nombre: Lurigancho no es San Juan de Lurigancho.
+          sale y el año que corresponde. No es una estimación de la población actual ni del alcance de la estación. El
+          cruce es por ubigeo, no por nombre: Lurigancho no es San Juan de Lurigancho.
         </p>
         <p>{impacto.metadatos.notas.find((n) => n.includes('No se suma'))}</p>
       </DeDondeSale>
