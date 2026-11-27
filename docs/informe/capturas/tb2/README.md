@@ -133,6 +133,12 @@ esta corrida: es lo mismo que pasa al final de la hora de un token normal, sin e
 
 ## 3. Mediciones (`pruebas/`)
 
+**Las pruebas automáticas**, corridas sobre el mismo commit de las capturas más lo de esta rama:
+`web-pruebas.txt` (lint sin errores, Vitest con 708 pruebas en 36 archivos, build) y `go-test-race.txt`
+(`go vet` y `go test -race -count=1 ./...`, todos los paquetes en verde). Una primera corrida de `go test -race`
+falló en `cmd/carga` por una prueba que exigía un p99 menor que 100 ms a un servidor de prueba con todos los
+paquetes corriendo a la vez (dio 102 ms); se corrigió la prueba en `e84281e`, no el comando.
+
 **Latencia de la API, con `cmd/carga`** (`POST /api/predicciones`, 5000 pedidos medidos por nivel, las 78
 lecturas de prueba de Postman, 14 CPU lógicas). Se midió dos veces: directo a la API (`:8080`) y por el Caddy
 de la UI (`:8081`), que es el camino del navegador. Ningún error, ninguna respuesta con otro régimen y ninguna
