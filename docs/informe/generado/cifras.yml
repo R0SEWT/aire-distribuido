@@ -95,6 +95,12 @@ cifras:
     repeticiones: "10"
     identicos: "sí"
     maquina: "A019803"
+  revision:
+    go: "go1.27.1"
+    plataforma: "darwin/arm64"
+    chequeos: "40"
+    ok: "40"
+    mismos_hashes: "sí"
   benchmark_cargador_windows:
     fecha: "2026-11-07"
     commit: "f49e4ca"
