@@ -22,7 +22,7 @@ página entera; las demás, lo que entra en la ventana. El 3 de `pruebas/` descr
 
 | # | Paso | Resultado | Evidencia |
 |---|---|---|---|
-| 1 | El Compose levanta los seis servicios sanos con dos nodos | ✅ | `pruebas/compose-ps.txt` |
+| 1 | El Compose levanta los seis servicios sanos con dos nodos | ✅ | `pruebas/compose-ps.txt`, `despliegue/compose-ps.txt` |
 | 2 | Ingresar con una clave mala: dice «Usuario o clave incorrectos.», sin más | ✅ | `ingreso/02` |
 | 3 | Entrar como invitado («No pienso crearme una cuenta aquí» → «Entrar igual»): rol `usuario`, menú de cuatro pantallas | ✅ | `ingreso/03`, `panel/01` |
 | 4 | Con el sistema recién levantado, el Panel explica por qué está vacío y ofrece ir a Simulación | ✅ | `panel/01`, `panel/02` |
@@ -75,6 +75,7 @@ página entera; las demás, lo que entra en la ventana. El 3 de `pruebas/` descr
 | `05-dia-configurado.png` | Un día de una estación elegido desde la UI: CA-ESP-01, 21/12/2021, ritmo rápido |
 | `06-dia-cruza-eca-terminado.png`, `07-dia-cruza-eca-completa.png` | El día simulado: la media de PM10 aparece a las 18:00 del día anterior y la alerta se enciende a las 07:00 (131.9 µg/m³ al final, ECA 100) |
 | `08-lectura-a-mano.png` | Una lectura a mano (la real del silver) y lo que respondió la API |
+| `09-comparacion-con-lo-esperado.png` | La tabla de evaluación del escenario, recortada de `04`: las 14 estaciones coinciden con lo esperado de `series.json` (media, banda, alerta, primera alerta y régimen) |
 
 ### `estacion/`
 
@@ -99,6 +100,7 @@ página entera; las demás, lo que entra en la ventana. El 3 de `pruebas/` descr
 | Archivo | Qué muestra |
 |---|---|
 | `01-cluster.png`, `02-cluster-completa.png` | El panel de administrador que pide el enunciado: número de nodos (2, con latido y tiempo por ronda), uso de CPU y memoria del proceso de la API que coordina, latencia de la API por ruta con la línea de los 100 ms, escrituras por almacén (716 sin pérdidas), salud de cada componente y los «logs» del clúster (altas y bajas de nodos alrededor de cada entrenamiento) |
+| `03-eventos-y-escrituras.png` | Recorte de `02`: los eventos del clúster y las escrituras por almacén |
 
 ### `impacto/`
 
@@ -118,6 +120,12 @@ página entera; las demás, lo que entra en la ventana. El 3 de `pruebas/` descr
 | Archivo | Qué muestra |
 |---|---|
 | `01-modo-proyector-panel.png` | El panel en modo proyector (letra más grande y más contraste, para la sustentación) |
+
+### `despliegue/`
+
+| Archivo | Qué muestra |
+|---|---|
+| `compose-ps.txt` | `docker compose ps -a` del Compose levantado otra vez limpio, sobre esta rama con develop al día (`4cfc6dc`): `web`, `api`, dos `nodo`, `mongo` y `redis` sanos y `seed` terminado con 0 |
 
 ### `seguridad/`
 
