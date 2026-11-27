@@ -1,0 +1,108 @@
+{
+  "metadatos": {
+    "momento": "2026-11-27T23:42:51.349Z",
+    "base": "http://localhost:8081",
+    "rol": "usuario",
+    "node": "v22.22.0",
+    "dias": [
+      "CA-JUPR-01-2022-05-03",
+      "CA-CG-02-2022-06-02",
+      "CA-MAC-01-2022-05-26"
+    ],
+    "pausa_ms": 350
+  },
+  "lecturas": 132,
+  "errores_http": 0,
+  "sin_evento": 0,
+  "respuesta_ms": {
+    "n": 132,
+    "p50": 1.91,
+    "p95": 2.96,
+    "p99": 3.74,
+    "max": 5.41
+  },
+  "evento_ms": {
+    "n": 132,
+    "p50": 2.19,
+    "p95": 3.96,
+    "p99": 4.44,
+    "max": 4.7
+  },
+  "finales": [
+    {
+      "dia": "CA-JUPR-01-2022-05-03",
+      "caso": "limpio",
+      "coincide": true,
+      "esperado": {
+        "regimen": 0,
+        "alerta": false,
+        "inca": "buena",
+        "media_24h": {
+          "pm2_5": 4.241666666666666,
+          "pm10": 9.749999999999998,
+          "lecturas": 24
+        }
+      },
+      "evento": {
+        "regimen": 0,
+        "alerta": false,
+        "inca": "buena",
+        "media_24h": {
+          "pm2_5": 4.241666666666666,
+          "pm10": 9.749999999999998,
+          "lecturas": 24
+        }
+      }
+    },
+    {
+      "dia": "CA-CG-02-2022-06-02",
+      "caso": "huecos_con_media",
+      "coincide": true,
+      "esperado": {
+        "regimen": 0,
+        "alerta": false,
+        "inca": "moderada",
+        "media_24h": {
+          "pm2_5": 22.80894736842105,
+          "pm10": 38.89842105263158,
+          "lecturas": 19
+        }
+      },
+      "evento": {
+        "regimen": 0,
+        "alerta": false,
+        "inca": "moderada",
+        "media_24h": {
+          "pm2_5": 22.80894736842105,
+          "pm10": 38.89842105263158,
+          "lecturas": 19
+        }
+      }
+    },
+    {
+      "dia": "CA-MAC-01-2022-05-26",
+      "caso": "huecos_sin_media",
+      "coincide": true,
+      "esperado": {
+        "regimen": 0,
+        "alerta": false,
+        "inca": null,
+        "media_24h": {
+          "pm2_5": null,
+          "pm10": null,
+          "lecturas": 17
+        }
+      },
+      "evento": {
+        "regimen": 0,
+        "alerta": false,
+        "inca": null,
+        "media_24h": {
+          "pm2_5": null,
+          "pm10": null,
+          "lecturas": 17
+        }
+      }
+    }
+  ]
+}
