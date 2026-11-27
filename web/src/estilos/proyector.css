@@ -1,0 +1,34 @@
+/* Modo proyector (spec §8): para la sustentación. Letra más grande y más
+   contraste. Toda la UI mide en rem, así que basta con agrandar la raíz; los
+   colores se cambian sobre los mismos tokens. */
+
+:root[data-modo='proyector'] {
+  font-size: 118.75%; /* 19 px */
+
+  --color-fondo: #05070a;
+  --color-superficie: #10141c;
+  --color-relieve: #1a2130;
+  --color-borde: #465066;
+
+  --color-texto: #ffffff;
+  --color-suave: #d9dfe9;
+  --color-tenue: #b4bdcc;
+
+  --color-borde-control: #a3aec2;
+
+  --color-acento: #3d8bea;
+  --color-acento-claro: #8fbdf5;
+
+  /* Claro con texto oscuro: más contraste que el botón del modo normal. */
+  --color-boton: #8fbdf5;
+  --color-boton-texto: #05070a;
+
+  --color-falla: #ff8a82;
+
+  --color-inca-buena: #2fcf95;
+  --color-inca-moderada: #f2c84b;
+  --color-inca-mala: #ff7d47;
+  --color-inca-cuidado: #f05252;
+  --color-sin-datos: #dfe4ec;
+  --color-no-mide: #7a8598;
+}

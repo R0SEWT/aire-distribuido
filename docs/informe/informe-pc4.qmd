@@ -1,0 +1,108 @@
+---
+# Informe de la PC4 (Entregable 2 del Trabajo Final). Contiene el informe de la PC3: las secciones de
+# secciones/ se incluyen tal como se entregaron y las de secciones/pc4/ son lo nuevo. La estructura es
+# la del enunciado, a) a j). Se renderiza con `ENTREGA=pc4 bash render.sh` (ver README.md).
+#
+# Reglas, las mismas de informe.qmd:
+#   - Ninguna cifra a mano: tablas desde generado/tablas/ (shortcode include) y cifras de la prosa
+#     desde generado/cifras.yml (shortcode meta). Las escribe tablas.py; lo de la PC4, desde reports/,
+#     el contrato, los ejemplos de datos y el código.
+#   - Cada hueco es un aviso PENDIENTE visible, o una cifra «[PENDIENTE]»: empaquetar-pc4.sh no arma
+#     la entrega mientras quede uno.
+lang: es
+---
+
+{{< include secciones/pc4/_00-caratula.qmd >}}
+
+{{< pagebreak >}}
+
+{{< include secciones/pc4/_01-resumen.qmd >}}
+
+{{< pagebreak >}}
+
+::: indice
+:::
+
+{{< pagebreak >}}
+
+{{< include generado/tablas/_estado.md >}}
+
+{{< include generado/tablas/_estado_pc4.md >}}
+
+{{< include secciones/_02-problema.qmd >}}
+
+{{< include secciones/pc4/_03-objetivos.qmd >}}
+
+# Desarrollo
+
+Este informe es el del Entregable 2 (PC4) y **contiene el del Entregable 1 (PC3)**, como pide el
+enunciado. El informe de la PC3 no tuvo observaciones, así que sus secciones van tal como se
+entregaron: la descripción del problema, y dentro de este desarrollo, de la @sec-caso a la
+@sec-evidencias. Lo nuevo empieza en la @sec-distribucion y sigue el orden de los puntos del
+Entregable 2: la distribución, la API, las bases de datos y las evidencias. La @tbl-mapa-pc4 dice
+dónde está cada punto de los dos entregables.
+
+::: {#tbl-mapa-pc4 tbl-colwidths="[46,54]"}
+| Punto del enunciado | Dónde está en este informe |
+|:---|:---|
+| **Entregable 2 (PC4)** | |
+| Distribución: clúster de nodos de ML, justificación de la topología de red y funcionamiento en Go | @sec-distribucion: topología (@sec-topologia), protocolo, reparto, barrera, fusión, determinismo, fallas y mediciones |
+| Desarrollo de la API: Swagger, funcionamiento en Go, respuesta en menos de 100 ms y pruebas con Postman | @sec-api: rutas y Swagger (@sec-swagger), JWT, la predicción y su latencia (@sec-latencia), el coordinador y el WebSocket |
+| Implementación de las bases de datos: diseño de entidades y registros | @sec-bases: diagrama de entidades (@fig-entidades), colecciones, claves y registros |
+| Evidencias de la implementación y pruebas de funcionamiento: datos de prueba y pantallazos | @sec-evidencias-pc4: despliegue, pruebas, datos de prueba (@tbl-datos-prueba), Postman y capturas |
+| Documentación: el informe contiene el del entregable anterior | Este documento: las secciones de la PC3 completas, sin cambios |
+| Cambios subidos a GitHub | Anexo A (repositorio y tag) y Anexo C (historial y PR) |
+| Tablero Kanban actualizado | Anexo B |
+| Reporte de participación | Anexo D y el archivo aparte `1ACC0065-202620_Participación_PC4.docx` |
+| **Entregable 1 (PC3)** | |
+| Presentación del caso: problema, motivación y pregunta de impacto social | @sec-caso, con la pregunta en la @sec-pregunta y la cobertura en la @sec-cobertura |
+| Limpieza y análisis de datos | @sec-limpieza |
+| Diseño del modelo de ML distribuido | @sec-modelo, con el pseudocódigo en la @sec-pseudocodigo |
+| Paralelización del cálculo en Go | @sec-paralelizacion |
+| Evidencias de la implementación: código en Go y pruebas | @sec-evidencias |
+
+Dónde está cada punto del enunciado, por entregable
+:::
+
+{{< include secciones/_04-caso.qmd >}}
+
+{{< include secciones/_05-limpieza.qmd >}}
+
+{{< include secciones/_06-modelo.qmd >}}
+
+{{< include secciones/_07-paralelizacion.qmd >}}
+
+{{< include secciones/_08-evidencias.qmd >}}
+
+{{< include secciones/pc4/_12-distribucion.qmd >}}
+
+{{< include secciones/pc4/_13-api.qmd >}}
+
+{{< include secciones/pc4/_14-bases-de-datos.qmd >}}
+
+{{< include secciones/pc4/_15-evidencias.qmd >}}
+
+# Conclusiones
+
+{{< include secciones/pc4/_09-conclusiones.qmd >}}
+
+## Del Entregable 1 (PC3) {.unnumbered}
+
+Las conclusiones de la PC3 se conservan como se entregaron.
+
+{{< include secciones/_09-conclusiones.qmd >}}
+
+# Recomendaciones
+
+{{< include secciones/pc4/_10-recomendaciones.qmd >}}
+
+{{< include secciones/_10-recomendaciones.qmd >}}
+
+# Bibliografía {.unnumbered}
+
+::: {#refs}
+:::
+
+{{< pagebreak >}}
+
+{{< include secciones/pc4/_11-anexos.qmd >}}

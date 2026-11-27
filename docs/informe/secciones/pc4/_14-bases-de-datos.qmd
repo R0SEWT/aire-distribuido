@@ -1,0 +1,193 @@
+<!-- f.8) PC4 · Implementación de las bases de datos: diseño de entidades y registros. -->
+
+## Implementación de las bases de datos {#sec-bases}
+
+El sistema usa las dos bases que pide el enunciado, cada una para lo que sirve: **MongoDB guarda lo
+persistente** (lo que tiene que seguir ahí mañana) y **Redis es la caché** (lo último de cada cosa,
+para responder rápido y arrancar en caliente). Las dos corren como contenedores del mismo Docker
+Compose que la API (@sec-despliegue).
+
+### Diseño de entidades
+
+La @fig-entidades es el diagrama de entidades: las {{< meta cifras.datos.colecciones >}} colecciones
+de MongoDB, las {{< meta cifras.datos.claves >}} familias de claves de Redis y cómo se relacionan.
+En cada entidad, PK marca el identificador y FK, una referencia lógica a otra colección; las líneas
+continuas son las relaciones entre colecciones, con su cardinalidad, y las punteadas, las copias o
+derivaciones que van a Redis y la correspondencia por nombre entre un evento del clúster y los nodos
+de un entrenamiento. La franja inferior de MongoDB lista los índices. El detalle de cada campo está
+en las tablas que siguen.
+
+<!-- La figura es la copia girada que arma render.sh en generado/local/ desde ../diagramas/entidades.png
+(apaisado: a lo ancho de la página no se lee). El aviso si-falta mira el PNG original. -->
+
+![Modelo de datos: entidades de MongoDB y de Redis y sus relaciones. El diagrama es apaisado y va girado: su parte superior queda a la izquierda de la página](generado/local/entidades-girado.png){#fig-entidades width=13.5cm}
+
+:::: {si-falta="../diagramas/entidades.png"}
+::: {.callout-warning title="PENDIENTE"}
+Falta `docs/diagramas/entidades.png` (se exporta con draw.io desde `entidades.drawio`).
+:::
+::::
+
+La @tbl-entidades-mongo detalla cada colección. Sus campos se leen, en cada render, de los
+documentos de ejemplo del repositorio, y hay pruebas que fallan si un documento que la API escribe
+deja de tener exactamente esos campos: la tabla describe lo que el sistema guarda de verdad.
+
+{{< include generado/tablas/entidades_mongo.md >}}
+
+Tres decisiones del modelo de documentos:
+
+- **Las rondas van dentro del entrenamiento**, como un arreglo. Son a lo sumo las iteraciones de una
+  corrida, siempre se leen junto con ella y agregar una es una sola operación (`$push`). Una
+  colección aparte de rondas habría pedido una consulta más para armar lo que siempre se muestra
+  junto.
+- **Las relaciones son referencias por identificador**, no claves foráneas: la predicción guarda el
+  código de su estación y el identificador del modelo que la produjo; el modelo guarda de qué
+  entrenamiento salió (`origen`) y el entrenamiento, qué modelo activó (`modelo_id`). MongoDB no las
+  impone; las mantiene la API, que solo acepta lecturas de estaciones del catálogo.
+- **Los identificadores dicen algo.** El de una estación es su código de OEFA; el de un
+  entrenamiento, `e-` seguido de la fecha y la hora en que se lanzó; el de un modelo, `sembrado-…` si
+  viene de los reportes de la PC3 o `entrenado-` y el identificador de su entrenamiento.
+
+Los índices ({{< meta cifras.datos.indices >}}, todos creados por el seed con nombre propio) siguen a
+las consultas: las últimas predicciones de una estación, los entrenamientos del más reciente al más
+antiguo, el modelo activo y el más nuevo, y los eventos por fecha.
+
+{{< include generado/tablas/claves_redis.md >}}
+
+Redis guarda **lo último de cada cosa** (@tbl-claves-redis), y por eso sus valores repiten campos de
+MongoDB a propósito: el estado de una estación es el de su predicción de fecha más reciente, y
+`modelo:activo` es una copia del documento del modelo activo. El régimen de una estación es además
+la única fuente de `GET /api/estaciones/{id}/regimen`: esa consulta no toca MongoDB.
+
+### Decisiones de implementación
+
+**Detrás de interfaces.** La API no conoce MongoDB ni Redis: conoce las interfaces pequeñas del
+paquete `almacen/` (`Estaciones`, `Predicciones`, `Modelos`, `Entrenamientos`, `Eventos`, `Cache`,
+`PuntosControl`). Hay tres implementaciones: `almacen/mongo`, `almacen/redis` y un doble en memoria
+con el que corren las pruebas y la integración continua, que no levanta bases. El proyecto mantiene
+la regla de la PC3 de usar solo la biblioteca estándar, con una excepción escrita: los drivers
+oficiales (`{{< meta cifras.pc4.driver_mongo >}}` y `{{< meta cifras.pc4.driver_redis >}}`), que solo
+se importan en esos dos paquetes. El cargador, el K-Means, el protocolo, el clúster y la API siguen
+sin dependencias.
+
+**Fechas y vacíos.** En MongoDB todas las fechas son de tipo fecha (BSON Date), nunca texto: un
+campo tiene un solo tipo y los índices ordenan por tiempo. Lo que todavía no tiene valor se guarda
+como `null`, no como cero ni como texto vacío: el fin de un entrenamiento en curso, la media de 24
+horas cuando faltan lecturas, el error de una corrida que salió bien. Un cero en `dif_secuencial`
+se leería como «idéntico al secuencial», y no es lo mismo que «no se midió».
+
+**El régimen de una estación no retrocede.** Las lecturas pueden llegar desordenadas, y una más
+antigua no debe pisar el estado que dejó una más reciente. Leer la clave, comparar y escribir desde
+Go serían tres pasos entre los que otra escritura puede colarse: es una condición de carrera, solo
+que entre procesos. La comparación y la escritura van entonces en un script de Lua (@lst-guion-regimen),
+que Redis ejecuta entero sin atender a nadie más. `TestRegimenAtomicoConEscritoresConcurrentes` lo
+prueba contra un Redis real con varios escritores a la vez.
+
+{{< include generado/tablas/frag_guion_regimen.md >}}
+
+**El modelo activo.** Al arrancar, la API lee el modelo de los reportes de la PC3 y los dos
+guardados (el activo de MongoDB y el de Redis) y se queda con el entrenado más nuevo; si las dos
+bases no coinciden, porque activar un modelo son dos escrituras y una puede fallar, gana el más
+nuevo y la otra base queda al día. Así un modelo entrenado por el clúster sobrevive a un reinicio.
+
+**El punto de control por ronda.** En cada ronda de un entrenamiento, la API escribe
+en Redis la iteración y los centroides con que cerró. Solo importa el último, y Redis no tiene que
+poder frenar a Lloyd: por eso el camino hasta la goroutine que escribe es un **buzón de un lugar**
+(@lst-buzon). Si el punto anterior todavía no se escribió cuando llega el siguiente, el nuevo lo
+reemplaza y el viejo se cuenta como omitido. Si un nodo cae, queda el punto de la última ronda que
+sí terminó. Es un registro de hasta dónde llegó la corrida: **el sistema no reanuda desde él**.
+
+{{< include generado/tablas/frag_buzon.md >}}
+
+**Lo que sobrevive a un reinicio.** Al arrancar, la API recupera de MongoDB cuál fue el último
+entrenamiento y cierra como `abortado`, con un error que lo dice, cualquiera que hubiera quedado
+`en_curso` cuando el proceso anterior murió: si no, quedaría en curso para siempre.
+
+**El seed.** `docs/datos/seed.js` crea las colecciones y los índices y carga las
+{{< meta cifras.datos.estaciones >}} estaciones de la ficha (`reports/estaciones_ficha.csv`, de las
+que {{< meta cifras.datos.estaciones_gold >}} tienen horas en el gold). Corre en cada
+`docker compose up`, contra el MongoDB ya sano, y la API espera a que termine. Valida la ficha antes
+de escribir, con las mismas reglas con que la API la lee, y es idempotente: se puede repetir sin
+borrar nada.
+
+Las bases del Compose son de desarrollo: no tienen autenticación y solo publican su puerto en
+`localhost`. No es una configuración para exponer.
+
+### Registros {#sec-registros}
+
+Los registros que siguen los escribió la API durante la corrida de pruebas de la
+@sec-evidencias-pc4, no un script: las predicciones, al atender los pedidos de Postman y de la
+prueba de carga; los modelos, al arrancar y al terminar un entrenamiento; los entrenamientos, sus
+puntos de control y los eventos del clúster, mientras los nodos entraban, entrenaban y salían. El
+@lst-salida-mongo y el @lst-salida-mongo-modelos son consultas a MongoDB después de esa corrida, y
+el @lst-salida-redis, a Redis.
+
+{{< include generado/tablas/salida_mongo.md >}}
+
+{{< include generado/tablas/salida_mongo_modelos.md >}}
+
+{{< include generado/tablas/salida_redis.md >}}
+
+![MongoDB: documentos en cada una de las cinco colecciones](capturas/pc4/mongo-conteos.png){#fig-mongo-conteos width=16cm}
+
+:::: {si-falta="capturas/pc4/mongo-conteos.png"}
+::: {.callout-warning title="PENDIENTE"}
+Captura real de pantalla: El `countDocuments` de las cinco colecciones: 33 estaciones y las demás con registros (comandos en `mongo.txt`). Va en `docs/informe/capturas/pc4/mongo-conteos.png` (guion: `docs/informe/capturas/pc4/GUION.md`).
+:::
+::::
+
+![MongoDB: una predicción guardada, con la media de 24 h, la alerta y la banda INCA](capturas/pc4/mongo-prediccion.png){#fig-mongo-prediccion width=16cm}
+
+:::: {si-falta="capturas/pc4/mongo-prediccion.png"}
+::: {.callout-warning title="PENDIENTE"}
+Captura real de pantalla: `db.predicciones.find({estacion: "CA-HU-04"}).sort({fecha_hora: -1, ts: -1}).limit(1)`: un documento con `media_24h`, `alerta: true` e `inca`. Va en `docs/informe/capturas/pc4/mongo-prediccion.png` (guion: `docs/informe/capturas/pc4/GUION.md`).
+:::
+::::
+
+![MongoDB: el modelo sembrado y el entrenado por el clúster, con uno solo activo](capturas/pc4/mongo-modelo.png){#fig-mongo-modelo width=16cm}
+
+:::: {si-falta="capturas/pc4/mongo-modelo.png"}
+::: {.callout-warning title="PENDIENTE"}
+Captura real de pantalla: `db.modelos.find({}, {origen: 1, creado: 1, activo: 1, iteraciones: 1, inercia: 1})`: el sembrado y el entrenado, uno solo con `activo: true`. Va en `docs/informe/capturas/pc4/mongo-modelo.png` (guion: `docs/informe/capturas/pc4/GUION.md`).
+:::
+::::
+
+![MongoDB: los entrenamientos, con sus nodos y los rangos que le tocaron a cada uno](capturas/pc4/mongo-entrenamiento.png){#fig-mongo-entrenamiento width=16cm}
+
+:::: {si-falta="capturas/pc4/mongo-entrenamiento.png"}
+::: {.callout-warning title="PENDIENTE"}
+Captura real de pantalla: `db.entrenamientos.find({}, {rondas: 0}).sort({inicio: -1})`: los entrenamientos con sus nodos y rangos. Va en `docs/informe/capturas/pc4/mongo-entrenamiento.png` (guion: `docs/informe/capturas/pc4/GUION.md`).
+:::
+::::
+
+![MongoDB: altas y bajas de los nodos del clúster](capturas/pc4/mongo-eventos.png){#fig-mongo-eventos width=16cm}
+
+:::: {si-falta="capturas/pc4/mongo-eventos.png"}
+::: {.callout-warning title="PENDIENTE"}
+Captura real de pantalla: `db.eventos_cluster.find().sort({ts: 1}).limit(4)`: altas y bajas de los nodos. Va en `docs/informe/capturas/pc4/mongo-eventos.png` (guion: `docs/informe/capturas/pc4/GUION.md`).
+:::
+::::
+
+![Redis: las tres familias de claves](capturas/pc4/redis-claves.png){#fig-redis-claves width=16cm}
+
+:::: {si-falta="capturas/pc4/redis-claves.png"}
+::: {.callout-warning title="PENDIENTE"}
+Captura real de pantalla: `redis-cli --scan --pattern '*'`: `modelo:activo`, `estacion:*:regimen` y `entrenamiento:*:punto`. Va en `docs/informe/capturas/pc4/redis-claves.png` (guion: `docs/informe/capturas/pc4/GUION.md`).
+:::
+::::
+
+![Redis: el estado de una estación en su lectura más reciente](capturas/pc4/redis-estacion.png){#fig-redis-estacion width=16cm}
+
+:::: {si-falta="capturas/pc4/redis-estacion.png"}
+::: {.callout-warning title="PENDIENTE"}
+Captura real de pantalla: `redis-cli GET estacion:CA-HU-04:regimen`: el estado con `alerta: true`. Va en `docs/informe/capturas/pc4/redis-estacion.png` (guion: `docs/informe/capturas/pc4/GUION.md`).
+:::
+::::
+
+![Redis: el punto de control de un entrenamiento](capturas/pc4/redis-punto.png){#fig-redis-punto width=16cm}
+
+:::: {si-falta="capturas/pc4/redis-punto.png"}
+::: {.callout-warning title="PENDIENTE"}
+Captura real de pantalla: `redis-cli GET entrenamiento:<id>:punto`: `iter` y los centroides. Va en `docs/informe/capturas/pc4/redis-punto.png` (guion: `docs/informe/capturas/pc4/GUION.md`).
+:::
+::::

@@ -1,0 +1,375 @@
+<!-- f.7) PC4 · Desarrollo de la API: Swagger, funcionamiento en Go, menos de 100 ms y Postman. -->
+
+## Desarrollo de la API {#sec-api}
+
+La API es la parte C del sistema y, por decisión del enunciado, también el coordinador del clúster.
+Es un solo binario en Go, `cmd/api`, sobre el paquete `api/`. Está escrita con la **biblioteca
+estándar**: `net/http` para el servidor y las rutas, `crypto/hmac` y `crypto/sha256` para el JWT, y
+el WebSocket implementado sobre `net`. Las únicas dependencias externas del repositorio son los dos
+drivers de las bases de datos, y están confinadas en dos paquetes (@sec-bases).
+
+### Rutas y contrato: Swagger {#sec-swagger}
+
+El contrato de la API es `docs/api/openapi.yaml`, un documento OpenAPI escrito antes que el código
+para que la API, las pruebas de Postman y la documentación se desarrollaran en paralelo contra lo
+mismo. La API lo sirve tal cual en `/openapi.yaml`, y en `/docs` carga Swagger UI
+(versión {{< meta cifras.pc4.swagger_ui >}}, desde un CDN) apuntando a ese archivo: lo que se ve en
+Swagger es exactamente lo que la API promete. La @tbl-api-rutas lista sus
+{{< meta cifras.api.rutas >}} operaciones; en cada render se comprueba que sean las mismas rutas, con
+el mismo acceso, que registra el código.
+
+{{< include generado/tablas/api_rutas.md >}}
+
+![El contrato cargado en Swagger Editor, sin errores](capturas/pc4/swagger-editor.png){#fig-swagger-editor width=16cm}
+
+![Swagger UI servido por la API en `/docs`: las rutas agrupadas por etiqueta y el botón *Authorize*](capturas/pc4/swagger-ui.png){#fig-swagger-ui width=16cm}
+
+:::: {si-falta="capturas/pc4/swagger-ui.png"}
+::: {.callout-warning title="PENDIENTE"}
+Captura real de pantalla: `http://localhost:8080/docs` con la lista de rutas agrupadas por etiqueta y el botón *Authorize*. Va en `docs/informe/capturas/pc4/swagger-ui.png` (guion: `docs/informe/capturas/pc4/GUION.md`).
+:::
+::::
+
+![Una predicción ejecutada desde Swagger UI con el token: el pedido, la respuesta 200 y su duración](capturas/pc4/swagger-prediccion.png){#fig-swagger-prediccion width=16cm}
+
+:::: {si-falta="capturas/pc4/swagger-prediccion.png"}
+::: {.callout-warning title="PENDIENTE"}
+Captura real de pantalla: `/docs`, `POST /api/predicciones` → *Try it out* con el token: el pedido, la respuesta 200 y su duración. Va en `docs/informe/capturas/pc4/swagger-prediccion.png` (guion: `docs/informe/capturas/pc4/GUION.md`).
+:::
+::::
+
+Las respuestas de error tienen siempre la misma forma, `{"error": "…"}`, también las que no llegan
+a ningún handler (una ruta que no existe o un método que la ruta no admite). Los códigos siguen un
+criterio fijo: 400 para un pedido mal formado, con un mensaje que nombra el primer campo inválido;
+401 sin token o con uno vencido; 403 con un rol que no alcanza; 404 cuando el recurso no existe;
+409 y 422 en los entrenamientos (@sec-coordinador); y 503 cuando no hay modelo activo o no responde
+la base de datos de esa ruta.
+
+### El servidor en Go
+
+Cada ruta se registra con su patrón de método y camino en un `http.ServeMux`, envuelta en dos capas:
+la que exige el JWT con alguno de los roles de la ruta y la que mide cuánto tarda el pedido. Los
+handlers comparten pocas reglas, y todas apuntan a que un pedido malo cueste poco: el cuerpo se lee
+con un tope de {{< meta cifras.pc4.limite_cuerpo_kib >}} KiB, tiene que ser un solo objeto JSON y se
+valida campo por campo en el orden del contrato; la respuesta se codifica entera antes de escribir
+el encabezado, para no dejar un 200 con el cuerpo a medias.
+
+El arranque (`cmd/api`) hace todo lo que puede fallar antes de escuchar: lee el secreto del JWT y
+los usuarios de las variables de entorno (sin ellas no arranca y dice cuál falta), siembra el modelo
+desde `reports/`, lee el catálogo de estaciones, abre las conexiones a MongoDB y Redis y, si hay un
+modelo entrenado más nuevo guardado, se queda con ese. El apagado es ordenado: con la primera señal
+corta el entrenamiento en curso, despide a los nodos y a los clientes del WebSocket, termina los
+pedidos que estaban en vuelo y vacía las colas de escritura.
+
+### Autenticación con JWT
+
+El enunciado sugiere gestionar la autenticación con JWT. `POST /api/auth/token` recibe un usuario y
+una clave y devuelve un token HS256 [@rfc7519] con el usuario, su rol (`usuario` o `admin`) y su vencimiento;
+las demás rutas lo esperan en el encabezado `Authorization: Bearer`. El token se firma y se verifica
+con `crypto/hmac` y `crypto/sha256`, sin ninguna biblioteca (@lst-jwt).
+
+{{< include generado/tablas/frag_jwt.md >}}
+
+El orden de la verificación importa: primero el algoritmo (solo HS256: un token que declare `none`
+u otro algoritmo se rechaza), después la firma, comparada en tiempo constante, y recién entonces se
+lee la carga, su vencimiento y su rol. El secreto llega por variable de entorno, tiene que medir al
+menos {{< meta cifras.pc4.jwt_secreto_bytes >}} bytes y nunca sale del servidor; los usuarios y sus
+roles también se configuran por entorno, y las claves se comparan en tiempo constante exista o no el
+usuario, para no delatar cuáles existen.
+
+### La predicción en menos de 100 milisegundos {#sec-latencia}
+
+El enunciado fija la vara: la API «debe responder en menos de 100 milisegundos». La decisión de
+diseño que lo garantiza es una sola: **el camino de una predicción no espera a nadie**. No consulta
+MongoDB ni Redis, no toma ningún candado global y no hace ninguna llamada de red. El
+@alg-prediccion es ese camino.
+
+::: {#alg-prediccion}
+```pseudo
+Entrada: una lectura {estación, fecha_hora, pm2_5, pm10} con un JWT válido
+Salida:  régimen, media de 24 h, alerta e INCA; o un error 400 que dice
+         qué campo está mal
+
+ 1  m ← modelo activo                 // lectura atómica de un puntero
+ 2  si m no existe entonces responder 503
+ 3  validar la lectura campo por campo  // la estación, contra el catálogo
+ 4  x ← features de la receta, con log1p donde corresponda
+ 5  z ← (x - media) / desviación      // estandarización del gold, en m
+ 6  j ← argmin_j |z - c[j]|²          // empate: gana el índice menor
+ 7  media ← ventana de 24 h de la estación, con esta lectura
+                                      // candado solo de esa estación
+ 8  alerta ← media supera el ECA de 24 h; inca ← banda de la media
+ 9  enviar la predicción a la cola de MongoDB y a la de Redis, sin esperar
+10  responder 200 con j, la media, la alerta, la banda y el tiempo medido
+
+    aparte, una goroutine por base de datos, hasta que la API se apaga:
+11      recibir de su cola todo lo que haya, hasta el tope del lote
+12      escribir el lote en una sola ida y vuelta, con plazo
+```
+
+El camino de una predicción (`api/rutas.go`, `modelo/`, `ventana/` y `api/escritor.go`)
+:::
+
+Cada línea tiene detrás una decisión de concurrencia:
+
+- **El modelo vive en memoria detrás de un `atomic.Pointer`** (línea 1). Un modelo no cambia después
+  de creado, así que cualquier número de goroutines puede predecir con él a la vez sin candado.
+  Cuando un entrenamiento produce uno nuevo, se reemplaza el puntero entero (@lst-activar): las
+  predicciones que estaban en curso terminan con el anterior y las siguientes usan el nuevo.
+- **El catálogo de estaciones está en memoria** (línea 3). Se lee al arrancar de la misma ficha con
+  que se siembra MongoDB, de modo que validar una estación no cuesta una consulta.
+- **Predecir es poco cálculo** (líneas 4 a 6): estandarizar {{< meta cifras.pc4.features >}} números
+  y medir la distancia a {{< meta cifras.pc4.k >}} centroides, con el mismo contrato del K-Means.
+- **La ventana de 24 horas tiene un candado por estación** (línea 7), no uno global: dos estaciones
+  nunca se esperan entre sí (@sec-alerta).
+- **La escritura sale del camino** (línea 9): el handler deja la predicción en dos colas y responde.
+
+{{< include generado/tablas/frag_activar.md >}}
+
+El @lst-predecir es el final del handler: la ventana, la alerta, el tiempo medido hasta ahí y la
+predicción encolada. Lo que viene después es solo codificar la respuesta.
+
+{{< include generado/tablas/frag_predecir.md >}}
+
+**Cómo se demuestra.** La latencia se mide en tres lugares distintos, para que no dependa de quién
+la mira:
+
+1. **Dentro del servidor**, en cada pedido y por ruta. Guardar cada medición no escala, así que
+   cada ruta tiene un histograma de contadores atómicos con
+   {{< meta cifras.pc4.cubetas_por_octava >}} cubetas por octava (cada una es
+   $2^{1/16}$ veces más ancha que la anterior): observar no toma candados, la memoria es fija y un
+   percentil se conoce con el error de una cubeta. `GET /api/metricas` publica p50, p95 y p99 por
+   ruta.
+2. **Del lado del cliente, bajo carga**, con `cmd/carga`: clientes concurrentes que mandan lecturas
+   reales sin pausa y miden cada pedido desde antes de enviarlo hasta tener la respuesta completa,
+   con la red, el JWT y el JSON incluidos (@tbl-api-latencia).
+3. **En Postman**, donde cada pedido de la colección comprueba que su tiempo HTTP completo sea menor
+   de 100 ms (@sec-postman).
+
+{{< include generado/tablas/api_latencia.md >}}
+
+Con un cliente, la mediana es de {{< meta cifras.api_latencia.p50_1 >}} ms y el percentil 99, de
+{{< meta cifras.api_latencia.p99_1 >}} ms. Con {{< meta cifras.api_latencia.clientes_max >}} clientes
+a la vez, el percentil 99 es de {{< meta cifras.api_latencia.p99_max >}} ms y el pedido más lento de
+toda la prueba tardó {{< meta cifras.api_latencia.max_peor >}} ms. De los
+{{< meta cifras.api_latencia.pedidos_total >}} pedidos medidos, {{< meta cifras.api_latencia.errores >}}
+fallaron y {{< meta cifras.api_latencia.sobre_el_limite >}} llegaron a los
+{{< meta cifras.api_latencia.limite_ms >}} ms. La API llegó a atender
+{{< meta cifras.api_latencia.pedidos_por_s_max >}} predicciones por segundo. Es una medición con el
+cliente y la API en la misma máquina, sin una red de por medio: dice cuánto tarda el servicio, no
+cuánto tardaría un enlace lento.
+
+Esa velocidad no se compró perdiendo registros. La predicción responde antes de escribir, así que la
+latencia sola no dice si lo predicho llegó a las bases: por eso la prueba consulta además lo que la
+API escribió. Durante la corrida la API aceptó {{< meta cifras.api_latencia.escrituras_aceptadas >}}
+predicciones, contando las de calentamiento, y las dos bases las escribieron todas:
+{{< meta cifras.api_latencia.escritas_mongo >}} en MongoDB y
+{{< meta cifras.api_latencia.escritas_redis >}} en Redis, con
+{{< meta cifras.api_latencia.escrituras_descartadas >}} descartadas y
+{{< meta cifras.api_latencia.escrituras_fallidas >}} fallidas. MongoDB las recibió en
+{{< meta cifras.api_latencia.lotes_mongo >}} idas y vueltas, unas
+{{< meta cifras.api_latencia.por_lote_mongo >}} predicciones por lote: es el escritor de la
+@sec-escritor adaptándose a la carga.
+
+![El pedido «Predicción válida» de la colección de Postman: 200 con el régimen, la media de 24 h, la alerta, la banda INCA y el tiempo en milisegundos](capturas/pc4/postman-prediccion.png){#fig-postman-prediccion width=16cm}
+
+:::: {si-falta="capturas/pc4/postman-prediccion.png"}
+::: {.callout-warning title="PENDIENTE"}
+Captura real de pantalla: Postman, pedido «Predicción válida»: 200 con `regimen`, `media_24h`, `alerta`, `inca` y `ms`, con el tiempo y la pestaña *Test Results* a la vista. Va en `docs/informe/capturas/pc4/postman-prediccion.png` (guion: `docs/informe/capturas/pc4/GUION.md`).
+:::
+::::
+
+### La alerta: la media de 24 horas frente al ECA, y la banda INCA {#sec-alerta}
+
+La respuesta de una predicción trae dos cosas que no se mezclan. `regimen` y `excede_eca` describen
+el **tipo de aire de esa lectura**: el régimen del K-Means y si la media de ese régimen supera el
+ECA. `alerta` e `inca` describen el **estado de la estación**: salen de la media de sus lecturas de
+las últimas 24 horas. El ECA de material particulado [@minam2017eca] y el Índice de Calidad del Aire
+(INCA) [@minam2016inca] son normas de 24 horas, y un régimen no es una media de 24 horas
+(@sec-eca-inca).
+
+Los umbrales no se tomaron de segunda mano: salen del texto oficial de las dos normas. La
+@fig-norma-eca es el anexo del decreto que fija el ECA, con los 50 µg/m³ de PM2,5 y los 100 µg/m³ de
+PM10 para 24 horas; la @fig-norma-inca, las tablas de la resolución que define el INCA, con los
+cortes de concentración de cada banda. Son los valores que usa `ventana/` y que comprueban sus
+pruebas.
+
+![Anexo del Decreto Supremo N.° 003-2017-MINAM, publicado en El Peruano el 7 de junio de 2017: los Estándares de Calidad Ambiental para Aire. Captura del PDF oficial [@minam2017eca]](capturas/normas/eca-ds-003-2017-minam.png){#fig-norma-eca width=15cm}
+
+![Tabla 3 de la Resolución Ministerial N.° 181-2016-MINAM: cálculo del Índice de Calidad del Aire para PM10 y PM2,5 en promedio de 24 horas, con el intervalo de concentraciones de cada banda. Captura del PDF oficial [@minam2016inca]](capturas/normas/inca-rm-181-2016-minam.png){#fig-norma-inca width=13cm}
+
+La separación no es un gusto: se midió sobre el gold antes de decidirla (@tbl-alerta).
+
+{{< include generado/tablas/alerta_24h.md >}}
+
+Si la alerta fuera «la lectura cayó en el régimen alto», acertaría el
+{{< meta cifras.alerta.regimen_precision >}} de las veces y encontraría el
+{{< meta cifras.alerta.regimen_recall >}} de las horas en que la estación supera el ECA. Si fuera
+«la lectura horaria pasó el umbral», encontraría algo más
+({{< meta cifras.alerta.horaria_recall >}}) con más falsas alarmas (precisión del
+{{< meta cifras.alerta.horaria_precision >}}). Ninguna de las dos sirve para avisarle a alguien. Es
+la conclusión 5 de la PC3 puesta en producción: el K-Means describe niveles de aire, no detecta
+incumplimientos. Entonces la API calcula la media directamente:
+
+- La `fecha_hora` se trunca a la hora: hay una lectura por estación y hora, y repetirla la
+  reemplaza.
+- La ventana de una lectura son las de su estación en las {{< meta cifras.pc4.ventana_horas >}}
+  horas que terminan en ella. Se calcula respecto de **la lectura que llega**, no del reloj del
+  servidor: sirven los datos históricos y las lecturas que llegan desordenadas.
+- Con menos de {{< meta cifras.pc4.minimo_lecturas >}} lecturas en la ventana no hay media, la
+  alerta es `false` y el INCA es `null`. Es el 75 % de la ventana, y coincide con las
+  {{< meta cifras.eda.regla_horas_validas >}} horas válidas que OEFA exige a sus propios promedios de
+  24 horas (conclusión 6 del Entregable 1).
+- `alerta` es que esa media supere el ECA (PM2,5 mayor de {{< meta cifras.alerta.eca_pm2_5 >}} o PM10
+  mayor de {{< meta cifras.alerta.eca_pm10 >}} µg/m³), e `inca` es la banda del INCA de esa misma
+  media, la peor entre la de PM2,5 y la de PM10 (@tbl-inca). Se informan por separado, como en la
+  PC3.
+
+Cada estación guarda en memoria sus {{< meta cifras.pc4.lecturas_guardadas >}} lecturas horarias más
+cercanas a la última recibida, ordenadas por hora (@lst-ventana): insertar es una búsqueda binaria,
+la memoria queda acotada y una lectura con una fecha lejana desplaza a lo sumo una, sin borrar la
+ventana. Para que una fecha absurda no deje clavado el estado de la estación, la API rechaza las
+lecturas con más de una hora de adelanto respecto de su reloj y los valores de PM mayores de
+{{< meta cifras.pc4.max_pm >}} µg/m³.
+
+{{< include generado/tablas/frag_ventana.md >}}
+
+Un límite conocido: las ventanas viven solo en memoria. Después de reiniciar la API, cada estación
+vuelve a necesitar {{< meta cifras.pc4.minimo_lecturas >}} lecturas para tener media; reconstruirlas
+al arrancar desde la colección `predicciones` queda como mejora.
+
+### El escritor por colas {#sec-escritor}
+
+Que la predicción no espere a las bases no quiere decir que no se guarde. El handler deja cada
+predicción en **dos canales con búfer, uno por base**, y una goroutine por base los vacía. Son dos y
+no uno para que una base lenta o caída no frene a la otra. El @lst-cola tiene las dos piezas.
+
+{{< include generado/tablas/frag_cola.md >}}
+
+`encolar` usa un `select` con `default`: si la cola está llena, la predicción no se escribe en esa
+base, el descarte se cuenta y el pedido responde igual. Es una decisión explícita sobre qué se
+sacrifica cuando una base no da abasto: se pierde un registro, que queda contado, y no la latencia
+de todos. `completar` es lo que hace que la escritura se adapte sola: la goroutine toma lo que ya
+esté esperando, hasta {{< meta cifras.pc4.max_lote >}} predicciones, y lo manda en una sola ida y
+vuelta. Con la base al día, el lote es de una predicción y no se agrega espera; cuando se atrasa,
+los lotes crecen y el costo por predicción baja. En MongoDB un lote es un solo `insertMany`; en
+Redis, el último estado de cada estación del lote en un solo *pipeline*.
+
+Cada cola tiene {{< meta cifras.pc4.cola_por_omision >}} lugares por omisión; el Compose la sube a
+{{< meta cifras.pc4.cola_compose >}} porque, según anota el propio `docker-compose.yml`, con el valor
+por omisión una ráfaga de prueba llegó a descartar escrituras en MongoDB. `GET /api/metricas` publica
+por base cuántas predicciones se escribieron, cuántas se descartaron, cuántas falló la base y en
+cuántos lotes, y `GET /api/salud` dice si cada base responde: con MongoDB caído la API sigue
+prediciendo y lo informa. Al apagar, cada goroutine vacía su cola con un plazo de
+{{< meta cifras.pc4.plazo_vaciado_s >}} segundos, y lo que no alcance a escribirse queda contado y
+en el registro.
+
+### El coordinador dentro de la API {#sec-coordinador}
+
+Un administrador lanza un entrenamiento distribuido con `POST /api/entrenamientos`, indicando
+cuántos nodos usar, cuántas réplicas del gold y la semilla. El pedido **no espera al
+entrenamiento**: responde 202 con un identificador y la corrida sigue en su propia goroutine
+(@alg-entrenamiento; el bucle de Lloyd de la línea 8 es el @alg-kmeans-distribuido). El estado se consulta con `GET /api/entrenamientos/{id}` o se sigue en vivo
+por WebSocket.
+
+::: {#alg-entrenamiento}
+```pseudo
+Entrada: pedido {nodos K, réplicas r, semilla} de un administrador
+Salida:  202 con el id; o 400, 409, 422 o 503 con el motivo
+
+ 1  validar el pedido; si la API se está apagando entonces responder 503
+ 2  si el semáforo está tomado entonces responder 409  // sin esperar
+ 3  tomar K nodos libres del pool, por nombre
+    si no hay K entonces responder 422
+ 4  R[1..K] ← Repartir(r × n filas); guardar el entrenamiento «en curso»
+ 5  responder 202 con el id
+ 6  lanzar la corrida en su goroutine:
+ 7      enviar CARGAR a los K nodos y esperar sus LISTO, con plazo
+ 8      para cada iteración de Lloyd, al cerrar su Ronda hacer
+ 9          enviar la ronda al canal del almacén   // MongoDB
+10          enviar la ronda al hub del WebSocket   // a quien esté mirando
+11          enviar los centroides al buzón del punto de control  // Redis
+12      si un nodo falló entonces abortar: estado «abortado», con el error
+13      comparar los centroides con el K-Means secuencial sobre el gold
+14      si r = 1 y la diferencia ≤ tolerancia entonces activar el modelo
+15      guardar el estado final; soltar el semáforo; enviar el evento de fin
+```
+
+Un entrenamiento distribuido lanzado por la API (`api/entrenamientos.go`)
+:::
+
+**Un entrenamiento a la vez.** El semáforo es un canal con búfer de un lugar (@lst-semaforo). Tomarlo
+es un envío dentro de un `select` con `default`: si el lugar está ocupado, el pedido no se queda
+esperando, recibe un 409 con el identificador del entrenamiento en curso. La corrida devuelve el
+lugar cuando termina, haya salido bien o mal.
+
+{{< include generado/tablas/frag_semaforo.md >}}
+
+**Tres consumidores, tres canales.** Cada ronda que cierra le interesa a tres partes con ritmos
+distintos, y cada una tiene su propio canal (@lst-al-ronda). El almacén recibe las rondas por un
+canal donde caben todas las de la corrida, así que mandarle nunca frena a Lloyd ni pierde una. El
+hub del WebSocket tiene su canal de difusión. Y el punto de control va a un buzón de un solo lugar,
+porque de los centroides solo importan los últimos (@sec-bases). Con un canal compartido, cada ronda
+la recibiría uno solo de los tres.
+
+{{< include generado/tablas/frag_al_ronda.md >}}
+
+**La compuerta del modelo.** Cuando la corrida termina, la API corre el K-Means secuencial sobre su
+propia copia del gold, desde los mismos centroides iniciales, y guarda la mayor diferencia entre
+centroides (`dif_secuencial`). Con una réplica, el modelo nuevo se activa solo si esa diferencia no
+supera la tolerancia de la @sec-determinismo; si la supera, el entrenamiento queda `terminado` con
+sus cifras a la vista y un aviso que dice por qué el modelo no se activó, y sigue el anterior. Con
+más de una réplica la corrida es una medición: no activa nada. El modelo activado se guarda en
+MongoDB y en Redis, de modo que sobrevive a un reinicio.
+
+### El WebSocket y su hub {#sec-websocket}
+
+`GET /ws` abre un WebSocket por el que el servidor avisa dos eventos: `entrenamiento.ronda`, con la
+iteración, la inercia y los tiempos de la ronda y de cada nodo, y `entrenamiento.fin`, con el
+resultado o el error. Es lo que va a consumir el panel del entregable final. El protocolo está
+implementado sobre `net/http` y `net`, sin bibliotecas: el apretón de manos de RFC 6455
+[@rfc6455], las tramas de texto del servidor, y del cliente, sus `ping`, sus `pong` y su cierre. El
+pedido se valida completo (que sea un apretón, el origen y el token) antes de tomar la conexión,
+mientras todavía se puede responder con un error HTTP. Como un navegador no deja poner encabezados
+en un WebSocket, el token puede venir también como subprotocolo o en la consulta de la URL.
+
+El reparto de los eventos sigue el patrón del **hub**: una sola goroutine es dueña del conjunto de
+clientes y lo modifica únicamente por lo que le llega por tres canales (altas, bajas y difusión).
+Como nadie más toca ese mapa, no hay candado. Cada cliente tiene además su propio canal con búfer y
+su propia goroutine escritora, la única que escribe en su conexión. El @lst-hub es el corazón:
+
+{{< include generado/tablas/frag_hub.md >}}
+
+El hub **nunca espera a un cliente**. Si al repartir un evento el búfer de uno está lleno
+({{< meta cifras.pc4.ws_bufer_cliente >}} eventos pendientes, más que todos los de un entrenamiento),
+ese cliente no está leyendo: el hub lo da de baja, su escritora le manda un cierre con el motivo y
+los demás reciben el evento a tiempo. Un cliente lento no frena ni al hub ni al entrenamiento. El
+servidor manda además un `ping` cada {{< meta cifras.pc4.ws_ping_s >}} segundos y corta al que no da
+señales de vida, cierra la conexión cuando vence el token con que se abrió, y al apagarse despide a
+todos con un cierre que lo dice. Los eventos de un entrenamiento llegan solo a los clientes con rol
+de administrador.
+
+### Patrones de concurrencia de este entregable
+
+La @tbl-patrones-pc4 reúne los patrones de la distribución y de la API, como la @tbl-patrones hizo
+con los de la PC3. Todo el código corre bajo `go test -race` en la integración continua.
+
+::: {#tbl-patrones-pc4 tbl-colwidths="[21,27,52]"}
+| Patrón | Dónde | Para qué |
+|:---|:---|:---|
+| *Fan-out/fan-in* con barrera y plazo | `protocolo.Ronda`, `cluster.Cargar`, el latido del pool | Hablarles a todos los nodos a la vez y esperar al último, como mucho hasta un instante límite |
+| Reducción en orden fijo | `cluster.LloydCtx` | Que el resultado no dependa de qué nodo respondió primero |
+| *Worker pool* por chunks | `cluster.Nodo`, con `kmeans.ParcialesPorChunks` | El paralelismo dentro de cada nodo, igual que en una máquina |
+| Semáforo con un canal | `api/entrenamientos.go` | Un entrenamiento a la vez, sin hacer esperar al segundo pedido |
+| Puntero atómico | El modelo activo (`atomic.Pointer`) | Reemplazar el modelo sin candado en el camino de la predicción |
+| Cola con búfer y envío que no bloquea | `api/escritor.go`, el hub | Sacar la escritura del camino del pedido; contar lo que no entra en vez de frenar |
+| Escritura por lotes que se adapta | `api/escritor.go` | Una ida y vuelta a la base por todo lo que esté esperando |
+| Un canal por consumidor | Las rondas de un entrenamiento | Que el almacén, el WebSocket y el punto de control no se frenen entre sí |
+| Buzón de un lugar | El punto de control | Quedarse con lo último cuando lo viejo ya no importa |
+| Un solo dueño del estado, que recibe por canales | El hub del WebSocket | Un mapa sin candado: solo una goroutine lo toca |
+| Candado por recurso, no global | La ventana de cada estación; los dos candados del pool | Que dos estaciones no se esperen; que las consultas no esperen a la red |
+| Contadores atómicos | Las métricas y los histogramas | Medir desde todas las goroutines sin candados |
+| Cancelación con `context` | El apagado, la carga y cada ronda | Cortar una corrida sin esperar a su plazo y sin dejar goroutines |
+
+Patrones de concurrencia y de distribución usados en el Entregable 2
+:::

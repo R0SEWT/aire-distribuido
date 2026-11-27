@@ -10,9 +10,11 @@ salida/
 # llenada y el historial de git del momento no se versionan (el repositorio es público).
 equipo.local.yml
 participacion.local.md
+participacion-pc4.local.md
 generado/local/
 
 /.quarto/
 **/*.quarto_ipynb
 recursos/plantilla-participacion.docx
 participacion.local.yml
+participacion-pc4.local.yml

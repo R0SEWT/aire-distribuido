@@ -1,0 +1,3528 @@
+{
+  "info": {
+    "_postman_id": "23454543-ad1f-51c8-98dd-9c48b2e6b2cf",
+    "name": "aire-distribuido - PC4",
+    "description": "Pruebas de la API coordinadora de aire-distribuido contra el contrato docs/api/openapi.yaml.\n\nCada pedido comprueba el código HTTP, la forma de la respuesta (el esquema del contrato, sin campos de más) y que el tiempo HTTP completo quede por debajo de limite_ms (100 ms).\n\nAntes de usarla: levanta el Compose con al menos nodos_entrenamiento nodos (docker compose up --build --scale nodo=3) y completa en el entorno las credenciales de API_USUARIOS (usuario_usuario, usuario_clave, admin_usuario, admin_clave). Los tokens se piden solos.\n\nCarpetas 1 a 3: se corren tal cual. Carpeta 4: en el Runner, con docs/postman/lecturas_prueba.csv como archivo de datos. Ver docs/postman/README.md.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "1. Base HTTP",
+      "description": "Rutas libres, autenticación, predicción con sus rechazos, estaciones, modelo, documentación y permisos por rol.",
+      "item": [
+        {
+          "name": "Salud pública",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('código HTTP 200', () => pm.response.to.have.status(200));",
+                  "const esquema = {\"type\":\"object\",\"required\":[\"api\",\"mongo\",\"redis\",\"nodos_en_pool\",\"modelo_activo\"],\"properties\":{\"api\":{\"type\":\"string\",\"enum\":[\"ok\"]},\"mongo\":{\"type\":\"string\",\"enum\":[\"ok\",\"error\"]},\"redis\":{\"type\":\"string\",\"enum\":[\"ok\",\"error\"]},\"nodos_en_pool\":{\"type\":\"integer\",\"minimum\":0},\"modelo_activo\":{\"type\":[\"string\",\"null\"]}},\"additionalProperties\":false};",
+                  "let datos;",
+                  "pm.test('forma de la respuesta: Salud del contrato', () => {",
+                  "  datos = pm.response.json();",
+                  "  pm.expect(datos).to.have.jsonSchema(esquema);",
+                  "});",
+                  "pm.test('MongoDB y Redis responden', () => {",
+                  "  pm.expect(datos.mongo).to.eql('ok');",
+                  "  pm.expect(datos.redis).to.eql('ok');",
+                  "});",
+                  "pm.test('hay un modelo activo', () => pm.expect(datos.modelo_activo).to.be.a('string').and.not.empty);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "noauth"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/salud",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "salud"
+              ]
+            },
+            "description": "Ruta libre. Estado de la API, sus almacenes, el pool de nodos y el modelo activo."
+          },
+          "response": []
+        },
+        {
+          "name": "Credenciales incorrectas",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('código HTTP 401', () => pm.response.to.have.status(401));",
+                  "const esquema = {\"type\":\"object\",\"required\":[\"error\"],\"properties\":{\"error\":{\"type\":\"string\",\"minLength\":1}},\"additionalProperties\":false};",
+                  "let datos;",
+                  "pm.test('forma de la respuesta: Error del contrato', () => {",
+                  "  datos = pm.response.json();",
+                  "  pm.expect(datos).to.have.jsonSchema(esquema);",
+                  "});",
+                  "pm.test('el error dice: usuario o clave incorrectos', () => pm.expect(datos.error).to.include(\"usuario o clave incorrectos\"));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "noauth"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/auth/token",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "token"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"usuario\": \"no-existe\", \"clave\": \"clave-equivocada\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Credenciales sin clave",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('código HTTP 400', () => pm.response.to.have.status(400));",
+                  "const esquema = {\"type\":\"object\",\"required\":[\"error\"],\"properties\":{\"error\":{\"type\":\"string\",\"minLength\":1}},\"additionalProperties\":false};",
+                  "let datos;",
+                  "pm.test('forma de la respuesta: Error del contrato', () => {",
+                  "  datos = pm.response.json();",
+                  "  pm.expect(datos).to.have.jsonSchema(esquema);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "noauth"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/auth/token",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "token"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"usuario\": \"demo\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Token usuario",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const usuario = pm.variables.get('usuario_usuario');",
+                  "const clave = pm.variables.get('usuario_clave');",
+                  "if (!usuario || !clave) {",
+                  "  throw new Error('Falta usuario_usuario o usuario_clave en el entorno: son los de API_USUARIOS del .env');",
+                  "}",
+                  "pm.request.body.update(JSON.stringify({ usuario: String(usuario), clave: String(clave) }));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('código HTTP 200', () => pm.response.to.have.status(200));",
+                  "const esquema = {\"type\":\"object\",\"required\":[\"token\",\"rol\",\"expira\"],\"properties\":{\"token\":{\"type\":\"string\",\"minLength\":1},\"rol\":{\"type\":\"string\",\"enum\":[\"usuario\",\"admin\"]},\"expira\":{\"type\":\"string\",\"format\":\"date-time\"}},\"additionalProperties\":false};",
+                  "let datos;",
+                  "pm.test('forma de la respuesta: Token del contrato', () => {",
+                  "  datos = pm.response.json();",
+                  "  pm.expect(datos).to.have.jsonSchema(esquema);",
+                  "});",
+                  "pm.test('rol usuario', () => pm.expect(datos.rol).to.eql('usuario'));",
+                  "pm.test('el token es un JWT y expira en el futuro', () => {",
+                  "  pm.expect(datos.token.split('.')).to.have.lengthOf(3);",
+                  "  pm.expect(Date.parse(datos.expira)).to.be.above(Date.now());",
+                  "});",
+                  "if (pm.response.code === 200) {",
+                  "  pm.collectionVariables.set('token_usuario', datos.token);",
+                  "  pm.collectionVariables.set('token_usuario_expira', datos.expira);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "noauth"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/auth/token",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "token"
+              ]
+            },
+            "description": "El cuerpo se arma con usuario_usuario y usuario_clave del entorno. Guarda el token para los demás pedidos.",
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Token admin",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const usuario = pm.variables.get('admin_usuario');",
+                  "const clave = pm.variables.get('admin_clave');",
+                  "if (!usuario || !clave) {",
+                  "  throw new Error('Falta admin_usuario o admin_clave en el entorno: son los de API_USUARIOS del .env');",
+                  "}",
+                  "pm.request.body.update(JSON.stringify({ usuario: String(usuario), clave: String(clave) }));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('código HTTP 200', () => pm.response.to.have.status(200));",
+                  "const esquema = {\"type\":\"object\",\"required\":[\"token\",\"rol\",\"expira\"],\"properties\":{\"token\":{\"type\":\"string\",\"minLength\":1},\"rol\":{\"type\":\"string\",\"enum\":[\"usuario\",\"admin\"]},\"expira\":{\"type\":\"string\",\"format\":\"date-time\"}},\"additionalProperties\":false};",
+                  "let datos;",
+                  "pm.test('forma de la respuesta: Token del contrato', () => {",
+                  "  datos = pm.response.json();",
+                  "  pm.expect(datos).to.have.jsonSchema(esquema);",
+                  "});",
+                  "pm.test('rol admin', () => pm.expect(datos.rol).to.eql('admin'));",
+                  "pm.test('el token es un JWT y expira en el futuro', () => {",
+                  "  pm.expect(datos.token.split('.')).to.have.lengthOf(3);",
+                  "  pm.expect(Date.parse(datos.expira)).to.be.above(Date.now());",
+                  "});",
+                  "if (pm.response.code === 200) {",
+                  "  pm.collectionVariables.set('token_admin', datos.token);",
+                  "  pm.collectionVariables.set('token_admin_expira', datos.expira);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "noauth"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/auth/token",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "token"
+              ]
+            },
+            "description": "El cuerpo se arma con admin_usuario y admin_clave del entorno. Guarda el token para los demás pedidos.",
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Ingreso de invitado",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Una corrida va contra una sola API, que tiene el ingreso de invitado habilitado (API_INVITADO)",
+                  "// o no lo tiene: por eso este pedido acepta los dos casos y comprueba la forma del que tocó.",
+                  "const habilitado = pm.response.code === 200;",
+                  "pm.test('código HTTP 200 (invitado habilitado) o 404 (deshabilitado)', () => pm.expect(pm.response.code).to.be.oneOf([200, 404]));",
+                  "const esquemaToken = {\"type\":\"object\",\"required\":[\"token\",\"rol\",\"expira\"],\"properties\":{\"token\":{\"type\":\"string\",\"minLength\":1},\"rol\":{\"type\":\"string\",\"enum\":[\"usuario\",\"admin\"]},\"expira\":{\"type\":\"string\",\"format\":\"date-time\"}},\"additionalProperties\":false};",
+                  "const esquemaError = {\"type\":\"object\",\"required\":[\"error\"],\"properties\":{\"error\":{\"type\":\"string\",\"minLength\":1}},\"additionalProperties\":false};",
+                  "let datos;",
+                  "pm.test('forma de la respuesta: ' + (habilitado ? 'Token' : 'Error') + ' del contrato', () => {",
+                  "  datos = pm.response.json();",
+                  "  pm.expect(datos).to.have.jsonSchema(habilitado ? esquemaToken : esquemaError);",
+                  "});",
+                  "if (habilitado) {",
+                  "  pm.test('el token es un JWT de rol usuario y expira en el futuro', () => {",
+                  "    pm.expect(datos.rol).to.eql('usuario');",
+                  "    pm.expect(datos.token.split('.')).to.have.lengthOf(3);",
+                  "    pm.expect(Date.parse(datos.expira)).to.be.above(Date.now());",
+                  "  });",
+                  "} else {",
+                  "  pm.test('el error dice: el ingreso de invitado no está habilitado', () => pm.expect(datos.error).to.include(\"el ingreso de invitado no está habilitado\"));",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "auth": {
+              "type": "noauth"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/auth/invitado",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "invitado"
+              ]
+            },
+            "description": "Ruta libre, sin cuerpo y sin credenciales. Con API_INVITADO en el servidor responde 200 y un token de esa cuenta, de rol usuario; sin ella, 404. El pedido acepta los dos casos."
+          },
+          "response": []
+        },
+        {
+          "name": "Predicción sin token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('código HTTP 401', () => pm.response.to.have.status(401));",
+                  "const esquema = {\"type\":\"object\",\"required\":[\"error\"],\"properties\":{\"error\":{\"type\":\"string\",\"minLength\":1}},\"additionalProperties\":false};",
+                  "let datos;",
+                  "pm.test('forma de la respuesta: Error del contrato', () => {",
+                  "  datos = pm.response.json();",
+                  "  pm.expect(datos).to.have.jsonSchema(esquema);",
+                  "});",
+                  "pm.test('el error dice: token ausente, inválido o expirado', () => pm.expect(datos.error).to.include(\"token ausente, inválido o expirado\"));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "noauth"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/predicciones",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "predicciones"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"estacion\": \"{{estacion}}\", \"fecha_hora\": \"2026-11-14T15:00:00-05:00\", \"pm2_5\": 70.2, \"pm10\": 190.5}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Predicción con token inválido",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('código HTTP 401', () => pm.response.to.have.status(401));",
+                  "const esquema = {\"type\":\"object\",\"required\":[\"error\"],\"properties\":{\"error\":{\"type\":\"string\",\"minLength\":1}},\"additionalProperties\":false};",
+                  "let datos;",
+                  "pm.test('forma de la respuesta: Error del contrato', () => {",
+                  "  datos = pm.response.json();",
+                  "  pm.expect(datos).to.have.jsonSchema(esquema);",
+                  "});",
+                  "pm.test('el error dice: token ausente, inválido o expirado', () => pm.expect(datos.error).to.include(\"token ausente, inválido o expirado\"));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "token.invalido.j2",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/predicciones",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "predicciones"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"estacion\": \"{{estacion}}\", \"fecha_hora\": \"2026-11-14T15:00:00-05:00\", \"pm2_5\": 70.2, \"pm10\": 190.5}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Predicción válida",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('código HTTP 200', () => pm.response.to.have.status(200));",
+                  "const esquema = {\"type\":\"object\",\"required\":[\"estacion\",\"regimen\",\"excede_eca\",\"media_24h\",\"alerta\",\"inca\",\"pm2_5_medio_regimen\",\"pm10_medio_regimen\",\"modelo_id\",\"ms\"],\"properties\":{\"estacion\":{\"type\":\"string\",\"minLength\":1},\"regimen\":{\"type\":\"integer\",\"minimum\":0},\"excede_eca\":{\"type\":\"boolean\"},\"media_24h\":{\"type\":\"object\",\"required\":[\"pm2_5\",\"pm10\",\"lecturas\"],\"properties\":{\"pm2_5\":{\"type\":[\"number\",\"null\"],\"minimum\":0},\"pm10\":{\"type\":[\"number\",\"null\"],\"minimum\":0},\"lecturas\":{\"type\":\"integer\",\"minimum\":0,\"maximum\":24}},\"additionalProperties\":false},\"alerta\":{\"type\":\"boolean\"},\"inca\":{\"enum\":[\"buena\",\"moderada\",\"mala\",\"umbral_de_cuidado\",null]},\"pm2_5_medio_regimen\":{\"type\":\"number\",\"minimum\":0},\"pm10_medio_regimen\":{\"type\":\"number\",\"minimum\":0},\"modelo_id\":{\"type\":\"string\",\"minLength\":1},\"ms\":{\"type\":\"number\",\"minimum\":0}},\"additionalProperties\":false};",
+                  "let datos;",
+                  "pm.test('forma de la respuesta: Prediccion del contrato', () => {",
+                  "  datos = pm.response.json();",
+                  "  pm.expect(datos).to.have.jsonSchema(esquema);",
+                  "});",
+                  "pm.test('es la estación de la lectura', () => pm.expect(datos.estacion).to.eql(pm.variables.get('estacion')));",
+                  "pm.test('70.2 y 190.5 µg/m³ caen en un régimen que excede el ECA', () => {",
+                  "  pm.expect(datos.excede_eca).to.eql(true);",
+                  "  pm.expect(datos.pm2_5_medio_regimen > 50 || datos.pm10_medio_regimen > 100).to.eql(true);",
+                  "});",
+                  "pm.test('el tiempo interno de la predicción también queda bajo el límite', () => pm.expect(datos.ms).to.be.below(Number(pm.variables.get('limite_ms'))));",
+                  "",
+                  "pm.test('media_24h, alerta e inca son coherentes con la regla de las 18 lecturas', () => {",
+                  "  const m = datos.media_24h;",
+                  "  if (m.lecturas < 18) {",
+                  "    pm.expect(m.pm2_5).to.eql(null);",
+                  "    pm.expect(m.pm10).to.eql(null);",
+                  "    pm.expect(datos.alerta).to.eql(false);",
+                  "    pm.expect(datos.inca).to.eql(null);",
+                  "  } else {",
+                  "    pm.expect(m.pm2_5).to.be.a('number');",
+                  "    pm.expect(m.pm10).to.be.a('number');",
+                  "    pm.expect(datos.alerta).to.eql(m.pm2_5 > 50 || m.pm10 > 100);",
+                  "    pm.expect(datos.inca).to.be.a('string');",
+                  "  }",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_usuario}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/predicciones",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "predicciones"
+              ]
+            },
+            "description": "La lectura de ejemplo del contrato (spec §6.5): régimen, media de 24 h de la estación, alerta e INCA.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"estacion\": \"{{estacion}}\", \"fecha_hora\": \"2026-11-14T15:00:00-05:00\", \"pm2_5\": 70.2, \"pm10\": 190.5}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "PM2.5 negativa",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('código HTTP 400', () => pm.response.to.have.status(400));",
+                  "const esquema = {\"type\":\"object\",\"required\":[\"error\"],\"properties\":{\"error\":{\"type\":\"string\",\"minLength\":1}},\"additionalProperties\":false};",
+                  "let datos;",
+                  "pm.test('forma de la respuesta: Error del contrato', () => {",
+                  "  datos = pm.response.json();",
+                  "  pm.expect(datos).to.have.jsonSchema(esquema);",
+                  "});",
+                  "pm.test('el error dice: pm2_5 tiene que ser un número no negativo', () => pm.expect(datos.error).to.include(\"pm2_5 tiene que ser un número no negativo\"));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_usuario}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/predicciones",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "predicciones"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"estacion\": \"{{estacion}}\", \"fecha_hora\": \"2026-11-14T15:00:00-05:00\", \"pm2_5\": -1, \"pm10\": 190.5}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "PM10 negativa",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('código HTTP 400', () => pm.response.to.have.status(400));",
+                  "const esquema = {\"type\":\"object\",\"required\":[\"error\"],\"properties\":{\"error\":{\"type\":\"string\",\"minLength\":1}},\"additionalProperties\":false};",
+                  "let datos;",
+                  "pm.test('forma de la respuesta: Error del contrato', () => {",
+                  "  datos = pm.response.json();",
+                  "  pm.expect(datos).to.have.jsonSchema(esquema);",
+                  "});",
+                  "pm.test('el error dice: pm10 tiene que ser un número no negativo', () => pm.expect(datos.error).to.include(\"pm10 tiene que ser un número no negativo\"));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_usuario}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/predicciones",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "predicciones"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"estacion\": \"{{estacion}}\", \"fecha_hora\": \"2026-11-14T15:00:00-05:00\", \"pm2_5\": 70.2, \"pm10\": -1}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "PM2.5 mayor de 10 000",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('código HTTP 400', () => pm.response.to.have.status(400));",
+                  "const esquema = {\"type\":\"object\",\"required\":[\"error\"],\"properties\":{\"error\":{\"type\":\"string\",\"minLength\":1}},\"additionalProperties\":false};",
+                  "let datos;",
+                  "pm.test('forma de la respuesta: Error del contrato', () => {",
+                  "  datos = pm.response.json();",
+                  "  pm.expect(datos).to.have.jsonSchema(esquema);",
+                  "});",
+                  "pm.test('el error dice: pm2_5 no puede superar 10000', () => pm.expect(datos.error).to.include(\"pm2_5 no puede superar 10000\"));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_usuario}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/predicciones",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "predicciones"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"estacion\": \"{{estacion}}\", \"fecha_hora\": \"2026-11-14T15:00:00-05:00\", \"pm2_5\": 10000.5, \"pm10\": 190.5}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "PM10 mayor de 10 000",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('código HTTP 400', () => pm.response.to.have.status(400));",
+                  "const esquema = {\"type\":\"object\",\"required\":[\"error\"],\"properties\":{\"error\":{\"type\":\"string\",\"minLength\":1}},\"additionalProperties\":false};",
+                  "let datos;",
+                  "pm.test('forma de la respuesta: Error del contrato', () => {",
+                  "  datos = pm.response.json();",
+                  "  pm.expect(datos).to.have.jsonSchema(esquema);",
+                  "});",
+                  "pm.test('el error dice: pm10 no puede superar 10000', () => pm.expect(datos.error).to.include(\"pm10 no puede superar 10000\"));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_usuario}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/predicciones",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "predicciones"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"estacion\": \"{{estacion}}\", \"fecha_hora\": \"2026-11-14T15:00:00-05:00\", \"pm2_5\": 70.2, \"pm10\": 25000}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Estación vacía",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('código HTTP 400', () => pm.response.to.have.status(400));",
+                  "const esquema = {\"type\":\"object\",\"required\":[\"error\"],\"properties\":{\"error\":{\"type\":\"string\",\"minLength\":1}},\"additionalProperties\":false};",
+                  "let datos;",
+                  "pm.test('forma de la respuesta: Error del contrato', () => {",
+                  "  datos = pm.response.json();",
+                  "  pm.expect(datos).to.have.jsonSchema(esquema);",
+                  "});",
+                  "pm.test('el error dice: estacion tiene que ser un texto no vacío', () => pm.expect(datos.error).to.include(\"estacion tiene que ser un texto no vacío\"));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_usuario}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/predicciones",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "predicciones"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"estacion\": \"\", \"fecha_hora\": \"2026-11-14T15:00:00-05:00\", \"pm2_5\": 70.2, \"pm10\": 190.5}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Estación desconocida",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('código HTTP 400', () => pm.response.to.have.status(400));",
+                  "const esquema = {\"type\":\"object\",\"required\":[\"error\"],\"properties\":{\"error\":{\"type\":\"string\",\"minLength\":1}},\"additionalProperties\":false};",
+                  "let datos;",
+                  "pm.test('forma de la respuesta: Error del contrato', () => {",
+                  "  datos = pm.response.json();",
+                  "  pm.expect(datos).to.have.jsonSchema(esquema);",
+                  "});",
+                  "pm.test('el error dice: estación desconocida: CA-XX-99', () => pm.expect(datos.error).to.include(\"estación desconocida: CA-XX-99\"));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_usuario}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/predicciones",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "predicciones"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"estacion\": \"CA-XX-99\", \"fecha_hora\": \"2026-11-14T15:00:00-05:00\", \"pm2_5\": 70.2, \"pm10\": 190.5}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Fecha inválida",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('código HTTP 400', () => pm.response.to.have.status(400));",
+                  "const esquema = {\"type\":\"object\",\"required\":[\"error\"],\"properties\":{\"error\":{\"type\":\"string\",\"minLength\":1}},\"additionalProperties\":false};",
+                  "let datos;",
+                  "pm.test('forma de la respuesta: Error del contrato', () => {",
+                  "  datos = pm.response.json();",
+                  "  pm.expect(datos).to.have.jsonSchema(esquema);",
+                  "});",
+                  "pm.test('el error dice: fecha_hora tiene que ser una fecha RFC3339', () => pm.expect(datos.error).to.include(\"fecha_hora tiene que ser una fecha RFC3339\"));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_usuario}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/predicciones",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "predicciones"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"estacion\": \"{{estacion}}\", \"fecha_hora\": \"14/11/2026 15:00\", \"pm2_5\": 70.2, \"pm10\": 190.5}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Fecha futura",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Dos horas adelante del reloj de quien prueba: el margen de la API es de una hora.",
+                  "pm.variables.set('fecha_futura', new Date(Date.now() + 2 * 3600 * 1000).toISOString());"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('código HTTP 400', () => pm.response.to.have.status(400));",
+                  "const esquema = {\"type\":\"object\",\"required\":[\"error\"],\"properties\":{\"error\":{\"type\":\"string\",\"minLength\":1}},\"additionalProperties\":false};",
+                  "let datos;",
+                  "pm.test('forma de la respuesta: Error del contrato', () => {",
+                  "  datos = pm.response.json();",
+                  "  pm.expect(datos).to.have.jsonSchema(esquema);",
+                  "});",
+                  "pm.test('el error dice: fecha_hora no puede estar más de 1 hora adelante', () => pm.expect(datos.error).to.include(\"fecha_hora no puede estar más de 1 hora adelante\"));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_usuario}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/predicciones",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "predicciones"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"estacion\": \"{{estacion}}\", \"fecha_hora\": \"{{fecha_futura}}\", \"pm2_5\": 70.2, \"pm10\": 190.5}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Cuerpo que no es JSON",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('código HTTP 400', () => pm.response.to.have.status(400));",
+                  "const esquema = {\"type\":\"object\",\"required\":[\"error\"],\"properties\":{\"error\":{\"type\":\"string\",\"minLength\":1}},\"additionalProperties\":false};",
+                  "let datos;",
+                  "pm.test('forma de la respuesta: Error del contrato', () => {",
+                  "  datos = pm.response.json();",
+                  "  pm.expect(datos).to.have.jsonSchema(esquema);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_usuario}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/predicciones",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "predicciones"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "esto no es JSON",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Listar estaciones",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('código HTTP 200', () => pm.response.to.have.status(200));",
+                  "const esquema = {\"type\":\"array\",\"items\":{\"type\":\"object\",\"required\":[\"id\",\"objeto_fiscalizado\",\"tipo_actividad\",\"departamento\",\"provincia\",\"distrito\",\"lat\",\"lon\"],\"properties\":{\"id\":{\"type\":\"string\",\"minLength\":1},\"objeto_fiscalizado\":{\"type\":[\"string\",\"null\"]},\"tipo_actividad\":{\"type\":[\"string\",\"null\"]},\"departamento\":{\"type\":[\"string\",\"null\"]},\"provincia\":{\"type\":[\"string\",\"null\"]},\"distrito\":{\"type\":[\"string\",\"null\"]},\"lat\":{\"type\":\"number\",\"minimum\":-90,\"maximum\":90},\"lon\":{\"type\":\"number\",\"minimum\":-180,\"maximum\":180}},\"additionalProperties\":false}};",
+                  "let datos;",
+                  "pm.test('forma de la respuesta: lista de Estacion del contrato', () => {",
+                  "  datos = pm.response.json();",
+                  "  pm.expect(datos).to.have.jsonSchema(esquema);",
+                  "});",
+                  "pm.test('trae la estación del entorno', () => pm.expect(datos.map((e) => e.id)).to.include(pm.variables.get('estacion')));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_usuario}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/estaciones",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "estaciones"
+              ]
+            },
+            "description": "El catálogo, leído de MongoDB (lo carga el seed)."
+          },
+          "response": []
+        },
+        {
+          "name": "Régimen de estación",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('código HTTP 200', () => pm.response.to.have.status(200));",
+                  "const esquema = {\"type\":\"object\",\"required\":[\"fecha_hora\",\"regimen\",\"excede_eca\",\"media_24h\",\"alerta\",\"inca\",\"ts\"],\"properties\":{\"fecha_hora\":{\"type\":\"string\",\"format\":\"date-time\"},\"regimen\":{\"type\":\"integer\",\"minimum\":0},\"excede_eca\":{\"type\":\"boolean\"},\"media_24h\":{\"type\":\"object\",\"required\":[\"pm2_5\",\"pm10\",\"lecturas\"],\"properties\":{\"pm2_5\":{\"type\":[\"number\",\"null\"],\"minimum\":0},\"pm10\":{\"type\":[\"number\",\"null\"],\"minimum\":0},\"lecturas\":{\"type\":\"integer\",\"minimum\":0,\"maximum\":24}},\"additionalProperties\":false},\"alerta\":{\"type\":\"boolean\"},\"inca\":{\"enum\":[\"buena\",\"moderada\",\"mala\",\"umbral_de_cuidado\",null]},\"ts\":{\"type\":\"string\",\"format\":\"date-time\"}},\"additionalProperties\":false};",
+                  "let datos;",
+                  "pm.test('forma de la respuesta: RegimenEstacion del contrato', () => {",
+                  "  datos = pm.response.json();",
+                  "  pm.expect(datos).to.have.jsonSchema(esquema);",
+                  "});",
+                  "pm.test('es el estado que dejó «Predicción válida»', () => {",
+                  "  pm.expect(Date.parse(datos.fecha_hora)).to.eql(Date.parse('2026-11-14T15:00:00-05:00'));",
+                  "  pm.expect(datos.excede_eca).to.eql(true);",
+                  "});",
+                  "pm.test('las fechas van en la hora de Lima', () => {",
+                  "  pm.expect(datos.fecha_hora).to.match(/-05:00$/);",
+                  "  pm.expect(datos.ts).to.match(/-05:00$/);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_usuario}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/estaciones/{{estacion}}/regimen",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "estaciones",
+                "{{estacion}}",
+                "regimen"
+              ]
+            },
+            "description": "El último régimen de la estación, leído de Redis. Lo escribió «Predicción válida»."
+          },
+          "response": []
+        },
+        {
+          "name": "Régimen de estación desconocida",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('código HTTP 404', () => pm.response.to.have.status(404));",
+                  "const esquema = {\"type\":\"object\",\"required\":[\"error\"],\"properties\":{\"error\":{\"type\":\"string\",\"minLength\":1}},\"additionalProperties\":false};",
+                  "let datos;",
+                  "pm.test('forma de la respuesta: Error del contrato', () => {",
+                  "  datos = pm.response.json();",
+                  "  pm.expect(datos).to.have.jsonSchema(esquema);",
+                  "});",
+                  "pm.test('el error dice: estación desconocida: CA-XX-99', () => pm.expect(datos.error).to.include(\"estación desconocida: CA-XX-99\"));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_usuario}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/estaciones/CA-XX-99/regimen",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "estaciones",
+                "CA-XX-99",
+                "regimen"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Régimen de estación sin lecturas",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('código HTTP 404', () => pm.response.to.have.status(404));",
+                  "const esquema = {\"type\":\"object\",\"required\":[\"error\"],\"properties\":{\"error\":{\"type\":\"string\",\"minLength\":1}},\"additionalProperties\":false};",
+                  "let datos;",
+                  "pm.test('forma de la respuesta: Error del contrato', () => {",
+                  "  datos = pm.response.json();",
+                  "  pm.expect(datos).to.have.jsonSchema(esquema);",
+                  "});",
+                  "pm.test('el error dice: todavía no tiene un régimen registrado', () => pm.expect(datos.error).to.include(\"todavía no tiene un régimen registrado\"));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_usuario}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/estaciones/{{estacion_sin_lecturas}}/regimen",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "estaciones",
+                "{{estacion_sin_lecturas}}",
+                "regimen"
+              ]
+            },
+            "description": "Una estación del catálogo que no mide PM por hora: existe, pero nadie le manda lecturas."
+          },
+          "response": []
+        },
+        {
+          "name": "Estado de todas las estaciones",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('código HTTP 200', () => pm.response.to.have.status(200));",
+                  "const esquema = {\"type\":\"array\",\"items\":{\"type\":\"object\",\"required\":[\"estacion\",\"fecha_hora\",\"regimen\",\"excede_eca\",\"media_24h\",\"alerta\",\"inca\",\"ts\"],\"properties\":{\"estacion\":{\"type\":\"string\",\"minLength\":1},\"fecha_hora\":{\"type\":\"string\",\"format\":\"date-time\"},\"regimen\":{\"type\":\"integer\",\"minimum\":0},\"excede_eca\":{\"type\":\"boolean\"},\"media_24h\":{\"type\":\"object\",\"required\":[\"pm2_5\",\"pm10\",\"lecturas\"],\"properties\":{\"pm2_5\":{\"type\":[\"number\",\"null\"],\"minimum\":0},\"pm10\":{\"type\":[\"number\",\"null\"],\"minimum\":0},\"lecturas\":{\"type\":\"integer\",\"minimum\":0,\"maximum\":24}},\"additionalProperties\":false},\"alerta\":{\"type\":\"boolean\"},\"inca\":{\"enum\":[\"buena\",\"moderada\",\"mala\",\"umbral_de_cuidado\",null]},\"ts\":{\"type\":\"string\",\"format\":\"date-time\"}},\"additionalProperties\":false}};",
+                  "let datos;",
+                  "pm.test('forma de la respuesta: lista de EstadoEstacion del contrato', () => {",
+                  "  datos = pm.response.json();",
+                  "  pm.expect(datos).to.have.jsonSchema(esquema);",
+                  "});",
+                  "pm.test('trae la estación del entorno con el estado que dejó «Predicción válida»', () => {",
+                  "  const e = datos.find((x) => x.estacion === pm.variables.get('estacion'));",
+                  "  pm.expect(e, 'la estación del entorno').to.be.an('object');",
+                  "  pm.expect(Date.parse(e.fecha_hora)).to.eql(Date.parse('2026-11-14T15:00:00-05:00'));",
+                  "  pm.expect(e.excede_eca).to.eql(true);",
+                  "});",
+                  "pm.test('una entrada por estación, ordenadas por código', () => {",
+                  "  const ids = datos.map((x) => x.estacion);",
+                  "  pm.expect(new Set(ids).size).to.eql(ids.length);",
+                  "  pm.expect(ids).to.eql([...ids].sort());",
+                  "});",
+                  "pm.test('no trae la estación que nunca recibió lecturas', () => {",
+                  "  pm.expect(datos.map((x) => x.estacion)).to.not.include(pm.variables.get('estacion_sin_lecturas'));",
+                  "});",
+                  "pm.test('las fechas van en la hora de Lima', () => {",
+                  "  datos.forEach((x) => {",
+                  "    pm.expect(x.fecha_hora).to.match(/-05:00$/);",
+                  "    pm.expect(x.ts).to.match(/-05:00$/);",
+                  "  });",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_usuario}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/regimenes",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "regimenes"
+              ]
+            },
+            "description": "El estado de todas las estaciones que tienen uno, en un solo pedido (y una sola ida a Redis): lo que el panel pide al abrir. Es el mismo objeto del evento estacion.regimen de /ws."
+          },
+          "response": []
+        },
+        {
+          "name": "Estado de las estaciones sin token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('código HTTP 401', () => pm.response.to.have.status(401));",
+                  "const esquema = {\"type\":\"object\",\"required\":[\"error\"],\"properties\":{\"error\":{\"type\":\"string\",\"minLength\":1}},\"additionalProperties\":false};",
+                  "let datos;",
+                  "pm.test('forma de la respuesta: Error del contrato', () => {",
+                  "  datos = pm.response.json();",
+                  "  pm.expect(datos).to.have.jsonSchema(esquema);",
+                  "});",
+                  "pm.test('el error dice: token ausente, inválido o expirado', () => pm.expect(datos.error).to.include(\"token ausente, inválido o expirado\"));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "noauth"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/regimenes",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "regimenes"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Modelo activo",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('código HTTP 200', () => pm.response.to.have.status(200));",
+                  "const esquema = {\"type\":\"object\",\"required\":[\"id\",\"k\",\"features\",\"iteraciones\",\"inercia\",\"regimenes\"],\"properties\":{\"id\":{\"type\":\"string\",\"minLength\":1},\"k\":{\"type\":\"integer\",\"minimum\":1},\"features\":{\"type\":\"array\",\"minItems\":1,\"uniqueItems\":true,\"items\":{\"type\":\"string\"}},\"iteraciones\":{\"type\":\"integer\",\"minimum\":0},\"inercia\":{\"type\":\"number\",\"minimum\":0},\"centroides\":{\"type\":\"array\",\"items\":{\"type\":\"array\",\"items\":{\"type\":\"number\"}}},\"regimenes\":{\"type\":\"array\",\"items\":{\"type\":\"object\",\"required\":[\"regimen\",\"pm2_5_medio\",\"pm10_medio\",\"excede_eca\",\"tamano\"],\"properties\":{\"regimen\":{\"type\":\"integer\",\"minimum\":0},\"pm2_5_medio\":{\"type\":\"number\",\"minimum\":0},\"pm10_medio\":{\"type\":\"number\",\"minimum\":0},\"excede_eca\":{\"type\":\"boolean\"},\"tamano\":{\"type\":\"integer\",\"minimum\":0}},\"additionalProperties\":false}}},\"additionalProperties\":false};",
+                  "let datos;",
+                  "pm.test('forma de la respuesta: Modelo del contrato', () => {",
+                  "  datos = pm.response.json();",
+                  "  pm.expect(datos).to.have.jsonSchema(esquema);",
+                  "});",
+                  "pm.test('un régimen por centroide, numerados desde 0', () => {",
+                  "  pm.expect(datos.regimenes).to.have.lengthOf(datos.k);",
+                  "  datos.regimenes.forEach((r, i) => pm.expect(r.regimen).to.eql(i));",
+                  "});",
+                  "pm.test('las features de la receta', () => pm.expect(datos.features).to.eql(['pm2_5', 'pm10']));",
+                  "pm.test('excede_eca sale de las medias del régimen', () => {",
+                  "  datos.regimenes.forEach((r) => pm.expect(r.excede_eca).to.eql(r.pm2_5_medio > 50 || r.pm10_medio > 100));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_usuario}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/modelos/activo",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "modelos",
+                "activo"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Documento OpenAPI",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('código HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test('es el contrato en YAML', () => {",
+                  "  pm.expect(pm.response.headers.get('Content-Type')).to.match(/yaml/i);",
+                  "  pm.expect(pm.response.text()).to.match(/^openapi: 3\\.0\\.3/);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "noauth"
+            },
+            "url": {
+              "raw": "{{base_url}}/openapi.yaml",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "openapi.yaml"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Documentación HTML",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('código HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test('es la página de Swagger UI', () => {",
+                  "  pm.expect(pm.response.headers.get('Content-Type')).to.match(/^text\\/html\\b/i);",
+                  "  pm.expect(pm.response.text()).to.include('swagger-ui');",
+                  "  pm.expect(pm.response.text()).to.include('/openapi.yaml');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "noauth"
+            },
+            "url": {
+              "raw": "{{base_url}}/docs",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "docs"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Nodos sin token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('código HTTP 401', () => pm.response.to.have.status(401));",
+                  "const esquema = {\"type\":\"object\",\"required\":[\"error\"],\"properties\":{\"error\":{\"type\":\"string\",\"minLength\":1}},\"additionalProperties\":false};",
+                  "let datos;",
+                  "pm.test('forma de la respuesta: Error del contrato', () => {",
+                  "  datos = pm.response.json();",
+                  "  pm.expect(datos).to.have.jsonSchema(esquema);",
+                  "});",
+                  "pm.test('el error dice: token ausente, inválido o expirado', () => pm.expect(datos.error).to.include(\"token ausente, inválido o expirado\"));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "noauth"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/cluster/nodos",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "cluster",
+                "nodos"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Nodos denegado a usuario",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('código HTTP 403', () => pm.response.to.have.status(403));",
+                  "const esquema = {\"type\":\"object\",\"required\":[\"error\"],\"properties\":{\"error\":{\"type\":\"string\",\"minLength\":1}},\"additionalProperties\":false};",
+                  "let datos;",
+                  "pm.test('forma de la respuesta: Error del contrato', () => {",
+                  "  datos = pm.response.json();",
+                  "  pm.expect(datos).to.have.jsonSchema(esquema);",
+                  "});",
+                  "pm.test('el error dice: se requiere el rol admin', () => pm.expect(datos.error).to.include(\"se requiere el rol admin\"));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_usuario}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/cluster/nodos",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "cluster",
+                "nodos"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Eventos del clúster denegado a usuario",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('código HTTP 403', () => pm.response.to.have.status(403));",
+                  "const esquema = {\"type\":\"object\",\"required\":[\"error\"],\"properties\":{\"error\":{\"type\":\"string\",\"minLength\":1}},\"additionalProperties\":false};",
+                  "let datos;",
+                  "pm.test('forma de la respuesta: Error del contrato', () => {",
+                  "  datos = pm.response.json();",
+                  "  pm.expect(datos).to.have.jsonSchema(esquema);",
+                  "});",
+                  "pm.test('el error dice: se requiere el rol admin', () => pm.expect(datos.error).to.include(\"se requiere el rol admin\"));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_usuario}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/cluster/eventos",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "cluster",
+                "eventos"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Métricas denegado a usuario",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('código HTTP 403', () => pm.response.to.have.status(403));",
+                  "const esquema = {\"type\":\"object\",\"required\":[\"error\"],\"properties\":{\"error\":{\"type\":\"string\",\"minLength\":1}},\"additionalProperties\":false};",
+                  "let datos;",
+                  "pm.test('forma de la respuesta: Error del contrato', () => {",
+                  "  datos = pm.response.json();",
+                  "  pm.expect(datos).to.have.jsonSchema(esquema);",
+                  "});",
+                  "pm.test('el error dice: se requiere el rol admin', () => pm.expect(datos.error).to.include(\"se requiere el rol admin\"));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_usuario}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/metricas",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "metricas"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Historial denegado a usuario",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('código HTTP 403', () => pm.response.to.have.status(403));",
+                  "const esquema = {\"type\":\"object\",\"required\":[\"error\"],\"properties\":{\"error\":{\"type\":\"string\",\"minLength\":1}},\"additionalProperties\":false};",
+                  "let datos;",
+                  "pm.test('forma de la respuesta: Error del contrato', () => {",
+                  "  datos = pm.response.json();",
+                  "  pm.expect(datos).to.have.jsonSchema(esquema);",
+                  "});",
+                  "pm.test('el error dice: se requiere el rol admin', () => pm.expect(datos.error).to.include(\"se requiere el rol admin\"));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_usuario}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/entrenamientos",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "entrenamientos"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Detalle denegado a usuario",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('código HTTP 403', () => pm.response.to.have.status(403));",
+                  "const esquema = {\"type\":\"object\",\"required\":[\"error\"],\"properties\":{\"error\":{\"type\":\"string\",\"minLength\":1}},\"additionalProperties\":false};",
+                  "let datos;",
+                  "pm.test('forma de la respuesta: Error del contrato', () => {",
+                  "  datos = pm.response.json();",
+                  "  pm.expect(datos).to.have.jsonSchema(esquema);",
+                  "});",
+                  "pm.test('el error dice: se requiere el rol admin', () => pm.expect(datos.error).to.include(\"se requiere el rol admin\"));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_usuario}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/entrenamientos/no-existe",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "entrenamientos",
+                "no-existe"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Iniciar denegado a usuario",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('código HTTP 403', () => pm.response.to.have.status(403));",
+                  "const esquema = {\"type\":\"object\",\"required\":[\"error\"],\"properties\":{\"error\":{\"type\":\"string\",\"minLength\":1}},\"additionalProperties\":false};",
+                  "let datos;",
+                  "pm.test('forma de la respuesta: Error del contrato', () => {",
+                  "  datos = pm.response.json();",
+                  "  pm.expect(datos).to.have.jsonSchema(esquema);",
+                  "});",
+                  "pm.test('el error dice: se requiere el rol admin', () => pm.expect(datos.error).to.include(\"se requiere el rol admin\"));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_usuario}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/entrenamientos",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "entrenamientos"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"nodos\": {{nodos_entrenamiento}}, \"replicas\": 1, \"semilla\": 42}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Nodos admin",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('código HTTP 200', () => pm.response.to.have.status(200));",
+                  "const esquema = {\"type\":\"array\",\"items\":{\"type\":\"object\",\"required\":[\"nombre\",\"direccion\",\"workers\",\"latencia_ms\",\"libre\"],\"properties\":{\"nombre\":{\"type\":\"string\",\"minLength\":1},\"direccion\":{\"type\":\"string\"},\"workers\":{\"type\":\"integer\",\"minimum\":1},\"latencia_ms\":{\"type\":\"number\",\"minimum\":0},\"libre\":{\"type\":\"boolean\"}},\"additionalProperties\":false}};",
+                  "let datos;",
+                  "pm.test('forma de la respuesta: lista de Nodo del contrato', () => {",
+                  "  datos = pm.response.json();",
+                  "  pm.expect(datos).to.have.jsonSchema(esquema);",
+                  "});",
+                  "pm.test('están los nodos del entorno (nodos_entrenamiento)', () => pm.expect(datos.length).to.be.at.least(Number(pm.variables.get('nodos_entrenamiento'))));",
+                  "pm.test('cada nodo tiene un nombre distinto', () => pm.expect(new Set(datos.map((n) => n.nombre)).size).to.eql(datos.length));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_admin}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/cluster/nodos",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "cluster",
+                "nodos"
+              ]
+            },
+            "description": "Los nodos del pool: nombre, dirección, workers, latencia del último latido y si están libres."
+          },
+          "response": []
+        },
+        {
+          "name": "Eventos del clúster admin",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('código HTTP 200', () => pm.response.to.have.status(200));",
+                  "const esquema = {\"type\":\"array\",\"maxItems\":50,\"items\":{\"type\":\"object\",\"required\":[\"ts\",\"tipo\",\"nodo\",\"detalle\"],\"properties\":{\"ts\":{\"type\":\"string\",\"format\":\"date-time\"},\"tipo\":{\"type\":\"string\",\"enum\":[\"alta\",\"baja\",\"error\"]},\"nodo\":{\"type\":\"string\"},\"detalle\":{\"type\":\"string\"}},\"additionalProperties\":false}};",
+                  "let datos;",
+                  "pm.test('forma de la respuesta: lista de EventoCluster (sin limite, a lo sumo 50) del contrato', () => {",
+                  "  datos = pm.response.json();",
+                  "  pm.expect(datos).to.have.jsonSchema(esquema);",
+                  "});",
+                  "pm.test('entre ellos hay altas de los nodos del entorno (nodos_entrenamiento)', () => {",
+                  "  const nodos = new Set(datos.filter((e) => e.tipo === 'alta').map((e) => e.nodo));",
+                  "  pm.expect(nodos.size).to.be.at.least(Number(pm.variables.get('nodos_entrenamiento')));",
+                  "});",
+                  "pm.test('vienen del más reciente al más antiguo, en la hora de Lima', () => {",
+                  "  datos.forEach((e, i) => {",
+                  "    pm.expect(e.ts).to.match(/-05:00$/);",
+                  "    if (i > 0) pm.expect(Date.parse(datos[i - 1].ts)).to.be.at.least(Date.parse(e.ts));",
+                  "  });",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_admin}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/cluster/eventos",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "cluster",
+                "eventos"
+              ]
+            },
+            "description": "Los «logs» del clúster: altas, bajas y errores de los nodos, del más reciente al más antiguo. Sin limite trae 50."
+          },
+          "response": []
+        },
+        {
+          "name": "Eventos del clúster con límite",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('código HTTP 200', () => pm.response.to.have.status(200));",
+                  "const esquema = {\"type\":\"array\",\"maxItems\":2,\"items\":{\"type\":\"object\",\"required\":[\"ts\",\"tipo\",\"nodo\",\"detalle\"],\"properties\":{\"ts\":{\"type\":\"string\",\"format\":\"date-time\"},\"tipo\":{\"type\":\"string\",\"enum\":[\"alta\",\"baja\",\"error\"]},\"nodo\":{\"type\":\"string\"},\"detalle\":{\"type\":\"string\"}},\"additionalProperties\":false}};",
+                  "let datos;",
+                  "pm.test('forma de la respuesta: lista de EventoCluster del contrato', () => {",
+                  "  datos = pm.response.json();",
+                  "  pm.expect(datos).to.have.jsonSchema(esquema);",
+                  "});",
+                  "pm.test('trae los 2 que se pidieron', () => pm.expect(datos.length).to.eql(2));",
+                  "pm.test('vienen del más reciente al más antiguo, en la hora de Lima', () => {",
+                  "  datos.forEach((e, i) => {",
+                  "    pm.expect(e.ts).to.match(/-05:00$/);",
+                  "    if (i > 0) pm.expect(Date.parse(datos[i - 1].ts)).to.be.at.least(Date.parse(e.ts));",
+                  "  });",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_admin}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/cluster/eventos?limite=2",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "cluster",
+                "eventos"
+              ],
+              "query": [
+                {
+                  "key": "limite",
+                  "value": "2"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Eventos del clúster con límite cero",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('código HTTP 400', () => pm.response.to.have.status(400));",
+                  "const esquema = {\"type\":\"object\",\"required\":[\"error\"],\"properties\":{\"error\":{\"type\":\"string\",\"minLength\":1}},\"additionalProperties\":false};",
+                  "let datos;",
+                  "pm.test('forma de la respuesta: Error del contrato', () => {",
+                  "  datos = pm.response.json();",
+                  "  pm.expect(datos).to.have.jsonSchema(esquema);",
+                  "});",
+                  "pm.test('el error dice: limite tiene que ser un entero entre 1 y 200', () => pm.expect(datos.error).to.include(\"limite tiene que ser un entero entre 1 y 200\"));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_admin}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/cluster/eventos?limite=0",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "cluster",
+                "eventos"
+              ],
+              "query": [
+                {
+                  "key": "limite",
+                  "value": "0"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Eventos del clúster sobre el máximo",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('código HTTP 400', () => pm.response.to.have.status(400));",
+                  "const esquema = {\"type\":\"object\",\"required\":[\"error\"],\"properties\":{\"error\":{\"type\":\"string\",\"minLength\":1}},\"additionalProperties\":false};",
+                  "let datos;",
+                  "pm.test('forma de la respuesta: Error del contrato', () => {",
+                  "  datos = pm.response.json();",
+                  "  pm.expect(datos).to.have.jsonSchema(esquema);",
+                  "});",
+                  "pm.test('el error dice: limite tiene que ser un entero entre 1 y 200', () => pm.expect(datos.error).to.include(\"limite tiene que ser un entero entre 1 y 200\"));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_admin}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/cluster/eventos?limite=201",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "cluster",
+                "eventos"
+              ],
+              "query": [
+                {
+                  "key": "limite",
+                  "value": "201"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Métricas admin",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('código HTTP 200', () => pm.response.to.have.status(200));",
+                  "const esquema = {\"type\":\"object\",\"required\":[\"endpoints\",\"nodos_en_pool\",\"ultimo_entrenamiento\",\"escrituras_descartadas\",\"escrituras_fallidas\",\"escritura\",\"puntos_de_control\",\"proceso_api\"],\"properties\":{\"endpoints\":{\"type\":\"object\",\"additionalProperties\":{\"type\":\"object\",\"required\":[\"pedidos\",\"p50_ms\",\"p95_ms\",\"p99_ms\"],\"properties\":{\"pedidos\":{\"type\":\"integer\",\"minimum\":0},\"p50_ms\":{\"type\":\"number\",\"minimum\":0},\"p95_ms\":{\"type\":\"number\",\"minimum\":0},\"p99_ms\":{\"type\":\"number\",\"minimum\":0}},\"additionalProperties\":false}},\"nodos_en_pool\":{\"type\":\"integer\",\"minimum\":0},\"ultimo_entrenamiento\":{\"type\":[\"string\",\"null\"]},\"escrituras_descartadas\":{\"type\":\"integer\",\"minimum\":0},\"escrituras_fallidas\":{\"type\":\"integer\",\"minimum\":0},\"escritura\":{\"type\":\"object\",\"required\":[\"mongo\",\"redis\"],\"properties\":{\"mongo\":{\"type\":\"object\",\"required\":[\"escritas\",\"descartadas\",\"fallidas\",\"lotes\"],\"properties\":{\"escritas\":{\"type\":\"integer\",\"minimum\":0},\"descartadas\":{\"type\":\"integer\",\"minimum\":0},\"fallidas\":{\"type\":\"integer\",\"minimum\":0},\"lotes\":{\"type\":\"integer\",\"minimum\":0}},\"additionalProperties\":false},\"redis\":{\"type\":\"object\",\"required\":[\"escritas\",\"descartadas\",\"fallidas\",\"lotes\"],\"properties\":{\"escritas\":{\"type\":\"integer\",\"minimum\":0},\"descartadas\":{\"type\":\"integer\",\"minimum\":0},\"fallidas\":{\"type\":\"integer\",\"minimum\":0},\"lotes\":{\"type\":\"integer\",\"minimum\":0}},\"additionalProperties\":false}},\"additionalProperties\":false},\"puntos_de_control\":{\"type\":\"object\",\"required\":[\"escritos\",\"fallidos\",\"omitidos\"],\"properties\":{\"escritos\":{\"type\":\"integer\",\"minimum\":0},\"fallidos\":{\"type\":\"integer\",\"minimum\":0},\"omitidos\":{\"type\":\"integer\",\"minimum\":0}},\"additionalProperties\":false},\"proceso_api\":{\"type\":\"object\",\"required\":[\"cpu_usuario_s\",\"cpu_sistema_s\",\"en_marcha_s\",\"nucleos\",\"heap_mb\",\"sistema_mb\",\"max_rss_mb\",\"goroutines\"],\"properties\":{\"cpu_usuario_s\":{\"type\":\"number\",\"minimum\":0},\"cpu_sistema_s\":{\"type\":\"number\",\"minimum\":0},\"en_marcha_s\":{\"type\":\"number\",\"minimum\":0},\"nucleos\":{\"type\":\"integer\",\"minimum\":1},\"heap_mb\":{\"type\":\"number\",\"minimum\":0},\"sistema_mb\":{\"type\":\"number\",\"minimum\":0},\"max_rss_mb\":{\"type\":\"number\",\"minimum\":0},\"goroutines\":{\"type\":\"integer\",\"minimum\":1},\"no_disponible\":{\"type\":\"array\",\"items\":{\"type\":\"string\",\"enum\":[\"cpu_usuario_s\",\"cpu_sistema_s\",\"max_rss_mb\"]}}},\"additionalProperties\":false}},\"additionalProperties\":false};",
+                  "let datos;",
+                  "pm.test('forma de la respuesta: Metricas del contrato', () => {",
+                  "  datos = pm.response.json();",
+                  "  pm.expect(datos).to.have.jsonSchema(esquema);",
+                  "});",
+                  "pm.test('midió las predicciones, con los percentiles en orden', () => {",
+                  "  const p = datos.endpoints['POST /api/predicciones'];",
+                  "  pm.expect(p, 'POST /api/predicciones').to.be.an('object');",
+                  "  pm.expect(p.pedidos).to.be.at.least(1);",
+                  "  pm.expect(p.p50_ms).to.be.at.most(p.p95_ms);",
+                  "  pm.expect(p.p95_ms).to.be.at.most(p.p99_ms);",
+                  "});",
+                  "pm.test('el p99 de las predicciones, medido en el servidor, queda bajo el límite', () => {",
+                  "  pm.expect(datos.endpoints['POST /api/predicciones'].p99_ms).to.be.below(Number(pm.variables.get('limite_ms')));",
+                  "});",
+                  "pm.test('los totales son la suma de los dos almacenes', () => {",
+                  "  const e = datos.escritura;",
+                  "  pm.expect(datos.escrituras_descartadas).to.eql(e.mongo.descartadas + e.redis.descartadas);",
+                  "  pm.expect(datos.escrituras_fallidas).to.eql(e.mongo.fallidas + e.redis.fallidas);",
+                  "});",
+                  "pm.test('la predicción válida se escribió en MongoDB y en Redis', () => {",
+                  "  pm.expect(datos.escritura.mongo.escritas).to.be.at.least(1);",
+                  "  pm.expect(datos.escritura.redis.escritas).to.be.at.least(1);",
+                  "});",
+                  "pm.test('proceso_api es el CPU y la memoria del proceso de la API (no de los nodos)', () => {",
+                  "  const p = datos.proceso_api;",
+                  "  pm.expect(p.en_marcha_s).to.be.above(0);",
+                  "  pm.expect(p.heap_mb).to.be.above(0);",
+                  "  pm.expect(p.sistema_mb).to.be.at.least(p.heap_mb);",
+                  "  if (!p.no_disponible) {",
+                  "    const cpu = p.cpu_usuario_s + p.cpu_sistema_s;",
+                  "    pm.expect(cpu).to.be.above(0);",
+                  "    pm.expect(p.max_rss_mb).to.be.above(0);",
+                  "    // El promedio desde el arranque: nunca más que todos los núcleos ocupados.",
+                  "    pm.expect(cpu / p.en_marcha_s).to.be.at.most(p.nucleos);",
+                  "  }",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_admin}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/metricas",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "metricas"
+              ]
+            },
+            "description": "Latencia por ruta medida en el servidor, nodos, último entrenamiento, el detalle de la escritura por almacén y el CPU y la memoria del proceso de la API (proceso_api)."
+          },
+          "response": []
+        },
+        {
+          "name": "Historial admin",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('código HTTP 200', () => pm.response.to.have.status(200));",
+                  "const esquema = {\"type\":\"array\",\"items\":{\"type\":\"object\",\"required\":[\"id\",\"estado\",\"nodos\",\"replicas\"],\"properties\":{\"id\":{\"type\":\"string\",\"minLength\":1},\"estado\":{\"type\":\"string\",\"enum\":[\"en_curso\",\"terminado\",\"abortado\"]},\"nodos\":{\"type\":\"array\",\"items\":{\"type\":\"string\"}},\"replicas\":{\"type\":\"integer\",\"minimum\":1},\"iteraciones\":{\"type\":\"integer\",\"minimum\":0},\"paro\":{\"type\":\"string\",\"enum\":[\"tolerancia\",\"max_iter\"]},\"dif_secuencial\":{\"type\":\"number\",\"minimum\":0},\"ms_total\":{\"type\":\"number\",\"minimum\":0},\"modelo_id\":{\"type\":\"string\",\"minLength\":1},\"aviso\":{\"type\":\"string\",\"minLength\":1},\"error\":{\"type\":\"string\",\"minLength\":1}},\"additionalProperties\":false}};",
+                  "let datos;",
+                  "pm.test('forma de la respuesta: lista de EntrenamientoResumen del contrato', () => {",
+                  "  datos = pm.response.json();",
+                  "  pm.expect(datos).to.have.jsonSchema(esquema);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_admin}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/entrenamientos",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "entrenamientos"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Entrenamiento inexistente",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('código HTTP 404', () => pm.response.to.have.status(404));",
+                  "const esquema = {\"type\":\"object\",\"required\":[\"error\"],\"properties\":{\"error\":{\"type\":\"string\",\"minLength\":1}},\"additionalProperties\":false};",
+                  "let datos;",
+                  "pm.test('forma de la respuesta: Error del contrato', () => {",
+                  "  datos = pm.response.json();",
+                  "  pm.expect(datos).to.have.jsonSchema(esquema);",
+                  "});",
+                  "pm.test('el error dice: no existe el entrenamiento e-20000101-0000', () => pm.expect(datos.error).to.include(\"no existe el entrenamiento e-20000101-0000\"));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_admin}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/entrenamientos/e-20000101-0000",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "entrenamientos",
+                "e-20000101-0000"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "2. Entrenamiento",
+      "description": "Rechazos (400 y 422), un entrenamiento distribuido aceptado (202) y su detalle con las rondas. Necesita nodos_entrenamiento nodos libres. Deja activo el modelo entrenado.",
+      "item": [
+        {
+          "name": "Cero nodos",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('código HTTP 400', () => pm.response.to.have.status(400));",
+                  "const esquema = {\"type\":\"object\",\"required\":[\"error\"],\"properties\":{\"error\":{\"type\":\"string\",\"minLength\":1}},\"additionalProperties\":false};",
+                  "let datos;",
+                  "pm.test('forma de la respuesta: Error del contrato', () => {",
+                  "  datos = pm.response.json();",
+                  "  pm.expect(datos).to.have.jsonSchema(esquema);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_admin}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/entrenamientos",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "entrenamientos"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"nodos\": 0, \"replicas\": 1, \"semilla\": 42}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Cero réplicas",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('código HTTP 400', () => pm.response.to.have.status(400));",
+                  "const esquema = {\"type\":\"object\",\"required\":[\"error\"],\"properties\":{\"error\":{\"type\":\"string\",\"minLength\":1}},\"additionalProperties\":false};",
+                  "let datos;",
+                  "pm.test('forma de la respuesta: Error del contrato', () => {",
+                  "  datos = pm.response.json();",
+                  "  pm.expect(datos).to.have.jsonSchema(esquema);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_admin}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/entrenamientos",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "entrenamientos"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"nodos\": {{nodos_entrenamiento}}, \"replicas\": 0, \"semilla\": 42}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Sin semilla",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('código HTTP 400', () => pm.response.to.have.status(400));",
+                  "const esquema = {\"type\":\"object\",\"required\":[\"error\"],\"properties\":{\"error\":{\"type\":\"string\",\"minLength\":1}},\"additionalProperties\":false};",
+                  "let datos;",
+                  "pm.test('forma de la respuesta: Error del contrato', () => {",
+                  "  datos = pm.response.json();",
+                  "  pm.expect(datos).to.have.jsonSchema(esquema);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_admin}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/entrenamientos",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "entrenamientos"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"nodos\": {{nodos_entrenamiento}}, \"replicas\": 1}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Esperar nodos libres",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Pausa entre consultas, para no sondear en un lazo cerrado.",
+                  "setTimeout(() => {}, Number(pm.variables.get('pausa_consulta_ms')) || 250);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('código HTTP 200', () => pm.response.to.have.status(200));",
+                  "const esquema = {\"type\":\"array\",\"items\":{\"type\":\"object\",\"required\":[\"nombre\",\"direccion\",\"workers\",\"latencia_ms\",\"libre\"],\"properties\":{\"nombre\":{\"type\":\"string\",\"minLength\":1},\"direccion\":{\"type\":\"string\"},\"workers\":{\"type\":\"integer\",\"minimum\":1},\"latencia_ms\":{\"type\":\"number\",\"minimum\":0},\"libre\":{\"type\":\"boolean\"}},\"additionalProperties\":false}};",
+                  "let datos;",
+                  "pm.test('forma de la respuesta: lista de Nodo del contrato', () => {",
+                  "  datos = pm.response.json();",
+                  "  pm.expect(datos).to.have.jsonSchema(esquema);",
+                  "});",
+                  "const libres = Array.isArray(datos) ? datos.filter((n) => n.libre).length : 0;",
+                  "const pedidos = Number(pm.variables.get('nodos_entrenamiento'));",
+                  "const n = Number(pm.variables.get('consultas_nodos') || 0) + 1;",
+                  "pm.variables.set('consultas_nodos', n);",
+                  "if (libres < pedidos && n < Number(pm.variables.get('max_consultas_entrenamiento'))) {",
+                  "  // Al terminar una corrida los nodos vuelven a llamar a la API tras unos 2 s.",
+                  "  pm.execution.setNextRequest(pm.info.requestName);",
+                  "} else {",
+                  "  pm.variables.set('consultas_nodos', 0);",
+                  "  pm.test('hay ' + pedidos + ' nodos libres en el pool', () => pm.expect(libres).to.be.at.least(pedidos));",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_admin}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/cluster/nodos",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "cluster",
+                "nodos"
+              ]
+            },
+            "description": "Se repite hasta que haya nodos_entrenamiento nodos libres o se agoten max_consultas_entrenamiento consultas."
+          },
+          "response": []
+        },
+        {
+          "name": "Nodos insuficientes",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('código HTTP 422', () => pm.response.to.have.status(422));",
+                  "const esquema = {\"type\":\"object\",\"required\":[\"error\"],\"properties\":{\"error\":{\"type\":\"string\",\"minLength\":1}},\"additionalProperties\":false};",
+                  "let datos;",
+                  "pm.test('forma de la respuesta: Error del contrato', () => {",
+                  "  datos = pm.response.json();",
+                  "  pm.expect(datos).to.have.jsonSchema(esquema);",
+                  "});",
+                  "pm.test('el error dice: nodos libres en el pool y se pidieron', () => pm.expect(datos.error).to.include(\"nodos libres en el pool y se pidieron\"));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_admin}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/entrenamientos",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "entrenamientos"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"nodos\": {{nodos_insuficientes}}, \"replicas\": 1, \"semilla\": 42}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Aceptar entrenamiento",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('código HTTP 202', () => pm.response.to.have.status(202));",
+                  "const esquema = {\"type\":\"object\",\"required\":[\"id\",\"estado\"],\"properties\":{\"id\":{\"type\":\"string\",\"minLength\":1},\"estado\":{\"type\":\"string\",\"enum\":[\"en_curso\"]}},\"additionalProperties\":false};",
+                  "let datos;",
+                  "pm.test('forma de la respuesta: EntrenamientoAceptado del contrato', () => {",
+                  "  datos = pm.response.json();",
+                  "  pm.expect(datos).to.have.jsonSchema(esquema);",
+                  "});",
+                  "pm.test('el id es e-AAAAMMDD-HHMM, con sufijo si se repite el minuto', () => pm.expect(datos.id).to.match(/^e-\\d{8}-\\d{4}(-\\d+)?$/));",
+                  "if (pm.response.code === 202) {",
+                  "  pm.collectionVariables.set('entrenamiento_id', datos.id);",
+                  "  pm.variables.set('consultas_trabajo', 0);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_admin}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/entrenamientos",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "entrenamientos"
+              ]
+            },
+            "description": "Responde 202 enseguida con el id; el entrenamiento sigue en su goroutine. Con replicas = 1, si termina bien, su modelo pasa a ser el activo.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"nodos\": {{nodos_entrenamiento}}, \"replicas\": 1, \"semilla\": 42}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Consultar hasta terminar",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Pausa entre consultas, para no sondear en un lazo cerrado.",
+                  "setTimeout(() => {}, Number(pm.variables.get('pausa_consulta_ms')) || 250);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('código HTTP 200', () => pm.response.to.have.status(200));",
+                  "const esquema = {\"type\":\"object\",\"required\":[\"id\",\"estado\",\"nodos\",\"replicas\",\"rondas\"],\"properties\":{\"id\":{\"type\":\"string\",\"minLength\":1},\"estado\":{\"type\":\"string\",\"enum\":[\"en_curso\",\"terminado\",\"abortado\"]},\"nodos\":{\"type\":\"array\",\"items\":{\"type\":\"string\"}},\"replicas\":{\"type\":\"integer\",\"minimum\":1},\"iteraciones\":{\"type\":\"integer\",\"minimum\":0},\"paro\":{\"type\":\"string\",\"enum\":[\"tolerancia\",\"max_iter\"]},\"dif_secuencial\":{\"type\":\"number\",\"minimum\":0},\"ms_total\":{\"type\":\"number\",\"minimum\":0},\"modelo_id\":{\"type\":\"string\",\"minLength\":1},\"aviso\":{\"type\":\"string\",\"minLength\":1},\"error\":{\"type\":\"string\",\"minLength\":1},\"rondas\":{\"type\":\"array\",\"items\":{\"type\":\"object\",\"required\":[\"iter\",\"inercia\",\"ms_ronda\",\"ms_fusion\",\"ms_por_nodo\"],\"properties\":{\"iter\":{\"type\":\"integer\",\"minimum\":1},\"inercia\":{\"type\":\"number\",\"minimum\":0},\"ms_ronda\":{\"type\":\"number\",\"minimum\":0},\"ms_fusion\":{\"type\":\"number\",\"minimum\":0},\"ms_por_nodo\":{\"type\":\"object\",\"additionalProperties\":{\"type\":\"number\",\"minimum\":0}}},\"additionalProperties\":false}}},\"additionalProperties\":false};",
+                  "let datos;",
+                  "pm.test('forma de la respuesta: Entrenamiento del contrato', () => {",
+                  "  datos = pm.response.json();",
+                  "  pm.expect(datos).to.have.jsonSchema(esquema);",
+                  "});",
+                  "pm.test('es el entrenamiento que se lanzó', () => pm.expect(datos.id).to.eql(pm.collectionVariables.get('entrenamiento_id')));",
+                  "const n = Number(pm.variables.get('consultas_trabajo') || 0) + 1;",
+                  "pm.variables.set('consultas_trabajo', n);",
+                  "if (datos.estado === 'en_curso' && n < Number(pm.variables.get('max_consultas_entrenamiento'))) {",
+                  "  pm.execution.setNextRequest(pm.info.requestName);",
+                  "} else {",
+                  "  pm.test('el entrenamiento terminó (consulta ' + n + ')', () => pm.expect(datos.estado, datos.error).to.eql('terminado'));",
+                  "  pm.test('una ronda por iteración, con el tiempo de cada nodo', () => {",
+                  "    pm.expect(datos.iteraciones).to.be.at.least(1);",
+                  "    pm.expect(datos.rondas).to.have.lengthOf(datos.iteraciones);",
+                  "    datos.rondas.forEach((r, i) => {",
+                  "      pm.expect(r.iter).to.eql(i + 1);",
+                  "      pm.expect(Object.keys(r.ms_por_nodo).sort()).to.eql(datos.nodos.slice().sort());",
+                  "    });",
+                  "  });",
+                  "  pm.test('usó los nodos pedidos', () => pm.expect(datos.nodos).to.have.lengthOf(Number(pm.variables.get('nodos_entrenamiento'))));",
+                  "  pm.test('coincide con el K-Means secuencial (dif_secuencial ≤ 1e-9)', () => pm.expect(datos.dif_secuencial).to.be.at.most(1e-9));",
+                  "  pm.test('paró por tolerancia o por max_iter', () => pm.expect(['tolerancia', 'max_iter']).to.include(datos.paro));",
+                  "",
+                  "  pm.test('con replicas = 1 dejó activo su modelo', () => pm.expect(datos.modelo_id).to.eql('entrenado-' + datos.id));",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_admin}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/entrenamientos/{{entrenamiento_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "entrenamientos",
+                "{{entrenamiento_id}}"
+              ]
+            },
+            "description": "Se repite mientras el estado sea en_curso. Al terminar comprueba las rondas, los nodos y la diferencia con el secuencial."
+          },
+          "response": []
+        },
+        {
+          "name": "Historial con el entrenamiento",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('código HTTP 200', () => pm.response.to.have.status(200));",
+                  "const esquema = {\"type\":\"array\",\"items\":{\"type\":\"object\",\"required\":[\"id\",\"estado\",\"nodos\",\"replicas\"],\"properties\":{\"id\":{\"type\":\"string\",\"minLength\":1},\"estado\":{\"type\":\"string\",\"enum\":[\"en_curso\",\"terminado\",\"abortado\"]},\"nodos\":{\"type\":\"array\",\"items\":{\"type\":\"string\"}},\"replicas\":{\"type\":\"integer\",\"minimum\":1},\"iteraciones\":{\"type\":\"integer\",\"minimum\":0},\"paro\":{\"type\":\"string\",\"enum\":[\"tolerancia\",\"max_iter\"]},\"dif_secuencial\":{\"type\":\"number\",\"minimum\":0},\"ms_total\":{\"type\":\"number\",\"minimum\":0},\"modelo_id\":{\"type\":\"string\",\"minLength\":1},\"aviso\":{\"type\":\"string\",\"minLength\":1},\"error\":{\"type\":\"string\",\"minLength\":1}},\"additionalProperties\":false}};",
+                  "let datos;",
+                  "pm.test('forma de la respuesta: lista de EntrenamientoResumen del contrato', () => {",
+                  "  datos = pm.response.json();",
+                  "  pm.expect(datos).to.have.jsonSchema(esquema);",
+                  "});",
+                  "pm.test('el más reciente es el que se acaba de lanzar, terminado y sin las rondas', () => {",
+                  "  pm.expect(datos[0].id).to.eql(pm.collectionVariables.get('entrenamiento_id'));",
+                  "  pm.expect(datos[0].estado).to.eql('terminado');",
+                  "  pm.expect(datos[0]).to.not.have.property('rondas');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_admin}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/entrenamientos",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "entrenamientos"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Eventos del clúster tras entrenar",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('código HTTP 200', () => pm.response.to.have.status(200));",
+                  "const esquema = {\"type\":\"array\",\"maxItems\":200,\"items\":{\"type\":\"object\",\"required\":[\"ts\",\"tipo\",\"nodo\",\"detalle\"],\"properties\":{\"ts\":{\"type\":\"string\",\"format\":\"date-time\"},\"tipo\":{\"type\":\"string\",\"enum\":[\"alta\",\"baja\",\"error\"]},\"nodo\":{\"type\":\"string\"},\"detalle\":{\"type\":\"string\"}},\"additionalProperties\":false}};",
+                  "let datos;",
+                  "pm.test('forma de la respuesta: lista de EventoCluster del contrato', () => {",
+                  "  datos = pm.response.json();",
+                  "  pm.expect(datos).to.have.jsonSchema(esquema);",
+                  "});",
+                  "pm.test('cada nodo del entrenamiento dejó su baja al terminar', () => {",
+                  "  const id = pm.collectionVariables.get('entrenamiento_id');",
+                  "  const bajas = datos.filter((e) => e.tipo === 'baja' && e.detalle.includes('entrenamiento ' + id + ' terminado'));",
+                  "  pm.expect(bajas.length).to.eql(Number(pm.variables.get('nodos_entrenamiento')));",
+                  "  pm.expect(new Set(bajas.map((e) => e.nodo)).size).to.eql(bajas.length);",
+                  "});",
+                  "pm.test('vienen del más reciente al más antiguo, en la hora de Lima', () => {",
+                  "  datos.forEach((e, i) => {",
+                  "    pm.expect(e.ts).to.match(/-05:00$/);",
+                  "    if (i > 0) pm.expect(Date.parse(datos[i - 1].ts)).to.be.at.least(Date.parse(e.ts));",
+                  "  });",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_admin}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/cluster/eventos?limite=200",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "cluster",
+                "eventos"
+              ],
+              "query": [
+                {
+                  "key": "limite",
+                  "value": "200"
+                }
+              ]
+            },
+            "description": "Al terminar un entrenamiento, los nodos que se llevó dejan el pool (una baja cada uno) y vuelven a llamar a la API unos 2 s después (un alta)."
+          },
+          "response": []
+        },
+        {
+          "name": "Métricas tras entrenar",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('código HTTP 200', () => pm.response.to.have.status(200));",
+                  "const esquema = {\"type\":\"object\",\"required\":[\"endpoints\",\"nodos_en_pool\",\"ultimo_entrenamiento\",\"escrituras_descartadas\",\"escrituras_fallidas\",\"escritura\",\"puntos_de_control\",\"proceso_api\"],\"properties\":{\"endpoints\":{\"type\":\"object\",\"additionalProperties\":{\"type\":\"object\",\"required\":[\"pedidos\",\"p50_ms\",\"p95_ms\",\"p99_ms\"],\"properties\":{\"pedidos\":{\"type\":\"integer\",\"minimum\":0},\"p50_ms\":{\"type\":\"number\",\"minimum\":0},\"p95_ms\":{\"type\":\"number\",\"minimum\":0},\"p99_ms\":{\"type\":\"number\",\"minimum\":0}},\"additionalProperties\":false}},\"nodos_en_pool\":{\"type\":\"integer\",\"minimum\":0},\"ultimo_entrenamiento\":{\"type\":[\"string\",\"null\"]},\"escrituras_descartadas\":{\"type\":\"integer\",\"minimum\":0},\"escrituras_fallidas\":{\"type\":\"integer\",\"minimum\":0},\"escritura\":{\"type\":\"object\",\"required\":[\"mongo\",\"redis\"],\"properties\":{\"mongo\":{\"type\":\"object\",\"required\":[\"escritas\",\"descartadas\",\"fallidas\",\"lotes\"],\"properties\":{\"escritas\":{\"type\":\"integer\",\"minimum\":0},\"descartadas\":{\"type\":\"integer\",\"minimum\":0},\"fallidas\":{\"type\":\"integer\",\"minimum\":0},\"lotes\":{\"type\":\"integer\",\"minimum\":0}},\"additionalProperties\":false},\"redis\":{\"type\":\"object\",\"required\":[\"escritas\",\"descartadas\",\"fallidas\",\"lotes\"],\"properties\":{\"escritas\":{\"type\":\"integer\",\"minimum\":0},\"descartadas\":{\"type\":\"integer\",\"minimum\":0},\"fallidas\":{\"type\":\"integer\",\"minimum\":0},\"lotes\":{\"type\":\"integer\",\"minimum\":0}},\"additionalProperties\":false}},\"additionalProperties\":false},\"puntos_de_control\":{\"type\":\"object\",\"required\":[\"escritos\",\"fallidos\",\"omitidos\"],\"properties\":{\"escritos\":{\"type\":\"integer\",\"minimum\":0},\"fallidos\":{\"type\":\"integer\",\"minimum\":0},\"omitidos\":{\"type\":\"integer\",\"minimum\":0}},\"additionalProperties\":false},\"proceso_api\":{\"type\":\"object\",\"required\":[\"cpu_usuario_s\",\"cpu_sistema_s\",\"en_marcha_s\",\"nucleos\",\"heap_mb\",\"sistema_mb\",\"max_rss_mb\",\"goroutines\"],\"properties\":{\"cpu_usuario_s\":{\"type\":\"number\",\"minimum\":0},\"cpu_sistema_s\":{\"type\":\"number\",\"minimum\":0},\"en_marcha_s\":{\"type\":\"number\",\"minimum\":0},\"nucleos\":{\"type\":\"integer\",\"minimum\":1},\"heap_mb\":{\"type\":\"number\",\"minimum\":0},\"sistema_mb\":{\"type\":\"number\",\"minimum\":0},\"max_rss_mb\":{\"type\":\"number\",\"minimum\":0},\"goroutines\":{\"type\":\"integer\",\"minimum\":1},\"no_disponible\":{\"type\":\"array\",\"items\":{\"type\":\"string\",\"enum\":[\"cpu_usuario_s\",\"cpu_sistema_s\",\"max_rss_mb\"]}}},\"additionalProperties\":false}},\"additionalProperties\":false};",
+                  "let datos;",
+                  "pm.test('forma de la respuesta: Metricas del contrato', () => {",
+                  "  datos = pm.response.json();",
+                  "  pm.expect(datos).to.have.jsonSchema(esquema);",
+                  "});",
+                  "pm.test('ultimo_entrenamiento es el que se acaba de lanzar', () => pm.expect(datos.ultimo_entrenamiento).to.eql(pm.collectionVariables.get('entrenamiento_id')));",
+                  "pm.test('se escribieron puntos de control en Redis', () => {",
+                  "  pm.expect(datos.puntos_de_control.escritos).to.be.at.least(1);",
+                  "  pm.expect(datos.puntos_de_control.fallidos).to.eql(0);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_admin}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/metricas",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "metricas"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Modelo activo tras entrenar",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('código HTTP 200', () => pm.response.to.have.status(200));",
+                  "const esquema = {\"type\":\"object\",\"required\":[\"id\",\"k\",\"features\",\"iteraciones\",\"inercia\",\"regimenes\"],\"properties\":{\"id\":{\"type\":\"string\",\"minLength\":1},\"k\":{\"type\":\"integer\",\"minimum\":1},\"features\":{\"type\":\"array\",\"minItems\":1,\"uniqueItems\":true,\"items\":{\"type\":\"string\"}},\"iteraciones\":{\"type\":\"integer\",\"minimum\":0},\"inercia\":{\"type\":\"number\",\"minimum\":0},\"centroides\":{\"type\":\"array\",\"items\":{\"type\":\"array\",\"items\":{\"type\":\"number\"}}},\"regimenes\":{\"type\":\"array\",\"items\":{\"type\":\"object\",\"required\":[\"regimen\",\"pm2_5_medio\",\"pm10_medio\",\"excede_eca\",\"tamano\"],\"properties\":{\"regimen\":{\"type\":\"integer\",\"minimum\":0},\"pm2_5_medio\":{\"type\":\"number\",\"minimum\":0},\"pm10_medio\":{\"type\":\"number\",\"minimum\":0},\"excede_eca\":{\"type\":\"boolean\"},\"tamano\":{\"type\":\"integer\",\"minimum\":0}},\"additionalProperties\":false}}},\"additionalProperties\":false};",
+                  "let datos;",
+                  "pm.test('forma de la respuesta: Modelo del contrato', () => {",
+                  "  datos = pm.response.json();",
+                  "  pm.expect(datos).to.have.jsonSchema(esquema);",
+                  "});",
+                  "pm.test('el modelo activo es el del entrenamiento', () => pm.expect(datos.id).to.eql('entrenado-' + pm.collectionVariables.get('entrenamiento_id')));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_usuario}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/modelos/activo",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "modelos",
+                "activo"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "3. Conflicto controlado",
+      "description": "Un entrenamiento largo (replicas_conflicto copias del gold) y, mientras corre, un segundo pedido que recibe 409.",
+      "item": [
+        {
+          "name": "Esperar nodos libres para el conflicto",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Pausa entre consultas, para no sondear en un lazo cerrado.",
+                  "setTimeout(() => {}, Number(pm.variables.get('pausa_consulta_ms')) || 250);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('código HTTP 200', () => pm.response.to.have.status(200));",
+                  "const esquema = {\"type\":\"array\",\"items\":{\"type\":\"object\",\"required\":[\"nombre\",\"direccion\",\"workers\",\"latencia_ms\",\"libre\"],\"properties\":{\"nombre\":{\"type\":\"string\",\"minLength\":1},\"direccion\":{\"type\":\"string\"},\"workers\":{\"type\":\"integer\",\"minimum\":1},\"latencia_ms\":{\"type\":\"number\",\"minimum\":0},\"libre\":{\"type\":\"boolean\"}},\"additionalProperties\":false}};",
+                  "let datos;",
+                  "pm.test('forma de la respuesta: lista de Nodo del contrato', () => {",
+                  "  datos = pm.response.json();",
+                  "  pm.expect(datos).to.have.jsonSchema(esquema);",
+                  "});",
+                  "const libres = Array.isArray(datos) ? datos.filter((n) => n.libre).length : 0;",
+                  "const pedidos = Number(pm.variables.get('nodos_entrenamiento'));",
+                  "const n = Number(pm.variables.get('consultas_nodos') || 0) + 1;",
+                  "pm.variables.set('consultas_nodos', n);",
+                  "if (libres < pedidos && n < Number(pm.variables.get('max_consultas_entrenamiento'))) {",
+                  "  // Al terminar una corrida los nodos vuelven a llamar a la API tras unos 2 s.",
+                  "  pm.execution.setNextRequest(pm.info.requestName);",
+                  "} else {",
+                  "  pm.variables.set('consultas_nodos', 0);",
+                  "  pm.test('hay ' + pedidos + ' nodos libres en el pool', () => pm.expect(libres).to.be.at.least(pedidos));",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_admin}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/cluster/nodos",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "cluster",
+                "nodos"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Iniciar entrenamiento largo",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('código HTTP 202', () => pm.response.to.have.status(202));",
+                  "const esquema = {\"type\":\"object\",\"required\":[\"id\",\"estado\"],\"properties\":{\"id\":{\"type\":\"string\",\"minLength\":1},\"estado\":{\"type\":\"string\",\"enum\":[\"en_curso\"]}},\"additionalProperties\":false};",
+                  "let datos;",
+                  "pm.test('forma de la respuesta: EntrenamientoAceptado del contrato', () => {",
+                  "  datos = pm.response.json();",
+                  "  pm.expect(datos).to.have.jsonSchema(esquema);",
+                  "});",
+                  "pm.test('el id es e-AAAAMMDD-HHMM, con sufijo si se repite el minuto', () => pm.expect(datos.id).to.match(/^e-\\d{8}-\\d{4}(-\\d+)?$/));",
+                  "if (pm.response.code === 202) {",
+                  "  pm.collectionVariables.set('entrenamiento_id', datos.id);",
+                  "  pm.variables.set('consultas_trabajo', 0);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_admin}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/entrenamientos",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "entrenamientos"
+              ]
+            },
+            "description": "Con replicas_conflicto copias del gold la corrida dura unos segundos: es una medición y no reemplaza el modelo activo.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"nodos\": {{nodos_entrenamiento}}, \"replicas\": {{replicas_conflicto}}, \"semilla\": 42}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Rechazar entrenamiento simultáneo",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('código HTTP 409', () => pm.response.to.have.status(409));",
+                  "const esquema = {\"type\":\"object\",\"required\":[\"error\"],\"properties\":{\"error\":{\"type\":\"string\",\"minLength\":1}},\"additionalProperties\":false};",
+                  "let datos;",
+                  "pm.test('forma de la respuesta: Error del contrato', () => {",
+                  "  datos = pm.response.json();",
+                  "  pm.expect(datos).to.have.jsonSchema(esquema);",
+                  "});",
+                  "pm.test('el error trae el id del entrenamiento en curso', () => {",
+                  "  pm.expect(datos.error).to.include('ya hay un entrenamiento en curso');",
+                  "  pm.expect(datos.error).to.include(pm.collectionVariables.get('entrenamiento_id'));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_admin}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/entrenamientos",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "entrenamientos"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"nodos\": {{nodos_entrenamiento}}, \"replicas\": 1, \"semilla\": 42}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Cerrar escenario de conflicto",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Pausa entre consultas, para no sondear en un lazo cerrado.",
+                  "setTimeout(() => {}, Number(pm.variables.get('pausa_consulta_ms')) || 250);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('código HTTP 200', () => pm.response.to.have.status(200));",
+                  "const esquema = {\"type\":\"object\",\"required\":[\"id\",\"estado\",\"nodos\",\"replicas\",\"rondas\"],\"properties\":{\"id\":{\"type\":\"string\",\"minLength\":1},\"estado\":{\"type\":\"string\",\"enum\":[\"en_curso\",\"terminado\",\"abortado\"]},\"nodos\":{\"type\":\"array\",\"items\":{\"type\":\"string\"}},\"replicas\":{\"type\":\"integer\",\"minimum\":1},\"iteraciones\":{\"type\":\"integer\",\"minimum\":0},\"paro\":{\"type\":\"string\",\"enum\":[\"tolerancia\",\"max_iter\"]},\"dif_secuencial\":{\"type\":\"number\",\"minimum\":0},\"ms_total\":{\"type\":\"number\",\"minimum\":0},\"modelo_id\":{\"type\":\"string\",\"minLength\":1},\"aviso\":{\"type\":\"string\",\"minLength\":1},\"error\":{\"type\":\"string\",\"minLength\":1},\"rondas\":{\"type\":\"array\",\"items\":{\"type\":\"object\",\"required\":[\"iter\",\"inercia\",\"ms_ronda\",\"ms_fusion\",\"ms_por_nodo\"],\"properties\":{\"iter\":{\"type\":\"integer\",\"minimum\":1},\"inercia\":{\"type\":\"number\",\"minimum\":0},\"ms_ronda\":{\"type\":\"number\",\"minimum\":0},\"ms_fusion\":{\"type\":\"number\",\"minimum\":0},\"ms_por_nodo\":{\"type\":\"object\",\"additionalProperties\":{\"type\":\"number\",\"minimum\":0}}},\"additionalProperties\":false}}},\"additionalProperties\":false};",
+                  "let datos;",
+                  "pm.test('forma de la respuesta: Entrenamiento del contrato', () => {",
+                  "  datos = pm.response.json();",
+                  "  pm.expect(datos).to.have.jsonSchema(esquema);",
+                  "});",
+                  "pm.test('es el entrenamiento que se lanzó', () => pm.expect(datos.id).to.eql(pm.collectionVariables.get('entrenamiento_id')));",
+                  "const n = Number(pm.variables.get('consultas_trabajo') || 0) + 1;",
+                  "pm.variables.set('consultas_trabajo', n);",
+                  "if (datos.estado === 'en_curso' && n < Number(pm.variables.get('max_consultas_entrenamiento'))) {",
+                  "  pm.execution.setNextRequest(pm.info.requestName);",
+                  "} else {",
+                  "  pm.test('el entrenamiento terminó (consulta ' + n + ')', () => pm.expect(datos.estado, datos.error).to.eql('terminado'));",
+                  "  pm.test('una ronda por iteración, con el tiempo de cada nodo', () => {",
+                  "    pm.expect(datos.iteraciones).to.be.at.least(1);",
+                  "    pm.expect(datos.rondas).to.have.lengthOf(datos.iteraciones);",
+                  "    datos.rondas.forEach((r, i) => {",
+                  "      pm.expect(r.iter).to.eql(i + 1);",
+                  "      pm.expect(Object.keys(r.ms_por_nodo).sort()).to.eql(datos.nodos.slice().sort());",
+                  "    });",
+                  "  });",
+                  "  pm.test('usó los nodos pedidos', () => pm.expect(datos.nodos).to.have.lengthOf(Number(pm.variables.get('nodos_entrenamiento'))));",
+                  "  pm.test('coincide con el K-Means secuencial (dif_secuencial ≤ 1e-9)', () => pm.expect(datos.dif_secuencial).to.be.at.most(1e-9));",
+                  "  pm.test('paró por tolerancia o por max_iter', () => pm.expect(['tolerancia', 'max_iter']).to.include(datos.paro));",
+                  "",
+                  "  pm.test('con replicas > 1 es una medición: no activa su modelo', () => pm.expect(datos).to.not.have.property('modelo_id'));",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_admin}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/entrenamientos/{{entrenamiento_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "entrenamientos",
+                "{{entrenamiento_id}}"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "4. Datos de prueba (Runner con lecturas_prueba.csv)",
+      "description": "Para el Runner o newman -d con docs/postman/lecturas_prueba.csv: 78 filas, diez lecturas por régimen y dos series de 24 horas (una termina con alerta, la otra sin alerta y con INCA mala). Sin archivo de datos, sus pedidos se saltan.",
+      "item": [
+        {
+          "name": "Predicción del CSV",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Este pedido es para el Runner con docs/postman/lecturas_prueba.csv (una iteración por fila).",
+                  "// Sin archivo de datos no tiene qué enviar: se salta.",
+                  "if (pm.iterationData.get('regimen_esperado') === undefined) {",
+                  "  pm.execution.skipRequest();",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('código HTTP 200', () => pm.response.to.have.status(200));",
+                  "const esquema = {\"type\":\"object\",\"required\":[\"estacion\",\"regimen\",\"excede_eca\",\"media_24h\",\"alerta\",\"inca\",\"pm2_5_medio_regimen\",\"pm10_medio_regimen\",\"modelo_id\",\"ms\"],\"properties\":{\"estacion\":{\"type\":\"string\",\"minLength\":1},\"regimen\":{\"type\":\"integer\",\"minimum\":0},\"excede_eca\":{\"type\":\"boolean\"},\"media_24h\":{\"type\":\"object\",\"required\":[\"pm2_5\",\"pm10\",\"lecturas\"],\"properties\":{\"pm2_5\":{\"type\":[\"number\",\"null\"],\"minimum\":0},\"pm10\":{\"type\":[\"number\",\"null\"],\"minimum\":0},\"lecturas\":{\"type\":\"integer\",\"minimum\":0,\"maximum\":24}},\"additionalProperties\":false},\"alerta\":{\"type\":\"boolean\"},\"inca\":{\"enum\":[\"buena\",\"moderada\",\"mala\",\"umbral_de_cuidado\",null]},\"pm2_5_medio_regimen\":{\"type\":\"number\",\"minimum\":0},\"pm10_medio_regimen\":{\"type\":\"number\",\"minimum\":0},\"modelo_id\":{\"type\":\"string\",\"minLength\":1},\"ms\":{\"type\":\"number\",\"minimum\":0}},\"additionalProperties\":false};",
+                  "let datos;",
+                  "pm.test('forma de la respuesta: Prediccion del contrato', () => {",
+                  "  datos = pm.response.json();",
+                  "  pm.expect(datos).to.have.jsonSchema(esquema);",
+                  "});",
+                  "const fila = (c) => pm.iterationData.get(c);",
+                  "const vacio = (v) => v === undefined || v === null || String(v) === '';",
+                  "const caso = fila('caso') + ' ' + fila('estacion') + ' ' + fila('fecha_hora');",
+                  "pm.test('régimen esperado ' + fila('regimen_esperado') + ' (' + caso + ')', () => pm.expect(datos.regimen).to.eql(Number(fila('regimen_esperado'))));",
+                  "pm.test('lecturas en la ventana de 24 h: ' + fila('lecturas_esperadas'), () => pm.expect(datos.media_24h.lecturas).to.eql(Number(fila('lecturas_esperadas'))));",
+                  "pm.test('media de 24 h esperada', () => {",
+                  "  for (const [campo, columna] of [['pm2_5', 'media_pm2_5_esperada'], ['pm10', 'media_pm10_esperada']]) {",
+                  "    if (vacio(fila(columna))) {",
+                  "      pm.expect(datos.media_24h[campo], campo).to.eql(null);",
+                  "    } else {",
+                  "      pm.expect(datos.media_24h[campo], campo).to.be.closeTo(Number(fila(columna)), 1e-9);",
+                  "    }",
+                  "  }",
+                  "});",
+                  "pm.test('alerta esperada: ' + fila('alerta_esperada'), () => pm.expect(datos.alerta).to.eql(String(fila('alerta_esperada')) === 'true'));",
+                  "pm.test('INCA esperado: ' + (vacio(fila('inca_esperada')) ? 'null' : fila('inca_esperada')), () => {",
+                  "  pm.expect(datos.inca).to.eql(vacio(fila('inca_esperada')) ? null : String(fila('inca_esperada')));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_usuario}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/predicciones",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "predicciones"
+              ]
+            },
+            "description": "Una fila del CSV por iteración. Lo esperado (régimen, lecturas, media, alerta e INCA) se calculó con docs/postman/generar_lecturas.py a partir del gold, sin consultar a la API.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"estacion\": \"{{estacion}}\", \"fecha_hora\": \"{{fecha_hora}}\", \"pm2_5\": {{pm2_5}}, \"pm10\": {{pm10}}}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Estado de la estación al cerrar la serie",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Solo en la última fila de cada serie de 24 horas; en las demás se salta.",
+                  "const serie = String(pm.iterationData.get('caso') || '').startsWith('serie_');",
+                  "if (!serie || Number(pm.iterationData.get('lecturas_esperadas')) !== 24) {",
+                  "  pm.execution.skipRequest();",
+                  "} else {",
+                  "  setTimeout(() => {}, Number(pm.variables.get('pausa_consulta_ms')) || 250);",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('código HTTP 200', () => pm.response.to.have.status(200));",
+                  "const esquema = {\"type\":\"object\",\"required\":[\"fecha_hora\",\"regimen\",\"excede_eca\",\"media_24h\",\"alerta\",\"inca\",\"ts\"],\"properties\":{\"fecha_hora\":{\"type\":\"string\",\"format\":\"date-time\"},\"regimen\":{\"type\":\"integer\",\"minimum\":0},\"excede_eca\":{\"type\":\"boolean\"},\"media_24h\":{\"type\":\"object\",\"required\":[\"pm2_5\",\"pm10\",\"lecturas\"],\"properties\":{\"pm2_5\":{\"type\":[\"number\",\"null\"],\"minimum\":0},\"pm10\":{\"type\":[\"number\",\"null\"],\"minimum\":0},\"lecturas\":{\"type\":\"integer\",\"minimum\":0,\"maximum\":24}},\"additionalProperties\":false},\"alerta\":{\"type\":\"boolean\"},\"inca\":{\"enum\":[\"buena\",\"moderada\",\"mala\",\"umbral_de_cuidado\",null]},\"ts\":{\"type\":\"string\",\"format\":\"date-time\"}},\"additionalProperties\":false};",
+                  "let datos;",
+                  "pm.test('forma de la respuesta: RegimenEstacion del contrato', () => {",
+                  "  datos = pm.response.json();",
+                  "  pm.expect(datos).to.have.jsonSchema(esquema);",
+                  "});",
+                  "// La predicción responde sin esperar a Redis: se consulta hasta ver la lectura 24 de la serie.",
+                  "const fila = (c) => pm.iterationData.get(c);",
+                  "const n = Number(pm.variables.get('consultas_estado') || 0) + 1;",
+                  "pm.variables.set('consultas_estado', n);",
+                  "const llego = datos && datos.media_24h && datos.media_24h.lecturas === 24 && Date.parse(datos.fecha_hora) === Date.parse(fila('fecha_hora'));",
+                  "if (!llego && n < 20) {",
+                  "  pm.execution.setNextRequest(pm.info.requestName);",
+                  "} else {",
+                  "  pm.variables.set('consultas_estado', 0);",
+                  "  pm.test('Redis tiene la última lectura de la serie (' + fila('caso') + ', consulta ' + n + ')', () => {",
+                  "    pm.expect(Date.parse(datos.fecha_hora)).to.eql(Date.parse(fila('fecha_hora')));",
+                  "    pm.expect(datos.media_24h.lecturas).to.eql(24);",
+                  "  });",
+                  "  pm.test('alerta ' + fila('alerta_esperada') + ' e INCA ' + fila('inca_esperada') + ', como en el CSV', () => {",
+                  "    pm.expect(datos.alerta).to.eql(String(fila('alerta_esperada')) === 'true');",
+                  "    pm.expect(datos.inca).to.eql(String(fila('inca_esperada')));",
+                  "    pm.expect(datos.media_24h.pm2_5).to.be.closeTo(Number(fila('media_pm2_5_esperada')), 1e-9);",
+                  "    pm.expect(datos.media_24h.pm10).to.be.closeTo(Number(fila('media_pm10_esperada')), 1e-9);",
+                  "  });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_usuario}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/estaciones/{{estacion}}/regimen",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "estaciones",
+                "{{estacion}}",
+                "regimen"
+              ]
+            },
+            "description": "Corre solo en la fila 24 de serie_alerta y de serie_sin_alerta: el estado que quedó en Redis tiene que ser el del CSV."
+          },
+          "response": []
+        }
+      ]
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Tokens. Si falta el del usuario o el del admin, o le queda menos de un minuto, se pide antes",
+          "// de enviar el pedido. Así cualquier pedido se puede enviar suelto (para una captura) y el",
+          "// Runner puede repetir uno solo con el CSV. Las credenciales salen del entorno, nunca de este",
+          "// archivo. Los pedidos «Token usuario» y «Token admin» prueban la ruta y también los renuevan.",
+          "if (pm.request.url.getPath() !== '/api/auth/token') {",
+          "  for (const rol of ['usuario', 'admin']) {",
+          "    const vence = Date.parse(pm.collectionVariables.get('token_' + rol + '_expira') || '');",
+          "    if (pm.collectionVariables.get('token_' + rol) && vence - Date.now() > 60000) continue;",
+          "    const usuario = pm.variables.get(rol + '_usuario');",
+          "    const clave = pm.variables.get(rol + '_clave');",
+          "    if (!usuario || !clave) {",
+          "      throw new Error('Falta ' + rol + '_usuario o ' + rol + '_clave en el entorno: son los de API_USUARIOS del .env');",
+          "    }",
+          "    pm.sendRequest({",
+          "      url: pm.variables.get('base_url') + '/api/auth/token',",
+          "      method: 'POST',",
+          "      header: { 'Content-Type': 'application/json' },",
+          "      body: { mode: 'raw', raw: JSON.stringify({ usuario: String(usuario), clave: String(clave) }) },",
+          "    }, (err, res) => {",
+          "      if (err || res.code !== 200) {",
+          "        throw new Error('No se pudo pedir el token de ' + rol + ': ' + (err || 'HTTP ' + res.code));",
+          "      }",
+          "      const t = res.json();",
+          "      pm.collectionVariables.set('token_' + rol, t.token);",
+          "      pm.collectionVariables.set('token_' + rol + '_expira', t.expira);",
+          "    });",
+          "  }",
+          "}"
+        ]
+      }
+    },
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Lo que se comprueba en todos los pedidos: el tiempo HTTP completo que mide Postman",
+          "// (pm.response.responseTime), contra limite_ms del entorno (100 ms, la vara de la rúbrica).",
+          "const limite = Number(pm.variables.get('limite_ms'));",
+          "pm.test('responde en menos de ' + limite + ' ms (tiempo HTTP completo: ' + pm.response.responseTime + ' ms)', () => {",
+          "  pm.expect(Number.isFinite(limite) && limite > 0, 'limite_ms del entorno').to.eql(true);",
+          "  pm.expect(pm.response.responseTime).to.be.below(limite);",
+          "});",
+          "if (pm.request.url.getPath().startsWith('/api/')) {",
+          "  pm.test('la respuesta es JSON', () => pm.expect(pm.response.headers.get('Content-Type')).to.match(/^application\\/json\\b/i));",
+          "}"
+        ]
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "token_usuario",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "token_usuario_expira",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "token_admin",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "token_admin_expira",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "entrenamiento_id",
+      "value": "",
+      "type": "string"
+    }
+  ]
+}

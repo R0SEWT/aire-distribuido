@@ -1,0 +1,319 @@
+{
+  "metadatos": {
+    "momento": "2026-11-20T13:01:53.636060318-05:00",
+    "maquina": "A019803",
+    "version_go": "go1.27.4",
+    "gomaxprocs": 14,
+    "cpus_logicas": 14,
+    "commit": "c69dae40740fe823e598d1486633baa13c7415bd",
+    "arbol_sucio": true
+  },
+  "receta": {
+    "features": [
+      "pm2_5",
+      "pm10"
+    ],
+    "log1p": [],
+    "nivel": "absoluto",
+    "k": 3,
+    "semilla": 42,
+    "semillas": 10,
+    "tolerancia": 0.000001,
+    "max_iter": 100,
+    "workers": 0,
+    "chunk": 1000
+  },
+  "gold": {
+    "ruta": "data/gold/oefa_features.csv",
+    "sha256": "2fdace5ad8599149c9ed2b177151881025d895a50738519d9358d537236f87f7",
+    "n": 65873,
+    "d": 2,
+    "estaciones": 17,
+    "replicas": 1,
+    "filas_tabla": 65873
+  },
+  "huella": "sha256:2fdace5ad8599149c9ed2b177151881025d895a50738519d9358d537236f87f7",
+  "estandarizacion": "reports/estandarizacion.json",
+  "modo": "distribuido por datos: rangos contiguos de filas, una ronda ITERAR → PARCIAL por iteración con barrera y plazo, fusión de los parciales en orden de nodo (docs/diseno.md, §4)",
+  "k": 3,
+  "k_efectivo": 3,
+  "semilla": 42,
+  "centroides_iniciales": {
+    "archivo": "reports/centroides_iniciales.json",
+    "sha256": "c5db5fa5ec9c5c044c57e232e562add23a957d0036da3411fb609d244eb20cf7"
+  },
+  "nota_semillas": "Una semilla por corrida: la de la receta o -semilla. Para las semillas de la receta, se corre una vez por semilla (semilla, semilla+1, …) y se elige la de menor inercia final (empate: la semilla menor), como cmd/entrenar. En una sola corrida sería repetir cluster.Lloyd sobre las mismas conexiones ya cargadas, numerando las rondas desde Corrida.UltimaRonda + 1.",
+  "tol_abs": 0.000001,
+  "tol_rel": 0.000001,
+  "max_iter": 100,
+  "nodos_esperados": 4,
+  "nodos": [
+    {
+      "nodo": "local-01",
+      "direccion": "127.0.0.1:42690",
+      "workers": 2,
+      "rango": {
+        "desde": 0,
+        "hasta": 16469
+      },
+      "filas": 16469,
+      "ms_carga": 32.355908,
+      "rezagados": 0
+    },
+    {
+      "nodo": "local-02",
+      "direccion": "127.0.0.1:42716",
+      "workers": 2,
+      "rango": {
+        "desde": 16469,
+        "hasta": 32937
+      },
+      "filas": 16468,
+      "ms_carga": 34.201216,
+      "rezagados": 0
+    },
+    {
+      "nodo": "local-03",
+      "direccion": "127.0.0.1:42692",
+      "workers": 2,
+      "rango": {
+        "desde": 32937,
+        "hasta": 49405
+      },
+      "filas": 16468,
+      "ms_carga": 34.313463,
+      "rezagados": 0
+    },
+    {
+      "nodo": "local-04",
+      "direccion": "127.0.0.1:42688",
+      "workers": 2,
+      "rango": {
+        "desde": 49405,
+        "hasta": 65873
+      },
+      "filas": 16468,
+      "ms_carga": 32.942519,
+      "rezagados": 0
+    }
+  ],
+  "reparto": "rangos contiguos iguales (difieren a lo sumo en una fila), en orden de nodo por nombre; con replicas \u003e 1, sobre la tabla virtual (fila i = fila i mod N del gold)",
+  "plazo_ronda_ms": 10000,
+  "iteraciones": 44,
+  "paro": "tolerancia",
+  "movimiento_ultima_iteracion": 0,
+  "clusters_vacios": 0,
+  "inercia": 50950.36689106273,
+  "inercias_por_iteracion": [
+    73075.49583192293,
+    57902.13093642958,
+    52392.0973607289,
+    51221.65020639865,
+    51016.418482173336,
+    50973.706197781634,
+    50960.75965189433,
+    50956.46917524797,
+    50954.11888044049,
+    50952.87719383875,
+    50952.06412060859,
+    50951.83892860823,
+    50951.68806969195,
+    50951.454959201146,
+    50951.2776122674,
+    50951.2449423427,
+    50951.12900454404,
+    50950.88931514141,
+    50950.78837586025,
+    50950.728627213786,
+    50950.69179572482,
+    50950.656403589004,
+    50950.62173734862,
+    50950.60454995612,
+    50950.602399757045,
+    50950.60145197891,
+    50950.601049514495,
+    50950.60065124929,
+    50950.60019212868,
+    50950.59417671088,
+    50950.593582334084,
+    50950.593474802314,
+    50950.59337249874,
+    50950.57752318149,
+    50950.499562020115,
+    50950.45060272424,
+    50950.39885730195,
+    50950.39167835455,
+    50950.38940575072,
+    50950.37689492659,
+    50950.3682695731,
+    50950.36716721599,
+    50950.36710185208,
+    50950.36689106273
+  ],
+  "tamanos": [
+    48161,
+    1536,
+    16176
+  ],
+  "features": [
+    "pm2_5",
+    "pm10"
+  ],
+  "centroides_estandarizados": [
+    [
+      -0.3810318622031203,
+      -0.37347837176132137
+    ],
+    [
+      3.8292692196401186,
+      4.165192564331025
+    ],
+    [
+      0.7708406277322729,
+      0.716453763821993
+    ]
+  ],
+  "centroides_des_estandarizados": [
+    [
+      9.037549677124646,
+      17.63909927119454
+    ],
+    [
+      65.12396484375,
+      186.66182291666667
+    ],
+    [
+      24.381915182987143,
+      58.22880069238378
+    ]
+  ],
+  "ms_ronda_por_iteracion": [
+    0.386433,
+    0.317817,
+    0.3331,
+    0.276017,
+    0.288365,
+    0.249424,
+    0.240522,
+    0.261548,
+    0.313102,
+    0.286272,
+    0.254091,
+    0.261476,
+    0.244902,
+    0.285648,
+    0.329107,
+    0.333301,
+    0.293198,
+    0.288194,
+    0.240959,
+    0.265104,
+    0.228518,
+    0.237027,
+    0.229081,
+    0.317388,
+    0.32667,
+    0.32867,
+    1.159773,
+    0.272489,
+    0.315209,
+    0.247786,
+    0.314402,
+    0.262911,
+    0.290163,
+    0.250143,
+    0.407737,
+    0.292085,
+    0.2329,
+    0.243373,
+    0.234481,
+    0.247703,
+    0.240383,
+    0.884739,
+    0.30964,
+    0.263328
+  ],
+  "ms_fusion_por_iteracion": [
+    0.003733,
+    0.004807,
+    0.002272,
+    0.007249,
+    0.001835,
+    0.001664,
+    0.002676,
+    0.001661,
+    0.001417,
+    0.001866,
+    0.001592,
+    0.001361,
+    0.001318,
+    0.001085,
+    0.001234,
+    0.001249,
+    0.001607,
+    0.001272,
+    0.001178,
+    0.000949,
+    0.001546,
+    0.00089,
+    0.001019,
+    0.001527,
+    0.001313,
+    0.001289,
+    0.00197,
+    0.002095,
+    0.00158,
+    0.001839,
+    0.002059,
+    0.001454,
+    0.003211,
+    0.001358,
+    0.001522,
+    0.001342,
+    0.00138,
+    0.001508,
+    0.001514,
+    0.001325,
+    0.001214,
+    0.001364,
+    0.00129,
+    0.00141
+  ],
+  "ms_ronda": {
+    "media": 0.31557225,
+    "p50": 0.276017,
+    "p95": 0.407737,
+    "max": 1.159773
+  },
+  "ms_fusion": {
+    "media": 0.0017964545454545455,
+    "p50": 0.001454,
+    "p95": 0.003733,
+    "max": 0.007249
+  },
+  "ms": {
+    "espera_nodos": 0.482296,
+    "carga": 34.335965,
+    "rondas": 13.885179,
+    "fusiones": 0.079044,
+    "lloyd": 14.266553,
+    "pasada_final": 0.278132,
+    "total": 48.677174
+  },
+  "nota_tiempos": "ms_ronda_por_iteracion: la barrera de red de cada iteración, desde que sale el primer ITERAR hasta que llega el último PARCIAL (cómputo de los nodos más latencia). ms_fusion_por_iteracion: lo que hace el coordinador después: validar los parciales, fusionarlos en orden de nodo y CerrarIteracion (actualizar los centroides y el criterio de parada). ms.carga: CARGAR → LISTO de todos los nodos. ms.lloyd: desde el primer ITERAR hasta el fin de la pasada final. ms.total: desde el primer CARGAR hasta el FIN; no incluye ms.espera_nodos, que depende de cuándo se lanzan los nodos.",
+  "referencia": {
+    "archivo": "reports/kmeans.json",
+    "semilla_referencia": 42,
+    "comparable": true,
+    "iteraciones_referencia": 44,
+    "mismas_iteraciones": true,
+    "dif_max_centroides": 1.3322676295501878e-15,
+    "dif_inercia_relativa": 4.2841443888364076e-16,
+    "dif_max_inercias_por_iteracion_relativa": 7.140207776586339e-16,
+    "mismos_tamanos": true,
+    "bit_a_bit": false,
+    "tolerancia": 1e-9,
+    "dentro_de_tolerancia": true,
+    "nota": "Centroides: diferencia absoluta en el espacio estandarizado; inercia: relativa. Reasociar la suma de los parciales de K nodos cambia los últimos bits (del orden de 1e-16); que una fila cambie de cluster mueve un centroide más de 1e-5 en el gold real. La tolerancia queda entre los dos: dentro, la diferencia es redondeo; fuera, es otra asignación. Con un nodo, replicas = 1 y el chunk de la receta, el resultado es el de cmd/entrenar bit a bit."
+  }
+}

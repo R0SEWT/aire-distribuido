@@ -1,0 +1,307 @@
+{
+  "metadatos": {
+    "momento": "2026-11-20T13:01:53.542311924-05:00",
+    "maquina": "A019803",
+    "version_go": "go1.27.4",
+    "gomaxprocs": 14,
+    "cpus_logicas": 14,
+    "commit": "c69dae40740fe823e598d1486633baa13c7415bd",
+    "arbol_sucio": true
+  },
+  "receta": {
+    "features": [
+      "pm2_5",
+      "pm10"
+    ],
+    "log1p": [],
+    "nivel": "absoluto",
+    "k": 3,
+    "semilla": 42,
+    "semillas": 10,
+    "tolerancia": 0.000001,
+    "max_iter": 100,
+    "workers": 0,
+    "chunk": 1000
+  },
+  "gold": {
+    "ruta": "data/gold/oefa_features.csv",
+    "sha256": "2fdace5ad8599149c9ed2b177151881025d895a50738519d9358d537236f87f7",
+    "n": 65873,
+    "d": 2,
+    "estaciones": 17,
+    "replicas": 1,
+    "filas_tabla": 65873
+  },
+  "huella": "sha256:2fdace5ad8599149c9ed2b177151881025d895a50738519d9358d537236f87f7",
+  "estandarizacion": "reports/estandarizacion.json",
+  "modo": "distribuido por datos: rangos contiguos de filas, una ronda ITERAR → PARCIAL por iteración con barrera y plazo, fusión de los parciales en orden de nodo (docs/diseno.md, §4)",
+  "k": 3,
+  "k_efectivo": 3,
+  "semilla": 42,
+  "centroides_iniciales": {
+    "archivo": "reports/centroides_iniciales.json",
+    "sha256": "c5db5fa5ec9c5c044c57e232e562add23a957d0036da3411fb609d244eb20cf7"
+  },
+  "nota_semillas": "Una semilla por corrida: la de la receta o -semilla. Para las semillas de la receta, se corre una vez por semilla (semilla, semilla+1, …) y se elige la de menor inercia final (empate: la semilla menor), como cmd/entrenar. En una sola corrida sería repetir cluster.Lloyd sobre las mismas conexiones ya cargadas, numerando las rondas desde Corrida.UltimaRonda + 1.",
+  "tol_abs": 0.000001,
+  "tol_rel": 0.000001,
+  "max_iter": 100,
+  "nodos_esperados": 3,
+  "nodos": [
+    {
+      "nodo": "local-01",
+      "direccion": "127.0.0.1:42664",
+      "workers": 2,
+      "rango": {
+        "desde": 0,
+        "hasta": 21958
+      },
+      "filas": 21958,
+      "ms_carga": 31.944403,
+      "rezagados": 0
+    },
+    {
+      "nodo": "local-02",
+      "direccion": "127.0.0.1:42668",
+      "workers": 2,
+      "rango": {
+        "desde": 21958,
+        "hasta": 43916
+      },
+      "filas": 21958,
+      "ms_carga": 33.811387,
+      "rezagados": 0
+    },
+    {
+      "nodo": "local-03",
+      "direccion": "127.0.0.1:42666",
+      "workers": 2,
+      "rango": {
+        "desde": 43916,
+        "hasta": 65873
+      },
+      "filas": 21957,
+      "ms_carga": 33.662666,
+      "rezagados": 0
+    }
+  ],
+  "reparto": "rangos contiguos iguales (difieren a lo sumo en una fila), en orden de nodo por nombre; con replicas \u003e 1, sobre la tabla virtual (fila i = fila i mod N del gold)",
+  "plazo_ronda_ms": 10000,
+  "iteraciones": 44,
+  "paro": "tolerancia",
+  "movimiento_ultima_iteracion": 0,
+  "clusters_vacios": 0,
+  "inercia": 50950.36689106274,
+  "inercias_por_iteracion": [
+    73075.49583192292,
+    57902.130936429574,
+    52392.0973607289,
+    51221.650206398655,
+    51016.41848217332,
+    50973.706197781634,
+    50960.75965189435,
+    50956.46917524796,
+    50954.11888044051,
+    50952.87719383878,
+    50952.064120608564,
+    50951.83892860823,
+    50951.688069691925,
+    50951.45495920114,
+    50951.27761226739,
+    50951.244942342724,
+    50951.129004544055,
+    50950.88931514143,
+    50950.78837586024,
+    50950.72862721378,
+    50950.691795724815,
+    50950.656403589004,
+    50950.62173734862,
+    50950.60454995614,
+    50950.60239975706,
+    50950.601451978924,
+    50950.60104951449,
+    50950.60065124928,
+    50950.60019212868,
+    50950.594176710874,
+    50950.59358233407,
+    50950.59347480232,
+    50950.593372498726,
+    50950.577523181484,
+    50950.49956202014,
+    50950.45060272424,
+    50950.39885730196,
+    50950.39167835453,
+    50950.38940575072,
+    50950.376894926565,
+    50950.36826957311,
+    50950.367167216,
+    50950.36710185207,
+    50950.36689106274
+  ],
+  "tamanos": [
+    48161,
+    1536,
+    16176
+  ],
+  "features": [
+    "pm2_5",
+    "pm10"
+  ],
+  "centroides_estandarizados": [
+    [
+      -0.3810318622031203,
+      -0.3734783717613215
+    ],
+    [
+      3.8292692196401195,
+      4.165192564331026
+    ],
+    [
+      0.7708406277322727,
+      0.7164537638219931
+    ]
+  ],
+  "centroides_des_estandarizados": [
+    [
+      9.037549677124646,
+      17.63909927119453
+    ],
+    [
+      65.12396484375,
+      186.66182291666672
+    ],
+    [
+      24.38191518298714,
+      58.228800692383786
+    ]
+  ],
+  "ms_ronda_por_iteracion": [
+    0.418243,
+    0.305154,
+    0.490325,
+    0.326323,
+    0.319344,
+    0.308233,
+    0.284237,
+    0.319963,
+    0.271585,
+    0.295547,
+    0.271672,
+    0.298108,
+    0.303679,
+    0.301523,
+    0.293592,
+    0.306779,
+    0.385579,
+    0.288058,
+    0.284321,
+    0.293251,
+    0.366166,
+    0.30304,
+    0.269202,
+    0.2613,
+    0.260425,
+    0.272025,
+    0.31118,
+    0.309346,
+    0.293216,
+    0.309773,
+    0.26877,
+    0.279373,
+    0.287124,
+    0.274402,
+    0.276895,
+    0.285477,
+    0.291761,
+    0.278071,
+    0.277158,
+    0.271778,
+    0.276272,
+    0.509894,
+    0.305162,
+    0.275078
+  ],
+  "ms_fusion_por_iteracion": [
+    0.003996,
+    0.00221,
+    0.002365,
+    0.001908,
+    0.001589,
+    0.001502,
+    0.001312,
+    0.000988,
+    0.001481,
+    0.001019,
+    0.001408,
+    0.000996,
+    0.001178,
+    0.001273,
+    0.000761,
+    0.001137,
+    0.000908,
+    0.001084,
+    0.002684,
+    0.000839,
+    0.000808,
+    0.0013,
+    0.001577,
+    0.000789,
+    0.001411,
+    0.000887,
+    0.001073,
+    0.000935,
+    0.001189,
+    0.001205,
+    0.00091,
+    0.000971,
+    0.002825,
+    0.001065,
+    0.001179,
+    0.001213,
+    0.00118,
+    0.001127,
+    0.000893,
+    0.000767,
+    0.001112,
+    0.001219,
+    0.001098,
+    0.001158
+  ],
+  "ms_ronda": {
+    "media": 0.30632736363636365,
+    "p50": 0.293216,
+    "p95": 0.418243,
+    "max": 0.509894
+  },
+  "ms_fusion": {
+    "media": 0.0013302045454545454,
+    "p50": 0.001158,
+    "p95": 0.002684,
+    "max": 0.003996
+  },
+  "ms": {
+    "espera_nodos": 0.591802,
+    "carga": 33.866384,
+    "rondas": 13.478404,
+    "fusiones": 0.058529,
+    "lloyd": 13.851024,
+    "pasada_final": 0.289142,
+    "total": 47.797188
+  },
+  "nota_tiempos": "ms_ronda_por_iteracion: la barrera de red de cada iteración, desde que sale el primer ITERAR hasta que llega el último PARCIAL (cómputo de los nodos más latencia). ms_fusion_por_iteracion: lo que hace el coordinador después: validar los parciales, fusionarlos en orden de nodo y CerrarIteracion (actualizar los centroides y el criterio de parada). ms.carga: CARGAR → LISTO de todos los nodos. ms.lloyd: desde el primer ITERAR hasta el fin de la pasada final. ms.total: desde el primer CARGAR hasta el FIN; no incluye ms.espera_nodos, que depende de cuándo se lanzan los nodos.",
+  "referencia": {
+    "archivo": "reports/kmeans.json",
+    "semilla_referencia": 42,
+    "comparable": true,
+    "iteraciones_referencia": 44,
+    "mismas_iteraciones": true,
+    "dif_max_centroides": 8.881784197001252e-16,
+    "dif_inercia_relativa": 2.8560962592242717e-16,
+    "dif_max_inercias_por_iteracion_relativa": 7.140236168279453e-16,
+    "mismos_tamanos": true,
+    "bit_a_bit": false,
+    "tolerancia": 1e-9,
+    "dentro_de_tolerancia": true,
+    "nota": "Centroides: diferencia absoluta en el espacio estandarizado; inercia: relativa. Reasociar la suma de los parciales de K nodos cambia los últimos bits (del orden de 1e-16); que una fila cambie de cluster mueve un centroide más de 1e-5 en el gold real. La tolerancia queda entre los dos: dentro, la diferencia es redondeo; fuera, es otra asignación. Con un nodo, replicas = 1 y el chunk de la receta, el resultado es el de cmd/entrenar bit a bit."
+  }
+}

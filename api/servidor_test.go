@@ -37,6 +37,10 @@ type entorno struct {
 	cache *memoria.Cache
 	ent   *memoria.Entrenamientos
 	ev    *memoria.Eventos
+	// parar apaga lo que corre en segundo plano (Escribir y Coordinar) y
+	// espera a que termine. Lo llama la limpieza de la prueba; se puede llamar
+	// antes, más de una vez.
+	parar func()
 }
 
 // nuevoEntorno arma la API como cmd/api, con el modelo sembrado desde
@@ -91,7 +95,8 @@ func nuevoEntorno(t *testing.T, cambiar ...func(*Config)) *entorno {
 	listo, coordinado := make(chan struct{}), make(chan struct{})
 	go func() { e.srv.Escribir(ctx); close(listo) }()
 	go func() { e.srv.Coordinar(ctx); close(coordinado) }()
-	t.Cleanup(func() { cancel(); <-listo; <-coordinado })
+	e.parar = sync.OnceFunc(func() { cancel(); <-listo; <-coordinado })
+	t.Cleanup(e.parar)
 	return e
 }
 
@@ -737,6 +742,11 @@ func TestNuevoExigeLoNecesario(t *testing.T) {
 	if _, err := Nuevo(base()); err != nil {
 		t.Fatalf("la configuración base tiene que valer: %v", err)
 	}
+	conInvitado := base()
+	conInvitado.Invitado = "a"
+	if _, err := Nuevo(conInvitado); err != nil {
+		t.Fatalf("con un invitado de rol usuario tiene que valer: %v", err)
+	}
 	for nombre, cambiar := range map[string]func(*Config){
 		"sin firmador":     func(c *Config) { c.Firmador = nil },
 		"sin usuarios":     func(c *Config) { c.Usuarios = nil },
@@ -746,6 +756,12 @@ func TestNuevoExigeLoNecesario(t *testing.T) {
 		"sin caché":        func(c *Config) { c.Cache = nil },
 		"sin contrato":     func(c *Config) { c.OpenAPI = nil },
 		"cola de 0":        func(c *Config) { c.TamCola = 0 },
+		// El invitado entra sin clave: un usuario que existe, y nunca un admin.
+		"invitado que no existe": func(c *Config) { c.Invitado = "nadie" },
+		"invitado admin": func(c *Config) {
+			c.Usuarios = map[string]Usuario{"a": {"b", RolUsuario}, "jefa": {"c", RolAdmin}}
+			c.Invitado = "jefa"
+		},
 	} {
 		cfg := base()
 		cambiar(&cfg)

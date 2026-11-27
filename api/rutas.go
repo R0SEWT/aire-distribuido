@@ -36,7 +36,32 @@ func (s *Servidor) crearToken(w http.ResponseWriter, r *http.Request) {
 		escribirError(w, http.StatusUnauthorized, "usuario o clave incorrectos")
 		return
 	}
-	tok, expira, err := s.firmador.Emitir(*c.Usuario, u.Rol)
+	s.responderToken(w, r, *c.Usuario, u.Rol)
+}
+
+// msgSinInvitado es el 404 de POST /api/auth/invitado cuando el servidor no
+// designó una cuenta de invitado.
+const msgSinInvitado = "el ingreso de invitado no está habilitado"
+
+// POST /api/auth/invitado
+//
+// El ingreso de invitado: un token de la cuenta que designó quien levantó la
+// API (Config.Invitado), sin presentar credenciales. El pedido no lleva cuerpo
+// y, si trae uno, no se lee. La cuenta es un usuario más, de rol usuario: su
+// clave no sale del servidor y el token es igual al que daría
+// POST /api/auth/token. Sin cuenta de invitado responde 404.
+func (s *Servidor) ingresarInvitado(w http.ResponseWriter, r *http.Request) {
+	if s.invitado == "" {
+		escribirError(w, http.StatusNotFound, msgSinInvitado)
+		return
+	}
+	s.responderToken(w, r, s.invitado, s.usuarios[s.invitado].Rol)
+}
+
+// responderToken firma un token para el usuario y lo responde con el esquema
+// Token del contrato. Es la respuesta de los dos ingresos.
+func (s *Servidor) responderToken(w http.ResponseWriter, r *http.Request, usuario, rol string) {
+	tok, expira, err := s.firmador.Emitir(usuario, rol)
 	if err != nil {
 		s.log.Error("no se pudo firmar el token", "err", err)
 		escribirError(w, http.StatusInternalServerError, "no se pudo emitir el token")
@@ -46,7 +71,7 @@ func (s *Servidor) crearToken(w http.ResponseWriter, r *http.Request) {
 		Token  string `json:"token"`
 		Rol    string `json:"rol"`
 		Expira string `json:"expira"`
-	}{tok, u.Rol, enLima(expira).Format(time.RFC3339)})
+	}{tok, rol, enLima(expira).Format(time.RFC3339)})
 }
 
 // GET /api/salud
@@ -302,6 +327,50 @@ func (s *Servidor) regimenEstacion(w http.ResponseWriter, r *http.Request) {
 	s.responder(w, r, http.StatusOK, reg)
 }
 
+// estadoEstacion es el esquema EstadoEstacion del contrato: el régimen de una
+// estación con su código. Es cada entrada de GET /api/regimenes y los datos
+// del evento estacion.regimen del WebSocket.
+type estadoEstacion struct {
+	Estacion string `json:"estacion"`
+	almacen.RegimenEstacion
+}
+
+func nuevoEstadoEstacion(estacion string, r almacen.RegimenEstacion) estadoEstacion {
+	r.FechaHora, r.TS = enLima(r.FechaHora), enLima(r.TS)
+	return estadoEstacion{estacion, r}
+}
+
+// GET /api/regimenes
+//
+// El estado de todas las estaciones que tienen uno, en un solo pedido y una
+// sola ida a la caché: se piden las claves de todo el catálogo a la vez. Sin
+// esta ruta, el panel tendría que hacer un pedido por estación, casi todos 404
+// con el sistema recién levantado. Si el valor guardado de una estación no se
+// puede leer, esa estación se salta (queda en el log) y la respuesta es 200
+// con las demás.
+func (s *Servidor) listarRegimenes(w http.ResponseWriter, r *http.Request) {
+	rs, err := s.cache.Regimenes(r.Context(), s.idsCatalogo)
+	var ilegibles *almacen.RegimenesIlegibles
+	switch {
+	case errors.As(err, &ilegibles):
+		// Redis respondió; el valor de alguna clave no se puede leer. Esa
+		// estación no aparece y las demás sí: una clave rota no deja al panel
+		// sin ninguna.
+		s.log.Error("regímenes guardados que no se pueden leer: esas estaciones se saltan", "estaciones", ilegibles.Estaciones, "err", ilegibles.Causa)
+	case err != nil:
+		s.log.Error("regímenes de las estaciones", "err", err)
+		escribirError(w, http.StatusServiceUnavailable, "Redis no disponible")
+		return
+	}
+	estados := make([]estadoEstacion, 0, len(rs))
+	for _, id := range s.idsCatalogo { // en el orden del catálogo: por código
+		if reg, ok := rs[id]; ok {
+			estados = append(estados, nuevoEstadoEstacion(id, reg))
+		}
+	}
+	s.responder(w, r, http.StatusOK, estados)
+}
+
 // GET /api/modelos/activo
 func (s *Servidor) modeloActivo(w http.ResponseWriter, r *http.Request) {
 	m := s.modelo.Load()
@@ -330,8 +399,9 @@ func (s *Servidor) consultarMetricas(w http.ResponseWriter, r *http.Request) {
 		EscriturasFallidas    uint64                     `json:"escrituras_fallidas"`
 		Escritura             map[string]estadoEscritura `json:"escritura"`
 		PuntosDeControl       estadoPuntos               `json:"puntos_de_control"`
+		ProcesoAPI            estadoProceso              `json:"proceso_api"`
 	}{s.metricas.Resumen(), s.nodosEnPool(), s.coord.ultimoEntrenamiento(), s.escritor.descartadas(), s.escritor.fallidas(),
-		s.escritor.estado(), s.cuentaPuntos.estado()})
+		s.escritor.estado(), s.cuentaPuntos.estado(), medirProceso()})
 }
 
 // GET /openapi.yaml: el contrato tal cual está en docs/api/openapi.yaml.

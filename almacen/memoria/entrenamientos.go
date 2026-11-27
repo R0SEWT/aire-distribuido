@@ -103,6 +103,22 @@ func (s *Eventos) Guardar(_ context.Context, e almacen.EventoCluster) error {
 	return nil
 }
 
+// Recientes devuelve a lo sumo n eventos, del más reciente al más antiguo; dos
+// con el mismo TS, el que se guardó después primero.
+func (s *Eventos) Recientes(_ context.Context, n int) ([]almacen.EventoCluster, error) {
+	lista := []almacen.EventoCluster{}
+	if n <= 0 {
+		return lista, nil
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	for _, e := range slices.Backward(s.todos) {
+		lista = append(lista, e)
+	}
+	slices.SortStableFunc(lista, func(a, b almacen.EventoCluster) int { return b.TS.Compare(a.TS) })
+	return lista[:min(n, len(lista))], nil
+}
+
 // Todos devuelve una copia de los eventos guardados, en orden de llegada.
 func (s *Eventos) Todos() []almacen.EventoCluster {
 	s.mu.Lock()

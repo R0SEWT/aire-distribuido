@@ -1,0 +1,1292 @@
+$ npx newman@6 run docs/postman/aire-distribuido.postman_collection.json -e docs/postman/local.postman_environment.json --env-var usuario_usuario=demo --env-var usuario_clave="$CLAVE_DEMO" --env-var admin_usuario=admin --env-var admin_clave="$CLAVE_ADMIN" --color off --folder "4. Datos de prueba (Runner con lecturas_prueba.csv)" -d docs/postman/lecturas_prueba.csv
+
+newman
+
+aire-distribuido - PC4
+
+Iteration 1/78
+
+❏ 4. Datos de prueba (Runner con lecturas_prueba.csv)
+↳ Predicción del CSV
+  POST http://localhost:8080/api/auth/token   POST http://localhost:8080/api/auth/token [200 OK, 353B, 12ms]
+[200 OK, 357B, 19ms]
+  POST http://localhost:8080/api/predicciones [200 OK, 392B, 2ms]
+  ✓  responde en menos de 100 ms (tiempo HTTP completo: 2 ms)
+  ✓  la respuesta es JSON
+  ✓  código HTTP 200
+  ✓  forma de la respuesta: Prediccion del contrato
+  ✓  régimen esperado 0 (regimen_0 CA-AYAS-01 2022-11-10T13:00:00-05:00)
+  ✓  lecturas en la ventana de 24 h: 1
+  ✓  media de 24 h esperada
+  ✓  alerta esperada: false
+  ✓  INCA esperado: null
+
+↳ Estado de la estación al cerrar la serie
+
+Iteration 2/78
+
+↳ Predicción del CSV
+  POST http://localhost:8080/api/predicciones [200 OK, 391B, 2ms]
+  ✓  responde en menos de 100 ms (tiempo HTTP completo: 2 ms)
+  ✓  la respuesta es JSON
+  ✓  código HTTP 200
+  ✓  forma de la respuesta: Prediccion del contrato
+  ✓  régimen esperado 0 (regimen_0 CA-CG-01 2022-01-10T03:00:00-05:00)
+  ✓  lecturas en la ventana de 24 h: 1
+  ✓  media de 24 h esperada
+  ✓  alerta esperada: false
+  ✓  INCA esperado: null
+
+↳ Estado de la estación al cerrar la serie
+
+Iteration 3/78
+
+↳ Predicción del CSV
+  POST http://localhost:8080/api/predicciones [200 OK, 391B, 1ms]
+  ✓  responde en menos de 100 ms (tiempo HTTP completo: 1 ms)
+  ✓  la respuesta es JSON
+  ✓  código HTTP 200
+  ✓  forma de la respuesta: Prediccion del contrato
+  ✓  régimen esperado 0 (regimen_0 CA-CG-02 2022-10-24T16:00:00-05:00)
+  ✓  lecturas en la ventana de 24 h: 1
+  ✓  media de 24 h esperada
+  ✓  alerta esperada: false
+  ✓  INCA esperado: null
+
+↳ Estado de la estación al cerrar la serie
+
+Iteration 4/78
+
+↳ Predicción del CSV
+  POST http://localhost:8080/api/predicciones [200 OK, 391B, 1ms]
+  ✓  responde en menos de 100 ms (tiempo HTTP completo: 1 ms)
+  ✓  la respuesta es JSON
+  ✓  código HTTP 200
+  ✓  forma de la respuesta: Prediccion del contrato
+  ✓  régimen esperado 0 (regimen_0 CA-CH-03 2021-12-21T03:00:00-05:00)
+  ✓  lecturas en la ventana de 24 h: 1
+  ✓  media de 24 h esperada
+  ✓  alerta esperada: false
+  ✓  INCA esperado: null
+
+↳ Estado de la estación al cerrar la serie
+
+Iteration 5/78
+
+↳ Predicción del CSV
+  POST http://localhost:8080/api/predicciones [200 OK, 393B, 1ms]
+  ✓  responde en menos de 100 ms (tiempo HTTP completo: 1 ms)
+  ✓  la respuesta es JSON
+  ✓  código HTTP 200
+  ✓  forma de la respuesta: Prediccion del contrato
+  ✓  régimen esperado 0 (regimen_0 CA-COLQ-01 2021-12-27T10:00:00-05:00)
+  ✓  lecturas en la ventana de 24 h: 1
+  ✓  media de 24 h esperada
+  ✓  alerta esperada: false
+  ✓  INCA esperado: null
+
+↳ Estado de la estación al cerrar la serie
+
+Iteration 6/78
+
+↳ Predicción del CSV
+  POST http://localhost:8080/api/predicciones [200 OK, 391B, 2ms]
+  ✓  responde en menos de 100 ms (tiempo HTTP completo: 2 ms)
+  ✓  la respuesta es JSON
+  ✓  código HTTP 200
+  ✓  forma de la respuesta: Prediccion del contrato
+  ✓  régimen esperado 0 (regimen_0 CA-CP-01 2020-03-11T00:00:00-05:00)
+  ✓  lecturas en la ventana de 24 h: 1
+  ✓  media de 24 h esperada
+  ✓  alerta esperada: false
+  ✓  INCA esperado: null
+
+↳ Estado de la estación al cerrar la serie
+
+Iteration 7/78
+
+↳ Predicción del CSV
+  POST http://localhost:8080/api/predicciones [200 OK, 392B, 2ms]
+  ✓  responde en menos de 100 ms (tiempo HTTP completo: 2 ms)
+  ✓  la respuesta es JSON
+  ✓  código HTTP 200
+  ✓  forma de la respuesta: Prediccion del contrato
+  ✓  régimen esperado 0 (regimen_0 CA-ESP-01 2021-11-15T05:00:00-05:00)
+  ✓  lecturas en la ventana de 24 h: 1
+  ✓  media de 24 h esperada
+  ✓  alerta esperada: false
+  ✓  INCA esperado: null
+
+↳ Estado de la estación al cerrar la serie
+
+Iteration 8/78
+
+↳ Predicción del CSV
+  POST http://localhost:8080/api/predicciones [200 OK, 391B, 2ms]
+  ✓  responde en menos de 100 ms (tiempo HTTP completo: 2 ms)
+  ✓  la respuesta es JSON
+  ✓  código HTTP 200
+  ✓  forma de la respuesta: Prediccion del contrato
+  ✓  régimen esperado 0 (regimen_0 CA-HU-09 2021-12-26T00:00:00-05:00)
+  ✓  lecturas en la ventana de 24 h: 1
+  ✓  media de 24 h esperada
+  ✓  alerta esperada: false
+  ✓  INCA esperado: null
+
+↳ Estado de la estación al cerrar la serie
+
+Iteration 9/78
+
+↳ Predicción del CSV
+  POST http://localhost:8080/api/predicciones [200 OK, 392B, 1ms]
+  ✓  responde en menos de 100 ms (tiempo HTTP completo: 1 ms)
+  ✓  la respuesta es JSON
+  ✓  código HTTP 200
+  ✓  forma de la respuesta: Prediccion del contrato
+  ✓  régimen esperado 0 (regimen_0 CA-HUA-01 2022-06-29T14:00:00-05:00)
+  ✓  lecturas en la ventana de 24 h: 1
+  ✓  media de 24 h esperada
+  ✓  alerta esperada: false
+  ✓  INCA esperado: null
+
+↳ Estado de la estación al cerrar la serie
+
+Iteration 10/78
+
+↳ Predicción del CSV
+  POST http://localhost:8080/api/predicciones [200 OK, 393B, 1ms]
+  ✓  responde en menos de 100 ms (tiempo HTTP completo: 1 ms)
+  ✓  la respuesta es JSON
+  ✓  código HTTP 200
+  ✓  forma de la respuesta: Prediccion del contrato
+  ✓  régimen esperado 0 (regimen_0 CA-HUAR-01 2021-12-13T17:00:00-05:00)
+  ✓  lecturas en la ventana de 24 h: 1
+  ✓  media de 24 h esperada
+  ✓  alerta esperada: false
+  ✓  INCA esperado: null
+
+↳ Estado de la estación al cerrar la serie
+
+Iteration 11/78
+
+↳ Predicción del CSV
+  POST http://localhost:8080/api/predicciones [200 OK, 392B, 1ms]
+  ✓  responde en menos de 100 ms (tiempo HTTP completo: 1 ms)
+  ✓  la respuesta es JSON
+  ✓  código HTTP 200
+  ✓  forma de la respuesta: Prediccion del contrato
+  ✓  régimen esperado 1 (regimen_1 CA-AYAS-01 2022-02-14T21:00:00-05:00)
+  ✓  lecturas en la ventana de 24 h: 1
+  ✓  media de 24 h esperada
+  ✓  alerta esperada: false
+  ✓  INCA esperado: null
+
+↳ Estado de la estación al cerrar la serie
+
+Iteration 12/78
+
+↳ Predicción del CSV
+  POST http://localhost:8080/api/predicciones [200 OK, 390B, 2ms]
+  ✓  responde en menos de 100 ms (tiempo HTTP completo: 2 ms)
+  ✓  la respuesta es JSON
+  ✓  código HTTP 200
+  ✓  forma de la respuesta: Prediccion del contrato
+  ✓  régimen esperado 1 (regimen_1 CA-CG-01 2021-12-23T09:00:00-05:00)
+  ✓  lecturas en la ventana de 24 h: 1
+  ✓  media de 24 h esperada
+  ✓  alerta esperada: false
+  ✓  INCA esperado: null
+
+↳ Estado de la estación al cerrar la serie
+
+Iteration 13/78
+
+↳ Predicción del CSV
+  POST http://localhost:8080/api/predicciones [200 OK, 390B, 1ms]
+  ✓  responde en menos de 100 ms (tiempo HTTP completo: 1 ms)
+  ✓  la respuesta es JSON
+  ✓  código HTTP 200
+  ✓  forma de la respuesta: Prediccion del contrato
+  ✓  régimen esperado 1 (regimen_1 CA-CG-02 2022-06-04T06:00:00-05:00)
+  ✓  lecturas en la ventana de 24 h: 1
+  ✓  media de 24 h esperada
+  ✓  alerta esperada: false
+  ✓  INCA esperado: null
+
+↳ Estado de la estación al cerrar la serie
+
+Iteration 14/78
+
+↳ Predicción del CSV
+  POST http://localhost:8080/api/predicciones [200 OK, 392B, 2ms]
+  ✓  responde en menos de 100 ms (tiempo HTTP completo: 2 ms)
+  ✓  la respuesta es JSON
+  ✓  código HTTP 200
+  ✓  forma de la respuesta: Prediccion del contrato
+  ✓  régimen esperado 1 (regimen_1 CA-COLQ-01 2021-12-22T08:00:00-05:00)
+  ✓  lecturas en la ventana de 24 h: 1
+  ✓  media de 24 h esperada
+  ✓  alerta esperada: false
+  ✓  INCA esperado: null
+
+↳ Estado de la estación al cerrar la serie
+
+Iteration 15/78
+
+↳ Predicción del CSV
+  POST http://localhost:8080/api/predicciones [200 OK, 390B, 1ms]
+  ✓  responde en menos de 100 ms (tiempo HTTP completo: 1 ms)
+  ✓  la respuesta es JSON
+  ✓  código HTTP 200
+  ✓  forma de la respuesta: Prediccion del contrato
+  ✓  régimen esperado 1 (regimen_1 CA-CP-01 2020-09-10T10:00:00-05:00)
+  ✓  lecturas en la ventana de 24 h: 1
+  ✓  media de 24 h esperada
+  ✓  alerta esperada: false
+  ✓  INCA esperado: null
+
+↳ Estado de la estación al cerrar la serie
+
+Iteration 16/78
+
+↳ Predicción del CSV
+  POST http://localhost:8080/api/predicciones [200 OK, 391B, 2ms]
+  ✓  responde en menos de 100 ms (tiempo HTTP completo: 2 ms)
+  ✓  la respuesta es JSON
+  ✓  código HTTP 200
+  ✓  forma de la respuesta: Prediccion del contrato
+  ✓  régimen esperado 1 (regimen_1 CA-ESP-01 2021-12-14T10:00:00-05:00)
+  ✓  lecturas en la ventana de 24 h: 1
+  ✓  media de 24 h esperada
+  ✓  alerta esperada: false
+  ✓  INCA esperado: null
+
+↳ Estado de la estación al cerrar la serie
+
+Iteration 17/78
+
+↳ Predicción del CSV
+  POST http://localhost:8080/api/predicciones [200 OK, 390B, 1ms]
+  ✓  responde en menos de 100 ms (tiempo HTTP completo: 1 ms)
+  ✓  la respuesta es JSON
+  ✓  código HTTP 200
+  ✓  forma de la respuesta: Prediccion del contrato
+  ✓  régimen esperado 1 (regimen_1 CA-HU-09 2021-12-31T10:00:00-05:00)
+  ✓  lecturas en la ventana de 24 h: 1
+  ✓  media de 24 h esperada
+  ✓  alerta esperada: false
+  ✓  INCA esperado: null
+
+↳ Estado de la estación al cerrar la serie
+
+Iteration 18/78
+
+↳ Predicción del CSV
+  POST http://localhost:8080/api/predicciones [200 OK, 390B, 1ms]
+  ✓  responde en menos de 100 ms (tiempo HTTP completo: 1 ms)
+  ✓  la respuesta es JSON
+  ✓  código HTTP 200
+  ✓  forma de la respuesta: Prediccion del contrato
+  ✓  régimen esperado 1 (regimen_1 CA-HUA-01 2022-02-17T15:00:00-05:00)
+  ✓  lecturas en la ventana de 24 h: 1
+  ✓  media de 24 h esperada
+  ✓  alerta esperada: false
+  ✓  INCA esperado: null
+
+↳ Estado de la estación al cerrar la serie
+
+Iteration 19/78
+
+↳ Predicción del CSV
+  POST http://localhost:8080/api/predicciones [200 OK, 392B, 1ms]
+  ✓  responde en menos de 100 ms (tiempo HTTP completo: 1 ms)
+  ✓  la respuesta es JSON
+  ✓  código HTTP 200
+  ✓  forma de la respuesta: Prediccion del contrato
+  ✓  régimen esperado 1 (regimen_1 CA-JUPR-01 2022-11-16T19:00:00-05:00)
+  ✓  lecturas en la ventana de 24 h: 1
+  ✓  media de 24 h esperada
+  ✓  alerta esperada: false
+  ✓  INCA esperado: null
+
+↳ Estado de la estación al cerrar la serie
+
+Iteration 20/78
+
+↳ Predicción del CSV
+  POST http://localhost:8080/api/predicciones [200 OK, 391B, 1ms]
+  ✓  responde en menos de 100 ms (tiempo HTTP completo: 1 ms)
+  ✓  la respuesta es JSON
+  ✓  código HTTP 200
+  ✓  forma de la respuesta: Prediccion del contrato
+  ✓  régimen esperado 1 (regimen_1 CA-MAC-01 2022-06-05T16:00:00-05:00)
+  ✓  lecturas en la ventana de 24 h: 1
+  ✓  media de 24 h esperada
+  ✓  alerta esperada: false
+  ✓  INCA esperado: null
+
+↳ Estado de la estación al cerrar la serie
+
+Iteration 21/78
+
+↳ Predicción del CSV
+  POST http://localhost:8080/api/predicciones [200 OK, 394B, 2ms]
+  ✓  responde en menos de 100 ms (tiempo HTTP completo: 2 ms)
+  ✓  la respuesta es JSON
+  ✓  código HTTP 200
+  ✓  forma de la respuesta: Prediccion del contrato
+  ✓  régimen esperado 2 (regimen_2 CA-AYAS-01 2022-08-23T16:00:00-05:00)
+  ✓  lecturas en la ventana de 24 h: 1
+  ✓  media de 24 h esperada
+  ✓  alerta esperada: false
+  ✓  INCA esperado: null
+
+↳ Estado de la estación al cerrar la serie
+
+Iteration 22/78
+
+↳ Predicción del CSV
+  POST http://localhost:8080/api/predicciones [200 OK, 391B, 1ms]
+  ✓  responde en menos de 100 ms (tiempo HTTP completo: 1 ms)
+  ✓  la respuesta es JSON
+  ✓  código HTTP 200
+  ✓  forma de la respuesta: Prediccion del contrato
+  ✓  régimen esperado 2 (regimen_2 CA-CG-01 2022-02-12T21:00:00-05:00)
+  ✓  lecturas en la ventana de 24 h: 1
+  ✓  media de 24 h esperada
+  ✓  alerta esperada: false
+  ✓  INCA esperado: null
+
+↳ Estado de la estación al cerrar la serie
+
+Iteration 23/78
+
+↳ Predicción del CSV
+  POST http://localhost:8080/api/predicciones [200 OK, 392B, 1ms]
+  ✓  responde en menos de 100 ms (tiempo HTTP completo: 1 ms)
+  ✓  la respuesta es JSON
+  ✓  código HTTP 200
+  ✓  forma de la respuesta: Prediccion del contrato
+  ✓  régimen esperado 2 (regimen_2 CA-CG-02 2022-08-12T16:00:00-05:00)
+  ✓  lecturas en la ventana de 24 h: 1
+  ✓  media de 24 h esperada
+  ✓  alerta esperada: false
+  ✓  INCA esperado: null
+
+↳ Estado de la estación al cerrar la serie
+
+Iteration 24/78
+
+↳ Predicción del CSV
+  POST http://localhost:8080/api/predicciones [200 OK, 392B, 1ms]
+  ✓  responde en menos de 100 ms (tiempo HTTP completo: 1 ms)
+  ✓  la respuesta es JSON
+  ✓  código HTTP 200
+  ✓  forma de la respuesta: Prediccion del contrato
+  ✓  régimen esperado 2 (regimen_2 CA-CH-03 2021-11-19T08:00:00-05:00)
+  ✓  lecturas en la ventana de 24 h: 1
+  ✓  media de 24 h esperada
+  ✓  alerta esperada: false
+  ✓  INCA esperado: null
+
+↳ Estado de la estación al cerrar la serie
+
+Iteration 25/78
+
+↳ Predicción del CSV
+  POST http://localhost:8080/api/predicciones [200 OK, 393B, 1ms]
+  ✓  responde en menos de 100 ms (tiempo HTTP completo: 1 ms)
+  ✓  la respuesta es JSON
+  ✓  código HTTP 200
+  ✓  forma de la respuesta: Prediccion del contrato
+  ✓  régimen esperado 2 (regimen_2 CA-COLQ-01 2021-12-11T09:00:00-05:00)
+  ✓  lecturas en la ventana de 24 h: 1
+  ✓  media de 24 h esperada
+  ✓  alerta esperada: false
+  ✓  INCA esperado: null
+
+↳ Estado de la estación al cerrar la serie
+
+Iteration 26/78
+
+↳ Predicción del CSV
+  POST http://localhost:8080/api/predicciones [200 OK, 392B, 1ms]
+  ✓  responde en menos de 100 ms (tiempo HTTP completo: 1 ms)
+  ✓  la respuesta es JSON
+  ✓  código HTTP 200
+  ✓  forma de la respuesta: Prediccion del contrato
+  ✓  régimen esperado 2 (regimen_2 CA-CP-01 2021-08-18T14:00:00-05:00)
+  ✓  lecturas en la ventana de 24 h: 1
+  ✓  media de 24 h esperada
+  ✓  alerta esperada: false
+  ✓  INCA esperado: null
+
+↳ Estado de la estación al cerrar la serie
+
+Iteration 27/78
+
+↳ Predicción del CSV
+  POST http://localhost:8080/api/predicciones [200 OK, 393B, 1ms]
+  ✓  responde en menos de 100 ms (tiempo HTTP completo: 1 ms)
+  ✓  la respuesta es JSON
+  ✓  código HTTP 200
+  ✓  forma de la respuesta: Prediccion del contrato
+  ✓  régimen esperado 2 (regimen_2 CA-ESP-01 2021-11-23T13:00:00-05:00)
+  ✓  lecturas en la ventana de 24 h: 1
+  ✓  media de 24 h esperada
+  ✓  alerta esperada: false
+  ✓  INCA esperado: null
+
+↳ Estado de la estación al cerrar la serie
+
+Iteration 28/78
+
+↳ Predicción del CSV
+  POST http://localhost:8080/api/predicciones [200 OK, 392B, 1ms]
+  ✓  responde en menos de 100 ms (tiempo HTTP completo: 1 ms)
+  ✓  la respuesta es JSON
+  ✓  código HTTP 200
+  ✓  forma de la respuesta: Prediccion del contrato
+  ✓  régimen esperado 2 (regimen_2 CA-HU-09 2021-12-18T20:00:00-05:00)
+  ✓  lecturas en la ventana de 24 h: 1
+  ✓  media de 24 h esperada
+  ✓  alerta esperada: false
+  ✓  INCA esperado: null
+
+↳ Estado de la estación al cerrar la serie
+
+Iteration 29/78
+
+↳ Predicción del CSV
+  POST http://localhost:8080/api/predicciones [200 OK, 392B, 1ms]
+  ✓  responde en menos de 100 ms (tiempo HTTP completo: 1 ms)
+  ✓  la respuesta es JSON
+  ✓  código HTTP 200
+  ✓  forma de la respuesta: Prediccion del contrato
+  ✓  régimen esperado 2 (regimen_2 CA-HUA-01 2022-12-22T15:00:00-05:00)
+  ✓  lecturas en la ventana de 24 h: 1
+  ✓  media de 24 h esperada
+  ✓  alerta esperada: false
+  ✓  INCA esperado: null
+
+↳ Estado de la estación al cerrar la serie
+
+Iteration 30/78
+
+↳ Predicción del CSV
+  POST http://localhost:8080/api/predicciones [200 OK, 394B, 1ms]
+  ✓  responde en menos de 100 ms (tiempo HTTP completo: 1 ms)
+  ✓  la respuesta es JSON
+  ✓  código HTTP 200
+  ✓  forma de la respuesta: Prediccion del contrato
+  ✓  régimen esperado 2 (regimen_2 CA-HUAR-01 2021-12-10T06:00:00-05:00)
+  ✓  lecturas en la ventana de 24 h: 1
+  ✓  media de 24 h esperada
+  ✓  alerta esperada: false
+  ✓  INCA esperado: null
+
+↳ Estado de la estación al cerrar la serie
+
+Iteration 31/78
+
+↳ Predicción del CSV
+  POST http://localhost:8080/api/predicciones [200 OK, 390B, 2ms]
+  ✓  responde en menos de 100 ms (tiempo HTTP completo: 2 ms)
+  ✓  la respuesta es JSON
+  ✓  código HTTP 200
+  ✓  forma de la respuesta: Prediccion del contrato
+  ✓  régimen esperado 1 (serie_alerta CA-HU-04 2021-12-10T01:00:00-05:00)
+  ✓  lecturas en la ventana de 24 h: 1
+  ✓  media de 24 h esperada
+  ✓  alerta esperada: false
+  ✓  INCA esperado: null
+
+↳ Estado de la estación al cerrar la serie
+
+Iteration 32/78
+
+↳ Predicción del CSV
+  POST http://localhost:8080/api/predicciones [200 OK, 390B, 1ms]
+  ✓  responde en menos de 100 ms (tiempo HTTP completo: 1 ms)
+  ✓  la respuesta es JSON
+  ✓  código HTTP 200
+  ✓  forma de la respuesta: Prediccion del contrato
+  ✓  régimen esperado 1 (serie_alerta CA-HU-04 2021-12-10T02:00:00-05:00)
+  ✓  lecturas en la ventana de 24 h: 2
+  ✓  media de 24 h esperada
+  ✓  alerta esperada: false
+  ✓  INCA esperado: null
+
+↳ Estado de la estación al cerrar la serie
+
+Iteration 33/78
+
+↳ Predicción del CSV
+  POST http://localhost:8080/api/predicciones [200 OK, 389B, 1ms]
+  ✓  responde en menos de 100 ms (tiempo HTTP completo: 1 ms)
+  ✓  la respuesta es JSON
+  ✓  código HTTP 200
+  ✓  forma de la respuesta: Prediccion del contrato
+  ✓  régimen esperado 1 (serie_alerta CA-HU-04 2021-12-10T03:00:00-05:00)
+  ✓  lecturas en la ventana de 24 h: 3
+  ✓  media de 24 h esperada
+  ✓  alerta esperada: false
+  ✓  INCA esperado: null
+
+↳ Estado de la estación al cerrar la serie
+
+Iteration 34/78
+
+↳ Predicción del CSV
+  POST http://localhost:8080/api/predicciones [200 OK, 390B, 1ms]
+  ✓  responde en menos de 100 ms (tiempo HTTP completo: 1 ms)
+  ✓  la respuesta es JSON
+  ✓  código HTTP 200
+  ✓  forma de la respuesta: Prediccion del contrato
+  ✓  régimen esperado 1 (serie_alerta CA-HU-04 2021-12-10T04:00:00-05:00)
+  ✓  lecturas en la ventana de 24 h: 4
+  ✓  media de 24 h esperada
+  ✓  alerta esperada: false
+  ✓  INCA esperado: null
+
+↳ Estado de la estación al cerrar la serie
+
+Iteration 35/78
+
+↳ Predicción del CSV
+  POST http://localhost:8080/api/predicciones [200 OK, 392B, 1ms]
+  ✓  responde en menos de 100 ms (tiempo HTTP completo: 1 ms)
+  ✓  la respuesta es JSON
+  ✓  código HTTP 200
+  ✓  forma de la respuesta: Prediccion del contrato
+  ✓  régimen esperado 2 (serie_alerta CA-HU-04 2021-12-10T05:00:00-05:00)
+  ✓  lecturas en la ventana de 24 h: 5
+  ✓  media de 24 h esperada
+  ✓  alerta esperada: false
+  ✓  INCA esperado: null
+
+↳ Estado de la estación al cerrar la serie
+
+Iteration 36/78
+
+↳ Predicción del CSV
+  POST http://localhost:8080/api/predicciones [200 OK, 392B, 1ms]
+  ✓  responde en menos de 100 ms (tiempo HTTP completo: 1 ms)
+  ✓  la respuesta es JSON
+  ✓  código HTTP 200
+  ✓  forma de la respuesta: Prediccion del contrato
+  ✓  régimen esperado 2 (serie_alerta CA-HU-04 2021-12-10T06:00:00-05:00)
+  ✓  lecturas en la ventana de 24 h: 6
+  ✓  media de 24 h esperada
+  ✓  alerta esperada: false
+  ✓  INCA esperado: null
+
+↳ Estado de la estación al cerrar la serie
+
+Iteration 37/78
+
+↳ Predicción del CSV
+  POST http://localhost:8080/api/predicciones [200 OK, 392B, 1ms]
+  ✓  responde en menos de 100 ms (tiempo HTTP completo: 1 ms)
+  ✓  la respuesta es JSON
+  ✓  código HTTP 200
+  ✓  forma de la respuesta: Prediccion del contrato
+  ✓  régimen esperado 2 (serie_alerta CA-HU-04 2021-12-10T07:00:00-05:00)
+  ✓  lecturas en la ventana de 24 h: 7
+  ✓  media de 24 h esperada
+  ✓  alerta esperada: false
+  ✓  INCA esperado: null
+
+↳ Estado de la estación al cerrar la serie
+
+Iteration 38/78
+
+↳ Predicción del CSV
+  POST http://localhost:8080/api/predicciones [200 OK, 390B, 1ms]
+  ✓  responde en menos de 100 ms (tiempo HTTP completo: 1 ms)
+  ✓  la respuesta es JSON
+  ✓  código HTTP 200
+  ✓  forma de la respuesta: Prediccion del contrato
+  ✓  régimen esperado 1 (serie_alerta CA-HU-04 2021-12-10T08:00:00-05:00)
+  ✓  lecturas en la ventana de 24 h: 8
+  ✓  media de 24 h esperada
+  ✓  alerta esperada: false
+  ✓  INCA esperado: null
+
+↳ Estado de la estación al cerrar la serie
+
+Iteration 39/78
+
+↳ Predicción del CSV
+  POST http://localhost:8080/api/predicciones [200 OK, 390B, 1ms]
+  ✓  responde en menos de 100 ms (tiempo HTTP completo: 1 ms)
+  ✓  la respuesta es JSON
+  ✓  código HTTP 200
+  ✓  forma de la respuesta: Prediccion del contrato
+  ✓  régimen esperado 1 (serie_alerta CA-HU-04 2021-12-10T09:00:00-05:00)
+  ✓  lecturas en la ventana de 24 h: 9
+  ✓  media de 24 h esperada
+  ✓  alerta esperada: false
+  ✓  INCA esperado: null
+
+↳ Estado de la estación al cerrar la serie
+
+Iteration 40/78
+
+↳ Predicción del CSV
+  POST http://localhost:8080/api/predicciones [200 OK, 391B, 1ms]
+  ✓  responde en menos de 100 ms (tiempo HTTP completo: 1 ms)
+  ✓  la respuesta es JSON
+  ✓  código HTTP 200
+  ✓  forma de la respuesta: Prediccion del contrato
+  ✓  régimen esperado 1 (serie_alerta CA-HU-04 2021-12-10T10:00:00-05:00)
+  ✓  lecturas en la ventana de 24 h: 10
+  ✓  media de 24 h esperada
+  ✓  alerta esperada: false
+  ✓  INCA esperado: null
+
+↳ Estado de la estación al cerrar la serie
+
+Iteration 41/78
+
+↳ Predicción del CSV
+  POST http://localhost:8080/api/predicciones [200 OK, 391B, 2ms]
+  ✓  responde en menos de 100 ms (tiempo HTTP completo: 2 ms)
+  ✓  la respuesta es JSON
+  ✓  código HTTP 200
+  ✓  forma de la respuesta: Prediccion del contrato
+  ✓  régimen esperado 1 (serie_alerta CA-HU-04 2021-12-10T11:00:00-05:00)
+  ✓  lecturas en la ventana de 24 h: 11
+  ✓  media de 24 h esperada
+  ✓  alerta esperada: false
+  ✓  INCA esperado: null
+
+↳ Estado de la estación al cerrar la serie
+
+Iteration 42/78
+
+↳ Predicción del CSV
+  POST http://localhost:8080/api/predicciones [200 OK, 390B, 1ms]
+  ✓  responde en menos de 100 ms (tiempo HTTP completo: 1 ms)
+  ✓  la respuesta es JSON
+  ✓  código HTTP 200
+  ✓  forma de la respuesta: Prediccion del contrato
+  ✓  régimen esperado 1 (serie_alerta CA-HU-04 2021-12-10T12:00:00-05:00)
+  ✓  lecturas en la ventana de 24 h: 12
+  ✓  media de 24 h esperada
+  ✓  alerta esperada: false
+  ✓  INCA esperado: null
+
+↳ Estado de la estación al cerrar la serie
+
+Iteration 43/78
+
+↳ Predicción del CSV
+  POST http://localhost:8080/api/predicciones [200 OK, 391B, 1ms]
+  ✓  responde en menos de 100 ms (tiempo HTTP completo: 1 ms)
+  ✓  la respuesta es JSON
+  ✓  código HTTP 200
+  ✓  forma de la respuesta: Prediccion del contrato
+  ✓  régimen esperado 1 (serie_alerta CA-HU-04 2021-12-10T13:00:00-05:00)
+  ✓  lecturas en la ventana de 24 h: 13
+  ✓  media de 24 h esperada
+  ✓  alerta esperada: false
+  ✓  INCA esperado: null
+
+↳ Estado de la estación al cerrar la serie
+
+Iteration 44/78
+
+↳ Predicción del CSV
+  POST http://localhost:8080/api/predicciones [200 OK, 391B, 1ms]
+  ✓  responde en menos de 100 ms (tiempo HTTP completo: 1 ms)
+  ✓  la respuesta es JSON
+  ✓  código HTTP 200
+  ✓  forma de la respuesta: Prediccion del contrato
+  ✓  régimen esperado 1 (serie_alerta CA-HU-04 2021-12-10T14:00:00-05:00)
+  ✓  lecturas en la ventana de 24 h: 14
+  ✓  media de 24 h esperada
+  ✓  alerta esperada: false
+  ✓  INCA esperado: null
+
+↳ Estado de la estación al cerrar la serie
+
+Iteration 45/78
+
+↳ Predicción del CSV
+  POST http://localhost:8080/api/predicciones [200 OK, 391B, 1ms]
+  ✓  responde en menos de 100 ms (tiempo HTTP completo: 1 ms)
+  ✓  la respuesta es JSON
+  ✓  código HTTP 200
+  ✓  forma de la respuesta: Prediccion del contrato
+  ✓  régimen esperado 1 (serie_alerta CA-HU-04 2021-12-10T15:00:00-05:00)
+  ✓  lecturas en la ventana de 24 h: 15
+  ✓  media de 24 h esperada
+  ✓  alerta esperada: false
+  ✓  INCA esperado: null
+
+↳ Estado de la estación al cerrar la serie
+
+Iteration 46/78
+
+↳ Predicción del CSV
+  POST http://localhost:8080/api/predicciones [200 OK, 391B, 1ms]
+  ✓  responde en menos de 100 ms (tiempo HTTP completo: 1 ms)
+  ✓  la respuesta es JSON
+  ✓  código HTTP 200
+  ✓  forma de la respuesta: Prediccion del contrato
+  ✓  régimen esperado 1 (serie_alerta CA-HU-04 2021-12-10T16:00:00-05:00)
+  ✓  lecturas en la ventana de 24 h: 16
+  ✓  media de 24 h esperada
+  ✓  alerta esperada: false
+  ✓  INCA esperado: null
+
+↳ Estado de la estación al cerrar la serie
+
+Iteration 47/78
+
+↳ Predicción del CSV
+  POST http://localhost:8080/api/predicciones [200 OK, 391B, 1ms]
+  ✓  responde en menos de 100 ms (tiempo HTTP completo: 1 ms)
+  ✓  la respuesta es JSON
+  ✓  código HTTP 200
+  ✓  forma de la respuesta: Prediccion del contrato
+  ✓  régimen esperado 1 (serie_alerta CA-HU-04 2021-12-10T17:00:00-05:00)
+  ✓  lecturas en la ventana de 24 h: 17
+  ✓  media de 24 h esperada
+  ✓  alerta esperada: false
+  ✓  INCA esperado: null
+
+↳ Estado de la estación al cerrar la serie
+
+Iteration 48/78
+
+↳ Predicción del CSV
+  POST http://localhost:8080/api/predicciones [200 OK, 419B, 1ms]
+  ✓  responde en menos de 100 ms (tiempo HTTP completo: 1 ms)
+  ✓  la respuesta es JSON
+  ✓  código HTTP 200
+  ✓  forma de la respuesta: Prediccion del contrato
+  ✓  régimen esperado 1 (serie_alerta CA-HU-04 2021-12-10T18:00:00-05:00)
+  ✓  lecturas en la ventana de 24 h: 18
+  ✓  media de 24 h esperada
+  ✓  alerta esperada: true
+  ✓  INCA esperado: mala
+
+↳ Estado de la estación al cerrar la serie
+
+Iteration 49/78
+
+↳ Predicción del CSV
+  POST http://localhost:8080/api/predicciones [200 OK, 419B, 1ms]
+  ✓  responde en menos de 100 ms (tiempo HTTP completo: 1 ms)
+  ✓  la respuesta es JSON
+  ✓  código HTTP 200
+  ✓  forma de la respuesta: Prediccion del contrato
+  ✓  régimen esperado 1 (serie_alerta CA-HU-04 2021-12-10T19:00:00-05:00)
+  ✓  lecturas en la ventana de 24 h: 19
+  ✓  media de 24 h esperada
+  ✓  alerta esperada: true
+  ✓  INCA esperado: mala
+
+↳ Estado de la estación al cerrar la serie
+
+Iteration 50/78
+
+↳ Predicción del CSV
+  POST http://localhost:8080/api/predicciones [200 OK, 408B, 1ms]
+  ✓  responde en menos de 100 ms (tiempo HTTP completo: 1 ms)
+  ✓  la respuesta es JSON
+  ✓  código HTTP 200
+  ✓  forma de la respuesta: Prediccion del contrato
+  ✓  régimen esperado 1 (serie_alerta CA-HU-04 2021-12-10T20:00:00-05:00)
+  ✓  lecturas en la ventana de 24 h: 20
+  ✓  media de 24 h esperada
+  ✓  alerta esperada: true
+  ✓  INCA esperado: mala
+
+↳ Estado de la estación al cerrar la serie
+
+Iteration 51/78
+
+↳ Predicción del CSV
+  POST http://localhost:8080/api/predicciones [200 OK, 418B, 1ms]
+  ✓  responde en menos de 100 ms (tiempo HTTP completo: 1 ms)
+  ✓  la respuesta es JSON
+  ✓  código HTTP 200
+  ✓  forma de la respuesta: Prediccion del contrato
+  ✓  régimen esperado 1 (serie_alerta CA-HU-04 2021-12-10T21:00:00-05:00)
+  ✓  lecturas en la ventana de 24 h: 21
+  ✓  media de 24 h esperada
+  ✓  alerta esperada: true
+  ✓  INCA esperado: mala
+
+↳ Estado de la estación al cerrar la serie
+
+Iteration 52/78
+
+↳ Predicción del CSV
+  POST http://localhost:8080/api/predicciones [200 OK, 421B, 1ms]
+  ✓  responde en menos de 100 ms (tiempo HTTP completo: 1 ms)
+  ✓  la respuesta es JSON
+  ✓  código HTTP 200
+  ✓  forma de la respuesta: Prediccion del contrato
+  ✓  régimen esperado 2 (serie_alerta CA-HU-04 2021-12-10T22:00:00-05:00)
+  ✓  lecturas en la ventana de 24 h: 22
+  ✓  media de 24 h esperada
+  ✓  alerta esperada: true
+  ✓  INCA esperado: mala
+
+↳ Estado de la estación al cerrar la serie
+
+Iteration 53/78
+
+↳ Predicción del CSV
+  POST http://localhost:8080/api/predicciones [200 OK, 418B, 1ms]
+  ✓  responde en menos de 100 ms (tiempo HTTP completo: 1 ms)
+  ✓  la respuesta es JSON
+  ✓  código HTTP 200
+  ✓  forma de la respuesta: Prediccion del contrato
+  ✓  régimen esperado 1 (serie_alerta CA-HU-04 2021-12-10T23:00:00-05:00)
+  ✓  lecturas en la ventana de 24 h: 23
+  ✓  media de 24 h esperada
+  ✓  alerta esperada: true
+  ✓  INCA esperado: mala
+
+↳ Estado de la estación al cerrar la serie
+
+Iteration 54/78
+
+↳ Predicción del CSV
+  POST http://localhost:8080/api/predicciones [200 OK, 409B, 1ms]
+  ✓  responde en menos de 100 ms (tiempo HTTP completo: 1 ms)
+  ✓  la respuesta es JSON
+  ✓  código HTTP 200
+  ✓  forma de la respuesta: Prediccion del contrato
+  ✓  régimen esperado 1 (serie_alerta CA-HU-04 2021-12-11T00:00:00-05:00)
+  ✓  lecturas en la ventana de 24 h: 24
+  ✓  media de 24 h esperada
+  ✓  alerta esperada: true
+  ✓  INCA esperado: mala
+
+↳ Estado de la estación al cerrar la serie
+  GET http://localhost:8080/api/estaciones/CA-HU-04/regimen [200 OK, 328B, 2ms]
+  ✓  responde en menos de 100 ms (tiempo HTTP completo: 2 ms)
+  ✓  la respuesta es JSON
+  ✓  código HTTP 200
+  ✓  forma de la respuesta: RegimenEstacion del contrato
+  ✓  Redis tiene la última lectura de la serie (serie_alerta, consulta 1)
+  ✓  alerta true e INCA mala, como en el CSV
+
+Iteration 55/78
+
+↳ Predicción del CSV
+  POST http://localhost:8080/api/predicciones [200 OK, 392B, 1ms]
+  ✓  responde en menos de 100 ms (tiempo HTTP completo: 1 ms)
+  ✓  la respuesta es JSON
+  ✓  código HTTP 200
+  ✓  forma de la respuesta: Prediccion del contrato
+  ✓  régimen esperado 2 (serie_sin_alerta CA-ROM-01 2022-06-04T01:00:00-05:00)
+  ✓  lecturas en la ventana de 24 h: 1
+  ✓  media de 24 h esperada
+  ✓  alerta esperada: false
+  ✓  INCA esperado: null
+
+↳ Estado de la estación al cerrar la serie
+
+Iteration 56/78
+
+↳ Predicción del CSV
+  POST http://localhost:8080/api/predicciones [200 OK, 393B, 1ms]
+  ✓  responde en menos de 100 ms (tiempo HTTP completo: 1 ms)
+  ✓  la respuesta es JSON
+  ✓  código HTTP 200
+  ✓  forma de la respuesta: Prediccion del contrato
+  ✓  régimen esperado 2 (serie_sin_alerta CA-ROM-01 2022-06-04T02:00:00-05:00)
+  ✓  lecturas en la ventana de 24 h: 2
+  ✓  media de 24 h esperada
+  ✓  alerta esperada: false
+  ✓  INCA esperado: null
+
+↳ Estado de la estación al cerrar la serie
+
+Iteration 57/78
+
+↳ Predicción del CSV
+  POST http://localhost:8080/api/predicciones [200 OK, 393B, 1ms]
+  ✓  responde en menos de 100 ms (tiempo HTTP completo: 1 ms)
+  ✓  la respuesta es JSON
+  ✓  código HTTP 200
+  ✓  forma de la respuesta: Prediccion del contrato
+  ✓  régimen esperado 2 (serie_sin_alerta CA-ROM-01 2022-06-04T03:00:00-05:00)
+  ✓  lecturas en la ventana de 24 h: 3
+  ✓  media de 24 h esperada
+  ✓  alerta esperada: false
+  ✓  INCA esperado: null
+
+↳ Estado de la estación al cerrar la serie
+
+Iteration 58/78
+
+↳ Predicción del CSV
+  POST http://localhost:8080/api/predicciones [200 OK, 393B, 1ms]
+  ✓  responde en menos de 100 ms (tiempo HTTP completo: 1 ms)
+  ✓  la respuesta es JSON
+  ✓  código HTTP 200
+  ✓  forma de la respuesta: Prediccion del contrato
+  ✓  régimen esperado 2 (serie_sin_alerta CA-ROM-01 2022-06-04T04:00:00-05:00)
+  ✓  lecturas en la ventana de 24 h: 4
+  ✓  media de 24 h esperada
+  ✓  alerta esperada: false
+  ✓  INCA esperado: null
+
+↳ Estado de la estación al cerrar la serie
+
+Iteration 59/78
+
+↳ Predicción del CSV
+  POST http://localhost:8080/api/predicciones [200 OK, 391B, 1ms]
+  ✓  responde en menos de 100 ms (tiempo HTTP completo: 1 ms)
+  ✓  la respuesta es JSON
+  ✓  código HTTP 200
+  ✓  forma de la respuesta: Prediccion del contrato
+  ✓  régimen esperado 1 (serie_sin_alerta CA-ROM-01 2022-06-04T05:00:00-05:00)
+  ✓  lecturas en la ventana de 24 h: 5
+  ✓  media de 24 h esperada
+  ✓  alerta esperada: false
+  ✓  INCA esperado: null
+
+↳ Estado de la estación al cerrar la serie
+
+Iteration 60/78
+
+↳ Predicción del CSV
+  POST http://localhost:8080/api/predicciones [200 OK, 391B, 2ms]
+  ✓  responde en menos de 100 ms (tiempo HTTP completo: 2 ms)
+  ✓  la respuesta es JSON
+  ✓  código HTTP 200
+  ✓  forma de la respuesta: Prediccion del contrato
+  ✓  régimen esperado 1 (serie_sin_alerta CA-ROM-01 2022-06-04T06:00:00-05:00)
+  ✓  lecturas en la ventana de 24 h: 6
+  ✓  media de 24 h esperada
+  ✓  alerta esperada: false
+  ✓  INCA esperado: null
+
+↳ Estado de la estación al cerrar la serie
+
+Iteration 61/78
+
+↳ Predicción del CSV
+  POST http://localhost:8080/api/predicciones [200 OK, 393B, 2ms]
+  ✓  responde en menos de 100 ms (tiempo HTTP completo: 2 ms)
+  ✓  la respuesta es JSON
+  ✓  código HTTP 200
+  ✓  forma de la respuesta: Prediccion del contrato
+  ✓  régimen esperado 2 (serie_sin_alerta CA-ROM-01 2022-06-04T07:00:00-05:00)
+  ✓  lecturas en la ventana de 24 h: 7
+  ✓  media de 24 h esperada
+  ✓  alerta esperada: false
+  ✓  INCA esperado: null
+
+↳ Estado de la estación al cerrar la serie
+
+Iteration 62/78
+
+↳ Predicción del CSV
+  POST http://localhost:8080/api/predicciones [200 OK, 391B, 2ms]
+  ✓  responde en menos de 100 ms (tiempo HTTP completo: 2 ms)
+  ✓  la respuesta es JSON
+  ✓  código HTTP 200
+  ✓  forma de la respuesta: Prediccion del contrato
+  ✓  régimen esperado 1 (serie_sin_alerta CA-ROM-01 2022-06-04T08:00:00-05:00)
+  ✓  lecturas en la ventana de 24 h: 8
+  ✓  media de 24 h esperada
+  ✓  alerta esperada: false
+  ✓  INCA esperado: null
+
+↳ Estado de la estación al cerrar la serie
+
+Iteration 63/78
+
+↳ Predicción del CSV
+  POST http://localhost:8080/api/predicciones [200 OK, 391B, 1ms]
+  ✓  responde en menos de 100 ms (tiempo HTTP completo: 1 ms)
+  ✓  la respuesta es JSON
+  ✓  código HTTP 200
+  ✓  forma de la respuesta: Prediccion del contrato
+  ✓  régimen esperado 1 (serie_sin_alerta CA-ROM-01 2022-06-04T09:00:00-05:00)
+  ✓  lecturas en la ventana de 24 h: 9
+  ✓  media de 24 h esperada
+  ✓  alerta esperada: false
+  ✓  INCA esperado: null
+
+↳ Estado de la estación al cerrar la serie
+
+Iteration 64/78
+
+↳ Predicción del CSV
+  POST http://localhost:8080/api/predicciones [200 OK, 392B, 2ms]
+  ✓  responde en menos de 100 ms (tiempo HTTP completo: 2 ms)
+  ✓  la respuesta es JSON
+  ✓  código HTTP 200
+  ✓  forma de la respuesta: Prediccion del contrato
+  ✓  régimen esperado 1 (serie_sin_alerta CA-ROM-01 2022-06-04T10:00:00-05:00)
+  ✓  lecturas en la ventana de 24 h: 10
+  ✓  media de 24 h esperada
+  ✓  alerta esperada: false
+  ✓  INCA esperado: null
+
+↳ Estado de la estación al cerrar la serie
+
+Iteration 65/78
+
+↳ Predicción del CSV
+  POST http://localhost:8080/api/predicciones [200 OK, 394B, 1ms]
+  ✓  responde en menos de 100 ms (tiempo HTTP completo: 1 ms)
+  ✓  la respuesta es JSON
+  ✓  código HTTP 200
+  ✓  forma de la respuesta: Prediccion del contrato
+  ✓  régimen esperado 2 (serie_sin_alerta CA-ROM-01 2022-06-04T11:00:00-05:00)
+  ✓  lecturas en la ventana de 24 h: 11
+  ✓  media de 24 h esperada
+  ✓  alerta esperada: false
+  ✓  INCA esperado: null
+
+↳ Estado de la estación al cerrar la serie
+
+Iteration 66/78
+
+↳ Predicción del CSV
+  POST http://localhost:8080/api/predicciones [200 OK, 394B, 1ms]
+  ✓  responde en menos de 100 ms (tiempo HTTP completo: 1 ms)
+  ✓  la respuesta es JSON
+  ✓  código HTTP 200
+  ✓  forma de la respuesta: Prediccion del contrato
+  ✓  régimen esperado 2 (serie_sin_alerta CA-ROM-01 2022-06-04T12:00:00-05:00)
+  ✓  lecturas en la ventana de 24 h: 12
+  ✓  media de 24 h esperada
+  ✓  alerta esperada: false
+  ✓  INCA esperado: null
+
+↳ Estado de la estación al cerrar la serie
+
+Iteration 67/78
+
+↳ Predicción del CSV
+  POST http://localhost:8080/api/predicciones [200 OK, 394B, 1ms]
+  ✓  responde en menos de 100 ms (tiempo HTTP completo: 1 ms)
+  ✓  la respuesta es JSON
+  ✓  código HTTP 200
+  ✓  forma de la respuesta: Prediccion del contrato
+  ✓  régimen esperado 2 (serie_sin_alerta CA-ROM-01 2022-06-04T13:00:00-05:00)
+  ✓  lecturas en la ventana de 24 h: 13
+  ✓  media de 24 h esperada
+  ✓  alerta esperada: false
+  ✓  INCA esperado: null
+
+↳ Estado de la estación al cerrar la serie
+
+Iteration 68/78
+
+↳ Predicción del CSV
+  POST http://localhost:8080/api/predicciones [200 OK, 394B, 2ms]
+  ✓  responde en menos de 100 ms (tiempo HTTP completo: 2 ms)
+  ✓  la respuesta es JSON
+  ✓  código HTTP 200
+  ✓  forma de la respuesta: Prediccion del contrato
+  ✓  régimen esperado 2 (serie_sin_alerta CA-ROM-01 2022-06-04T14:00:00-05:00)
+  ✓  lecturas en la ventana de 24 h: 14
+  ✓  media de 24 h esperada
+  ✓  alerta esperada: false
+  ✓  INCA esperado: null
+
+↳ Estado de la estación al cerrar la serie
+
+Iteration 69/78
+
+↳ Predicción del CSV
+  POST http://localhost:8080/api/predicciones [200 OK, 394B, 1ms]
+  ✓  responde en menos de 100 ms (tiempo HTTP completo: 1 ms)
+  ✓  la respuesta es JSON
+  ✓  código HTTP 200
+  ✓  forma de la respuesta: Prediccion del contrato
+  ✓  régimen esperado 2 (serie_sin_alerta CA-ROM-01 2022-06-04T15:00:00-05:00)
+  ✓  lecturas en la ventana de 24 h: 15
+  ✓  media de 24 h esperada
+  ✓  alerta esperada: false
+  ✓  INCA esperado: null
+
+↳ Estado de la estación al cerrar la serie
+
+Iteration 70/78
+
+↳ Predicción del CSV
+  POST http://localhost:8080/api/predicciones [200 OK, 394B, 1ms]
+  ✓  responde en menos de 100 ms (tiempo HTTP completo: 1 ms)
+  ✓  la respuesta es JSON
+  ✓  código HTTP 200
+  ✓  forma de la respuesta: Prediccion del contrato
+  ✓  régimen esperado 2 (serie_sin_alerta CA-ROM-01 2022-06-04T16:00:00-05:00)
+  ✓  lecturas en la ventana de 24 h: 16
+  ✓  media de 24 h esperada
+  ✓  alerta esperada: false
+  ✓  INCA esperado: null
+
+↳ Estado de la estación al cerrar la serie
+
+Iteration 71/78
+
+↳ Predicción del CSV
+  POST http://localhost:8080/api/predicciones [200 OK, 394B, 1ms]
+  ✓  responde en menos de 100 ms (tiempo HTTP completo: 1 ms)
+  ✓  la respuesta es JSON
+  ✓  código HTTP 200
+  ✓  forma de la respuesta: Prediccion del contrato
+  ✓  régimen esperado 2 (serie_sin_alerta CA-ROM-01 2022-06-04T17:00:00-05:00)
+  ✓  lecturas en la ventana de 24 h: 17
+  ✓  media de 24 h esperada
+  ✓  alerta esperada: false
+  ✓  INCA esperado: null
+
+↳ Estado de la estación al cerrar la serie
+
+Iteration 72/78
+
+↳ Predicción del CSV
+  POST http://localhost:8080/api/predicciones [200 OK, 420B, 1ms]
+  ✓  responde en menos de 100 ms (tiempo HTTP completo: 1 ms)
+  ✓  la respuesta es JSON
+  ✓  código HTTP 200
+  ✓  forma de la respuesta: Prediccion del contrato
+  ✓  régimen esperado 0 (serie_sin_alerta CA-ROM-01 2022-06-04T18:00:00-05:00)
+  ✓  lecturas en la ventana de 24 h: 18
+  ✓  media de 24 h esperada
+  ✓  alerta esperada: false
+  ✓  INCA esperado: mala
+
+↳ Estado de la estación al cerrar la serie
+
+Iteration 73/78
+
+↳ Predicción del CSV
+  POST http://localhost:8080/api/predicciones [200 OK, 421B, 1ms]
+  ✓  responde en menos de 100 ms (tiempo HTTP completo: 1 ms)
+  ✓  la respuesta es JSON
+  ✓  código HTTP 200
+  ✓  forma de la respuesta: Prediccion del contrato
+  ✓  régimen esperado 2 (serie_sin_alerta CA-ROM-01 2022-06-04T19:00:00-05:00)
+  ✓  lecturas en la ventana de 24 h: 19
+  ✓  media de 24 h esperada
+  ✓  alerta esperada: false
+  ✓  INCA esperado: mala
+
+↳ Estado de la estación al cerrar la serie
+
+Iteration 74/78
+
+↳ Predicción del CSV
+  POST http://localhost:8080/api/predicciones [200 OK, 413B, 1ms]
+  ✓  responde en menos de 100 ms (tiempo HTTP completo: 1 ms)
+  ✓  la respuesta es JSON
+  ✓  código HTTP 200
+  ✓  forma de la respuesta: Prediccion del contrato
+  ✓  régimen esperado 2 (serie_sin_alerta CA-ROM-01 2022-06-04T20:00:00-05:00)
+  ✓  lecturas en la ventana de 24 h: 20
+  ✓  media de 24 h esperada
+  ✓  alerta esperada: false
+  ✓  INCA esperado: mala
+
+↳ Estado de la estación al cerrar la serie
+
+Iteration 75/78
+
+↳ Predicción del CSV
+  POST http://localhost:8080/api/predicciones [200 OK, 421B, 1ms]
+  ✓  responde en menos de 100 ms (tiempo HTTP completo: 1 ms)
+  ✓  la respuesta es JSON
+  ✓  código HTTP 200
+  ✓  forma de la respuesta: Prediccion del contrato
+  ✓  régimen esperado 2 (serie_sin_alerta CA-ROM-01 2022-06-04T21:00:00-05:00)
+  ✓  lecturas en la ventana de 24 h: 21
+  ✓  media de 24 h esperada
+  ✓  alerta esperada: false
+  ✓  INCA esperado: mala
+
+↳ Estado de la estación al cerrar la serie
+
+Iteration 76/78
+
+↳ Predicción del CSV
+  POST http://localhost:8080/api/predicciones [200 OK, 422B, 1ms]
+  ✓  responde en menos de 100 ms (tiempo HTTP completo: 1 ms)
+  ✓  la respuesta es JSON
+  ✓  código HTTP 200
+  ✓  forma de la respuesta: Prediccion del contrato
+  ✓  régimen esperado 2 (serie_sin_alerta CA-ROM-01 2022-06-04T22:00:00-05:00)
+  ✓  lecturas en la ventana de 24 h: 22
+  ✓  media de 24 h esperada
+  ✓  alerta esperada: false
+  ✓  INCA esperado: mala
+
+↳ Estado de la estación al cerrar la serie
+
+Iteration 77/78
+
+↳ Predicción del CSV
+  POST http://localhost:8080/api/predicciones [200 OK, 422B, 1ms]
+  ✓  responde en menos de 100 ms (tiempo HTTP completo: 1 ms)
+  ✓  la respuesta es JSON
+  ✓  código HTTP 200
+  ✓  forma de la respuesta: Prediccion del contrato
+  ✓  régimen esperado 2 (serie_sin_alerta CA-ROM-01 2022-06-04T23:00:00-05:00)
+  ✓  lecturas en la ventana de 24 h: 23
+  ✓  media de 24 h esperada
+  ✓  alerta esperada: false
+  ✓  INCA esperado: mala
+
+↳ Estado de la estación al cerrar la serie
+
+Iteration 78/78
+
+↳ Predicción del CSV
+  POST http://localhost:8080/api/predicciones [200 OK, 423B, 1ms]
+  ✓  responde en menos de 100 ms (tiempo HTTP completo: 1 ms)
+  ✓  la respuesta es JSON
+  ✓  código HTTP 200
+  ✓  forma de la respuesta: Prediccion del contrato
+  ✓  régimen esperado 2 (serie_sin_alerta CA-ROM-01 2022-06-05T00:00:00-05:00)
+  ✓  lecturas en la ventana de 24 h: 24
+  ✓  media de 24 h esperada
+  ✓  alerta esperada: false
+  ✓  INCA esperado: mala
+
+↳ Estado de la estación al cerrar la serie
+  GET http://localhost:8080/api/estaciones/CA-ROM-01/regimen [200 OK, 340B, 1ms]
+  ✓  responde en menos de 100 ms (tiempo HTTP completo: 1 ms)
+  ✓  la respuesta es JSON
+  ✓  código HTTP 200
+  ✓  forma de la respuesta: RegimenEstacion del contrato
+  ✓  Redis tiene la última lectura de la serie (serie_sin_alerta, consulta 1)
+  ✓  alerta false e INCA mala, como en el CSV
+
+┌─────────────────────────┬─────────────────┬─────────────────┐
+│                         │        executed │          failed │
+├─────────────────────────┼─────────────────┼─────────────────┤
+│              iterations │              78 │               0 │
+├─────────────────────────┼─────────────────┼─────────────────┤
+│                requests │              82 │               0 │
+├─────────────────────────┼─────────────────┼─────────────────┤
+│            test-scripts │             160 │               0 │
+├─────────────────────────┼─────────────────┼─────────────────┤
+│      prerequest-scripts │             312 │               0 │
+├─────────────────────────┼─────────────────┼─────────────────┤
+│              assertions │             714 │               0 │
+├─────────────────────────┴─────────────────┴─────────────────┤
+│ total run duration: 2.4s                                    │
+├─────────────────────────────────────────────────────────────┤
+│ total data received: 22.13kB (approx)                       │
+├─────────────────────────────────────────────────────────────┤
+│ average response time: 1ms [min: 1ms, max: 19ms, s.d.: 2ms] │
+└─────────────────────────────────────────────────────────────┘
+
+código de salida: 0

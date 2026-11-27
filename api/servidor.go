@@ -9,6 +9,12 @@
 // memoria detrás de un atomic.Pointer, la media de 24 h de cada estación
 // también (paquete ventana) y la escritura va a dos colas con búfer, una por
 // almacén, que se vacían por lotes (escritor.go).
+//
+// Para el frontend del TB2 (spec del frontend, §6): el estado de todas las
+// estaciones en un pedido (GET /api/regimenes), ese mismo estado por WebSocket
+// cuando cambia (el evento estacion.regimen, avisos.go), los eventos del
+// clúster (GET /api/cluster/eventos) y el CPU y la memoria de este proceso en
+// las métricas (proceso_api).
 package api
 
 import (
@@ -21,6 +27,7 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"maps"
 	"net"
 	"net/http"
 	"slices"
@@ -42,6 +49,11 @@ type Config struct {
 	Modelo   *modelo.Modelo
 	Firmador *Firmador
 	Usuarios map[string]Usuario
+	// Invitado es el usuario con que entra quien pide POST /api/auth/invitado,
+	// sin presentar credenciales. Tiene que estar en Usuarios con el rol
+	// usuario (ValidarInvitado). Vacío: no hay ingreso de invitado y esa ruta
+	// responde 404.
+	Invitado string
 	// Catalogo son las estaciones que la API acepta: la ficha
 	// (reports/estaciones_ficha.csv), que es la única fuente del catálogo. Se
 	// guarda en memoria para validar una lectura sin consultar ninguna base.
@@ -61,6 +73,10 @@ type Config struct {
 	OpenAPI      []byte         // docs/api/openapi.yaml, que se sirve tal cual
 	TamCola      int            // búfer de la cola de escritura
 	Log          *slog.Logger
+	// CadaAvisoRegimen es cada cuánto, a lo sumo, sale por el WebSocket el
+	// estado de una misma estación (evento estacion.regimen, avisos.go). Con
+	// cero, cadaAvisoPorOmision.
+	CadaAvisoRegimen time.Duration
 
 	// Lo del coordinador del clúster (spec §5.2).
 	//
@@ -88,7 +104,9 @@ type Servidor struct {
 	modelo       atomic.Pointer[modelo.Modelo]
 	firmador     *Firmador
 	usuarios     map[string]Usuario
+	invitado     string // "" = sin ingreso de invitado
 	catalogo     map[string]bool
+	idsCatalogo  []string // los códigos del catálogo, ordenados
 	estaciones   almacen.Estaciones
 	cache        almacen.Cache
 	modelos      almacenesDeModelo
@@ -110,7 +128,8 @@ type Servidor struct {
 
 	cors    *cors
 	hub     *Hub
-	pool    *cluster.Pool // nil: sin clúster
+	avisos  *avisosRegimen // los cambios de estado de las estaciones, camino al hub
+	pool    *cluster.Pool  // nil: sin clúster
 	coord   *coordinador
 	eventos almacen.Eventos
 	cronica chan almacen.EventoCluster // los eventos del clúster, camino al almacén
@@ -134,6 +153,9 @@ func Nuevo(cfg Config) (*Servidor, error) {
 	case cfg.TamCola <= 0:
 		return nil, fmt.Errorf("api: la cola de escritura tiene que tener búfer, tiene %d", cfg.TamCola)
 	}
+	if err := ValidarInvitado(cfg.Usuarios, cfg.Invitado); err != nil {
+		return nil, fmt.Errorf("api: %w", err)
+	}
 	log := cfg.Log
 	if log == nil {
 		log = slog.Default()
@@ -142,29 +164,34 @@ func Nuevo(cfg Config) (*Servidor, error) {
 	for _, e := range cfg.Catalogo {
 		catalogo[e.ID] = true
 	}
+	idsCatalogo := slices.Sorted(maps.Keys(catalogo))
 	s := &Servidor{
-		firmador:   cfg.Firmador,
-		usuarios:   cfg.Usuarios,
-		catalogo:   catalogo,
-		estaciones: cfg.Estaciones,
-		cache:      cfg.Cache,
-		modelos:    almacenesDeModelo{cfg.Modelos, cfg.CacheModelo},
-		mongo:      cfg.Mongo,
-		redis:      cfg.Redis,
-		openapi:    cfg.OpenAPI,
-		log:        log,
-		metricas:   NuevasMetricas(),
-		ventanas:   ventana.Nuevas(),
-		escritor:   nuevoEscritor(cfg.TamCola, cfg.Predicciones, cfg.Cache, log),
-		mux:        http.NewServeMux(),
-		ahora:      time.Now,
-		cors:       nuevoCORS(cfg.OrigenesCORS),
-		hub:        nuevoHub(opcionesHubPorOmision(), log),
-		eventos:    cfg.Eventos,
-		cronica:    make(chan almacen.EventoCluster, tamCronica),
+		firmador:    cfg.Firmador,
+		usuarios:    cfg.Usuarios,
+		invitado:    cfg.Invitado,
+		catalogo:    catalogo,
+		idsCatalogo: idsCatalogo,
+		estaciones:  cfg.Estaciones,
+		cache:       cfg.Cache,
+		modelos:     almacenesDeModelo{cfg.Modelos, cfg.CacheModelo},
+		mongo:       cfg.Mongo,
+		redis:       cfg.Redis,
+		openapi:     cfg.OpenAPI,
+		log:         log,
+		metricas:    NuevasMetricas(),
+		ventanas:    ventana.Nuevas(),
+		escritor:    nuevoEscritor(cfg.TamCola, cfg.Predicciones, cfg.Cache, log),
+		mux:         http.NewServeMux(),
+		ahora:       time.Now,
+		cors:        nuevoCORS(cfg.OrigenesCORS),
+		hub:         nuevoHub(opcionesHubPorOmision(), log),
+		eventos:     cfg.Eventos,
+		cronica:     make(chan almacen.EventoCluster, tamCronica),
 	}
 	s.modelo.Store(cfg.Modelo)
 	s.puntos = cfg.Puntos
+	s.avisos = nuevosAvisosRegimen(cfg.CadaAvisoRegimen, s.difundirRegimen)
+	s.escritor.alGuardar = s.avisos.anotar
 	if cfg.Nodos != nil {
 		op := cfg.Pool
 		op.AlEvento = s.registrarEvento
@@ -175,13 +202,16 @@ func Nuevo(cfg Config) (*Servidor, error) {
 
 	cualquiera := []string{RolUsuario, RolAdmin}
 	s.ruta("POST /api/auth/token", nil, s.crearToken)
+	s.ruta("POST /api/auth/invitado", nil, s.ingresarInvitado)
 	s.ruta("GET /api/salud", nil, s.salud)
 	s.ruta("POST /api/predicciones", cualquiera, s.predecir)
 	s.ruta("GET /api/estaciones", cualquiera, s.listarEstaciones)
 	s.ruta("GET /api/estaciones/{id}/regimen", cualquiera, s.regimenEstacion)
+	s.ruta("GET /api/regimenes", cualquiera, s.listarRegimenes)
 	s.ruta("GET /api/modelos/activo", cualquiera, s.modeloActivo)
 	s.ruta("GET /api/metricas", []string{RolAdmin}, s.consultarMetricas)
 	s.ruta("GET /api/cluster/nodos", []string{RolAdmin}, s.listarNodos)
+	s.ruta("GET /api/cluster/eventos", []string{RolAdmin}, s.listarEventosCluster)
 	s.ruta("POST /api/entrenamientos", []string{RolAdmin}, s.iniciarEntrenamiento)
 	s.ruta("GET /api/entrenamientos", []string{RolAdmin}, s.listarEntrenamientos)
 	s.ruta("GET /api/entrenamientos/{id}", []string{RolAdmin}, s.consultarEntrenamiento)
@@ -242,17 +272,21 @@ func (s *Servidor) Escribir(ctx context.Context) { s.escritor.correr(ctx) }
 const tamCronica = 256
 
 // Coordinar corre lo que el coordinador del clúster tiene en segundo plano: el
-// hub del WebSocket, el pool de nodos (si hay) y la goroutine que guarda los
-// eventos del clúster. Vuelve cuando ctx se cancela y todo eso terminó, en
-// este orden: se corta el entrenamiento en curso, que queda abortado en el
-// almacén y avisa su fin por el WebSocket; se cierra el pool; el hub despide a
+// hub del WebSocket, los avisos de régimen de las estaciones, el pool de nodos
+// (si hay) y la goroutine que guarda los eventos del clúster. Vuelve cuando
+// ctx se cancela y todo eso terminó, en este orden: se corta el entrenamiento
+// en curso, que queda abortado en el almacén y avisa su fin por el WebSocket;
+// se cierra el pool; salen los avisos de régimen pendientes; el hub despide a
 // sus clientes con un cierre 1001; y se guardan los eventos pendientes. Sin
 // Coordinar la API predice igual, pero no entran nodos ni salen eventos.
 func (s *Servidor) Coordinar(ctx context.Context) {
 	fondo, parar := context.WithCancel(context.Background())
 	defer parar()
-	var pool, hub, cronista sync.WaitGroup
+	var pool, hub, avisos, cronista sync.WaitGroup
 	hub.Go(func() { s.hub.Correr(fondo) })
+	ctxAvisos, pararAvisos := context.WithCancel(context.Background())
+	defer pararAvisos()
+	avisos.Go(func() { s.avisos.correr(ctxAvisos) })
 	pararCronista := make(chan struct{})
 	cronista.Go(func() { s.guardarEventos(pararCronista) })
 	pararPool := func() {}
@@ -267,10 +301,35 @@ func (s *Servidor) Coordinar(ctx context.Context) {
 	s.coord.apagar()
 	pararPool()
 	pool.Wait()
+	// Antes que el hub: lo pendiente todavía tiene a quién llegarle. Lo que el
+	// escritor guarde después (sigue vaciando sus colas) ya no se avisa.
+	pararAvisos()
+	avisos.Wait()
 	parar()
 	hub.Wait()
 	close(pararCronista)
 	cronista.Wait()
+}
+
+// difundirRegimen manda al hub el evento estacion.regimen: el estado nuevo de
+// una estación, para todos los roles del WebSocket. Devuelve false si el hub
+// no lo aceptó porque su canal de difusión está lleno: quien llama (los
+// avisos) lo conserva y lo reintenta, para que el último estado de la estación
+// no se pierda. Si el hub ya se apagó, o el estado no se puede codificar, no
+// hay nada que reintentar: devuelve true. El estado sigue en la caché y quien
+// se conecte lo pide con GET /api/regimenes.
+func (s *Servidor) difundirRegimen(estado estadoEstacion) bool {
+	err := s.hub.Difundir(eventoRegimen, estado, rolesEventosEstacion...)
+	switch {
+	case err == nil, errors.Is(err, errHubCerrado):
+		return true
+	case errors.Is(err, errDifusionLlena):
+		s.log.Warn("evento no difundido: se reintenta", "evento", eventoRegimen, "estacion", estado.Estacion, "err", err)
+		return false
+	default:
+		s.log.Error("evento no difundido", "evento", eventoRegimen, "estacion", estado.Estacion, "err", err)
+		return true
+	}
 }
 
 // registrarEvento recibe un evento del clúster (es el AlEvento del pool) y lo

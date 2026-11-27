@@ -29,6 +29,8 @@ package almacen
 import (
 	"context"
 	"errors"
+	"fmt"
+	"strings"
 	"time"
 )
 
@@ -116,10 +118,42 @@ type Cache interface {
 	// nuevo, no se reemplaza: una lectura más antigua no pisa a una más
 	// reciente (una de la misma hora, sí). La comparación y la escritura de
 	// cada estación son una sola operación atómica.
-	GuardarRegimenes(ctx context.Context, rs map[string]RegimenEstacion) error
+	//
+	// Devuelve los regímenes que quedaron guardados: los que desde esta
+	// llamada son el estado de su estación, con el valor tal como se guardó.
+	// Los que no reemplazaron al guardado no están. Es lo que decide si un
+	// cambio se avisa por el WebSocket (evento estacion.regimen): solo lo que
+	// Regimen y Regimenes ya devuelven. Si hay un error, puede que una parte
+	// del lote se haya guardado; el mapa trae lo que se sabe que sí.
+	GuardarRegimenes(ctx context.Context, rs map[string]RegimenEstacion) (map[string]RegimenEstacion, error)
 	// Regimen devuelve el último régimen de una estación o ErrNoEncontrado.
 	Regimen(ctx context.Context, estacion string) (RegimenEstacion, error)
+	// Regimenes devuelve el último régimen de las estaciones pedidas que tienen
+	// uno (la clave del mapa es el id de la estación), en una sola ida y vuelta
+	// por más estaciones que sean. Una estación sin régimen no está en el mapa:
+	// un mapa vacío es válido.
+	//
+	// Un valor guardado que no se puede leer no invalida a los demás: esa
+	// estación se salta y el error es un *RegimenesIlegibles que la nombra,
+	// junto con el mapa de las que sí se leyeron. Cualquier otro error es que
+	// la caché no respondió, y el mapa no vale.
+	Regimenes(ctx context.Context, estaciones []string) (map[string]RegimenEstacion, error)
 }
+
+// RegimenesIlegibles es el error de Cache.Regimenes cuando el valor guardado de
+// alguna estación no se pudo leer (alguien escribió la clave a mano, o quedó
+// de otra versión). No es que la caché no responda: el mapa que lo acompaña
+// trae las demás estaciones y sirve. Se reconoce con errors.As.
+type RegimenesIlegibles struct {
+	Estaciones []string // las que se saltaron, en el orden en que se pidieron
+	Causa      error    // por qué no se pudo leer la primera, con su clave
+}
+
+func (e *RegimenesIlegibles) Error() string {
+	return fmt.Sprintf("%d regímenes guardados no se pueden leer (%s): %v", len(e.Estaciones), strings.Join(e.Estaciones, ", "), e.Causa)
+}
+
+func (e *RegimenesIlegibles) Unwrap() error { return e.Causa }
 
 // Pinger dice si un almacén responde. Es lo que GET /api/salud informa como
 // mongo y redis.

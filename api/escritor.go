@@ -2,7 +2,10 @@ package api
 
 import (
 	"context"
+	"errors"
 	"log/slog"
+	"maps"
+	"slices"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -35,19 +38,106 @@ const (
 // crecen solos y el costo por predicción baja. Si aun así una cola se llena,
 // la predicción no se escribe en ese almacén: se cuenta el descarte y el
 // pedido responde igual.
+//
+// La goroutine de Redis, además, avisa (alGuardar) de los regímenes que
+// quedaron guardados, que es de donde salen los eventos estacion.regimen. Si
+// un lote termina con error no se sabe qué guardó Redis: cuando vuelve a
+// responder se le pregunta (releer) y se avisa de eso.
 type escritor struct {
 	mongo, redis *cola
 	plazoVaciado time.Duration
+	// alGuardar, si no es nil, recibe después de cada lote de Redis los
+	// regímenes que quedaron guardados: los que pasaron a ser el estado de su
+	// estación. Es de donde salen los eventos estacion.regimen. Lo llama la
+	// goroutine de Redis, así que no puede bloquear; se pone antes de correr.
+	alGuardar func(map[string]almacen.RegimenEstacion)
+
+	cache almacen.Cache
+	log   *slog.Logger
+	// La relectura (releer). Todo esto es de la goroutine de Redis, salvo los
+	// contadores.
+	cadaRelectura      time.Duration       // cuánto se espera antes de releer, y entre intentos
+	porReleer          map[string]struct{} // estaciones de lotes con error, de las que no se sabe qué quedó
+	releerDesde        time.Time           // no antes de este momento
+	relecturas         atomic.Uint64       // relecturas que la caché respondió
+	relecturasFallidas atomic.Uint64       // intentos en que la caché seguía sin responder
 }
 
+// cadaRelecturaPorOmision es lo que se espera, después de un lote de Redis con
+// error, antes de preguntarle a Redis qué quedó guardado, y entre un intento
+// fallido y el siguiente.
+const cadaRelecturaPorOmision = time.Second
+
 func nuevoEscritor(tam int, p almacen.Predicciones, c almacen.Cache, log *slog.Logger) *escritor {
-	return &escritor{
-		mongo: nuevaCola("mongo", tam, p.GuardarLote, log),
-		redis: nuevaCola("redis", tam, func(ctx context.Context, lote []almacen.Prediccion) error {
-			return c.GuardarRegimenes(ctx, regimenes(lote))
-		}, log),
-		plazoVaciado: plazoVaciado,
+	e := &escritor{plazoVaciado: plazoVaciado, cache: c, log: log,
+		cadaRelectura: cadaRelecturaPorOmision, porReleer: map[string]struct{}{}}
+	e.mongo = nuevaCola("mongo", tam, p.GuardarLote, log)
+	e.redis = nuevaCola("redis", tam, e.guardarRegimenes, log)
+	e.redis.repaso = e.releer
+	return e
+}
+
+// guardarRegimenes escribe un lote en Redis y avisa de lo que quedó guardado.
+func (e *escritor) guardarRegimenes(ctx context.Context, lote []almacen.Prediccion) error {
+	rs := regimenes(lote)
+	guardados, err := e.cache.GuardarRegimenes(ctx, rs)
+	// Aunque el lote haya fallado, lo que la caché sabe que guardó ya es el
+	// estado de esas estaciones.
+	e.avisar(guardados)
+	if err != nil {
+		// De las demás no se sabe: puede que Redis haya ejecutado el script y
+		// que solo la respuesta no haya llegado (un plazo vencido, la conexión
+		// cortada). Ese estado ya lo devuelve GET /api/regimenes, y si no se
+		// avisara el WebSocket lo contradiría hasta el siguiente cambio de la
+		// estación. Se anotan para preguntarle a Redis cuando vuelva (releer).
+		for estacion := range rs {
+			if _, ok := guardados[estacion]; !ok {
+				e.porReleer[estacion] = struct{}{}
+			}
+		}
+		e.releerDesde = time.Now().Add(e.cadaRelectura)
 	}
+	return err
+}
+
+func (e *escritor) avisar(guardados map[string]almacen.RegimenEstacion) {
+	if e.alGuardar != nil && len(guardados) > 0 {
+		e.alGuardar(guardados)
+	}
+}
+
+// releer le pregunta a Redis por el estado de las estaciones de los lotes que
+// terminaron con error y avisa de lo que haya guardado, sea de ese lote o de
+// antes: un evento repetido no hace daño; uno perdido deja al panel con un
+// estado que el GET ya no tiene. Es el repaso de la cola de Redis: corre en su
+// goroutine después de cada lote y cuando vence la espera, y devuelve cuánto
+// falta para el próximo intento, o 0 si no queda nada por releer.
+//
+// No se intenta enseguida del error: si Redis no responde, otra lectura
+// costaría otro plazo entero con la cola detenida. Se espera cadaRelectura
+// desde el último lote fallido o desde el último intento.
+func (e *escritor) releer(ctx context.Context) time.Duration {
+	if len(e.porReleer) == 0 {
+		return 0
+	}
+	if falta := time.Until(e.releerDesde); falta > 0 {
+		return falta
+	}
+	estaciones := slices.Sorted(maps.Keys(e.porReleer))
+	ctx, cancel := context.WithTimeout(ctx, plazoEscritura)
+	defer cancel()
+	rs, err := e.cache.Regimenes(ctx, estaciones)
+	var ilegibles *almacen.RegimenesIlegibles
+	if err != nil && !errors.As(err, &ilegibles) {
+		e.relecturasFallidas.Add(1)
+		e.releerDesde = time.Now().Add(e.cadaRelectura)
+		return e.cadaRelectura
+	}
+	e.relecturas.Add(1)
+	clear(e.porReleer)
+	e.log.Info("régimen releído después de un lote con error", "almacen", e.redis.nombre, "estaciones", len(estaciones), "con_estado", len(rs))
+	e.avisar(rs)
+	return 0
 }
 
 // regimenes reduce un lote a lo último de cada estación: régimen, media de
@@ -123,6 +213,12 @@ type cola struct {
 	escribir func(context.Context, []almacen.Prediccion) error
 	log      *slog.Logger
 
+	// repaso, si no es nil, corre en la goroutine de la cola después de cada
+	// lote y cuando vence la espera que él mismo pidió: devuelve cuánto falta
+	// para volver a llamarlo, o 0 si no tiene nada pendiente. No corre durante
+	// el vaciado del apagado.
+	repaso func(context.Context) time.Duration
+
 	escritas    atomic.Uint64 // predicciones en lotes que el almacén aceptó
 	descartadas atomic.Uint64 // cola llena, o sin escribir al apagar
 	fallidas    atomic.Uint64 // predicciones en lotes que el almacén rechazó
@@ -154,6 +250,7 @@ func (c *cola) estado() estadoEscritura {
 // todavía esté respondiendo no puede mandar a un canal cerrado.
 func (c *cola) correr(ctx, duro context.Context) {
 	lote := make([]almacen.Prediccion, 0, maxLote)
+	var despertar <-chan time.Time // nil mientras el repaso no tenga nada pendiente
 	for {
 		// Se mira antes del select: con ctx cancelado y la cola con datos, el
 		// select elegiría al azar entre los dos casos y el vaciado empezaría
@@ -166,9 +263,16 @@ func (c *cola) correr(ctx, duro context.Context) {
 		case p := <-c.ch:
 			lote = c.completar(append(lote[:0], p))
 			c.escribirLote(duro, lote)
+		case <-despertar:
 		case <-ctx.Done():
 			c.vaciar(duro, lote)
 			return
+		}
+		despertar = nil
+		if c.repaso != nil {
+			if espera := c.repaso(duro); espera > 0 {
+				despertar = time.After(espera)
+			}
 		}
 	}
 }

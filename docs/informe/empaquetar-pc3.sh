@@ -78,7 +78,7 @@ while IFS= read -r ruta; do
 done < <(grep -ho 'si-falta="[^"]*"' secciones/*.qmd | sed 's/si-falta="\(.*\)"/\1/' | sort -u)
 
 echo "→ render"
-bash render.sh >/dev/null
+ENTREGA=pc3 bash render.sh >/dev/null
 
 # 4. El .docx final no puede tener un aviso PENDIENTE (el título del aviso es un run que dice solo
 #    «PENDIENTE») ni un PLACEHOLDER en ninguna parte. La palabra suelta sí puede aparecer: el

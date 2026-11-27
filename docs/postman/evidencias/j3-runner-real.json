@@ -1,0 +1,27 @@
+{
+  "fechaUTC": "2026-11-21T00:54:01.279Z",
+  "tipo": "Runner J3 con 78 lecturas reales, MongoDB y Redis en Docker",
+  "rama": "feature/j3-validacion-real-pc4",
+  "commitBase": "4ea24ab",
+  "carpeta": "4. Datos de prueba (Runner con lecturas_prueba.csv)",
+  "iteraciones": 78,
+  "peticiones": 82,
+  "aserciones": 714,
+  "fallos": [],
+  "maximoHTTPms": 7,
+  "limiteHTTPms": 100,
+  "csvSHA256_LF": "67e78001d098d10f5932fc3af04384f7bffecb21a1922d4af06f53c6dfc5e85c",
+  "casosRegimen": 30,
+  "porRegimen": [
+    10,
+    10,
+    10
+  ],
+  "series24h": [
+    24,
+    24
+  ],
+  "csvRegeneradoCoincide": true,
+  "goldSHA256": "2fdace5ad8599149c9ed2b177151881025d895a50738519d9358d537236f87f7",
+  "silverSHA256": "63b707f469a63baa8d38121b0e4b7724796d53f3aa66b306b1ed44c179cf506e"
+}

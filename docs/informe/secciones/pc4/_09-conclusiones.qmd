@@ -1,0 +1,75 @@
+<!-- g) Conclusiones del Entregable 2. El título «Conclusiones» lo pone informe-pc4.qmd; las de la
+PC3 se incluyen después, sin cambios. -->
+
+## Del Entregable 2 (PC4) {.unnumbered}
+
+1. **El modelo se entrena repartido sin dejar de ser el mismo modelo.** El K-Means corre en un
+   clúster de nodos por TCP con el protocolo que la PC3 dejó diseñado, sin cambiar un solo mensaje.
+   Con un nodo, sus centroides son los de una sola máquina bit a bit; con
+   {{< meta cifras.distribuido.nodos_lista >}} nodos, difieren a lo sumo en
+   {{< meta cifras.distribuido.dif_max >}}, muy por debajo de la tolerancia de
+   {{< meta cifras.pc4.tolerancia >}} (@tbl-distribuido). Eso no es casualidad sino diseño: cada
+   nodo suma en orden de chunk, el coordinador fusiona en orden de nodo y el texto del cable no
+   cambia ningún bit.
+
+2. **La estrella se justifica con una medición, y la misma medición dice cuándo no conviene
+   distribuir.** Con {{< meta cifras.smoke.nodos >}} PC del laboratorio como nodos, la barrera de
+   una ronda mide {{< meta cifras.smoke.p50 >}} ms de mediana (@tbl-smoke): la red no es obstáculo
+   para la topología. Pero una iteración sobre todo el gold cuesta
+   {{< meta cifras.benchmark_kmeans.ms_iter_w >}} ms en una sola máquina con
+   {{< meta cifras.benchmark_kmeans.w >}} workers: con {{< meta cifras.pc4.filas_gold >}} filas,
+   coordinar cuesta tanto como calcular. El clúster demuestra que se puede repartir y cuánto cuesta
+   hacerlo; no que con esta tabla sea más rápido.
+
+3. **Repartir paga cuando el cómputo pesa más que la barrera, y eso se pudo ver.** En un experimento
+   aparte, fuera del sistema y con datos sintéticos, el mismo esquema de coordinador en Go con
+   barrera sincronizó {{< meta cifras.mapa.nodos >}} GPU del laboratorio: sincronizando cada
+   {{< meta cifras.mapa.h_menor >}} pasos, la red se llevó el
+   {{< meta cifras.mapa.pct_red_menor >}} de cada ronda; cada {{< meta cifras.mapa.h_mayor >}}, el
+   {{< meta cifras.mapa.pct_red_mayor >}}, y el clúster rindió
+   {{< meta cifras.mapa.veces_mayor >}} veces lo que un nodo (@tbl-mapa-gpu). El costo de la barrera
+   es casi fijo: lo que decide es cuánto trabajo hay entre dos sincronizaciones.
+
+4. **Ante una falla, el clúster prefiere no tener modelo a tener uno equivocado.** Un nodo que cae o
+   no responde a tiempo aborta la ronda con un error que lo nombra; un nodo que responde con
+   parciales que no son de sus filas no logra activar su modelo, porque la API compara cada corrida
+   con el K-Means secuencial antes de activarla. Lo que el sistema no hace es recuperarse solo: no
+   reasigna el rango del nodo caído ni reanuda desde el punto de control.
+
+5. **La predicción responde en menos de 100 milisegundos porque su camino no espera a nadie.** Con
+   {{< meta cifras.api_latencia.clientes_max >}} clientes a la vez, el percentil 99 es de
+   {{< meta cifras.api_latencia.p99_max >}} ms y ningún pedido de los
+   {{< meta cifras.api_latencia.pedidos_total >}} medidos llegó al límite (@tbl-api-latencia). El
+   modelo se lee de un puntero atómico, la ventana de cada estación tiene su propio candado y la
+   escritura en las bases sale del camino por colas. El margen no viene de optimizar el cálculo,
+   que es mínimo, sino de haber sacado del pedido todo lo que podía bloquear.
+
+6. **La alerta no es el régimen, y se decidió con datos.** Usado como alerta, el régimen alto del
+   K-Means acierta el {{< meta cifras.alerta.regimen_precision >}} de las veces y encuentra el
+   {{< meta cifras.alerta.regimen_recall >}} de las horas en que la estación supera el ECA
+   (@tbl-alerta). La API responde por eso dos cosas distintas: qué tipo de aire es la lectura, que
+   es lo que el modelo sabe decir, y si la media de 24 horas de la estación supera el ECA, que es lo
+   que dice la norma. Es la conclusión 5 del Entregable 1 llevada al servicio.
+
+7. **Las dos bases se usan para cosas distintas, y ninguna puede frenar al sistema.** MongoDB guarda
+   la historia ({{< meta cifras.datos.colecciones >}} colecciones) y Redis, lo último de cada cosa
+   ({{< meta cifras.datos.claves >}} familias de claves). La API escribe en las dos por colas y por
+   lotes: si una se cae, sigue prediciendo, lo informa en su ruta de salud y cuenta lo que no pudo
+   escribir. La concurrencia aparece también en los datos: el estado de una estación se compara y
+   se escribe dentro de Redis, en un solo paso, para que una lectura atrasada no pise a una
+   reciente.
+
+8. **Los patrones del curso alcanzaron para todo el sistema.** Con la biblioteca estándar de Go se
+   escribieron el protocolo, el clúster, el servidor HTTP, el JWT y el WebSocket; las únicas
+   dependencias son los dos drivers de las bases, confinados en dos paquetes. Barreras, semáforos,
+   colas con búfer, un dueño por estado y cancelación con contexto resolvieron cada caso
+   (@tbl-patrones-pc4), y las {{< meta cifras.pruebas.pc4 >}} pruebas de este entregable corren con
+   el detector de carreras.
+
+9. **Lo que este entregable no midió está dicho.** El K-Means distribuido completo no se corrió
+   sobre los equipos del laboratorio, donde solo se midió la barrera; la latencia de la API se midió
+   con el cliente en la misma máquina; el modelo en Promela de la barrera y el paralelismo por
+   semillas entre nodos, anunciados en la PC3, no se hicieron (@tbl-cambios-pc3). Y la pregunta de
+   impacto sigue respondida a medias: el sistema dice dónde, cuándo y si una estación supera el
+   ECA, pero no con cuánta anticipación; eso y la interfaz para quien lo necesita son el entregable
+   final.
