@@ -308,7 +308,9 @@ describe('Impacto', () => {
 
       // Nada de lo que traía el archivo real quedó escrito en la pantalla.
       const pagina = texto()
-      for (const vieja of ['1,184horas-estación sobre el ECA', '64,748horas-estación', '65,873 lecturas horarias', '35.0', '44.3', '21.6', '54.8', 'No es un aviso sostenido de 20']) {
+      expect(pagina).not.toMatch(/1,184\s*horas(?:-estación)? sobre el ECA/)
+      expect(pagina).not.toMatch(/64,748\s*horas(?:-estación)?/)
+      for (const vieja of ['65,873 lecturas horarias', '35.0', '44.3', '21.6', '54.8', 'No es un aviso sostenido de 20']) {
         expect(pagina).not.toContain(vieja)
       }
       expect(pagina).not.toContain(REAL.anticipacion.lo_que_no_es)

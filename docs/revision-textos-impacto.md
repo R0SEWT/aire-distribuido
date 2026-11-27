@@ -37,7 +37,8 @@ corresponde a la issue #103.
 ## «¿De dónde sale este número?»
 
 Cada explicación conserva sus reglas, rutas, filas y huellas. Se añadieron nombres
-legibles a las fuentes: lecturas usadas, concentraciones sin estandarizar, régimen
+legibles a las fuentes: variables estandarizadas de la receta (gold), concentraciones
+sin estandarizar (silver), régimen
 de cada lectura, perfil del modelo, comprobación de alerta en Go, ficha de la
 estación y población censada. La sección de señales enlaza también la fuente de
 la comprobación de la alerta.
@@ -82,3 +83,15 @@ La [procedencia de las capturas](informe/capturas/tb2/textos-impacto/procedencia
 identifica la base del código, los textos locales aún sin commit, las huellas del
 código revisado y del JSON de impacto, y las de las propias imágenes. No son
 evidencias de una corrida en el laboratorio ni de rendimiento en producción.
+
+## Ajustes de la revisión del PR #115 — 27 de noviembre
+
+La fuente gold se identifica como variables estandarizadas de la receta. La prueba
+de navegación exige también la advertencia de que los datos no son lecturas en vivo
+ni una medición de exposición. La comprobación del total antiguo acepta tanto
+«horas» como «horas-estación», para detectar una cifra fija aunque cambie su unidad.
+
+Con esos ajustes pasan las 708 pruebas, lint y build en Linux con Node 22. En una
+copia temporal se quitaron la advertencia y se reintrodujo el total antiguo con
+ambas unidades: las pruebas fallaron en los tres casos esperados. Los archivos de
+la aplicación se conservaron corregidos; las regresiones solo se simularon en esa copia.

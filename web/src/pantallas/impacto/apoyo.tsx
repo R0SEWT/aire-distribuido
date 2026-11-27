@@ -13,7 +13,7 @@ interface PropsDeDondeSale {
 }
 
 const NOMBRES_DE_FUENTE: Record<string, string> = {
-  gold: 'Lecturas horarias usadas en el análisis',
+  gold: 'Variables estandarizadas de la receta usadas en el análisis',
   silver: 'Concentraciones antes de estandarizar',
   asignaciones: 'Régimen asignado a cada lectura',
   regimenes: 'Perfil de los regímenes del modelo',
