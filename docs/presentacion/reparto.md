@@ -16,35 +16,36 @@ revisa su parte antes de exponer.
 
 | # | Lámina | Quién | Tiempo |
 |--:|:--|:--|--:|
-| 1 | Portada: 2 883 877 lecturas, ¿qué aire se respira junto a una mina? | Rody | 0:45 |
-| 2 | La pregunta de impacto social | Rody | 0:30 |
-| 3 | Separador: el dato | Dayana | 0:05 |
-| 4 | Lo que el CSV de OEFA esconde (hora, ceros, unidades) | Dayana | 0:30 |
-| 5 | El embudo de la limpieza | Dayana | 0:30 |
-| 6 | Separador: el sistema | Rody | 0:05 |
-| 7 | Las cuatro partes en Docker Compose, con los puertos | Rody | 0:40 |
-| 8 | El camino de un pedido: predecir no pasa por el clúster; entrenar, sí | Rody | 0:40 |
-| 9 | Separador: la concurrencia | Julio | 0:05 |
-| 10 | Parte A: el cargador (canales, semáforo, `WaitGroup`) y su speedup | Julio | 0:45 |
-| 11 | Parte B: el worker pool del K-Means (animación) | Rody | 0:50 |
-| 12 | Bit a bit para todo W, y el speedup | Rody | 0:25 |
-| 13 | Separador: la distribución | Julio | 0:05 |
-| 14 | Los sockets: `net.Listen`, `Accept`, `DialContext`, la estrella | Julio | 0:50 |
-| 15 | Una ronda: una goroutine por nodo, `WaitGroup`, fusión en orden de nodo | Julio | 0:50 |
-| 16 | Separador: el servicio | Julio | 0:05 |
-| 17 | La API en Go: el handler de una predicción | Julio | 0:50 |
-| 18 | Menos de 100 ms con 64 clientes | Julio | 0:30 |
-| 19 | MongoDB y Redis | Dayana | 0:40 |
-| 20 | Separador: la interfaz | Dayana | 0:05 |
-| 21 | La SPA (capturas reales: el panel en alerta y la simulación que cruza el ECA) | Dayana | 0:45 |
-| 22 | Seguridad: la UI esconde, la API decide | Dayana | 0:40 |
-| 23 | Separador: lo que responde | Julio | 0:05 |
-| 24 | Evaluación experimental | Julio | 0:45 |
-| 25 | Lo que responde: horas sobre el ECA por actividad | Dayana | 0:45 |
-| 26 | ¿Con cuánta anticipación? | Dayana | 0:40 |
-| 27 | Lo que este sistema no puede decir | Rody | 0:35 |
-| 28 | Demo en vivo (Rody conduce; cada uno narra su parte) | los tres | 4:00 |
-| 29 | Cierre y preguntas | Rody | 0:30 |
+| 1 | Portada: el título y las estaciones de OEFA en su posición real (no tiene notas: el saludo está en las de la 2) | Rody | 0:20 |
+| 2 | 2 883 877 lecturas: ¿qué aire se respira junto a una mina? | Rody | 0:25 |
+| 3 | La pregunta de impacto social | Rody | 0:30 |
+| 4 | Separador: el dato | Dayana | 0:05 |
+| 5 | Lo que el CSV de OEFA esconde (hora, ceros, unidades) | Dayana | 0:30 |
+| 6 | El embudo de la limpieza | Dayana | 0:30 |
+| 7 | Separador: el sistema | Rody | 0:05 |
+| 8 | Arquitectura: las cuatro partes en Docker Compose, con los puertos y el Dockerfile | Rody | 0:40 |
+| 9 | El camino de un pedido: predecir no pasa por el clúster; entrenar, sí | Rody | 0:40 |
+| 10 | Separador: la concurrencia | Julio | 0:05 |
+| 11 | Parte A: el cargador (canales, semáforo, `WaitGroup`) y su speedup | Julio | 0:45 |
+| 12 | Parte B: el worker pool del K-Means (animación) | Rody | 0:50 |
+| 13 | Bit a bit para todo W, y el speedup | Rody | 0:25 |
+| 14 | Separador: la distribución | Julio | 0:05 |
+| 15 | Los sockets: `net.Listen`, `Accept`, `DialContext`, la estrella | Julio | 0:50 |
+| 16 | Una ronda: una goroutine por nodo, `WaitGroup`, fusión en orden de nodo | Julio | 0:50 |
+| 17 | Separador: el servicio | Julio | 0:05 |
+| 18 | La API en Go: el handler de una predicción | Julio | 0:50 |
+| 19 | Menos de 100 ms con 64 clientes | Julio | 0:30 |
+| 20 | MongoDB persiste, Redis es la caché | Dayana | 0:40 |
+| 21 | Separador: la interfaz | Dayana | 0:05 |
+| 22 | La SPA (capturas reales: el panel en alerta y la simulación que cruza el ECA) | Dayana | 0:45 |
+| 23 | Seguridad: la UI esconde, la API decide | Dayana | 0:40 |
+| 24 | Separador: lo que responde | Julio | 0:05 |
+| 25 | Evaluación experimental | Julio | 0:45 |
+| 26 | Lo que responde: horas sobre el ECA por actividad | Dayana | 0:45 |
+| 27 | ¿Con cuánta anticipación? | Dayana | 0:40 |
+| 28 | Lo que este sistema no puede decir | Rody | 0:35 |
+| 29 | Demo en vivo (Rody conduce; cada uno narra su parte) | los tres | 4:00 |
+| 30 | Cierre y preguntas | Rody | 0:30 |
 
 Exposición: **14:30** (Rody 5:00, Dayana 4:40, Julio 4:50) más **4:00** de demo. Después vienen
 las láminas de respaldo, que solo se abren si el docente pregunta (tecla `M` para el menú):
@@ -64,26 +65,26 @@ la demo, porque tiene la sesión de admin.
 Versión de unos 11 minutos más 3:20 de demo, en este orden:
 
 1. Saltar los seis separadores (−0:30).
-2. Saltar el embudo (lámina 5) y decir solo «de 2,9 millones de filas a 65 873 horas» (−0:30).
-3. Saltar «bit a bit para todo W» (12) y decirlo en la del worker pool (−0:25).
-4. Saltar la latencia (18) y decir la cifra en la de la API: «p99 de 3,1 ms con 64 clientes» (−0:30).
+2. Saltar el embudo (lámina 6) y decir solo «de 2,9 millones de filas a 65 873 horas» (−0:30).
+3. Saltar «bit a bit para todo W» (13) y decirlo en la del worker pool (−0:25).
+4. Saltar la latencia (19) y decir la cifra en la de la API: «p99 de 3,1 ms con 64 clientes» (−0:30).
 5. Evaluación en 0:20, anticipación en 0:20 y límites en 0:20 (−0:60).
 6. En la demo, saltar Impacto y Swagger (−0:40).
 
-Lo que **no** se salta nunca: el camino de un pedido (8), los sockets (14), la ronda (15) y el
-código de la API (17). Son exactamente lo que faltó en la PC4.
+Lo que **no** se salta nunca: el camino de un pedido (9), los sockets (15), la ronda (16) y el
+código de la API (18). Son exactamente lo que faltó en la PC4.
 
 ### Transiciones
 
 Cada uno cierra su bloque con una frase que pasa al siguiente, para no perder tiempo:
 
-- Rody (8) → Julio: «Julio, ¿cómo se reparte eso en una máquina?»
-- Julio (10) → Rody: «Y el K-Means usa el mismo patrón; Rody.»
-- Rody (12) → Julio: «Eso en una máquina. Entre máquinas, Julio.»
-- Julio (18) → Dayana: «Todo eso se guarda en dos bases; Dayana.»
-- Dayana (22) → Julio: «¿Y cómo sabemos que funciona?»
-- Julio (24) → Dayana: «Y lo que dice sobre el aire.»
-- Dayana (26) → Rody: «Rody, lo que no puede decir.»
+- Rody (9) → Julio: «Julio, ¿cómo se reparte eso en una máquina?»
+- Julio (11) → Rody: «Y el K-Means usa el mismo patrón; Rody.»
+- Rody (13) → Julio: «Eso en una máquina. Entre máquinas, Julio.»
+- Julio (19) → Dayana: «Todo eso se guarda en dos bases; Dayana.»
+- Dayana (23) → Julio: «¿Y cómo sabemos que funciona?»
+- Julio (25) → Dayana: «Y lo que dice sobre el aire.»
+- Dayana (27) → Rody: «Rody, lo que no puede decir.»
 
 ## Guion de la demo
 

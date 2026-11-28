@@ -1,6 +1,6 @@
 # Deck (Quarto + reveal.js + D3)
 
-`index.qmd` es la sustentación del TB2: portada, 28 láminas y 10 de respaldo en 16:9 (1280×720).
+`index.qmd` es la sustentación del TB2: portada, 29 láminas y 10 de respaldo (los números de lámina de `reparto.md` y `preguntas.md` son los que muestra el deck, con la portada como 1) en 16:9 (1280×720).
 Dura unos 14 minutos y medio más 4 de demo, y se reparte entre los tres integrantes; cada lámina dice
 quién habla, arriba a la derecha, y sus notas traen el tiempo y qué decir. El reparto, la versión
 corta y el guion de la demo están en [`../reparto.md`](../reparto.md); las preguntas probables del

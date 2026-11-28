@@ -43,7 +43,7 @@ lecturas horarias de {{< meta cifras.limpieza.n_estaciones >}} estaciones, en un
 :::
 
 ::: notes
-[0:20 · Rody, en la portada] Buenas. Somos el Equipo 4: Dayana, Julio y yo, Rody. Caso 10, calidad
+[0:20 · Rody, todavía en la portada, la lámina anterior; al terminar, avanza] Buenas. Somos el Equipo 4: Dayana, Julio y yo, Rody. Caso 10, calidad
 del aire. Los puntos de la portada son las estaciones de OEFA en su posición real.
 [0:25 · Rody] OEFA, el organismo que fiscaliza a las actividades que contaminan, mide el aire junto
 a ellas: casi 2,9 millones de lecturas horarias de 33 estaciones, de 2018 a 2022, en un CSV de
@@ -59,8 +59,8 @@ de ladrilleras?
 [La pregunta de impacto social]{.eyebrow}
 
 ::: {.pregunta}
-¿En qué estaciones y a qué horas el aire supera el ECA de PM2,5 y PM10, y **con cuánta
-anticipación** se puede avisar?
+¿En qué estaciones de OEFA y a qué horas el aire entra en el nivel alto de PM2,5/PM10, y **con
+cuánta anticipación** eso avisa de un episodio que supera el ECA?
 :::
 
 ::: {.chips .fragment}
@@ -74,9 +74,9 @@ fiscalizada. Es la pregunta que el enunciado pone de ejemplo para el caso 10.
 :::
 
 ::: notes
-[0:30 · Rody] El material particulado entra hasta lo profundo de los pulmones. La pregunta: en qué
-estaciones y a qué horas el aire supera el ECA, el estándar peruano, y con cuánta anticipación se
-puede avisar.
+[0:30 · Rody] El material particulado entra hasta lo profundo de los pulmones. Nuestra pregunta de
+impacto social: en qué estaciones de OEFA y a qué horas el aire entra en el nivel alto de PM2,5 y
+PM10, y con cuánta anticipación eso avisa de un episodio que supera el ECA, el estándar peruano.
 [clic] La PC3 respondió el dónde y el cuándo; la PC4 construyó el clúster y la API; hoy, el TB2
 cierra con el mapa, las alertas en tiempo real y la anticipación medida.
 [clic] Y la alerta es para quien más la necesita: las personas con enfermedades respiratorias.
@@ -174,7 +174,7 @@ Todo en Go y en contenedores: cargador, nodos, API coordinadora, MongoDB, Redis 
 [0:05 · Rody] Ahora el sistema completo.
 :::
 
-## Las cuatro partes, en Docker Compose
+## Arquitectura: las cuatro partes, en Docker Compose
 
 [Rody]{.quien}
 
@@ -183,16 +183,19 @@ Todo en Go y en contenedores: cargador, nodos, API coordinadora, MongoDB, Redis 
 ::: {.chips}
 [web (Caddy) · 80 / 443]{.chip} [api · HTTP 8080]{.chip .on} [api · TCP 7070 para los nodos]{.chip .on}
 [mongo · 27017]{.chip} [redis · 6379]{.chip} [`--scale nodo=K`]{.chip}
+[Dockerfile: una imagen para la API y los nodos]{.chip}
 :::
 
 ::: notes
-[0:40 · Rody] Las cuatro partes del enunciado. A, el cargador concurrente, en verde: lee el CSV y
+[0:40 · Rody] La arquitectura: las cuatro partes del enunciado. A, el cargador concurrente, en verde: lee el CSV y
 deja el silver y el gold. B, los nodos del K-Means, abajo. C, la API coordinadora, arriba, con
 MongoDB y Redis. Y D, la SPA, a la derecha.
 Los puertos: la API escucha dos sockets, el 8080 para HTTP y el 7070 para los nodos, que es TCP
 puro. El 7070 no se publica fuera de la red de Compose: solo lo usan los nodos. MongoDB en el
 27017, Redis en el 6379, y el Caddy del servicio web es el único que da la cara al navegador.
-Todo se levanta con docker compose up, y la cantidad de nodos es un parámetro: --scale nodo=K.
+Todo se levanta con docker compose up, y la cantidad de nodos es un parámetro: --scale nodo=K. Un
+solo Dockerfile, en dos etapas, compila todos los comandos de Go y deja una imagen distroless que
+usan la API y los nodos; la UI tiene el suyo, que la compila con Node y la sirve con Caddy.
 :::
 
 ## El camino de un pedido
@@ -380,6 +383,9 @@ solo lectura durante la iteración: por eso el bucle no necesita Mutex.
 La barrera es un sync.WaitGroup: espera los parciales de todos los chunks, y recién entonces
 Fusionar los suma en orden de chunk, nunca en el de llegada. La suma en coma flotante no es
 asociativa: en el orden de llegada, dos corridas iguales darían números distintos.
+Así no hay condiciones de carrera en la actualización de los centroides, que es lo que pide el
+enunciado: Actualizar corre en una sola goroutine, después de la barrera. Y lo comprobamos con el
+detector de carreras, go test -race, en cada push.
 (Clic en W = 1 para comparar.)
 :::
 
@@ -408,6 +414,7 @@ inercia, idéntica bit a bit con {{< meta cifras.benchmark_kmeans.workers >}} wo
 - {{< meta cifras.benchmark_kmeans.speedup >}}× con 12 workers, hasta converger en
   {{< meta cifras.kmeans.iteraciones >}} iteraciones
 - Una iteración dura {{< meta cifras.benchmark_kmeans.ms_iter_seq >}} ms: coordinar pesa
+- Sin condiciones de carrera al actualizar los centroides: `go test -race` en cada push
 :::
 
 ::: {.fragment .lista}
@@ -477,8 +484,8 @@ return marcador.DialContext(ctx, "tcp", *coordinador)
   suma de parciales, y solo el coordinador la necesita
 - **El nodo llama** (`Dial`): Colab no acepta conexiones entrantes, y en las PC del laboratorio el
   nodo corre sin permisos de administrador. Si pierde la conexión, vuelve a llamar solo
-- **Un mensaje = una línea de JSON** sobre la conexión TCP (`encoding/json` + `\n`), con
-  `SetReadDeadline` y `SetWriteDeadline` para los plazos
+- **Un mensaje = una línea de JSON** sobre la conexión TCP (`bufio` + `encoding/json` + `\n`),
+  con `SetReadDeadline` y `SetWriteDeadline` para los plazos
 - En el laboratorio, con {{< meta cifras.smoke.nodos >}} PC como nodos, la barrera de una ronda
   mide **{{< meta cifras.smoke.p50 >}} ms** de mediana
 :::
@@ -494,7 +501,8 @@ no acepta conexiones entrantes y en las PC del laboratorio el nodo corre sin per
 administrador: solo abre conexiones de salida. Y si el nodo pierde la conexión, vuelve a llamar solo.
 La topología es una estrella: los nodos no se hablan entre sí, porque la fusión es una suma de
 parciales y solo el coordinador la necesita. Cada mensaje es una línea de JSON sobre la conexión,
-con plazos de lectura y escritura del propio socket. En el laboratorio, con 4 PC, una ronda
+leída con un bufio.Reader y escrita con un bufio.Writer, con plazos de lectura y escritura del
+propio socket. En el laboratorio, con 4 PC, una ronda
 completa por la red tarda medio milisegundo. (En la demo, la pantalla Clúster muestra la IP:puerto
 de cada nodo: es la dirección remota de su conexión TCP.)
 :::
@@ -659,7 +667,7 @@ escala es logarítmica: con 64 clientes, el 99 % de los pedidos responde en 3,1 
 MongoDB y Redis guardaron cada predicción.
 :::
 
-## MongoDB persiste, Redis responde rápido
+## MongoDB persiste, Redis es la caché
 
 [Dayana]{.quien}
 
@@ -698,7 +706,7 @@ una base lenta no frena a la otra ni al pedido.
 [0:40 · Dayana] Dos niveles de almacenamiento, como pide el enunciado. MongoDB guarda lo que tiene
 que durar: el catálogo de estaciones, cada predicción, los modelos, el historial de entrenamientos
 con sus rondas y las altas y bajas de los nodos.
-Redis guarda lo que se lee rápido: el último régimen de cada estación, que es lo que pinta el mapa;
+Redis es la caché: guarda lo que se lee rápido: el último régimen de cada estación, que es lo que pinta el mapa;
 una copia del modelo activo, para que la API arranque con el último entrenado; y el punto de control
 de cada ronda.
 La API escribe con una goroutine y una cola por base: si una se pone lenta, no frena a la otra ni al
@@ -736,8 +744,8 @@ Una SPA que muestra el estado de cada estación, las alertas y el clúster en ti
 [Simulación de CA-ESP-01 el 21/12/2021: lecturas reales enviadas una por una; la alerta se enciende a las 07:00 por PM10]{.pie}
 
 ::: {.lista style="font-size: 0.5em; margin-top: 0.5em;"}
-- Ingreso, panel, estación, simulación e impacto; para el admin, entrenamiento y clúster (nodos,
-  CPU, latencia y eventos)
+- Menú de opciones por rol: ingreso, panel, estación, simulación e impacto; para el admin,
+  entrenamiento y clúster (nodos, CPU, latencia y eventos)
 - Tiempo real por WebSocket: `estacion.regimen` y las rondas del entrenamiento
 - Configura desde la UI: estación, día y ritmo de la simulación; nodos, réplicas y semilla de un entrenamiento
 :::
@@ -904,9 +912,9 @@ a {{< meta deck.impacto.lh_q3 >}} h). Todos tuvieron una señal antes.
 ::: {.fragment}
 [{{< meta deck.impacto.rg_mediana >}} h]{.cifra}
 
-[desde la primera hora en el nivel alto del K-Means]{.t}
+[desde la primera hora en el régimen alto del K-Means]{.t}
 
-Cuartiles {{< meta deck.impacto.rg_q1 >}} a {{< meta deck.impacto.rg_q3 >}} h. El nivel alto acierta el
+Cuartiles {{< meta deck.impacto.rg_q1 >}} a {{< meta deck.impacto.rg_q3 >}} h. El régimen alto acierta el
 {{< meta cifras.alerta.regimen_precision >}} de las veces y cubre el {{< meta cifras.alerta.regimen_recall >}}.
 :::
 
@@ -926,7 +934,7 @@ misma, la media de 24 h.
 [0:40 · Dayana] La segunda mitad de la pregunta: con cuánta anticipación. En los 30 episodios, la
 primera lectura horaria sobre el umbral apareció, en la mediana, 20 horas antes de que la media de
 24 horas cruzara el ECA.
-[clic] Si la señal es el nivel alto del K-Means, 18 horas. Pero el nivel alto acierta solo el 35 %
+[clic] Si la señal es el régimen alto del K-Means, 18 horas. Pero el régimen alto acierta solo el 35 %
 de las veces que suena.
 [clic] Y la cota baja: justo antes del cruce, la señal estuvo encendida una hora seguida, en la
 mediana. Las señales van y vienen. Por eso la alerta del sistema es la norma misma, la media de 24
@@ -1046,14 +1054,25 @@ Gracias; ¿preguntas?
 
 ## Docker Compose: servicios, puertos y orden de arranque {.respaldo}
 
-[Respaldo · docker-compose.yml y docs/diagramas/despliegue.png]{.eyebrow}
+[Respaldo · docker-compose.yml, Dockerfile y docs/diagramas/despliegue.png]{.eyebrow}
 
 :::: {.columns}
-::: {.column width="55%"}
-![](../../diagramas/despliegue.png){.figura style="max-height: 470px;"}
+::: {.column width="48%"}
+![](../../diagramas/despliegue.png){.figura style="max-height: 300px;"}
+
+::: {.codigo .chico}
+[Dockerfile · dos etapas: compilar con Go, ejecutar en distroless]{.archivo}
+
+```dockerfile
+FROM golang:1.26 AS build
+RUN CGO_ENABLED=0 go build -trimpath -o /out/bin/ ./cmd/...
+FROM gcr.io/distroless/static-debian12:nonroot
+COPY --from=build /out/bin/ /usr/local/bin/
+```
+:::
 :::
 
-::: {.column width="45%"}
+::: {.column width="52%"}
 | Servicio | Imagen | Puerto |
 |:--|:--|:--|
 | `web` | Caddy con la UI (Node la compila) | 80 → `127.0.0.1:8081` |
@@ -1063,7 +1082,7 @@ Gracias; ¿preguntas?
 | `redis` | `{{< meta cifras.pc4.redis_imagen >}}` | 6379 |
 | `seed` | mongosh con `seed.js` | — |
 
-[Orden: mongo y redis sanos → seed → api sana (`api -salud`: distroless no tiene curl) → web y nodos, que reintentan hasta que el 7070 responde.]{.nota}
+[Orden por `healthcheck`: mongo y redis sanos → seed → api sana (`api -salud`: distroless no tiene curl) → web y nodos, que reintentan hasta que el 7070 responde.]{.nota}
 :::
 ::::
 

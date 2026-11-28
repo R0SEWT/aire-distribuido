@@ -300,3 +300,6 @@ svg.g .l-valor { fill: $azul-oscuro; font-size: 23px; }
 
 // Impacto por actividad
 svg.g .i-fondo { fill: $niebla; }
+
+// Un comando no se parte en el guion (`go test -race`)
+.reveal .lista code { white-space: nowrap; }
