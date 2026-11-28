@@ -46,7 +46,7 @@ const ESCENAS = {
   /** Bloque 05: el contrato en Swagger UI, servido por la API en /docs. Solo lectura. */
   async swagger(pagina) {
     await pagina.goto(`${BASE}/docs`)
-    await pagina.locator('.swagger-ui .opblock').first().waitFor({ timeout: 30_000 })
+    await pagina.locator('.swagger-ui .opblock').first().waitFor({ timeout: 90_000 })  // Swagger UI viene de un CDN
     // Swagger UI escribe chico: se agranda para que se lea en el video.
     await pagina.evaluate(() => { document.body.style.zoom = '1.35' })
     await grabar(pagina, 'swagger', async () => {
