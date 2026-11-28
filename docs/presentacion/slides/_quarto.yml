@@ -3,7 +3,8 @@ project:
   type: default
   output-dir: _site
   render:
-    - index.qmd
+    - index.qmd   # la sustentación del TB2
+    - pc4.qmd     # la exposición de la PC4
 
 # Sin kernel: las cifras del texto se leen de los mismos YAML que el informe (shortcode meta) y
 # los gráficos de D3, de datos.js. Renderizar no depende de Python ni de Jupyter.
