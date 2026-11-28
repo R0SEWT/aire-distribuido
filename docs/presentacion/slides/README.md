@@ -59,10 +59,6 @@ En línea, la de la PC3: <https://uni.rosewt.dev/concurrente/pc3/>. La del TB2 s
   `docs/informe/capturas/tb2/pruebas/` (`web-pruebas.txt` y `ws_latencia.json`).
 - **Las figuras y diagramas** son los del informe (`docs/diagramas/`,
   `docs/informe/generado/figuras/`), referenciados, no copiados.
-- **Las capturas de terminal** son la pantalla entera y en una lámina no se leen: `recortes.py`
-  recorta de las del informe (`docs/informe/capturas/`) solo lo que importa, sin reescalar, y lo
-  deja en `img/captura-*.png`. En la lámina de evidencias se muestran grandes, una por clic.
-  `render.sh` los rehace si hay `uv`.
 
 Si cambian los reports, se corre `tablas.py` del informe (para `cifras.yml`) y después
 `render.sh`; el deck no puede contradecir al informe.
