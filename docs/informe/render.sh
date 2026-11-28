@@ -2,13 +2,15 @@
 # Renderiza el informe de un entregable a Word: un .docx por integrante, con su código en la
 # carátula, y el reporte de participación. Todo queda en salida/ (no se versiona).
 #
-#   bash render.sh                 # el de la PC4: tablas + historial + los tres informes + participación
+#   bash render.sh                 # el del TB2 (informe final): tablas + historial + los tres informes + participación
+#   ENTREGA=pc4 bash render.sh     # el de la PC4 (informe-pc4.qmd), como se entregó
 #   ENTREGA=pc3 bash render.sh     # el de la PC3 (informe.qmd), como se entregó
 #   bash render.sh U000000002      # solo el informe de ese código (más tablas e historial)
 #   FETCH=1 bash render.sh         # además hace git fetch antes de armar el historial
 #
 # El informe de la PC4 (informe-pc4.qmd) contiene el de la PC3: las secciones de secciones/ más las
-# de secciones/pc4/.
+# de secciones/pc4/. El del TB2 (informe-tb2.qmd) contiene los dos, con las secciones observadas en la
+# PC4 corregidas en secciones/tb2/, y sus listados de código van como texto (no corre listados_imagen.py).
 #
 # Pasos:
 #   1. tablas.py: generado/*.json → generado/tablas/*.md y generado/cifras.yml
@@ -17,19 +19,22 @@
 #      equipo.ejemplo.yml), _participacion.md (de participacion.local.md o de la plantilla
 #      _participacion.md), entidades-girado.png (el diagrama de entidades girado, para la PC4) e
 #      historial.md (generar-historial.sh o, si falla, el de ejemplo)
-#   4. quarto render informe.qmd (o informe-pc4.qmd) -M codigo:<código> por cada integrante de `equipo`
-#   5. quarto render participacion.qmd (o participacion-pc4.qmd)
+#   4. quarto render informe.qmd (o informe-pc4.qmd, informe-tb2.qmd) -M codigo:<código> por cada integrante de `equipo`
+#   5. quarto render participacion.qmd (o participacion-pc4.qmd, participacion-tb2.qmd)
 #   6. w:updateFields en cada .docx: Word pregunta al abrir si actualiza los campos (el índice)
+#   7. indice.py: llena el índice con sus entradas y páginas (medidas con LibreOffice), para que no
+#      salga vacío fuera de Word
 set -euo pipefail
 cd "$(dirname "$0")"
 
 command -v quarto >/dev/null 2>&1 || { echo "error: falta quarto (https://quarto.org)" >&2; exit 1; }
 
-ENTREGA="${ENTREGA:-pc4}"
+ENTREGA="${ENTREGA:-tb2}"
 case "$ENTREGA" in
   pc3) fuente=informe.qmd;     sufijo="";     etiqueta=PC3 ;;
   pc4) fuente=informe-pc4.qmd; sufijo="-pc4"; etiqueta=PC4 ;;
-  *) echo "error: ENTREGA tiene que ser pc3 o pc4, es '$ENTREGA'" >&2; exit 1 ;;
+  tb2) fuente=informe-tb2.qmd; sufijo="-tb2"; etiqueta=TB2 ;;
+  *) echo "error: ENTREGA tiene que ser pc3, pc4 o tb2, es '$ENTREGA'" >&2; exit 1 ;;
 esac
 echo "→ informe de la $etiqueta ($fuente)"
 
@@ -45,8 +50,10 @@ fi
 
 echo "→ verificación de limpieza"
 python3 ../../scripts/verificar_limpieza.py
+
 # Los listados de código y de terminal pasan a imagen (una línea larga se parte mal en Word).
-# Solo en el informe de la PC4.
+# Solo en el informe de la PC4, como se entregó. En el del TB2 van como texto: el docente observó en la
+# PC4 que en una imagen no se puede buscar el código (tablas.py los deja como texto).
 # Necesita Chrome y pygments; si falta alguno, se avisa y los listados quedan como texto, que es como
 # los escribe tablas.py.
 if [ "$ENTREGA" = pc4 ]; then
@@ -70,7 +77,7 @@ else
   cp equipo.ejemplo.yml generado/local/equipo.yml
 fi
 # La participación de cada entregable: la llenada (no versionada) o, si no existe, su plantilla.
-for p in participacion participacion-pc4; do
+for p in participacion participacion-pc4 participacion-tb2; do
   if [ -f "$p.local.md" ]; then
     cp "$p.local.md" "generado/local/_$p.md"
   else
@@ -89,6 +96,19 @@ if [ -f "$entidades" ]; then
   else
     echo "aviso: sin ImageMagick (magick o convert): el diagrama de entidades va sin girar y se lee peor" >&2
     cp "$entidades" generado/local/entidades-girado.png
+  fi
+fi
+# La arquitectura del TB2 también es apaisada (3474 × 1422): va girada a página completa, como la de
+# entidades. La copia girada se arma desde ../diagramas/arquitectura-tb2.png, que no se toca.
+arquitectura=../diagramas/arquitectura-tb2.png
+if [ -f "$arquitectura" ]; then
+  if command -v magick >/dev/null 2>&1; then
+    magick "$arquitectura" -rotate -90 generado/local/arquitectura-girada.png
+  elif command -v convert >/dev/null 2>&1; then
+    convert "$arquitectura" -rotate -90 generado/local/arquitectura-girada.png
+  else
+    echo "aviso: sin ImageMagick (magick o convert): la arquitectura va sin girar y se lee peor" >&2
+    cp "$arquitectura" generado/local/arquitectura-girada.png
   fi
 fi
 if ! ./generar-historial.sh; then
@@ -143,13 +163,19 @@ os.replace(tmp, ruta)
 PY
 }
 
+informes=()
 for c in "${codigos[@]}"; do
   nombre="1ACC0065_${etiqueta}_202610_Informe_${c}.docx"
   echo "→ $nombre"
   quarto render "$fuente" -M "codigo:$c" --output "$nombre" --quiet
   mover "$nombre" || { echo "error: quarto no produjo $nombre" >&2; exit 1; }
   actualizar_campos "salida/$nombre"
+  informes+=("salida/$nombre")
 done
+# El índice con sus entradas y páginas, para que no salga vacío fuera de Word (el visor del Aula, LibreOffice,
+# un PDF): indice.py mide las páginas con LibreOffice. Word lo vuelve a calcular al abrir. Sin soffice, avisa.
+echo "→ índice"
+python3 indice.py "${informes[@]}" || echo "aviso: indice.py falló; el índice de los .docx queda para Word" >&2
 
 if [ "$#" -eq 0 ]; then
   participacion="1ACC0065-202620_Participación_${etiqueta}.docx"
@@ -167,6 +193,7 @@ fi
 
 fuentes=(informe.qmd secciones/*.qmd _participacion.md)
 [ "$ENTREGA" = pc4 ] && fuentes=(informe-pc4.qmd secciones/*.qmd secciones/pc4/*.qmd _participacion-pc4.md)
+[ "$ENTREGA" = tb2 ] && fuentes=(informe-tb2.qmd secciones/*.qmd secciones/pc4/*.qmd secciones/tb2/*.qmd _participacion-tb2.md)
 n_pendiente="$(cat "${fuentes[@]}" | grep -c 'title="PENDIENTE' || true)"
 n_placeholder="$( (grep -l '"placeholder": *true' generado/*.json 2>/dev/null || true) | wc -l)"
 echo

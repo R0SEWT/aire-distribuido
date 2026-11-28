@@ -1,0 +1,330 @@
+<!-- f.10) TB2 · Desarrollo del frontend web: diseño adecuado a la experiencia de usuario final y los módulos del
+enunciado (ingreso, panel, resultados de entrenamiento y simulación, panel de administración del clúster). El
+código vive en web/; el diseño, en docs/specs/2026-11-21-frontend-tb2-design.md. Las capturas las produce la
+sesión del frontend en capturas/tb2/<pantalla>/; cada una tiene su aviso si-falta. -->
+
+## Desarrollo del frontend web {#sec-frontend}
+
+La interfaz es la parte D del sistema: una aplicación de una sola página (SPA) que le muestra a una
+persona que no programa lo que el sistema sabe del aire. Hasta la PC4, ver una alerta exigía
+mandar un pedido con `curl` o Postman. La interfaz responde tres preguntas, cada una para quien la
+necesita:
+
+1. **¿Cuál es el último estado de cada estación, y cuáles están en alerta?** Para cualquiera que
+   viva o trabaje cerca de una estación, o que la vigile.
+2. **¿Qué significa eso para la gente que vive cerca?** Es el impacto social que pide el enunciado,
+   con datos reales.
+3. **¿Cómo se entrena el modelo en el clúster, y cómo se está portando el sistema?** Para quien lo
+   administra.
+
+Una decisión atraviesa todas las pantallas: **no hay un «ahora»**. Los datos de OEFA son de campañas
+pasadas y el sistema no recibe lecturas en vivo: recibe las que alguien le manda. Por eso la
+interfaz nunca dice «ahora», sino **«último estado recibido»**, siempre con su fecha. Para mostrar el
+sistema en marcha, un administrador carga un **escenario**: 48 horas reales en que muchas estaciones
+midieron a la vez, que se mandan a la API lectura por lectura (@sec-evaluacion).
+
+### Cómo está construida {#sec-frontend-arquitectura}
+
+La interfaz está en `web/`, escrita en TypeScript estricto con React {{< meta cifras.tb2.react >}}
+(uno de los dos *frameworks* que nombra el enunciado), Vite para compilar, Tailwind
+{{< meta cifras.tb2.tailwind >}} para los estilos, React Router para las rutas, TanStack Query para
+los pedidos y su caché, y D3 para el mapa y los gráficos. No usa una biblioteca de componentes: los
+componentes base (tarjeta, cifra, frase, banda, tabla, estado) son propios y se comparten entre
+pantallas. Tres decisiones la ordenan:
+
+- **Los tipos salen del contrato.** Los tipos de cada ruta se generan desde
+  `docs/api/openapi.yaml` (`src/api/contrato.d.ts`), así que la interfaz y la API hablan del mismo
+  contrato que se ve en Swagger: si el contrato cambia, la interfaz deja de compilar donde no
+  coincide.
+- **La interfaz no calcula nada del modelo.** La alerta, la banda INCA y el régimen los da la API;
+  la interfaz los presenta. Si la pantalla y la API difieren, manda la API.
+- **Funciona sin internet.** El mapa se dibuja con D3 sobre un GeoJSON de los departamentos que va
+  en la propia aplicación, sin mosaicos de terceros, y las fuentes van empaquetadas. Eso es también
+  lo que permite una política de contenido estricta (@sec-integracion).
+
+Se sirve compilada desde el servicio `web` del Compose, un Caddy que además pasa `/api` y `/ws` a la
+API (@sec-integracion). En el despliegue público está en <https://aire.rosewt.dev>.
+
+### Los módulos del enunciado {#sec-modulos}
+
+El enunciado pide cuatro módulos y la parte D, una visualización del impacto. La @tbl-modulos dice en
+qué pantalla está cada uno y quién la ve. El menú es una barra de píldoras arriba, con el estado de
+la API (un punto verde, ámbar o rojo), el modo proyector y la salida; un usuario común no ve
+Entrenamiento ni Clúster.
+
+::: {#tbl-modulos tbl-colwidths="[27,17,12,44]"}
+| Módulo del enunciado | Pantalla | Quién la ve | Qué muestra |
+|:---|:---|:---|:---|
+| Inicio de sesión / autenticación | Ingreso | Sin sesión | Usuario y clave contra `POST /api/auth/token`; o entrar como invitado (@fig-ui-ingreso) |
+| Panel de usuario (*dashboard*) | Panel y Estación | Todos | El mapa del Perú con el último estado de cada estación, la lista por gravedad y el detalle de una estación (@fig-ui-panel, @fig-ui-estacion) |
+| Visualización de resultados: simulación | Simulación | Todos | Lecturas reales mandadas una por una a la API: cómo se llena la ventana de 24 horas y cuándo se enciende la alerta (@fig-ui-simulacion) |
+| Visualización de resultados: entrenamiento | Entrenamiento | Administrador | El formulario del entrenamiento distribuido, sus rondas y su resultado (@fig-ui-entrenamiento-formulario, @fig-ui-entrenamiento-rondas) |
+| Panel administrador: métricas del cluster (uso CPU, latencia, número de nodos, *logs*) | Clúster | Administrador | Los nodos del pool, el CPU y la memoria del coordinador, la latencia por ruta, las escrituras y los eventos del clúster (@fig-ui-cluster) |
+| Visualización del impacto social (parte D) | Impacto | Todos | Cuánto tiempo, dónde y junto a qué actividad el aire superó el ECA, y quién vive ahí (@fig-ui-impacto) |
+
+Los módulos que pide el enunciado y la pantalla que los cumple
+:::
+
+Toda pantalla empieza igual: un título, una bajada en una frase que dice qué se ve y de dónde sale,
+y sus tarjetas. Y toda pantalla tiene los mismos cinco estados además del normal: cargando, vacío
+(con lo que hay que hacer para llenarla), error de la API con un botón para reintentar, sesión
+vencida (vuelve al ingreso) y sin permiso.
+
+#### Ingreso
+
+Usuario y clave contra `POST /api/auth/token`. Con un 401 la pantalla dice «usuario o clave
+incorrectos», sin decir cuál de los dos; si la API no responde, lo dice y ofrece reintentar. No hay
+registro: las cuentas las configura quien levanta el sistema. Debajo del formulario, el botón «No
+pienso crearme una cuenta aquí» abre un diálogo que deja entrar como **invitado**: la API responde un
+token de la cuenta que designó el servidor, de rol `usuario`, y la sesión se abre por el mismo camino
+que el ingreso normal (@sec-integracion).
+
+![La pantalla de ingreso](capturas/tb2/ingreso/01-ingreso.png){#fig-ui-ingreso width=15cm}
+
+:::: {si-falta="capturas/tb2/ingreso/01-ingreso.png"}
+::: {.callout-warning title="PENDIENTE"}
+Captura real de pantalla: la pantalla de ingreso con el formulario y el botón del invitado. Va en
+`docs/informe/capturas/tb2/ingreso/01-ingreso.png` (la produce la sesión del frontend).
+:::
+::::
+
+#### Panel
+
+Es la pantalla de inicio. Tiene el **mapa del Perú** con las {{< meta cifras.impacto.estaciones_ficha >}}
+estaciones de la ficha en su lugar, cada una en uno de tres estados, con su color y su palabra:
+**con estado** (el color de su banda INCA y un anillo si está en alerta), **sin datos suficientes**
+(recibió lecturas, pero menos de {{< meta cifras.pc4.minimo_lecturas >}} en la ventana de 24 horas) y
+**no mide PM por hora**: {{< meta cifras.impacto.estaciones_sin_pm >}} estaciones son de muestreo
+manual o no tienen PM2,5 y PM10 horarios: no están en el gold ni en los datos de prueba, así que no
+tienen estado, y se dibujan apagadas, con esa leyenda. Que se vean es deliberado: una zona sin estación, o con una que no mide por hora, no es una
+zona con aire limpio.
+
+Arriba, tres cifras (estaciones en alerta, estaciones con estado y la fecha del último estado
+recibido) y una frase que las dice en llano. Debajo, la **lista de estaciones ordenada por
+gravedad**: las que están en alerta primero y después por banda INCA, cada una con su media de 24
+horas de PM2,5 y PM10, su banda, su régimen y la fecha de ese estado. El mapa se puede recorrer con
+el teclado en ese mismo orden. Con un sistema recién levantado ninguna estación tiene estado: en vez
+de un mapa gris y tres ceros, el panel explica por qué y ofrece cargar el escenario o ir a la
+simulación. El panel se actualiza solo cuando llega un estado nuevo por el WebSocket
+(@sec-tiempo-real).
+
+![El panel del administrador después del escenario, un día simulado y una lectura a mano: tres estaciones en alerta, el mapa con sus anillos, las tres cifras y la lista por gravedad](capturas/tb2/panel/05-panel-admin.png){#fig-ui-panel width=16cm}
+
+:::: {si-falta="capturas/tb2/panel/05-panel-admin.png"}
+::: {.callout-warning title="PENDIENTE"}
+Captura real de pantalla: el panel después de cargar el escenario, con el mapa, las tres cifras y la
+lista por gravedad. Va en `docs/informe/capturas/tb2/panel/05-panel-admin.png` (la produce la sesión del
+frontend).
+:::
+::::
+
+#### Estación
+
+El detalle de una estación: en grande, las medias de 24 horas de PM2,5 y de PM10, cuántas lecturas
+tiene la ventana, si hay alerta, la banda INCA y el régimen de la última lectura, con una frase en
+llano («La media de las últimas 24 horas de PM10 es … µg/m³: supera el ECA»). Debajo, la **curva**
+de las lecturas que la interfaz vio en la sesión y su media móvil de 24 horas, con la línea del ECA
+y las bandas INCA de fondo, para PM2,5 o PM10. Un desplegable, «¿De dónde sale este número?», explica
+la regla de la alerta, cita las dos normas y dice por qué el régimen no es la alerta
+(@sec-alerta). Cierra la ficha de la estación: el objeto fiscalizado, su tipo de actividad, dónde
+está, las fechas en que midió y la población de su distrito.
+
+![CA-ESP-01 en alerta: las medias de 24 horas, la banda, el régimen y la curva de lo que la sesión envió, con la línea del ECA](capturas/tb2/estacion/01-estacion-ca-esp-01.png){#fig-ui-estacion width=16cm}
+
+:::: {si-falta="capturas/tb2/estacion/01-estacion-ca-esp-01.png"}
+::: {.callout-warning title="PENDIENTE"}
+Captura real de pantalla: una estación en alerta, con la tarjeta de las medias, la frase y la curva.
+Va en `docs/informe/capturas/tb2/estacion/01-estacion-ca-esp-01.png` (la produce la sesión del frontend).
+:::
+::::
+
+#### Simulación
+
+Es la «simulación» del enunciado y la forma de ver el sistema funcionando. El usuario **elige los
+parámetros**: una de las {{< meta cifras.impacto.estaciones_pm >}} estaciones con PM por hora, uno de
+los días de prueba y un ritmo ({{< meta cifras.tb2.ritmo_lenta >}}, {{< meta cifras.tb2.ritmo_normal >}}
+o {{< meta cifras.tb2.ritmo_rapida >}} horas simuladas por segundo). La interfaz manda las lecturas
+reales de ese día una por una a `POST /api/predicciones` y la pantalla muestra cómo se llena la
+ventana, en qué lectura aparece la media y en qué hora se enciende la alerta. Al terminar, una tabla
+compara lo que respondió la API con lo esperado, calculado aparte sin consultarla
+(@sec-evaluacion). También se puede mandar una **lectura a mano** (PM2,5 y PM10 para la hora
+siguiente al último estado de una estación). El administrador carga desde aquí el escenario.
+
+La simulación cambia el estado que ven todos (el último estado de la estación queda guardado), y la
+pantalla lo avisa antes de empezar. Si una estación ya tiene un estado posterior al día elegido, la
+API respondería bien pero el panel no cambiaría, porque el último estado no retrocede: la interfaz lo
+detecta antes y ofrece días posteriores. Mientras una simulación está en curso, la barra lo dice en
+cualquier pantalla y el navegador pregunta antes de cerrar la pestaña.
+
+![La simulación de un día que cruza el ECA (CA-ESP-01, 21/12/2021, ritmo rápido): la ventana llena y la alerta encendida desde las 07:00 por PM10](capturas/tb2/simulacion/06-dia-cruza-eca-terminado.png){#fig-ui-simulacion width=16cm}
+
+:::: {si-falta="capturas/tb2/simulacion/06-dia-cruza-eca-terminado.png"}
+::: {.callout-warning title="PENDIENTE"}
+Captura real de pantalla: una simulación de un día que termina en alerta, con los controles a la
+vista. Va en `docs/informe/capturas/tb2/simulacion/06-dia-cruza-eca-terminado.png` (la produce la sesión del
+frontend).
+:::
+::::
+
+#### Entrenamiento
+
+Solo para administradores. Un **formulario** con los parámetros del entrenamiento distribuido
+(cuántos nodos, cuántas réplicas del gold y la semilla), con los nodos libres a la vista. Los
+rechazos de la API se muestran con sus palabras: «ya hay un entrenamiento en curso» (409) o «hay 2
+nodos libres en el pool y se pidieron 4» (422).
+
+Un entrenamiento real sobre el gold dura milisegundos, así que no hay nada que ver «avanzar». La
+interfaz abre el WebSocket antes de lanzarlo, recibe todas las rondas (`entrenamiento.ronda`) y las
+**reproduce a ritmo humano**: la inercia por iteración, una curva que baja, y el tiempo de cada nodo
+en cada ronda, en barras. La pantalla dice cuánto duró de verdad y que lo que se ve es una
+reproducción. Al terminar muestra el resultado: iteraciones, motivo de parada, diferencia con el
+K-Means secuencial, tiempo total y si el modelo quedó activo; si abortó, el error con el nodo que
+falló. Con más de una réplica es una medición y no cambia el modelo activo, y la pantalla lo dice.
+Debajo, el historial de entrenamientos.
+
+![El formulario del entrenamiento con los parámetros ingresados desde la interfaz: dos nodos, una réplica y la semilla 42](capturas/tb2/entrenamiento/03-formulario-configurado.png){#fig-ui-entrenamiento-formulario width=16cm}
+
+:::: {si-falta="capturas/tb2/entrenamiento/03-formulario-configurado.png"}
+::: {.callout-warning title="PENDIENTE"}
+Captura real de pantalla: el formulario del entrenamiento con los nodos libres. Va en
+`docs/informe/capturas/tb2/entrenamiento/03-formulario-configurado.png` (la produce la sesión del frontend).
+:::
+::::
+
+![La reproducción de las rondas a ritmo humano: la inercia por iteración y el tiempo de cada nodo](capturas/tb2/entrenamiento/04-rondas-reproduciendose.png){#fig-ui-entrenamiento-rondas width=16cm}
+
+:::: {si-falta="capturas/tb2/entrenamiento/04-rondas-reproduciendose.png"}
+::: {.callout-warning title="PENDIENTE"}
+Captura real de pantalla: las rondas de un entrenamiento, con la curva de inercia y las barras por
+nodo. Va en `docs/informe/capturas/tb2/entrenamiento/04-rondas-reproduciendose.png` (la produce la
+sesión del frontend).
+:::
+::::
+
+![El resultado del entrenamiento: las iteraciones, el motivo de parada, la diferencia con el K-Means secuencial, cuánto duró de verdad y el modelo que quedó activo](capturas/tb2/entrenamiento/05-resultado.png){#fig-ui-entrenamiento-resultado width=16cm}
+
+:::: {si-falta="capturas/tb2/entrenamiento/05-resultado.png"}
+::: {.callout-warning title="PENDIENTE"}
+Captura real de pantalla: el resultado de un entrenamiento terminado, con el modelo activo. Va en
+`docs/informe/capturas/tb2/entrenamiento/05-resultado.png` (la produce la sesión del frontend).
+:::
+::::
+
+#### Clúster
+
+Solo para administradores; es el panel de administración que pide el enunciado, con sus cuatro
+métricas, cada una con su nombre verdadero:
+
+- **Número de nodos**: los nodos del pool, con su nombre, su dirección, sus workers, su latencia (la
+  del último `PING`) y si están libres.
+- **Uso de CPU**: el protocolo no transporta el CPU de cada nodo, así que la pantalla no lo inventa.
+  Muestra el CPU y la memoria del **proceso coordinador**, que la API publica en `GET /api/metricas`,
+  y el **tiempo de respuesta de cada nodo en cada ronda**, medido desde el coordinador, que es lo que
+  se sabe del trabajo de los nodos.
+- **Latencia**: los pedidos y los percentiles 50, 95 y 99 de cada ruta de la API, con la línea de
+  los 100 ms.
+- ***Logs***: los eventos del clúster (altas, bajas y errores de nodos), del más reciente al más
+  antiguo, desde `GET /api/cluster/eventos`. Una baja y un alta después de cada entrenamiento son lo
+  normal (los nodos cierran y vuelven a llamar), y la pantalla lo explica.
+
+Completan la pantalla las escrituras por almacén (escritas, descartadas y fallidas) y la salud de la
+API, de MongoDB, de Redis y del modelo activo. Los datos se vuelven a pedir cada
+{{< meta cifras.tb2.cluster_cada_s >}} segundos.
+
+![El panel de administración del clúster, la página entera: el número de nodos, el CPU y la memoria del coordinador, la salud, los eventos, las escrituras y la latencia por ruta con la línea de los 100 ms](capturas/tb2/cluster/02-cluster-completa.png){#fig-ui-cluster width=10.5cm}
+
+:::: {si-falta="capturas/tb2/cluster/02-cluster-completa.png"}
+::: {.callout-warning title="PENDIENTE"}
+Captura real de pantalla: el clúster con tres nodos, el CPU y la memoria del coordinador, la latencia
+por ruta con la línea de 100 ms y los eventos. Va en `docs/informe/capturas/tb2/cluster/02-cluster-completa.png`
+(la produce la sesión del frontend).
+:::
+::::
+
+#### Impacto
+
+Una página para leer de arriba abajo, con las cifras de la @sec-impacto: qué son el ECA y el INCA en
+dos frases; cuánto tiempo superó el aire el ECA y cómo se reparten las horas entre las bandas INCA;
+dónde y junto a qué actividad, estación por estación, con las semanas en que cada una midió; quién
+vive en cada distrito, como contexto de su fila; si la alerta por régimen habría servido; con cuánta
+anticipación se encienden las señales; y lo que este dato no puede decir, a la vista y no en letra
+chica. Las cifras salen de un archivo generado desde el gold (`impacto.json`), el mismo del que sale
+la @sec-impacto de este informe: la página y el informe no pueden decir cosas distintas.
+
+![La página de impacto: las horas sobre el ECA por estación, con su actividad fiscalizada y las semanas en que midió](capturas/tb2/impacto/05-por-estacion.png){#fig-ui-impacto width=16cm}
+
+:::: {si-falta="capturas/tb2/impacto/05-por-estacion.png"}
+::: {.callout-warning title="PENDIENTE"}
+Captura real de pantalla: la página de impacto con las horas sobre el ECA y la tabla por estación. Va
+en `docs/informe/capturas/tb2/impacto/05-por-estacion.png` (la produce la sesión del frontend).
+:::
+::::
+
+### Decisiones de experiencia de usuario {#sec-ux}
+
+El enunciado pide un «diseño adecuado a UX para usuario final». Para alguien que no programa, un
+número sin contexto no dice nada, y un color sin palabra no lo ve todo el mundo. Las reglas que
+siguen todas las pantallas:
+
+- **Una frase en llano por cada cifra importante**: qué significa y comparada con qué. La frase se
+  arma con una plantilla fija desde los datos, no se escribe a mano.
+- **El color nunca va solo.** Cada estado lleva su palabra o su ícono, para quien no distingue los
+  colores y para una pantalla proyectada.
+- **Las mismas palabras para lo mismo**, y las mismas de este informe: «último estado recibido»,
+  «media de 24 horas», «en alerta», «banda INCA». El «excede el ECA» de un régimen se dice del grupo
+  de lecturas, nunca de la estación.
+- **«¿De dónde sale este número?»** junto a las cifras que lo necesitan: la regla, la norma y el
+  archivo de origen.
+- **Lo que no se sabe también se muestra**: las estaciones que no miden PM por hora, la ventana con
+  menos de {{< meta cifras.pc4.minimo_lecturas >}} lecturas y lo que el dato de impacto no permite
+  afirmar.
+- **Modo proyector**, con letra más grande y más contraste, para la sustentación (@fig-ui-proyector).
+  El texto tiene al menos 4,5:1 de contraste en los dos modos (lo comprueba una prueba sobre los
+  colores del diseño).
+- **El teclado alcanza para todo**: el mapa se recorre en orden de gravedad, los diálogos atrapan el
+  foco y se cierran con Escape, y al cambiar de pantalla el foco va al contenido.
+- **Nada se pierde sin avisar**: un F5 no saca de la sesión, la interfaz avisa antes de que venza el
+  token y el navegador pregunta antes de cerrar una simulación en curso.
+
+![El panel en modo proyector](capturas/tb2/armazon/01-modo-proyector-panel.png){#fig-ui-proyector width=15cm}
+
+:::: {si-falta="capturas/tb2/armazon/01-modo-proyector-panel.png"}
+::: {.callout-warning title="PENDIENTE"}
+Captura real de pantalla: el panel en modo proyector. Va en
+`docs/informe/capturas/tb2/armazon/01-modo-proyector-panel.png` (la produce la sesión del frontend).
+:::
+::::
+
+### Tiempo real y parámetros desde la interfaz {#sec-tiempo-real}
+
+La rúbrica pide que la interfaz «muestra los resultados en tiempo real» y que «configura el
+aplicativo con parámetros ingresados desde la UI». Las dos cosas pasan por la API:
+
+- **El estado de las estaciones, en vivo.** Cada vez que una predicción cambia el último estado de
+  una estación, la API emite un evento `estacion.regimen` por WebSocket a todos los clientes
+  conectados. El evento es el estado de la estación, no cada lectura: de una misma estación sale a
+  lo sumo uno cada {{< meta cifras.tb2.aviso_ms >}} ms, con el último, para que una ráfaga de
+  lecturas no llene el búfer de ningún cliente. La interfaz abre **un solo WebSocket por sesión** y,
+  con cada evento, actualiza la
+  caché de la estación: el panel, el mapa y la estación se redibujan sin volver a pedir nada. Si la
+  conexión se corta, la interfaz reconecta con una espera creciente y, al volver, pide de nuevo el
+  estado de todas las estaciones, porque los eventos emitidos durante el corte se perdieron. Si el
+  servidor cierra el WebSocket porque el token venció, la interfaz no insiste: vuelve al ingreso.
+  La @fig-ui-en-vivo es el panel de un invitado, en otro navegador, llenándose solo mientras un
+  administrador carga el escenario; del pedido a la llegada del evento pasan unos
+  {{< meta cifras.frontend.ws_evento_p50 >}} ms de mediana (@sec-latencia-tb2).
+- **Las rondas de un entrenamiento**, por los eventos `entrenamiento.ronda` y `entrenamiento.fin`,
+  que solo reciben los administradores.
+- **Los parámetros.** La simulación toma de la interfaz la estación, el día y el ritmo; la lectura a
+  mano, los valores de PM2,5 y PM10; y el entrenamiento, los nodos, las réplicas y la semilla, que
+  van tal cual en el cuerpo de `POST /api/entrenamientos` y llegan a los nodos como el reparto de la
+  @sec-camino.
+
+![Tiempo real: el panel de un invitado, en otra sesión, a mitad del escenario que carga un administrador; se llena solo por el WebSocket](capturas/tb2/panel/03-panel-en-vivo-invitado.png){#fig-ui-en-vivo width=16cm}
+
+:::: {si-falta="capturas/tb2/panel/03-panel-en-vivo-invitado.png"}
+::: {.callout-warning title="PENDIENTE"}
+Captura real de pantalla: el panel del invitado a mitad del escenario. Va en
+`docs/informe/capturas/tb2/panel/03-panel-en-vivo-invitado.png` (la produce la sesión del frontend).
+:::
+::::

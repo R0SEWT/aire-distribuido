@@ -69,6 +69,9 @@ COMANDOS = {
     "reports/alerta_24h.json": "go test ./ventana -run LaVentanaSobreElGold -actualizar",
     "reports/api_latencia.json": "cmd/carga",
     "docs/postman/lecturas_prueba.csv": "docs/postman/generar_lecturas.py",
+    # TB2
+    "reports/impacto.json": "scripts/impacto.py",
+    "web/public/datos/series.json": "scripts/impacto.py",
 }
 
 # Reglas de descarte en el orden de la cascada de Go (datos/doc.go, «Reglas»): cada fila descartada
@@ -283,7 +286,7 @@ class Informe:
         # estado ni el código de salida del informe de la PC3. main() cambia el ámbito antes de los
         # métodos de la PC4; las cinco listas de abajo son las del ámbito en curso.
         self.ambito = "pc3"
-        self._listas = {a: {n: [] for n in LISTAS} for a in ("pc3", "pc4")}
+        self._listas = {a: {n: [] for n in LISTAS} for a in ("pc3", "pc4", "tb2")}
 
     placeholders = property(lambda self: self._listas[self.ambito]["placeholders"])
     sinteticos = property(lambda self: self._listas[self.ambito]["sinteticos"])
@@ -1688,7 +1691,11 @@ class Informe:
         if sucios:
             self.desactualizadas.append("código con cambios sin commitear (" + ", ".join(sucios) + "): sus "
                                         "fragmentos no serían los del commit que se entrega")
-        for archivo, ident, ruta, tramos_def, titulo in lista:
+        for frag in lista:
+            # Un sexto elemento opcional trae opciones: max (líneas que se admiten antes de avisar),
+            # lenguaje, sin_comentarios (para archivos de configuración: se quitan las líneas «#»).
+            archivo, ident, ruta, tramos_def, titulo = frag[:5]
+            opciones = frag[5] if len(frag) > 5 else {}
             fuente = RAIZ / ruta
             if not fuente.exists():
                 self.faltantes.append(ruta)
@@ -1708,6 +1715,11 @@ class Informe:
                     elif t[0] == "rango":
                         a = buscar(t[1])
                         tramos.append((a, buscar(t[2], a)))
+                    elif t[0] == "lineas":    # n líneas desde la que cumple el patrón
+                        a = buscar(t[1])
+                        tramos.append((a, min(a + t[2] - 1, len(lineas) - 1)))
+                    elif t[0] == "archivo":   # el archivo entero (con sin_comentarios, sin sus comentarios)
+                        tramos.append((0, len(lineas) - 1))
                     elif t[0] == "funcion":   # el comentario de documentación y el cuerpo entero
                         f = buscar(t[1])
                         c = f
@@ -1727,17 +1739,29 @@ class Informe:
             codigo, rangos = [], []
             for a, b in tramos:
                 bloque = lineas[a:b + 1]
+                if opciones.get("sin_comentarios"):
+                    bloque = [l for l in bloque if not l.lstrip().startswith("#")]
+                    # Sin los comentarios quedan blancos seguidos: uno solo.
+                    bloque = [l for i, l in enumerate(bloque) if l.strip() or (i > 0 and bloque[i - 1].strip())]
+                if opciones.get("quitar"):   # un prefijo que se saca de cada línea (p. ej., «// » de un Output de Go)
+                    bloque = [l.lstrip("\t")[len(opciones["quitar"]):] if l.lstrip("\t").startswith(opciones["quitar"]) else l
+                              for l in bloque]
                 sangria = min((len(l) - len(l.lstrip("\t")) for l in bloque if l.strip()), default=0)
                 codigo += [l[sangria:].replace("\t", "    ") for l in bloque] + [""]
                 rangos.append(f"{a + 1}–{b + 1}")
-            n = sum(b - a + 1 for a, b in tramos)
-            if n > 30:
+            n = sum(1 for l in codigo if l.strip()) if opciones.get("sin_comentarios") else sum(b - a + 1 for a, b in tramos)
+            if n > opciones.get("max", 30):
                 self.problema(ruta, f"el fragmento «{ident}» tiene {n} líneas: ¿cambió el código?")
-            lenguaje = "lua" if ruta.endswith("redis.go") and "guion" in archivo else "go"
+            sufijo = Path(ruta).suffix
+            lenguaje = opciones.get("lenguaje") or ("lua" if ruta.endswith("redis.go") and "guion" in archivo else
+                                                    {".ts": "typescript", ".tsx": "typescript", ".yml": "yaml",
+                                                     ".yaml": "yaml"}.get(sufijo, "go"))
             cuerpo = f"```{lenguaje}\n" + "\n".join(codigo).rstrip() + "\n```"
+            donde = ("completo, sin sus comentarios" if opciones.get("sin_comentarios") and tramos == [(0, len(lineas) - 1)]
+                     else f"líneas {' y '.join(rangos)}" + (", sin sus comentarios" if opciones.get("sin_comentarios") else ""))
             texto = [f"<!-- Generado por tablas.py desde {ruta}. No editar a mano. -->", "",
                      f"::: {{#{ident}}}", cuerpo, "",
-                     f"{titulo} (`{ruta}`, líneas {' y '.join(rangos)})", ":::", ""]
+                     f"{titulo} (`{ruta}`, {donde})", ":::", ""]
             (self.salida / f"{archivo}.md").write_text("\n".join(texto), encoding="utf-8")
 
     # ----------------------------------------------------------------------- calibración y auditoría
@@ -2256,9 +2280,10 @@ class Informe:
          "`GET /api/metricas`: percentiles por ruta medidos dentro del servidor (primeras líneas)"),
     ]
 
-    def salidas(self) -> None:
+    def salidas(self, lista: list | None = None, relativa: str = "capturas/pc4") -> None:
         import re
-        carpeta = AQUI / "capturas" / "pc4"
+        lista = self.SALIDAS if lista is None else lista
+        carpeta = AQUI / relativa
         ancho = 86
 
         def juntar(bloque):
@@ -2273,15 +2298,15 @@ class Informe:
                 bloque = nuevo
             return bloque
 
-        for archivo, ident, txt, tramos, titulo in self.SALIDAS:
+        for archivo, ident, txt, tramos, titulo in lista:
             ruta, destino = carpeta / txt, self.salida / f"{archivo}.md"
-            origen = f"docs/informe/capturas/pc4/{txt}"
+            origen = f"docs/informe/{relativa}/{txt}"
             if not ruta.exists():
                 self.faltantes.append(origen)
                 destino.write_text("\n".join([
                     f"<!-- Generado por tablas.py desde {origen}. No editar a mano. -->", "",
                     "::: {.callout-warning title=\"PENDIENTE\"}",
-                    f"Falta `{origen}`: la salida en texto de la corrida real, que llega con las evidencias de la PC4.", ":::", "",
+                    f"Falta `{origen}`: la salida en texto de la corrida real, que llega con las evidencias.", ":::", "",
                     f"::: {{#{ident}}}", "```text", "(salida pendiente)", "```", "", titulo, ":::", ""]), encoding="utf-8")
                 continue
             lineas = ruta.read_text(encoding="utf-8").splitlines()
@@ -2289,6 +2314,12 @@ class Informe:
             for t in tramos:
                 if t[0] == "cola":
                     bloque = [l for l in lineas if l.strip()][-t[1]:]
+                elif t[0] == "desde":   # n líneas desde la que cumple el patrón (archivos sin líneas «$ …»)
+                    ini = next((i for i, l in enumerate(lineas) if re.search(t[1], l)), None)
+                    if ini is None:
+                        self.problema(origen, f"no se encontró «{t[1]}»: ¿cambió la salida?")
+                        continue
+                    bloque = [l for l in lineas[ini:ini + t[2]] if l.strip()]
                 else:
                     ini = next((i for i, l in enumerate(lineas) if l.startswith("$ ") and re.search(t[1], l)), None)
                     if ini is None:
@@ -2700,7 +2731,7 @@ class Informe:
             total, integ_total = total + n, integ_total + integ
             filas.append((f"`{paquete}`", que, entero(n) if n else "—", entero(integ) if integ else "—"))
         todas = sum(len(re.findall(r"^func Test\w+\(t \*testing\.T\)", a.read_text(encoding="utf-8"), re.M))
-                    for a in RAIZ.rglob("*_test.go") if ".claude" not in a.parts and "node_modules" not in a.parts)
+                    for a in RAIZ.rglob("*_test.go") if ".claude" not in a.relative_to(RAIZ).parts and "node_modules" not in a.relative_to(RAIZ).parts)
         t = pd.DataFrame(filas, columns=["Paquete", "Qué comprueban", "Pruebas", "De integración"])
         self.tabla("pruebas_pc4.md", o, {}, "tbl-pruebas-pc4", titulo, markdown(t, "llrr"), anchos=[18, 58, 11, 13],
                    fuente="Fuente: las funciones `Test…` de los archivos `_test.go` de cada paquete, contadas del código en cada render.",
@@ -2751,10 +2782,10 @@ class Informe:
         ("swagger_ui", "api/rutas.go", r"swagger-ui-dist@([\d.]+)/swagger-ui-bundle", str),
     ]
 
-    def constantes_pc4(self) -> None:
+    def constantes_pc4(self, lista: list | None = None, grupo: str = "pc4") -> None:
         import re
         valores = {}
-        for clave, archivo, patron, fmt in self.CONSTANTES:
+        for clave, archivo, patron, fmt in (self.CONSTANTES if lista is None else lista):
             ruta = RAIZ / archivo
             m = re.search(patron, ruta.read_text(encoding="utf-8"), re.M) if ruta.exists() else None
             if m is None:
@@ -2763,6 +2794,9 @@ class Informe:
                 continue
             crudo = m.group(1).replace("_", "") if fmt is not str else m.group(1)
             valores[clave] = fmt(float(crudo)) if fmt is not str else crudo
+        if grupo != "pc4":
+            self.cifras[grupo] = valores
+            return
         # El modelo sembrado y el tamaño de la tabla, de los JSON de la PC3 que la API lee al arrancar.
         modelo = self.datos.get("kmeans.json") or {}
         if modelo:
@@ -2824,6 +2858,482 @@ class Informe:
          "El punto de control de cada ronda: un buzón de un lugar donde el punto nuevo reemplaza al que no se escribió"),
     ]
 
+    # ----------------------------------------------------------------------- TB2 (Entregable 3)
+    # Lo del TB2 se lee de reports/impacto.json, de web/public/datos/series.json, de docs/informe/salidas-tb2/
+    # (salidas reales en texto), de los _test.go y *.test.ts(x) y del código. Lo que falte o no cuadre queda
+    # en el ámbito "tb2" y sale en generado/tablas/_estado_tb2.md.
+    BANDAS = {"buena": "buena", "moderada": "moderada", "mala": "mala", "umbral_de_cuidado": "umbral de cuidado"}
+
+    def impacto(self) -> None:
+        """reports/impacto.json (scripts/impacto.py): la respuesta a la pregunta de impacto social."""
+        o = "reports/impacto.json"
+        t_est = "Horas con la media de 24 horas sobre el ECA, por estación, con su actividad fiscalizada y la población de su distrito"
+        t_act = "Horas con la media de 24 horas sobre el ECA, por tipo de actividad fiscalizada"
+        t_ant = ("Con cuánta anticipación se encienden las dos señales antes de que la media de 24 horas cruce el ECA, "
+                 "sobre los episodios del gold")
+        d = self.leer_reports("impacto.json")
+        if d is None:
+            for a, i, t in (("impacto_estaciones.md", "tbl-impacto-estaciones", t_est),
+                            ("impacto_actividad.md", "tbl-impacto-actividad", t_act),
+                            ("impacto_anticipacion.md", "tbl-impacto-anticipacion", t_ant)):
+                self.tabla(a, o, None, i, t)
+            self.cifras["impacto"] = {}
+            return
+        alc, tot, est = d["alcance"], d["totales"], d["estaciones"]
+        calc, sobre = tot["horas_calculables"], tot["horas_sobre_eca"]
+        fuentes = d["metadatos"]["fuentes"]
+        self.comprobar(o, len(est) == alc["estaciones_con_pm_horario"], "las estaciones no son las del alcance")
+        self.comprobar(o, sum(e["horas_calculables"] for e in est) == calc, "las horas calculables por estación no suman el total")
+        self.comprobar(o, sum(e["horas_sobre_eca"] for e in est) == sobre, "las horas sobre el ECA por estación no suman el total")
+        self.comprobar(o, sum(tot["inca"].values()) == calc, "las bandas INCA no suman las horas calculables")
+        if self.gold_del_modelo():
+            self.comprobar(o, fuentes["gold"]["sha256"] == self.gold_del_modelo(), "no se calculó sobre el gold de kmeans.json")
+        # Las señales tienen que ser las mismas de reports/alerta_24h.json (la tabla de la alerta de la PC4).
+        a24 = self.reports / "alerta_24h.json"
+        sen = d["senales"]
+        if a24.exists():
+            a = json.loads(a24.read_text(encoding="utf-8"))
+            self.comprobar(o, (a["horas_calculables"], a["horas_sobre_eca"]) == (calc, sobre),
+                           "las horas no son las de reports/alerta_24h.json")
+            self.comprobar(o, a["regimen_alto"]["aciertos"] == sen["regimen_alto"]["aciertos"]
+                           and a["lectura_horaria"]["aciertos"] == sen["lectura_horaria"]["aciertos"],
+                           "las señales no son las de reports/alerta_24h.json")
+
+        filas = []
+        for e in sorted(est, key=lambda e: (-e["horas_sobre_eca"], e["estacion"])):
+            p = e.get("poblacion_distrito") or {}
+            distrito = (f"{titulo_lugar(e['distrito'])} ({titulo_lugar(e['departamento'])}), {entero(p['poblacion'])}"
+                        if e.get("distrito") and p else "(la ficha no trae distrito)")
+            tipo = e["tipo_actividad"] if e["tipo_actividad"] != "no lo dice el nombre" else "(no lo dice el nombre)"
+            filas.append((e["estacion"], f"{escapar(tipo)}: {escapar(e['objeto_fiscalizado'])}", escapar(distrito),
+                          f"{e['primera_fecha']} a {e['ultima_fecha']} ({entero(e['dias_con_datos'])} días)",
+                          entero(e["horas_calculables"]),
+                          f"{entero(e['horas_sobre_eca'])} ({pct(e['horas_sobre_eca'] / e['horas_calculables'], 0)})" if e["horas_calculables"] else "—",
+                          self.BANDAS.get(e["banda_mas_frecuente"], e["banda_mas_frecuente"])))
+        filas.append(("**Total**", "", f"{entero(alc['distritos_con_pm_horario'])} distritos", "", f"**{entero(calc)}**",
+                      f"**{entero(sobre)} ({pct(sobre / calc, 1)})**", ""))
+        t = pd.DataFrame(filas, columns=["Estación", "Actividad y objeto fiscalizado", "Distrito y población (censo 2017)",
+                                         "Periodo con datos", "Horas con media", "Sobre el ECA", "Banda más común"])
+        self.tabla("impacto_estaciones.md", o, d, "tbl-impacto-estaciones", t_est, markdown(t, "lllrrrl"),
+                   anchos=[13, 23, 16, 15, 9, 11, 13],
+                   fuente=f"Fuente: `{o}`, escrito por `scripts/impacto.py` el {d['metadatos']['generado']} sobre el gold y el silver "
+                          f"(sha256 en el archivo) y `reports/poblacion_distritos.csv`.",
+                   nota="Una hora cuenta si su media de 24 horas es calculable (18 lecturas o más en la ventana, la regla de "
+                        "`ventana/ventana.go`). «Sobre el ECA»: PM2,5 > 50 o PM10 > 100 µg/m³ en esa media. La población es la censada "
+                        "del distrito (INEI, Censos Nacionales 2017; la página de cada cifra está en el archivo) y es contexto de la fila: "
+                        "no se suma, porque vivir en el distrito no es respirar el aire de la estación, que mide junto a la actividad "
+                        "fiscalizada.")
+
+        filas = []
+        for ta in sorted(d["tipos_actividad"], key=lambda x: (-x["horas_sobre_eca"], x["tipo_actividad"])):
+            tipo = ta["tipo_actividad"] if ta["tipo_actividad"] != "no lo dice el nombre" else "(no lo dice el nombre)"
+            filas.append((escapar(tipo), entero(len(ta["estaciones"])), entero(len(ta["distritos"])), entero(ta["horas_calculables"]),
+                          entero(ta["horas_sobre_eca"]), pct(ta["horas_sobre_eca"] / ta["horas_calculables"], 1) if ta["horas_calculables"] else "—",
+                          pct(ta["horas_sobre_eca"] / sobre, 0),
+                          self.BANDAS.get(ta["banda_mas_frecuente"], ta["banda_mas_frecuente"])))
+        t = pd.DataFrame(filas, columns=["Tipo de actividad", "Estaciones", "Distritos", "Horas con media", "Sobre el ECA",
+                                         "De sus horas", "Del total sobre el ECA", "Banda más común"])
+        self.tabla("impacto_actividad.md", o, d, "tbl-impacto-actividad", t_act, markdown(t, "lrrrrrrl"),
+                   anchos=[24, 10, 9, 11, 10, 10, 13, 13],
+                   fuente=f"Fuente: `{o}` (`tipos_actividad`), escrito por `scripts/impacto.py`.",
+                   nota="El tipo de actividad sale del nombre del objeto fiscalizado en la ficha de OEFA; cuando el nombre no lo dice, "
+                        "no se adivina.")
+
+        an = d["anticipacion"]
+        tot_a, prev = an["total"], an["solo_con_media_previa"]
+
+        def fila_senal(nombre_s, s_):
+            h, sg = s_["horas_antes"], s_["horas_seguidas"]
+            return (nombre_s, f"{entero(s_['con_senal_previa'])} de {entero(tot_a['episodios'])}",
+                    f"{decimal(h['mediana'], 1)} ({decimal(h['q1'], 1)} a {decimal(h['q3'], 1)})", f"{entero(h['minimo'])} a {entero(h['maximo'])}",
+                    entero(s_["en_el_tope"]), f"{decimal(sg['mediana'], 1)} ({decimal(sg['q1'], 1)} a {decimal(sg['q3'], 1)})", entero(sg["maximo"]))
+
+        filas = [fila_senal("Una lectura horaria sobre el umbral del ECA", tot_a["lectura_horaria"]),
+                 fila_senal(f"Una lectura en el régimen que excede el ECA (régimen {an['regimen_que_excede']})", tot_a["regimen"])]
+        t = pd.DataFrame(filas, columns=["Señal", "Episodios en que se encendió antes", "Horas antes: mediana (Q1 a Q3)",
+                                         "Mínimo a máximo", "En el tope de 23 h", "Horas seguidas justo antes: mediana (Q1 a Q3)",
+                                         "Máximo seguido"])
+        self.tabla("impacto_anticipacion.md", o, d, "tbl-impacto-anticipacion", t_ant, markdown(t, "lrrrrrr"),
+                   anchos=[24, 12, 14, 11, 9, 18, 12],
+                   fuente=f"Fuente: `{o}` (`anticipacion`), escrito por `scripts/impacto.py`.",
+                   nota=f"Un episodio empieza en la hora t en que la media de 24 horas de una estación pasa a superar el ECA sin haberlo "
+                        f"superado en las 24 horas anteriores ({entero(tot_a['episodios'])} episodios, de {entero(an['cruces_hacia_arriba'])} "
+                        f"cruces hacia arriba). «Horas antes» cuenta desde la primera vez que la señal se enciende dentro de la ventana de esa "
+                        f"media y tiene un tope de 23 horas por construcción; «horas seguidas» es la cota baja: cuántas horas seguidas, justo "
+                        f"antes de t, estuvo encendida. Con solo los {entero(prev['episodios'])} episodios cuya hora anterior ya tenía media, "
+                        f"las medianas de «horas antes» son {decimal(prev['lectura_horaria']['horas_antes']['mediana'], 1)} y "
+                        f"{decimal(prev['regimen']['horas_antes']['mediana'], 1)}. Es descriptivo, sobre las mismas lecturas del "
+                        f"entrenamiento: no es un pronóstico.")
+
+        top = sorted(est, key=lambda e: -e["horas_sobre_eca"])
+        con_horas = [e for e in est if e["horas_sobre_eca"] > 0]
+        act = sorted(d["tipos_actividad"], key=lambda x: -x["horas_sobre_eca"])
+        pobl = [x["poblacion"] for x in d["distritos"] if x.get("poblacion")]
+        mayor = max((x for x in d["distritos"] if x.get("poblacion")), key=lambda x: x["poblacion"])
+        lh, rg = tot_a["lectura_horaria"], tot_a["regimen"]
+        v = {"generado": d["metadatos"]["generado"], "estaciones_ficha": entero(alc["estaciones_en_la_ficha"]),
+             "estaciones_pm": entero(alc["estaciones_con_pm_horario"]), "estaciones_sin_pm": entero(len(alc["estaciones_sin_pm_horario"])),
+             "distritos": entero(alc["distritos_con_pm_horario"]), "sin_distrito": ", ".join(alc["estaciones_sin_distrito"]),
+             "lecturas": entero(tot["lecturas"]), "horas_calculables": entero(calc), "horas_sobre_eca": entero(sobre),
+             "pct_sobre_eca": pct(sobre / calc, 1), "estaciones_con_horas": entero(len(con_horas)),
+             "estaciones_sin_horas": entero(len(est) - len(con_horas)),
+             "poblacion_min": entero(min(pobl)), "poblacion_max": entero(max(pobl)), "distrito_mayor": titulo_lugar(mayor["distrito"]),
+             "anio_poblacion": str(mayor["anio"]),
+             "episodios": entero(tot_a["episodios"]), "cruces": entero(an["cruces_hacia_arriba"]),
+             "episodios_con_media_previa": entero(tot_a["con_media_previa"]), "episodios_sin_media_previa": entero(tot_a["sin_media_previa"]),
+             "episodios_sin_senal": entero(tot_a["sin_senal_previa"]),
+             "regimen_que_excede": entero(an["regimen_que_excede"]),
+             "precision_regimen": pct(sen["regimen_alto"]["precision"], 0), "cobertura_regimen": pct(sen["regimen_alto"]["cobertura"], 0),
+             "precision_horaria": pct(sen["lectura_horaria"]["precision"], 0), "cobertura_horaria": pct(sen["lectura_horaria"]["cobertura"], 0)}
+        for clave, s_ in (("horaria", lh), ("regimen", rg)):
+            h, sg = s_["horas_antes"], s_["horas_seguidas"]
+            v |= {f"mediana_{clave}": decimal(h["mediana"], 1).replace(",0", ""), f"q1_{clave}": decimal(h["q1"], 1),
+                  f"q3_{clave}": decimal(h["q3"], 1), f"min_{clave}": entero(h["minimo"]), f"max_{clave}": entero(h["maximo"]),
+                  f"tope_{clave}": entero(s_["en_el_tope"]), f"seguidas_mediana_{clave}": decimal(sg["mediana"], 1).replace(",0", ""),
+                  f"seguidas_q3_{clave}": decimal(sg["q3"], 1).replace(",0", ""), f"seguidas_max_{clave}": entero(sg["maximo"])}
+        for i, e in enumerate(top[:3], 1):
+            v |= {f"top{i}_estacion": e["estacion"], f"top{i}_horas": entero(e["horas_sobre_eca"]),
+                  f"top{i}_pct": pct(e["horas_sobre_eca"] / e["horas_calculables"], 0), f"top{i}_dias": entero(e["dias_con_datos"]),
+                  f"top{i}_distrito": titulo_lugar(e["distrito"]) if e.get("distrito") else "(sin distrito)",
+                  f"top{i}_tipo": e["tipo_actividad"]}
+        for i, ta in enumerate(act[:3], 1):
+            v |= {f"act{i}": ta["tipo_actividad"], f"act{i}_horas": entero(ta["horas_sobre_eca"]),
+                  f"act{i}_pct_total": pct(ta["horas_sobre_eca"] / sobre, 0), f"act{i}_estaciones": entero(len(ta["estaciones"]))}
+        for banda, n in tot["inca"].items():
+            v |= {f"inca_{banda}": entero(n), f"inca_{banda}_pct": pct(n / calc, 1)}
+        self.cifras["impacto"] = v
+
+    def series_prueba(self) -> None:
+        """web/public/datos/series.json: los datos de prueba de la UI y de la evaluación experimental, con lo que la
+        API tiene que responder, y la verificación cruzada contra la API real (salidas-tb2/verificar-series.txt)."""
+        import re
+        o = "web/public/datos/series.json"
+        titulo = "Datos de prueba del TB2: el escenario y los días sueltos, con lo que la API tiene que responder al final de cada tramo"
+        ruta = RAIZ / o
+        if not ruta.exists():
+            self.faltantes.append(o)
+            self.tabla("series_prueba.md", o, None, "tbl-series", titulo)
+            self.cifras["series"] = {}
+            return
+        d = json.loads(ruta.read_text(encoding="utf-8"))
+        esc, dias = d["escenario"], d["dias"]
+
+        def media(m):
+            if not m or m.get("pm2_5") is None:
+                return f"sin media ({entero(m['lecturas'])} lecturas)" if m else "—"
+            return f"{decimal(m['pm2_5'], 1)} / {decimal(m['pm10'], 1)} ({entero(m['lecturas'])} lect.)"
+
+        def hora(iso):
+            return iso[:16].replace("T", " ") if iso else "no se enciende"
+
+        filas = []
+        alertas_esc = [k for k, e in esc["esperado"].items() if e["alerta"]]
+        filas.append(("Escenario: muchas estaciones a la vez", f"{entero(len(esc['estaciones']))} estaciones",
+                      f"{esc['desde'][:10]} a {esc['hasta'][:10]} ({entero(esc['horas'])} h)", entero(len(esc["lecturas"])),
+                      f"{entero(len(alertas_esc))} estaciones en alerta al final", "—"))
+        for x in dias:
+            e = x["esperado"]
+            filas.append((escapar(x["descripcion"].split(":")[0]), x["estacion"],
+                          f"{x['desde'][:10]} a {x['hasta'][:10]}", entero(len(x["lecturas"])),
+                          f"{media(e['media_24h'])}; alerta {'sí' if e['alerta'] else 'no'}; INCA {self.BANDAS.get(e['inca'], 'sin banda') if e['inca'] else 'sin banda'}",
+                          hora(e.get("primera_alerta"))))
+        t = pd.DataFrame(filas, columns=["Caso", "Estación", "Tramo", "Lecturas",
+                                         "Al final: media de PM2,5 / PM10 (µg/m³), alerta e INCA", "Primera alerta"])
+        total = len(esc["lecturas"]) + sum(len(x["lecturas"]) for x in dias)
+        self.tabla("series_prueba.md", o, d, "tbl-series", titulo, markdown(t, "lllrll"), anchos=[21, 14, 18, 9, 25, 13],
+                   fuente=f"Fuente: `{o}`, escrito por `scripts/impacto.py` el {d['metadatos']['generado']} desde el silver y las asignaciones del gold.",
+                   nota="Las lecturas son reales (OEFA). Lo esperado se calculó con la regla de `ventana/ventana.go` sin consultar a la API; "
+                        "el régimen esperado es el del modelo sembrado. El escenario se carga primero, sobre un sistema limpio; los días de "
+                        "una estación son posteriores a su tramo del escenario y están a más de 48 horas entre sí.")
+        v = {"escenario_estaciones": entero(len(esc["estaciones"])), "escenario_lecturas": entero(len(esc["lecturas"])),
+             "escenario_horas": entero(esc["horas"]), "escenario_desde": esc["desde"][:10], "escenario_hasta": esc["hasta"][:10],
+             "escenario_alertas": entero(len(alertas_esc)), "escenario_sin_lecturas": entero(len(esc["estaciones_sin_lecturas"])),
+             "tramos_comparados": entero(esc["tramos_comparados"]),
+             "dias": entero(len(dias)), "casos": entero(len({x["caso"] for x in dias})), "lecturas": entero(total)}
+        # La verificación cruzada: lo que respondió la API real frente a lo esperado.
+        sal = AQUI / "salidas-tb2" / "verificar-series.txt"
+        if sal.exists():
+            texto = sal.read_text(encoding="utf-8")
+            m = re.search(r"(\d+) lecturas enviadas al modelo (\S+); (\d+) diferencias", texto)
+            me = re.search(r"escenario \((\d+) lecturas\): (\d+) de (\d+) estaciones coinciden", texto)
+            md = re.search(r"días sueltos: (\d+) de (\d+) coinciden", texto)
+            if m and me and md:
+                self.comprobar("salidas-tb2/verificar-series.txt", int(m.group(1)) == total,
+                               f"la verificación mandó {m.group(1)} lecturas y series.json tiene {total}: ¿se regeneró series.json?")
+                v |= {"verificadas": entero(int(m.group(1))), "diferencias": entero(int(m.group(3))), "modelo": m.group(2),
+                      "estaciones_coinciden": me.group(2), "dias_coinciden": md.group(1)}
+            else:
+                self.problema("salidas-tb2/verificar-series.txt", "no tiene el resumen de scripts/verificar_series_api.py")
+        else:
+            self.faltantes.append("docs/informe/salidas-tb2/verificar-series.txt")
+        self.cifras["series"] = v
+
+    def latencia_tb2(self) -> None:
+        """Las dos mediciones de latencia del TB2, desde sus salidas reales en texto: la del servidor durante la
+        verificación de las series (salidas-tb2/metricas-verificacion.txt) y la de un cliente lejano contra el
+        despliegue público (salidas-tb2/latencia-remota.txt)."""
+        import re
+        v = {}
+        m = AQUI / "salidas-tb2" / "metricas-verificacion.txt"
+        if m.exists():
+            texto = m.read_text(encoding="utf-8")
+            d = json.loads(texto[texto.index("{"):])
+            p = d["endpoints"]["POST /api/predicciones"]
+            v |= {"servidor_pedidos": entero(p["pedidos"]), "servidor_p50": tiempo(p["p50_ms"]), "servidor_p95": tiempo(p["p95_ms"]),
+                  "servidor_p99": tiempo(p["p99_ms"]), "escritas": entero(d["escritura"]["mongo"]["escritas"]),
+                  "descartadas": entero(d["escritura"]["mongo"]["descartadas"] + d["escritura"]["redis"]["descartadas"])}
+        else:
+            self.faltantes.append("docs/informe/salidas-tb2/metricas-verificacion.txt")
+        r = AQUI / "salidas-tb2" / "latencia-remota.txt"
+        if r.exists():
+            texto = r.read_text(encoding="utf-8")
+            c = re.search(r"conexión TLS abierta en ([\d.]+) ms; (\d+) pedidos", texto)
+            filas = dict(re.findall(r"^GET (/api/\w+)\s+([\d.]+)\s+[\d.]+\s+[\d.]+", texto, re.M))
+            if c and "/api/salud" in filas and "/api/regimenes" in filas:
+                v |= {"remota_conexion": tiempo(float(c.group(1))), "remota_pedidos": c.group(2),
+                      "remota_p50_salud": tiempo(float(filas["/api/salud"])), "remota_p50_regimenes": tiempo(float(filas["/api/regimenes"]))}
+            else:
+                self.problema("salidas-tb2/latencia-remota.txt", "no tiene el resumen esperado")
+        else:
+            self.faltantes.append("docs/informe/salidas-tb2/latencia-remota.txt")
+        self.cifras["latencia_tb2"] = v
+
+    # Pruebas del TB2. Las de Go se nombran por archivo (lo que el TB2 agregó a la API); las de la UI se cuentan
+    # por carpeta (it/test de los *.test.ts(x)).
+    PRUEBAS_GO_TB2 = [
+        ("api/regimenes_test.go", "`GET /api/regimenes`: el estado de todas las estaciones en un pedido"),
+        ("api/avisos_test.go", "El evento `estacion.regimen` por WebSocket: solo la lectura más reciente, agrupado por estación"),
+        ("api/eventos_test.go", "`GET /api/cluster/eventos`: los «logs» del clúster"),
+        ("api/cors_test.go", "CORS: orígenes permitidos, preflight, `Vary` y el origen del WebSocket"),
+        ("api/invitado_test.go", "`POST /api/auth/invitado`: el token de la cuenta designada, rol `usuario`, 404 sin cuenta"),
+        ("cmd/api/invitado_test.go", "El arranque con `API_INVITADO`: no arranca si la cuenta no existe o es de administrador"),
+    ]
+    PRUEBAS_WEB = [   # carpeta relativa a web/, qué comprueban
+        ("src/sesion", "El token en `sessionStorage`, el rol, las guardas de ruta y los dos ingresos"),
+        ("src/api", "El cliente tipado, la traducción de errores, el WebSocket (reconexión, 1008) y la caché en vivo"),
+        ("src/pantallas", "Las siete pantallas: estados, frases, orden por gravedad, simulador, reproducción de rondas, CPU"),
+        ("src/componentes", "Los componentes base y los formatos (números, fechas en hora de Lima)"),
+        ("src/graficos", "Los gráficos de D3: mapa, curva, inercia y tiempos por nodo"),
+        ("src", "Las rutas de la aplicación (`App.test.tsx`)"),
+        ("pruebas", "Fuera del navegador: el `Caddyfile` (CSP y su hash) y el contraste de los tokens de color"),
+    ]
+
+    def pruebas_tb2(self) -> None:
+        import re
+        titulo = "Pruebas automáticas del Entregable 3: las de la API que agregó el TB2 y las de la interfaz"
+        filas, go_total, web_total, web_archivos = [], 0, 0, 0
+        for archivo, que in self.PRUEBAS_GO_TB2:
+            ruta = RAIZ / archivo
+            if not ruta.exists():
+                self.problema(archivo, "no existe (¿cambió la estructura del repositorio?)")
+                continue
+            n = len(re.findall(r"^func Test\w+\(t \*testing\.T\)", ruta.read_text(encoding="utf-8"), re.M))
+            go_total += n
+            filas.append(("Go", f"`{archivo}`", que, entero(n)))
+        patron = re.compile(r"^\s*(?:it|test)(?:\.each\([^)]*\))?\(", re.M)
+        for carpeta, que in self.PRUEBAS_WEB:
+            base = RAIZ / "web" / carpeta
+            if carpeta == "src":
+                archivos = sorted(base.glob("*.test.ts*"))
+            else:
+                archivos = sorted(p for p in base.rglob("*.test.ts*") if "node_modules" not in p.parts)
+            if not archivos:
+                self.problema(f"web/{carpeta}", "no tiene pruebas")
+                continue
+            n = sum(len(patron.findall(a.read_text(encoding="utf-8"))) for a in archivos)
+            web_total, web_archivos = web_total + n, web_archivos + len(archivos)
+            filas.append(("Interfaz", f"`web/{carpeta}/`" if carpeta != "src" else "`web/src/App.test.tsx`", que,
+                          f"{entero(n)} en {entero(len(archivos))} archivo{'s' if len(archivos) != 1 else ''}"))
+        t = pd.DataFrame(filas, columns=["Lado", "Dónde", "Qué comprueban", "Pruebas"])
+        self.tabla("pruebas_tb2.md", "los _test.go del TB2 y los *.test.ts(x) de web/", {}, "tbl-pruebas-tb2", titulo,
+                   markdown(t, "lllr"), anchos=[10, 26, 46, 18],
+                   fuente="Fuente: las funciones `Test…` de cada archivo de Go y los casos `it(…)` y `test(…)` de los archivos de prueba de la "
+                          "interfaz, contados del código en cada render.",
+                   nota="Las de Go corren con `go test -race` y las de la interfaz con Vitest y Testing Library (`pnpm test`), en la integración "
+                        "continua de GitHub en cada cambio.")
+        todas = sum(len(re.findall(r"^func Test\w+\(t \*testing\.T\)", a.read_text(encoding="utf-8"), re.M))
+                    for a in RAIZ.rglob("*_test.go") if ".claude" not in a.relative_to(RAIZ).parts and "node_modules" not in a.relative_to(RAIZ).parts)
+        py = RAIZ / "scripts" / "test_impacto.py"
+        self.cifras["pruebas_tb2"] = {"go": entero(go_total), "web": entero(web_total), "web_archivos": entero(web_archivos),
+                                      "go_repo": entero(todas),
+                                      "python_impacto": entero(len(re.findall(r"^\s*def test_\w+", py.read_text(encoding="utf-8"), re.M)))
+                                      if py.exists() else self.PENDIENTE}
+
+    CONSTANTES_TB2 = [
+        ("jwt_duracion", "docker-compose.yml", r'JWT_DURACION:-(\w+)\}', str),
+        ("cors_max_age_s", "api/cors.go", r'corsMaxAge\s+= "(\d+)"', str),
+        ("cors_metodos", "api/cors.go", r'corsMetodos\s+= "([^"]+)"', str),
+        ("cors_encabezados", "api/cors.go", r'corsEncabezados\s+= "([^"]+)"', str),
+        ("puerto_web", "docker-compose.yml", r"WEB_PORT:-(\d+)\}:80", str),
+        ("caddy_imagen", "web/Dockerfile", r"^FROM (caddy:\S+)", str),
+        ("node_imagen", "web/Dockerfile", r"^FROM (node:\S+) AS build", str),
+        ("hsts_s", "web/Caddyfile", r'Strict-Transport-Security "max-age=(\d+)"', str),
+        ("swagger_ui", "web/Caddyfile", r"swagger-ui-dist@([\d.]+)/", str),
+        ("read_header_timeout_s", "cmd/api/main.go", r"ReadHeaderTimeout:\s+(\d+) \* time\.Second", str),
+        ("read_timeout_s", "cmd/api/main.go", r"ReadTimeout:\s+(\d+) \* time\.Second", str),
+        ("write_timeout_s", "cmd/api/main.go", r"WriteTimeout:\s+(\d+) \* time\.Second", str),
+        ("cluster_cada_s", "web/src/pantallas/Cluster.tsx", r"const CADA_MS = (\d+)_000", str),
+        ("aviso_ms", "api/avisos.go", r"cadaAvisoPorOmision = (\d+) \* time\.Millisecond", str),
+        ("ritmo_lenta", "web/src/pantallas/simulacion/ritmos.ts", r"etiqueta: 'Lenta', horasPorSegundo: (\d+)", str),
+        ("ritmo_normal", "web/src/pantallas/simulacion/ritmos.ts", r"etiqueta: 'Normal', horasPorSegundo: (\d+)", str),
+        ("ritmo_rapida", "web/src/pantallas/simulacion/ritmos.ts", r"etiqueta: 'Rápida', horasPorSegundo: (\d+)", str),
+        ("react", "web/package.json", r'"react": "\^?(\d+)\.', str),
+        ("tailwind", "web/package.json", r'"tailwindcss": "\^?(\d+)\.', str),
+    ]
+
+    SALIDAS_TB2 = [
+        ("salida_verificar_series", "lst-salida-series", "verificar-series.txt", [("cola", 16)],
+         "Las series de prueba enviadas a la API real con `scripts/verificar_series_api.py`, comparadas con lo calculado sin la API"),
+        ("salida_metricas_verificacion", "lst-salida-metricas-tb2", "metricas-verificacion.txt", [("orden", r"api/metricas", 12)],
+         "`GET /api/metricas` al terminar la verificación: la latencia de la predicción medida dentro del servidor (primeras líneas)"),
+        ("salida_cabeceras", "lst-salida-cabeceras", "seguridad.txt",
+         [("orden", r"curl -sI \S+/$", 11), ("orden", r"curl -sI \S+/docs$", 6)],
+         "Las cabeceras que pone Caddy en el despliegue público: la UI y Swagger UI"),
+        ("salida_latencia_remota", "lst-salida-latencia-remota", "latencia-remota.txt", [("orden", r"latencia_remota", 6)],
+         "La latencia vista desde una laptop en Lima contra el despliegue público: dos rutas de lectura sobre una conexión abierta"),
+        ("salida_politicas", "lst-salida-politicas", "seguridad.txt",
+         [("orden", r"-X OPTIONS", 4), ("orden", r"api/metricas +# sin token", 4), ("orden", r"auth/invitado", 2),
+          ("orden", r"TOKEN_INVITADO", 3)],
+         "Las políticas de la API probadas contra el despliegue público: un origen ajeno, sin token, el invitado y su rol"),
+    ]
+
+    # Las salidas reales que deja la sesión del frontend en capturas/tb2/ (su índice: capturas/tb2/README.md).
+    SALIDAS_TB2_FRONTEND = [
+        ("salida_compose_tb2", "lst-salida-compose-tb2", "despliegue/compose-ps.txt", [("orden", r"compose .*ps", 10, "tabla")],
+         "`docker compose ps -a` con el sistema del TB2 levantado limpio: el servicio web, la API, dos nodos, MongoDB, Redis y el seed"),
+        ("salida_web_pruebas", "lst-salida-web-pruebas", "pruebas/web-pruebas.txt", [("cola", 7)],
+         "Las pruebas de la interfaz: el lint, Vitest y la compilación"),
+        ("salida_go_test", "lst-salida-go-test", "pruebas/go-test-race.txt", [("cola", 16)],
+         "`go test -race` sobre todos los paquetes del repositorio (últimas líneas)"),
+        ("salida_tokens", "lst-salida-tokens", "seguridad/politicas.txt",
+         [("desde", r"^## 7\.", 8), ("desde", r"^## 8\.", 4), ("desde", r"^## 10\.", 13)],
+         "Roles, tokens alterados y el WebSocket, probados con `curl` contra el Compose local por el Caddy de la interfaz"),
+    ]
+
+    def latencia_frontend(self) -> None:
+        """capturas/tb2/pruebas/: la latencia de la predicción con cmd/carga directo a la API y por el Caddy de la
+        interfaz, y la del pedido al evento estacion.regimen por el WebSocket (medir_ws.mjs)."""
+        o = "capturas/tb2/pruebas/api_latencia_*.json"
+        titulo = "La latencia de la predicción en el TB2: directo a la API y por el Caddy de la interfaz, que es el camino del navegador"
+        carpeta = AQUI / "capturas" / "tb2" / "pruebas"
+        rutas = {k: carpeta / f"api_latencia_{k}.json" for k in ("directa", "caddy")}
+        v = {}
+        if all(r.exists() for r in rutas.values()):
+            d = {k: json.loads(r.read_text(encoding="utf-8")) for k, r in rutas.items()}
+            por = {k: {n["clientes"]: n for n in d[k]["niveles"]} for k in d}
+            filas = []
+            for c in sorted(por["directa"]):
+                a, b = por["directa"][c], por["caddy"].get(c, {})
+                filas.append((entero(c), tiempo(a["p50_ms"]), tiempo(a["p99_ms"]), tiempo(b.get("p50_ms")), tiempo(b.get("p99_ms")),
+                              tiempo(b.get("max_ms")), entero(a["errores"] + b.get("errores", 0))))
+            t = pd.DataFrame(filas, columns=["Clientes a la vez", "p50 directo (ms)", "p99 directo (ms)", "p50 por Caddy (ms)",
+                                             "p99 por Caddy (ms)", "Máximo por Caddy (ms)", "Errores"])
+            m = d["caddy"]["metadatos"]
+            self.tabla("latencia_tb2.md", o, {}, "tbl-latencia-tb2", titulo, markdown(t, "rrrrrrr"),
+                       fuente=f"Fuente: `docs/informe/capturas/tb2/pruebas/api_latencia_directa.json` y `api_latencia_caddy.json`, escritos por "
+                              f"`cmd/carga` el {fecha(m.get('momento'))} contra el Compose local con dos nodos.",
+                       nota=f"{entero(d['caddy']['niveles'][0]['pedidos'])} predicciones medidas por nivel, con las lecturas de prueba de Postman; "
+                            "cada pedido se mide desde antes de enviarlo hasta leer la respuesta completa. «Por Caddy» es el camino del "
+                            "navegador: el pedido entra por el servicio web, que lo pasa a la API.")
+            peor_c = max(n["p99_ms"] for n in d["caddy"]["niveles"])
+            v |= {"p99_directa_max": tiempo(max(n["p99_ms"] for n in d["directa"]["niveles"])), "p99_caddy_max": tiempo(peor_c),
+                  "clientes_max": entero(max(por["caddy"])), "pedidos_nivel": entero(d["caddy"]["niveles"][0]["pedidos"]),
+                  "errores": entero(sum(n["errores"] for k in d for n in d[k]["niveles"])),
+                  "sobre_limite": entero(sum(n["sobre_el_limite"] for k in d for n in d[k]["niveles"])),
+                  "cumple": "sí" if all(d[k]["cumple"] for k in d) else "no", "fecha": fecha(m.get("momento"))}
+        else:
+            for r in rutas.values():
+                if not r.exists():
+                    self.faltantes.append(f"docs/informe/{r.relative_to(AQUI)}")
+            self.tabla("latencia_tb2.md", o, None, "tbl-latencia-tb2", titulo)
+        w = carpeta / "ws_latencia.json"
+        if w.exists():
+            d = json.loads(w.read_text(encoding="utf-8"))
+            v |= {"ws_lecturas": entero(d["lecturas"]), "ws_sin_evento": entero(d["sin_evento"]),
+                  "ws_respuesta_p50": tiempo(d["respuesta_ms"]["p50"]), "ws_respuesta_p99": tiempo(d["respuesta_ms"]["p99"]),
+                  "ws_evento_p50": tiempo(d["evento_ms"]["p50"]), "ws_evento_p99": tiempo(d["evento_ms"]["p99"]),
+                  "ws_evento_max": tiempo(d["evento_ms"]["max"]), "ws_dias": entero(len(d["finales"])),
+                  "ws_dias_coinciden": entero(sum(1 for x in d["finales"] if x["coincide"]))}
+        else:
+            self.faltantes.append("docs/informe/capturas/tb2/pruebas/ws_latencia.json")
+        wp = carpeta / "web-pruebas.txt"
+        if wp.exists():
+            import re
+            m = re.search(r"Tests\s+(\d+) passed \((\d+)\)", wp.read_text(encoding="utf-8"))
+            mf = re.search(r"Test Files\s+(\d+) passed", wp.read_text(encoding="utf-8"))
+            if m and mf:
+                v |= {"vitest_pruebas": entero(int(m.group(1))), "vitest_archivos": entero(int(mf.group(1)))}
+        else:
+            self.faltantes.append("docs/informe/capturas/tb2/pruebas/web-pruebas.txt")
+        self.cifras["frontend"] = v
+
+    FRAGMENTOS_TB2 = [
+        # Sockets: quién escucha, quién llama, en qué puerto y cómo viajan los mensajes.
+        ("frag_listen", "lst-listen", "cmd/api/main.go",
+         [("rango", r"^\tvar lnNodos net\.Listener", r"^\tln, err := net\.Listen\(\"tcp\", op\.addr\)")],
+         "Rol servidor: la API abre dos sockets en modo escucha, uno para los nodos y otro para HTTP", {"max": 20}),
+        ("frag_aceptar", "lst-aceptar", "cluster/reunir.go",
+         [("bloque", r"^func \(r \*recepcion\) aceptar\(\)")],
+         "El bucle de Accept del coordinador: una goroutine por conexión que llega, como el handle de los laboratorios"),
+        ("frag_dial", "lst-dial", "cmd/nodo/main.go",
+         [("lineas", r"^\tmarcador := &net\.Dialer\{", 4)],
+         "Rol cliente: el nodo llama al coordinador con net.Dialer, en la dirección IP:puerto que recibe por parámetro"),
+        ("frag_atender", "lst-atender", "cluster/nodo.go",
+         [("bloque", r"^func \(n \*Nodo\) Atender\(conn net\.Conn\) error \{")],
+         "El nodo sobre su conexión: manda HOLA y responde cada mensaje del coordinador hasta el FIN", {"max": 46}),
+        ("frag_cable", "lst-cable", "protocolo/codec_test.go",
+         [("rango", r'^\t// \{"tipo":"HOLA"', r'^\t// \{"tipo":"FIN"\}')],
+         "Una sesión en el cable, tal cual: un mensaje JSON por línea (la salida que comprueba ExampleCodificador)",
+         {"lenguaje": "json", "quitar": "// "}),
+        ("frag_escribir", "lst-escribir", "protocolo/codec.go",
+         [("bloque", r"^func \(c \*Codificador\) escribir\(m Mensaje\) error \{")],
+         "Serializar y enviar un mensaje: JSON en una línea, con bufio, y vaciar el búfer enseguida"),
+        ("frag_leer", "lst-leer", "protocolo/codec.go",
+         [("rango", r"^\t\ttrozo, err := d\.r\.ReadSlice\('\\n'\)", r"^\t\t\treturn decodificar\(linea\)")],
+         "Recibir un mensaje: leer hasta el salto de línea y deserializar el JSON"),
+        ("frag_enlace_ronda", "lst-enlace-ronda", "protocolo/coordinador.go",
+         [("lineas", r"^func \(e \*Enlace\) ronda\(", 17)],
+         "Lo que hace la goroutine de cada nodo en una ronda: escribe ITERAR en su socket y bloquea leyendo el PARCIAL"),
+        # La API en Go.
+        ("frag_rutas", "lst-rutas", "api/servidor.go",
+         [("rango", r"^\tcualquiera := \[\]string\{RolUsuario, RolAdmin\}", r"^\ts\.ruta\(\"GET /docs\"")],
+         "Las rutas de la API, cada una con los roles que la pueden usar (nil: libre)"),
+        ("frag_exigir", "lst-exigir", "api/servidor.go",
+         [("funcion", r"^func \(s \*Servidor\) ruta\("), ("bloque", r"^func \(s \*Servidor\) exigir\(")],
+         "Cada ruta se envuelve en dos capas: la que mide su latencia y la que exige un JWT con el rol"),
+        ("frag_http", "lst-http", "cmd/api/main.go",
+         [("rango", r"^\ths := &http\.Server\{", r"^\tgo func\(\) \{ sirviendo <- hs\.Serve\(ln\) \}\(\)")],
+         "El Web Server HTTP de la API: plazos de lectura y escritura y Serve sobre el socket que ya escucha"),
+        ("frag_camino", "lst-camino", "api/entrenamientos.go",
+         [("rango", r"^\tvar miembros \[\]\*cluster\.Miembro", r"^\trangos, err := cluster\.Repartir"),
+          ("rango", r"^\tlanzado = true", r"^\t\}\{e\.ID, almacen\.EstadoEnCurso\}\)"),
+          ("rango", r"^\t_, err := cluster\.CargarCtx", r"^\tclose\(paraAlmacen\)")],
+         "El camino de un entrenamiento dentro de la API: toma los nodos, responde 202 y corre en su goroutine", {"max": 32}),
+        # Seguridad e integración.
+        ("frag_cors", "lst-cors", "api/cors.go",
+         [("rango", r"^\torigen := r\.Header\.Get\(\"Origin\"\)$", r"^\tw\.WriteHeader\(http\.StatusNoContent\)")],
+         "CORS en la API: un origen que no está en la lista no recibe encabezados, y su preflight, un 403", {"max": 32}),
+        ("frag_ws_apreton", "lst-ws-apreton", "api/hub.go",
+         [("rango", r"^\tclave, msg := validarApreton\(r\)", r"^\ts\.hub\.Atender\(conn, lector")],
+         "El apretón de manos del WebSocket: el origen, el token y el rol se validan antes de responder 101", {"max": 36}),
+        ("frag_invitado", "lst-invitado", "api/rutas.go",
+         [("funcion", r"^func \(s \*Servidor\) ingresarInvitado\(")],
+         "El ingreso de invitado: un token de la cuenta que designó el servidor, sin que las credenciales pasen por el navegador"),
+        ("frag_cliente_token", "lst-cliente-token", "web/src/api/cliente.ts",
+         [("rango", r"^const autenticacion: Middleware = \{", r"^\}$")],
+         "La interfaz pone el token en cada pedido y cierra la sesión con un 401"),
+        # Despliegue.
+        ("frag_dockerfile", "lst-dockerfile", "Dockerfile", [("archivo",)],
+         "La imagen de la API y de los nodos, en dos etapas", {"max": 30, "lenguaje": "dockerfile", "sin_comentarios": True}),
+        ("frag_dockerfile_web", "lst-dockerfile-web", "web/Dockerfile", [("archivo",)],
+         "La imagen del servicio web: Node compila la interfaz y Caddy la sirve", {"max": 15, "lenguaje": "dockerfile", "sin_comentarios": True}),
+        ("frag_compose", "lst-compose", "docker-compose.yml", [("archivo",)],
+         "El despliegue completo con Docker Compose", {"max": 105, "sin_comentarios": True}),
+        ("frag_caddy", "lst-caddy", "web/Caddyfile", [("archivo",)],
+         "El Caddyfile: un solo servidor web para la interfaz y la API, con las cabeceras de seguridad",
+         {"max": 60, "lenguaje": "text", "sin_comentarios": True}),
+    ]
+
     def estado(self, ambito: str, archivo: str) -> None:
         """El aviso de lo que falta o no cuadra en un entregable, que su informe incluye al inicio."""
         l = self._listas[ambito]
@@ -2847,6 +3357,7 @@ class Informe:
     def cerrar(self, estricto: bool, final: bool, entrega: str = "pc3") -> int:
         self.estado("pc3", "_estado.md")
         self.estado("pc4", "_estado_pc4.md")
+        self.estado("tb2", "_estado_tb2.md")
         pc3 = self._listas["pc3"]
 
         lineas = ["# Generado por tablas.py desde generado/*.json. No editar a mano.",
@@ -2862,7 +3373,8 @@ class Informe:
         if pc3["placeholders"]:
             print("PLACEHOLDER: " + ", ".join(pc3["placeholders"]), file=sys.stderr)
         # El informe de la PC4 contiene el de la PC3: tiene que estar en regla lo de los dos.
-        ambitos = ("pc3", "pc4") if entrega == "pc4" else ("pc3",)
+        # El del TB2 contiene los dos: tienen que estar en regla los tres.
+        ambitos = {"pc3": ("pc3",), "pc4": ("pc3", "pc4"), "tb2": ("pc3", "pc4", "tb2")}[entrega]
         junto = {n: [x for a in ambitos for x in self._listas[a][n]] for n in LISTAS}
         if (estricto or final) and (junto["faltantes"] or junto["problemas"]):
             for x in dict.fromkeys(junto["faltantes"]):
@@ -2886,9 +3398,9 @@ def main() -> int:
                     help="reports/ del repo: calibracion_resumen.csv y kmeans_propuesto.json del notebook 02")
     ap.add_argument("--estricto", action="store_true", help="falla si falta un JSON o no cuadra un invariante")
     ap.add_argument("--final", action="store_true", help="como --estricto y, además, falla si queda un PLACEHOLDER")
-    ap.add_argument("--entrega", choices=("pc3", "pc4"), default="pc3",
+    ap.add_argument("--entrega", choices=("pc3", "pc4", "tb2"), default="pc3",
                     help="qué informe decide el código de salida de --estricto y --final: el de la PC4 exige "
-                         "además lo de la PC4 (las tablas y cifras de los dos se generan siempre)")
+                         "además lo de la PC4, y el del TB2, lo de los tres (las tablas y cifras se generan siempre)")
     a = ap.parse_args()
     salida = AQUI / "generado" / "tablas"
     salida.mkdir(parents=True, exist_ok=True)
@@ -2925,6 +3437,16 @@ def main() -> int:
     inf.pruebas_pc4()
     inf.constantes_pc4()
     inf.fragmentos(inf.FRAGMENTOS_PC4)
+    inf.ambito = "tb2"      # lo que sigue es del Entregable 3
+    inf.impacto()
+    inf.series_prueba()
+    inf.latencia_tb2()
+    inf.pruebas_tb2()
+    inf.constantes_pc4(inf.CONSTANTES_TB2, "tb2")
+    inf.salidas(inf.SALIDAS_TB2, "salidas-tb2")
+    inf.salidas(inf.SALIDAS_TB2_FRONTEND, "capturas/tb2")
+    inf.latencia_frontend()
+    inf.fragmentos(inf.FRAGMENTOS_TB2)
     return inf.cerrar(a.estricto, a.final, a.entrega)
 
 

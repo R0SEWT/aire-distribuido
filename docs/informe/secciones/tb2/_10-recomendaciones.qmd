@@ -1,0 +1,51 @@
+<!-- h) Recomendaciones del informe final. El título «Recomendaciones» lo pone informe-tb2.qmd; las de la PC4 y la
+PC3 se incluyen después, como se entregaron. -->
+
+## Del Entregable 3 (TB2)
+
+**Para quien use el dato o el sistema**
+
+1. **Avisar con la media de 24 horas, y mostrar el régimen como contexto.** Una lectura horaria alta
+   o el régimen alto anuncian casi todos los episodios, pero suenan muchas más veces de las que la
+   media cruza el ECA (@sec-impacto). Un aviso a la población debería salir de la regla de la norma,
+   como lo hace este sistema.
+2. **Medir PM por hora en más estaciones.** De las {{< meta cifras.impacto.estaciones_ficha >}}
+   estaciones de la ficha, {{< meta cifras.impacto.estaciones_sin_pm >}} no tienen PM2,5 y PM10
+   horarios y no pueden avisar de nada. Y las campañas de pocas semanas, como las de
+   {{< meta cifras.impacto.top2_distrito >}}, mostraron los peores registros del dato: valdría la pena
+   saber cómo es el resto del año en esos mismos puntos.
+3. **Leer el dato junto a la actividad que vigila.** Las estaciones de OEFA miden junto a una
+   actividad fiscalizada; sus cifras dicen cómo es el aire ahí, no en el distrito. Cualquier mapa
+   de riesgo hecho con ellas tiene que decirlo.
+
+**Para el sistema**
+
+1. **Reconstruir las ventanas de 24 horas al arrancar.** Siguen viviendo solo en memoria; las
+   predicciones guardadas en MongoDB alcanzan para reconstruirlas, si antes se les pone una clave
+   única por estación y hora.
+2. **Evaluar la anticipación sin fugas.** La medida de este informe es descriptiva, sobre las mismas
+   lecturas del entrenamiento. Entrenar con un tramo de fechas y medir con el siguiente diría cuánto
+   antes avisaría el sistema con datos nuevos.
+3. **Hacer la sesión de laboratorio del clúster.** Correr el K-Means distribuido sobre los PC del
+   aula con 1, 2, 4 y 8 equipos, y apagar un nodo a mitad de una corrida. Los comandos y el paquete
+   del nodo están en `lab/`.
+4. **Proteger las bases y el puerto de los nodos antes de usar más de una máquina.** Hoy están
+   protegidos por no estar publicados; con nodos o bases en otras máquinas hacen falta credenciales
+   y TLS.
+
+La @tbl-recomendaciones-pc4 dice qué pasó con las recomendaciones que la PC4 dirigió a este
+entregable.
+
+::: {#tbl-recomendaciones-pc4 tbl-colwidths="[38,62]"}
+| Recomendación de la PC4 para el TB2 | Qué pasó |
+|:---|:---|
+| Construir el panel sobre lo que la API ya publica, con el nivel del aire y la alerta juntos y separados | Hecho (@sec-frontend). La API sumó `GET /api/regimenes`, el evento `estacion.regimen`, los eventos del clúster y el CPU del coordinador |
+| Medir la latencia desde otra máquina | Hecho en parte: desde una laptop contra el despliegue público (@lst-salida-latencia-remota); el tiempo es casi todo de red |
+| Reconstruir las ventanas de 24 horas al arrancar | No se hizo: sigue como recomendación |
+| Proteger las bases antes de salir de la máquina de desarrollo | En el despliegue público las bases no se publican; siguen sin usuario ni clave (@sec-seguridad-limites) |
+
+Las recomendaciones de la PC4 para el TB2 y lo que se hizo
+:::
+
+Las recomendaciones de los dos primeros entregables se conservan a continuación como se entregaron:
+primero las de la PC4 y después las de la PC3. Las de la PC4 dirigidas al clúster siguen vigentes.

@@ -1,0 +1,31 @@
+$ curl -s http://127.0.0.1:18093/api/metricas -H "Authorization: Bearer $TOKEN_ADMIN"   # después de la verificación
+{
+  "endpoints": {
+    "POST /api/predicciones": {
+      "pedidos": 1086,
+      "p50_ms": 0.02263,
+      "p95_ms": 0.0349,
+      "p99_ms": 0.04525
+    },
+    "GET /api/estaciones/{id}/regimen": {
+      "pedidos": 14,
+      "p50_ms": 0.005187,
+      "p95_ms": 0.0415,
+      "p99_ms": 0.0415
+    }
+  },
+  "escritura": {
+    "mongo": {
+      "escritas": 1086,
+      "descartadas": 0,
+      "fallidas": 0,
+      "lotes": 1086
+    },
+    "redis": {
+      "escritas": 1086,
+      "descartadas": 0,
+      "fallidas": 0,
+      "lotes": 1086
+    }
+  }
+}

@@ -1,0 +1,254 @@
+<!-- f.12) TB2 · Evaluación experimental: datos de prueba, evidencia de pruebas de funcionalidad, latencia y la
+respuesta a la pregunta de impacto social. Las cifras salen de reports/impacto.json, de
+web/public/datos/series.json y de docs/informe/salidas-tb2/, vía tablas.py. -->
+
+## Evaluación experimental {#sec-evaluacion}
+
+El enunciado pide para el Entregable 3 una «evaluación experimental (datos de prueba, evidencia de
+pruebas de funcionalidad, responde a preguntas que atiende el impacto social)», y para la API, que
+la respuesta en menos de 100 milisegundos se evidencie «en las pruebas dentro del informe final».
+Esta sección tiene las cuatro cosas, en ese orden.
+
+### Datos de prueba {#sec-datos-prueba-tb2}
+
+Los datos de prueba del TB2 son lecturas reales de OEFA, no inventadas, organizadas en tramos de 48
+horas seguidas, con lo que la API tiene que responder al final de cada uno (@tbl-series). Hay dos
+clases:
+
+- **El escenario**: {{< meta cifras.series.escenario_horas >}} horas reales, del
+  {{< meta cifras.series.escenario_desde >}} al {{< meta cifras.series.escenario_hasta >}}, en que
+  {{< meta cifras.series.escenario_estaciones >}} estaciones midieron a la vez
+  ({{< meta cifras.series.escenario_lecturas >}} lecturas). Se eligió entre
+  {{< meta cifras.series.tramos_comparados >}} tramos de diciembre de 2021, el que deja más estaciones
+  con media de 24 horas al final. Es lo que llena el panel en una demostración.
+- **Los días sueltos**: {{< meta cifras.series.dias >}} tramos de una sola estación, elegidos para
+  cubrir {{< meta cifras.series.casos >}} casos distintos: días limpios, un día con banda INCA mala y
+  sin alerta (el INCA y el ECA se informan aparte), días que cruzan el ECA, uno en alerta todo el
+  tramo, uno que llega al umbral de cuidado y dos con huecos, uno que conserva su media y otro que
+  la pierde.
+
+{{< include generado/tablas/series_prueba.md >}}
+
+Lo esperado **no se le preguntó a la API**: lo calculó un script aparte (`scripts/impacto.py`) con la
+regla de `ventana/ventana.go`, desde el silver y las asignaciones del gold. Si la API y ese cálculo
+independiente no coinciden, la prueba falla. Los datos de prueba de la PC4 (@tbl-datos-prueba), que
+usa la colección de Postman, siguen vigentes.
+
+### Pruebas de funcionalidad {#sec-pruebas-funcionalidad}
+
+**La verificación cruzada contra la API real.** `scripts/verificar_series_api.py` manda las
+{{< meta cifras.series.lecturas >}} lecturas de la @tbl-series a una API levantada, en su orden, y
+compara cada respuesta con la regla aplicada a lo ya enviado; en la última lectura de cada estación,
+además, con lo esperado del archivo, y al final pide el último estado guardado de cada estación, que
+es lo que vería el panel. Para este informe corrió contra la API compilada del commit que se entrega
+(`cmd/api -demo`, con el modelo sembrado y las bases en memoria). El resultado: de
+{{< meta cifras.series.verificadas >}} lecturas, {{< meta cifras.series.diferencias >}} diferencias;
+las {{< meta cifras.series.estaciones_coinciden >}} estaciones del escenario y los
+{{< meta cifras.series.dias_coinciden >}} días sueltos coinciden (@lst-salida-series).
+
+{{< include generado/tablas/salida_verificar_series.md >}}
+
+**Las pruebas automáticas.** El repositorio tiene {{< meta cifras.pruebas_tb2.go_repo >}} pruebas de
+Go, que corren con `go test -race`, y la interfaz, {{< meta cifras.frontend.vitest_pruebas >}} pruebas
+en {{< meta cifras.frontend.vitest_archivos >}} archivos, que corren con Vitest. Las dos corren en la
+integración continua de GitHub en cada cambio, junto con `go vet`, `gofmt`, el *lint* de la interfaz
+y su compilación. La @tbl-pruebas-tb2 cuenta las que agregó el TB2, y el @lst-salida-web-pruebas y el
+@lst-salida-go-test son las dos corridas completas sobre el código de las capturas. El script de
+impacto tiene además {{< meta cifras.pruebas_tb2.python_impacto >}} pruebas propias
+(`scripts/test_impacto.py`).
+
+{{< include generado/tablas/pruebas_tb2.md >}}
+
+{{< include generado/tablas/salida_web_pruebas.md >}}
+
+{{< include generado/tablas/salida_go_test.md >}}
+
+**El recorrido de punta a punta en la interfaz.** Con el Compose recién levantado (`docker compose
+down -v` y `up`, con dos nodos), el recorrido de la @tbl-punta-a-punta prueba que las partes
+funcionan juntas, desde el navegador hasta los nodos y las bases. Se hizo con un navegador manejado
+por Playwright sobre la interfaz real, y cada paso tiene su captura. Es un resumen: la lista
+completa, de 21 pasos, está con las capturas en `docs/informe/capturas/tb2/README.md`.
+
+::: {#tbl-punta-a-punta tbl-colwidths="[4,30,42,24]"}
+| N.º | Paso | Lo que tiene que pasar | Evidencia |
+|:---|:---|:---|:---|
+| 1 | Ingresar como invitado y como administrador | El invitado ve cuatro pantallas; el administrador suma Entrenamiento y Clúster | @fig-ui-ingreso, @fig-ui-invitado |
+| 2 | Cargar el escenario desde la simulación | El panel de otro cliente se llena solo por el WebSocket; al final, las {{< meta cifras.series.escenario_estaciones >}} estaciones coinciden con lo esperado | @fig-ui-en-vivo, @fig-ui-comparacion |
+| 3 | Simular un día que cruza el ECA | La media aparece y la alerta se enciende en la hora esperada | @fig-ui-simulacion |
+| 4 | Abrir la estación en alerta | Las medias de 24 horas, la frase en llano y la curva cruzando la línea del ECA | @fig-ui-estacion |
+| 5 | Lanzar un entrenamiento con dos nodos desde la interfaz | Las rondas reproducidas, el resultado con la diferencia con el secuencial y el modelo nuevo activo | @fig-ui-entrenamiento-formulario, @fig-ui-entrenamiento-rondas, @fig-ui-entrenamiento-resultado |
+| 6 | Abrir el clúster | Los nodos con su latencia, el CPU del coordinador, la latencia por ruta bajo los 100 ms y los eventos del entrenamiento | @fig-ui-cluster |
+| 7 | Como usuario común, escribir `/cluster` a mano | La interfaz dice que es solo para administradores y la API responde 403 | @fig-ui-usuario, @lst-salida-tokens |
+
+El recorrido de punta a punta en la interfaz
+:::
+
+![La evaluación del escenario en la interfaz: para cada estación, lo esperado de `series.json` frente a lo que respondió la API (media, banda, alerta, primera alerta y régimen)](capturas/tb2/simulacion/09-comparacion-con-lo-esperado.png){#fig-ui-comparacion width=16cm}
+
+:::: {si-falta="capturas/tb2/simulacion/09-comparacion-con-lo-esperado.png"}
+::: {.callout-warning title="PENDIENTE"}
+Captura real de pantalla: la tabla de comparación al terminar el escenario. Va en
+`docs/informe/capturas/tb2/simulacion/09-comparacion-con-lo-esperado.png` (la produce la sesión del
+frontend).
+:::
+::::
+
+![Un usuario común que escribe `/cluster` a mano: el menú tiene cuatro pantallas y la interfaz dice que esa es solo para administradores](capturas/tb2/seguridad/01-usuario-sin-permiso-cluster.png){#fig-ui-usuario width=16cm}
+
+:::: {si-falta="capturas/tb2/seguridad/01-usuario-sin-permiso-cluster.png"}
+::: {.callout-warning title="PENDIENTE"}
+Captura real de pantalla: una sesión de rol `usuario` en `/cluster`. Va en
+`docs/informe/capturas/tb2/seguridad/01-usuario-sin-permiso-cluster.png` (la produce la sesión del
+frontend).
+:::
+::::
+
+### La latencia: menos de 100 milisegundos {#sec-latencia-tb2}
+
+En la PC4, con la API y sus dos bases levantadas en Compose, el percentil 99 de la latencia de una
+predicción con {{< meta cifras.api_latencia.clientes_max >}} clientes a la vez fue de
+{{< meta cifras.api_latencia.p99_max >}} ms (@tbl-api-latencia). El TB2 repitió la medición sobre el
+sistema completo, con la interfaz, y la hizo por los dos caminos (@tbl-latencia-tb2): directo a la
+API y por el Caddy de la interfaz, que es el que sigue el navegador. Con
+{{< meta cifras.frontend.clientes_max >}} clientes a la vez, el percentil 99 fue de
+{{< meta cifras.frontend.p99_directa_max >}} ms directo y de {{< meta cifras.frontend.p99_caddy_max >}}
+ms por Caddy, con {{< meta cifras.frontend.errores >}} errores y {{< meta cifras.frontend.sobre_limite >}}
+pedidos sobre el límite: pasar por el servidor web suma unos milisegundos y deja el margen intacto.
+
+{{< include generado/tablas/latencia_tb2.md >}}
+
+Para la interfaz importa además cuánto tarda en verse un cambio. Un cliente que manda las
+{{< meta cifras.frontend.ws_lecturas >}} lecturas de tres días de prueba, una por una, recibe la
+respuesta de cada predicción en {{< meta cifras.frontend.ws_respuesta_p50 >}} ms de mediana y el evento
+`estacion.regimen` por el WebSocket en {{< meta cifras.frontend.ws_evento_p50 >}} ms (percentil 99,
+{{< meta cifras.frontend.ws_evento_p99 >}} ms). Las {{< meta cifras.frontend.ws_lecturas >}} lecturas
+tuvieron su evento ({{< meta cifras.frontend.ws_sin_evento >}} sin evento), y el último estado de los
+{{< meta cifras.frontend.ws_dias >}} días coincidió con lo esperado
+(`docs/informe/capturas/tb2/pruebas/ws_latencia.json`). Dos mediciones más completan el cuadro:
+
+- **Dentro del servidor, durante la verificación cruzada.** La API midió sus propias
+  {{< meta cifras.latencia_tb2.servidor_pedidos >}} predicciones: un percentil 50 de
+  {{< meta cifras.latencia_tb2.servidor_p50 >}} ms y un percentil 99 de
+  {{< meta cifras.latencia_tb2.servidor_p99 >}} ms, con {{< meta cifras.latencia_tb2.descartadas >}}
+  escrituras descartadas (@lst-salida-metricas-tb2). Es la API sola, con las bases en memoria.
+- **Desde una laptop en Lima contra el despliegue público.** Dos rutas de lectura sobre una conexión
+  TLS ya abierta tardan unos {{< meta cifras.latencia_tb2.remota_p50_salud >}} ms de mediana
+  (@lst-salida-latencia-remota). Ese tiempo es casi todo el viaje de ida y vuelta por internet hasta
+  la máquina virtual: el servidor resuelve el pedido en menos de un milisegundo, como muestran las
+  otras dos mediciones. El requisito de 100 ms se cumple donde corre el servicio; lo que ve un
+  usuario lejano depende además de su red, y eso no lo puede bajar la API.
+
+{{< include generado/tablas/salida_metricas_verificacion.md >}}
+
+{{< include generado/tablas/salida_latencia_remota.md >}}
+
+### La respuesta a la pregunta de impacto social {#sec-impacto}
+
+La pregunta, elegida en la PC3 con la criba del EDA (@sec-pregunta), es: **¿en qué estaciones de OEFA
+y a qué horas el aire entra en el nivel alto de PM2,5/PM10, y con cuánta anticipación eso avisa de un
+episodio que supera el ECA?** La PC3 respondió el «a qué horas» con los regímenes del K-Means
+(@sec-resultados-kmeans); la PC4 decidió con datos que la alerta sale de la media de 24 horas y no
+del régimen (@sec-alerta). El TB2 responde el resto con las mismas lecturas, calculado por
+`scripts/impacto.py` sobre el gold (`reports/impacto.json`), que es también lo que muestra la página
+de impacto de la interfaz.
+
+**Cuánto tiempo.** Las {{< meta cifras.impacto.estaciones_pm >}} estaciones con PM2,5 y PM10 por hora
+suman {{< meta cifras.impacto.horas_calculables >}} horas con media de 24 horas calculable. En
+{{< meta cifras.impacto.horas_sobre_eca >}} de ellas ({{< meta cifras.impacto.pct_sobre_eca >}}) esa
+media superó el ECA. Por banda INCA, el {{< meta cifras.impacto.inca_buena_pct >}} de las horas fue
+buena, el {{< meta cifras.impacto.inca_moderada_pct >}} moderada, el
+{{< meta cifras.impacto.inca_mala_pct >}} mala y {{< meta cifras.impacto.inca_umbral_de_cuidado >}}
+horas llegaron al umbral de cuidado.
+
+**Dónde y junto a qué.** Las horas sobre el ECA no se reparten: se concentran en
+{{< meta cifras.impacto.estaciones_con_horas >}} de las {{< meta cifras.impacto.estaciones_pm >}}
+estaciones, y en {{< meta cifras.impacto.estaciones_sin_horas >}} la media nunca superó el ECA
+(@tbl-impacto-estaciones). Lo que importa es leer cada fila con su periodo, porque la unidad honesta
+es la estación, que vigila una actividad:
+
+- `{{< meta cifras.impacto.top1_estacion >}}`, junto a un {{< meta cifras.impacto.top1_tipo >}} en
+  {{< meta cifras.impacto.top1_distrito >}}, tiene la mayor cantidad de horas sobre el ECA
+  ({{< meta cifras.impacto.top1_horas >}}), pero midió {{< meta cifras.impacto.top1_dias >}} días: son
+  el {{< meta cifras.impacto.top1_pct >}} de sus horas.
+- `{{< meta cifras.impacto.top2_estacion >}}` ({{< meta cifras.impacto.top2_tipo >}}, en
+  {{< meta cifras.impacto.top2_distrito >}}) y `{{< meta cifras.impacto.top3_estacion >}}`
+  ({{< meta cifras.impacto.top3_tipo >}}, también en {{< meta cifras.impacto.top3_distrito >}})
+  midieron campañas de {{< meta cifras.impacto.top2_dias >}} días, y en ellas la media estuvo sobre el
+  ECA el {{< meta cifras.impacto.top2_pct >}} y el {{< meta cifras.impacto.top3_pct >}} de las horas.
+  Es el hallazgo más fuerte del dato, y vale para esas semanas: no dice cómo es el resto del año.
+
+{{< include generado/tablas/impacto_estaciones.md >}}
+
+Por tipo de actividad (@tbl-impacto-actividad), las {{< meta cifras.impacto.act1 >}}
+({{< meta cifras.impacto.act1_estaciones >}} estaciones) suman el
+{{< meta cifras.impacto.act1_pct_total >}} de todas las horas sobre el ECA, seguidas de las
+{{< meta cifras.impacto.act2 >}} y la {{< meta cifras.impacto.act3 >}}. Con tan pocas estaciones por
+tipo, es una descripción de estas estaciones y no una comparación entre industrias.
+
+{{< include generado/tablas/impacto_actividad.md >}}
+
+**A qué horas.** Es la respuesta de la PC3, que no cambia: el nivel alto se concentra en la
+{{< meta cifras.alto.franja >}} (el {{< meta cifras.alto.pct_franja >}} de sus horas, con el pico a
+las {{< meta cifras.alto.hora_pico >}}; @tbl-regimenes-hora).
+
+**¿Sirve el régimen como alerta?** No sola. Usada como alerta, una lectura en el régimen que excede
+el ECA acierta el {{< meta cifras.impacto.precision_regimen >}} de las veces que suena y encuentra el
+{{< meta cifras.impacto.cobertura_regimen >}} de las horas en que la media supera el ECA; una lectura
+horaria sobre el umbral, el {{< meta cifras.impacto.precision_horaria >}} y el
+{{< meta cifras.impacto.cobertura_horaria >}} (@tbl-alerta). Por eso la alerta del sistema es la media
+de 24 horas frente al ECA, que es la norma misma.
+
+**¿Con cuánta anticipación?** Sobre los {{< meta cifras.impacto.episodios >}} episodios del gold (cada
+vez que la media de una estación pasa a superar el ECA sin haberlo superado en las 24 horas
+anteriores), la @tbl-impacto-anticipacion mide cuánto antes se encendió cada señal. La respuesta
+tiene dos caras, y hay que decir las dos:
+
+- **Siempre hubo una señal antes.** En los {{< meta cifras.impacto.episodios >}} episodios, una
+  lectura horaria sobre el umbral apareció dentro de las 24 horas previas, con una mediana de
+  {{< meta cifras.impacto.mediana_horaria >}} horas antes del cruce; una lectura en el régimen alto,
+  con una mediana de {{< meta cifras.impacto.mediana_regimen >}} horas.
+- **Pero la señal no se sostiene.** Contadas las horas seguidas que estuvo encendida justo antes del
+  cruce, la mediana es de {{< meta cifras.impacto.seguidas_mediana_horaria >}} hora para la lectura
+  horaria y de {{< meta cifras.impacto.seguidas_mediana_regimen >}} para el régimen: la señal se
+  enciende, se apaga y vuelve. Y, como dice la precisión de arriba, también se enciende muchas veces
+  sin que la media llegue a cruzar.
+
+{{< include generado/tablas/impacto_anticipacion.md >}}
+
+La respuesta, entonces: las lecturas horarias y el régimen alto **anuncian** casi todos los
+episodios con horas de margen, pero como alerta producirían más falsas alarmas que avisos útiles. El
+sistema avisa con la media de 24 horas en el momento en que cruza y muestra el régimen de cada
+lectura como contexto, no como pronóstico. Es una medida descriptiva sobre las mismas lecturas con
+que se entrenó el modelo: no hay una partición en el tiempo ni un reentrenamiento sin fugas, que era
+el diseño completo anunciado en la PC3. La página de impacto de la interfaz lo presenta con las dos
+cuentas juntas (@fig-ui-anticipacion).
+
+![La página de impacto, «¿Con cuánta anticipación?»: los episodios contados desde el primer encendido de la señal y sin interrupción](capturas/tb2/impacto/08-anticipacion.png){#fig-ui-anticipacion width=15cm}
+
+:::: {si-falta="capturas/tb2/impacto/08-anticipacion.png"}
+::: {.callout-warning title="PENDIENTE"}
+Captura real de pantalla: la sección de anticipación de la página de impacto. Va en
+`docs/informe/capturas/tb2/impacto/08-anticipacion.png` (la produce la sesión del frontend).
+:::
+::::
+
+**¿A cuántas personas podría beneficiar?** El enunciado lo pregunta así, y la respuesta honesta no es
+un total. Las {{< meta cifras.impacto.estaciones_pm >}} estaciones con PM por hora están en
+{{< meta cifras.impacto.distritos >}} distritos, con poblaciones censadas en
+{{< meta cifras.impacto.anio_poblacion >}} que van de {{< meta cifras.impacto.poblacion_min >}} a
+{{< meta cifras.impacto.poblacion_max >}} habitantes ({{< meta cifras.impacto.distrito_mayor >}}). Esos
+distritos son los que tendrían, con este sistema, un aviso calculado hora por hora con la regla de la
+norma. La población no se suma, a propósito:
+
+- Vivir en un distrito con una estación en alerta **no** es haber respirado ese aire: las estaciones
+  de OEFA miden junto a una mina, una refinería o una zona ladrillera, no en el centro del distrito.
+- Un distrito grande decide cualquier suma: {{< meta cifras.impacto.distrito_mayor >}} solo tiene más
+  habitantes que los demás juntos, por dos estaciones junto a ladrilleras.
+- Un distrito sin estación, o con una de las {{< meta cifras.impacto.estaciones_sin_pm >}} que no miden
+  PM por hora, no es un distrito con aire limpio (@sec-cobertura).
+
+**Lo que quedó sin responder.** El diferencial de la pregunta (si los episodios son de combustión o
+de polvo) se queda con la lectura de la PC3: la fracción fina baja de
+{{< meta cifras.meteo.bajo_fraccion_fina >}} en el nivel bajo a {{< meta cifras.meteo.alto_fraccion_fina >}}
+en el alto, compatible con polvo (@tbl-meteorologia); probarlo estación por estación no se hizo. Tampoco
+se hizo el contraste con SENAMHI en Lima (Q8), que la PC3 había dejado para el TB2.
