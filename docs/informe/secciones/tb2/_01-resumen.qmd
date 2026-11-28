@@ -1,0 +1,44 @@
+<!-- b) Resumen del informe final (TB2): el sistema completo, lo que respondió cada entregable y lo que no. -->
+
+# Resumen {.unnumbered}
+
+El Organismo de Evaluación y Fiscalización Ambiental (OEFA) publica las lecturas horarias de calidad
+del aire que toma junto a las actividades que fiscaliza: {{< meta cifras.limpieza.filas_largas_leidas >}}
+filas de {{< meta cifras.limpieza.n_estaciones >}} estaciones [@oefa2026aire]. Este trabajo construye
+en Go un sistema que las limpia, las agrupa en niveles de aire con un K-Means entrenado en un clúster
+de nodos, avisa cuándo la media de 24 horas de una estación supera el Estándar de Calidad Ambiental
+(ECA) [@minam2017eca] y lo muestra en una interfaz web. Es el informe final: contiene los tres
+entregables, con las correcciones que el docente pidió a la PC4.
+
+**Carga y modelo (PC3).** Un cargador concurrente, con goroutines y canales, lee el CSV por bloques,
+lo limpia y lo estandariza; un K-Means paralelo da el mismo resultado bit a bit con cualquier número
+de workers y encuentra tres niveles de aire. El alto, el {{< meta cifras.alto.pct >}} de las horas,
+promedia {{< meta cifras.alto.pm2_5 >}} µg/m³ de PM2,5 y {{< meta cifras.alto.pm10 >}} de PM10.
+**Distribución y API (PC4).** Los nodos se conectan por sockets TCP a un coordinador que les reparte
+la tabla, sincroniza cada iteración con una barrera con plazo y fusiona sus sumas parciales en orden
+de nodo; con un nodo, el modelo es el de una sola máquina bit a bit. La API REST, con JWT y Swagger,
+es el coordinador del clúster, guarda en MongoDB y Redis y predice sin pasar por el clúster: con
+{{< meta cifras.frontend.clientes_max >}} clientes a la vez, el percentil 99 de una predicción es de
+{{< meta cifras.frontend.p99_caddy_max >}} ms por el camino del navegador, frente al límite de 100 ms.
+**Interfaz (TB2).** Una SPA en React con los módulos del enunciado (ingreso, panel con el mapa de las
+estaciones, simulación, entrenamiento y administración del clúster) se actualiza en tiempo real por
+WebSocket y se sirve desde el mismo origen que la API, con JWT por rol, CORS cerrado y cabeceras de
+seguridad. Todo se despliega con Docker Compose.
+
+**Impacto.** De {{< meta cifras.impacto.horas_calculables >}} horas-estación con media de 24 horas calculable,
+{{< meta cifras.impacto.horas_sobre_eca >}} ({{< meta cifras.impacto.pct_sobre_eca >}}) superaron el
+ECA, concentradas en {{< meta cifras.impacto.estaciones_con_horas >}} de
+{{< meta cifras.impacto.estaciones_pm >}} estaciones; en dos campañas de
+{{< meta cifras.impacto.top2_dias >}} días en {{< meta cifras.impacto.top2_distrito >}}, una junto a ladrilleras y otra junto a una
+refinería de zinc, la media estuvo sobre el ECA el {{< meta cifras.impacto.top2_pct >}} y el
+{{< meta cifras.impacto.top3_pct >}} de las horas. En los
+{{< meta cifras.impacto.episodios >}} episodios del gold, el régimen alto del K-Means apareció antes
+de que la media cruzara el ECA, con una mediana de {{< meta cifras.impacto.mediana_regimen >}} horas de
+margen, pero de forma intermitente y con muchas falsas alarmas: por eso la alerta del sistema
+compara la media de 24 horas con el ECA y da el régimen como contexto. Las evidencias son {{< meta cifras.pruebas_tb2.go_repo >}} pruebas de Go con el detector de
+carreras, {{< meta cifras.frontend.vitest_pruebas >}} de la interfaz, una verificación de
+{{< meta cifras.series.verificadas >}} lecturas reales contra la API con
+{{< meta cifras.series.diferencias >}} diferencias y capturas de corridas reales.
+
+*Palabras clave:* calidad del aire, PM2,5, PM10, K-Means distribuido, Go, sockets TCP, API REST,
+JWT, WebSocket, MongoDB, Redis, React, Docker Compose, OEFA, ECA.

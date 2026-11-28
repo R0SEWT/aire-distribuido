@@ -1,17 +1,63 @@
-# Informes de la PC3 y de la PC4 (Quarto → Word)
+# Informes de la PC3, la PC4 y el TB2 (Quarto → Word)
 
-Dos informes salen de esta carpeta. El de la **PC4** (`informe-pc4.qmd`, Entregable 2) **contiene el de la
-PC3**: incluye las secciones de `secciones/` tal como se entregaron y agrega las de `secciones/pc4/`
-(distribución, API, bases de datos, evidencias, y su carátula, resumen, objetivos, conclusiones,
-recomendaciones y anexos). El de la PC3 (`informe.qmd`) se sigue pudiendo renderizar igual que cuando
-se entregó.
+Tres informes salen de esta carpeta. El del **TB2** (`informe-tb2.qmd`, Entregable 3) es el **informe
+final** y contiene los otros dos, como pide el enunciado («el informe final contiene los entregables con
+las correcciones»). El de la **PC4** (`informe-pc4.qmd`) contiene el de la PC3, y el de la PC3
+(`informe.qmd`) se sigue pudiendo renderizar igual que cuando se entregó.
 
 ```bash
-bash render.sh                           # PC4: los tres 1ACC0065_PC4_202610_Informe_<código>.docx + participación
+bash render.sh                           # TB2: los tres 1ACC0065_TB2_202610_Informe_<código>.docx + participación
+ENTREGA=pc4 bash render.sh               # PC4, como se entregó
 ENTREGA=pc3 bash render.sh               # PC3, como se entregó
-./empaquetar-pc4.sh --preliminar         # prueba de la entrega de la PC4 en salida/entrega-pc4/
-./empaquetar-pc4.sh pc4                  # la entrega final, con el tag pc4 en el checkout
+./empaquetar-tb2.sh --preliminar         # prueba de la entrega del TB2 en salida/entrega-tb2/
+./empaquetar-tb2.sh tb2                  # la entrega final, con el tag tb2 en el checkout
 ```
+
+## Lo propio del TB2
+
+**Qué incluye.** `informe-tb2.qmd` arma el informe con las secciones de `secciones/` (PC3), de
+`secciones/pc4/` y de `secciones/tb2/`. En `secciones/tb2/` están las nuevas (frontend, integración y
+seguridad, evaluación experimental, el mapa de criterios y las observaciones de la PC4) y una **copia
+corregida** de cada sección que el docente observó en la PC4 (`_12-distribucion`, `_13-api`,
+`_15-evidencias`) o que repetía lo observado (`_04-caso` con la arquitectura final y `_06-modelo`); las
+originales quedan como se entregaron, para que `ENTREGA=pc4` siga dando el informe de la PC4.
+
+**Las correcciones de la PC4**, en una línea cada una (el detalle está en la sección «Observaciones de la
+PC4 y cómo se atendieron» del informe): el código de los sockets como texto (`net.Listen`, `Accept`,
+`net.Dial`, `bufio`, JSON, puertos) con los patrones de los laboratorios; sin la analogía falsa de los
+chunks, el `WaitGroup` y el canal; el código Go de la API y el camino de una petición hasta el clúster,
+con lo que no pasa por él; los Dockerfile y el Compose dentro del informe; y el Kanban con enlaces
+directos. **Todo el código va como texto**: `listados_imagen.py` no corre para el TB2.
+
+**De dónde salen sus cifras** (`tablas.py`, ámbito `tb2`; lo que falta sale en `generado/tablas/_estado_tb2.md`):
+
+| Qué | Lo lee de | Lo escribe |
+|---|---|---|
+| Impacto: por estación, por actividad y anticipación (`impacto`) | `reports/impacto.json` | `scripts/impacto.py` |
+| Datos de prueba del TB2 (`series`) | `web/public/datos/series.json` y `salidas-tb2/verificar-series.txt` | `scripts/impacto.py`; `scripts/verificar_series_api.py` |
+| Latencia de la verificación y desde lejos (`latencia_tb2`) | `salidas-tb2/metricas-verificacion.txt`, `salidas-tb2/latencia-remota.txt` | la corrida de este informe |
+| Latencia directa y por Caddy, WebSocket, Vitest (`frontend`) | `capturas/tb2/pruebas/*.json` y `*.txt` | la sesión del frontend (`cmd/carga`, `medir_ws.mjs`) |
+| Pruebas del TB2 (`pruebas_tb2`) | los `_test.go` del TB2 y los `*.test.ts(x)` de `web/` | — |
+| Constantes que cita la prosa (`tb2`) | el código, `docker-compose.yml`, `web/` (`CONSTANTES_TB2`) | — |
+| Fragmentos de código, Dockerfile, Compose y Caddyfile (`frag_*.md`) | el código (`FRAGMENTOS_TB2`) | — |
+| Salidas reales en texto (`salida_*.md`) | `salidas-tb2/*.txt` y `capturas/tb2/**/*.txt` (`SALIDAS_TB2`, `SALIDAS_TB2_FRONTEND`) | las corridas reales |
+
+**Capturas.** Las de la interfaz las produce la sesión del frontend en `capturas/tb2/<pantalla>/`, con su
+índice en `capturas/tb2/README.md` (qué muestra cada una y la lista de punta a punta). Cada figura tiene su
+aviso `si-falta`, que desaparece cuando llega el PNG. La del Kanban va en `capturas/tb2/kanban/tablero.png`.
+
+**Diagramas.** `../diagramas/arquitectura-tb2.drawio` (la arquitectura final, con el Caddy de la interfaz y
+sin los nodos por VPN que no se hicieron; va girada a página completa, como la de entidades) y
+`despliegue-tb2.drawio` (lo genera `generar-despliegue.py`, con el servicio `web`).
+
+**El índice.** Además de marcar el campo para que Word lo actualice, `render.sh` corre `indice.py`, que
+escribe en el campo las entradas con sus páginas medidas con LibreOffice: fuera de Word (el visor del Aula,
+LibreOffice, un PDF) el índice ya no sale vacío.
+
+**Antes de entregar el TB2**: fusionar la rama de las capturas, `equipo.local.yml` con los códigos reales, la
+captura del Kanban, el enlace del video en el Anexo A, la participación llenada
+(`participacion-tb2.local.md`), las filas del Anexo E confirmadas, `FETCH=1 bash render.sh` y
+`./empaquetar-tb2.sh tb2`.
 
 ## Lo propio de la PC4
 

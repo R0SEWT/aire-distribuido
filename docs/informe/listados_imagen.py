@@ -86,9 +86,21 @@ def terminal(nombre: str, texto: str, origen: str) -> float:
     return ancho
 
 
+def de_la_pc4() -> set[str]:
+    """Los listados que incluye el informe de la PC4: solo esos pasan a imagen. Los del TB2 van como texto
+    (el docente observó en la PC4 que en una imagen no se puede buscar el código)."""
+    aqui = TABLAS.parent.parent
+    fuentes = [aqui / "informe-pc4.qmd", *sorted((aqui / "secciones").glob("*.qmd")), *sorted((aqui / "secciones" / "pc4").glob("*.qmd"))]
+    texto = "\n".join(f.read_text(encoding="utf-8") for f in fuentes if f.exists())
+    return set(re.findall(r"generado/tablas/((?:frag|salida)_\w+)\.md", texto))
+
+
 def listados() -> int:
     hechos = 0
+    incluidos = de_la_pc4()
     for md in sorted(list(TABLAS.glob("frag_*.md")) + list(TABLAS.glob("salida_*.md"))):
+        if md.stem not in incluidos:
+            continue
         s = md.read_text(encoding="utf-8")
         m = re.search(r"```(\w*)\n(.*?)\n```\n", s, re.S)
         if not m or "PENDIENTE" in s:

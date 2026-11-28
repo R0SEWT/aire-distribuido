@@ -1,6 +1,6 @@
-# Informes de la PC3 (informe.qmd) y de la PC4 (informe-pc4.qmd, que contiene el de la PC3) en
-# Quarto → Word. Cómo se renderiza: README.md. Corto: `bash render.sh` deja los tres .docx de la PC4
-# en salida/; `ENTREGA=pc3 bash render.sh`, los de la PC3.
+# Informes de la PC3 (informe.qmd), de la PC4 (informe-pc4.qmd, que contiene el de la PC3) y del TB2
+# (informe-tb2.qmd, el final, que contiene los dos) en Quarto → Word. Cómo se renderiza: README.md. Corto:
+# `bash render.sh` deja los tres .docx del TB2 en salida/; `ENTREGA=pc4 bash render.sh`, los de la PC4.
 project:
   type: default
   output-dir: salida
@@ -9,6 +9,8 @@ project:
     - participacion.qmd
     - informe-pc4.qmd
     - participacion-pc4.qmd
+    - informe-tb2.qmd
+    - participacion-tb2.qmd
 
 # Motor markdown: el .qmd no tiene celdas ejecutables. Las tablas y cifras se generan antes, con
 # tablas.py (generado/tablas/*.md y generado/cifras.yml), y se incluyen. Así renderizar no depende
