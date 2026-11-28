@@ -78,7 +78,10 @@ export function CuantoTiempo({ impacto }: { impacto: Impacto }) {
               </dt>
               <dd className="mt-0.5">
                 <span className="text-texto block font-mono text-lg leading-tight font-semibold tabular-nums">{numero(t.inca[b])}</span>
-                <span className="text-suave block text-sm">horas-estación · {porciento(t.inca[b], t.horas_calculables)}</span>
+                <span className="text-suave block text-sm">
+                  {/* La unidad es larga: si no cabe, baja entero el porcentaje, no solo su «%». */}
+                  horas-estación · <span className="whitespace-nowrap">{porciento(t.inca[b], t.horas_calculables)}</span>
+                </span>
               </dd>
             </div>
           ))}
