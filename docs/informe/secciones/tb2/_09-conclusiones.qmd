@@ -11,8 +11,8 @@ incluyen después, como se entregaron. -->
 
 2. **El tiempo real cuesta milisegundos y no tocó el camino de la predicción.** El evento
    `estacion.regimen` sale del mismo escritor que guarda cada predicción, después de responder: una
-   lectura enviada llega al panel de otro cliente en {{< meta cifras.frontend.ws_evento_p50 >}} ms de
-   mediana, y las {{< meta cifras.frontend.ws_lecturas >}} lecturas medidas tuvieron su evento. El
+   lectura que manda un administrador le llega a un invitado conectado en otra sesión en
+   {{< meta cifras.frontend.ws_evento_p50 >}} ms de mediana, y las {{< meta cifras.frontend.ws_lecturas >}} lecturas medidas tuvieron su evento. El
    hub que lo reparte es el de la PC4, que nunca espera a un cliente lento.
 
 3. **Servir la interfaz y la API desde el mismo origen simplificó la seguridad.** No hizo falta abrir

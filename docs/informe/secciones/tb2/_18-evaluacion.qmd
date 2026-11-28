@@ -117,10 +117,12 @@ pedidos sobre el límite: pasar por el servidor web suma unos milisegundos y dej
 
 {{< include generado/tablas/latencia_tb2.md >}}
 
-Para la interfaz importa además cuánto tarda en verse un cambio. Un cliente que manda las
-{{< meta cifras.frontend.ws_lecturas >}} lecturas de tres días de prueba, una por una, recibe la
-respuesta de cada predicción en {{< meta cifras.frontend.ws_respuesta_p50 >}} ms de mediana y el evento
-`estacion.regimen` por el WebSocket en {{< meta cifras.frontend.ws_evento_p50 >}} ms (percentil 99,
+Para la interfaz importa además cuánto tarda en verse un cambio en otro navegador. Un administrador
+manda las {{< meta cifras.frontend.ws_lecturas >}} lecturas de tres días de prueba, una por una, y un
+invitado, con otro token y su propia conexión, solo escucha `/ws`, como un panel abierto en otra
+parte. El administrador recibe la respuesta de cada predicción en
+{{< meta cifras.frontend.ws_respuesta_p50 >}} ms de mediana, y al invitado le llega el evento
+`estacion.regimen` en {{< meta cifras.frontend.ws_evento_p50 >}} ms (percentil 99,
 {{< meta cifras.frontend.ws_evento_p99 >}} ms). Las {{< meta cifras.frontend.ws_lecturas >}} lecturas
 tuvieron su evento ({{< meta cifras.frontend.ws_sin_evento >}} sin evento), y el último estado de los
 {{< meta cifras.frontend.ws_dias >}} días coincidió con lo esperado
