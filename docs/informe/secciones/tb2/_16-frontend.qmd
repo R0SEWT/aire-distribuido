@@ -288,11 +288,11 @@ Se calculan una vez, con el script de análisis que también verifica las series
 (el estado de las estaciones, el modelo, el clúster); recalcular en cada visita algo que no cambia
 solo agregaría carga al servidor.
 
-![La página de impacto: las horas-estación sobre el ECA por estación, con su actividad fiscalizada y las semanas en que midió](capturas/tb2/impacto/05-por-estacion.png){#fig-ui-impacto width=16cm}
+![La página de impacto, «¿Dónde y junto a qué?»: cada estación con la actividad que vigila, las semanas en que midió, sus horas con la media de 24 horas sobre el ECA y la población de su distrito como contexto](capturas/tb2/impacto/05-por-estacion.png){#fig-ui-impacto width=16cm}
 
 :::: {si-falta="capturas/tb2/impacto/05-por-estacion.png"}
 ::: {.callout-warning title="PENDIENTE"}
-Captura real de pantalla: la página de impacto con las horas-estación sobre el ECA y la tabla por estación. Va
+Captura real de pantalla: la sección «¿Dónde y junto a qué?» de la página de impacto, con la tabla por estación. Va
 en `docs/informe/capturas/tb2/impacto/05-por-estacion.png`.
 :::
 ::::

@@ -172,7 +172,7 @@ superaciones en las medias calculables del periodo en que midieron (@tbl-impacto
 es la estación, que vigila una actividad:
 
 - `{{< meta cifras.impacto.top1_estacion >}}`, junto a un {{< meta cifras.impacto.top1_tipo >}} en
-  {{< meta cifras.impacto.top1_distrito >}}, tiene la mayor cantidad de horas sobre el ECA
+  {{< meta cifras.impacto.top1_distrito >}}, tiene la mayor cantidad de horas con la media sobre el ECA
   ({{< meta cifras.impacto.top1_horas >}}), pero midió {{< meta cifras.impacto.top1_dias >}} días: son
   el {{< meta cifras.impacto.top1_pct >}} de sus horas.
 - `{{< meta cifras.impacto.top2_estacion >}}` ({{< meta cifras.impacto.top2_tipo >}}, en
