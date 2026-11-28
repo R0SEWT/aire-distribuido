@@ -1,7 +1,7 @@
 # Deck (Quarto + reveal.js + D3)
 
-`index.qmd` es la sustentación del TB2: portada, 29 láminas y 10 de respaldo (los números de lámina de `reparto.md` y `preguntas.md` son los que muestra el deck, con la portada como 1) en 16:9 (1280×720).
-Dura unos 14 minutos y medio más 4 de demo, y se reparte entre los tres integrantes; cada lámina dice
+`index.qmd` es la sustentación del TB2: portada, 30 láminas y 10 de respaldo (los números de lámina de `reparto.md` y `preguntas.md` son los que muestra el deck, con la portada como 1) en 16:9 (1280×720).
+Dura unos 15 minutos más 3:50 de demo (en el medio, después de la SPA), y se reparte entre los tres integrantes; cada lámina dice
 quién habla, arriba a la derecha, y sus notas traen el tiempo y qué decir. El reparto, la versión
 corta y el guion de la demo están en [`../reparto.md`](../reparto.md); las preguntas probables del
 docente, en [`../preguntas.md`](../preguntas.md). La versión de la PC3 está en el tag `pc3.1`.
@@ -84,6 +84,6 @@ Si cambian los reports, se corre `tablas.py` del informe (para `cifras.yml`) y d
 ## Pendiente
 
 - Que cada integrante revise sus láminas, sus notas y sus preguntas antes de exponer.
-- Ensayar con reloj: el reparto suma 14:30 más 4:00 de demo; si el docente da menos tiempo, la
+- Ensayar con reloj: el reparto suma 14:55 más 3:50 de demo; si el docente da menos tiempo, la
   versión corta está en `../reparto.md`.
 - Si cambian los reports o las cifras del informe del TB2, correr `render.sh` otra vez.

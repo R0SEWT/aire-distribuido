@@ -24,14 +24,15 @@ suyas antes de la sustentación.
 
 ## Lo que el docente observó en la PC4
 
-Cuatro observaciones con base (la quinta, la del Kanban, era un error de hecho). Las cuatro tienen
-ahora una lámina y una respuesta que no repite el error.
+Cuatro observaciones con base. La quinta, la del Kanban, pedía una tarjeta que sí estaba (la #76):
+si sale, se muestra la tarjeta, sin discutir. Las cuatro tienen ahora una lámina y una respuesta
+que no repite el error.
 
 | Observación de la PC4 | Qué faltaba | Dónde se responde ahora |
 |:--|:--|:--|
-| No explica el código Go distribuido: listen, dial, puertos, patrones | Los listados mostraban `Ronda`, `Lloyd` y `Pool`, un nivel por encima de los sockets | Lámina 15 (el código de `net.Listen`, `Accept` y `DialContext`), lámina 16 (la ronda con su `WaitGroup`), respaldo de patrones; preguntas 10 a 16 |
-| «Incorrecto: los chunks pasan a ser nodos, el WaitGroup pasa a ser una barrera a través de la red y el canal pasa a ser una conexión TCP» | Una analogía falsa al pie de la letra | Lámina 16: «entre procesos, sockets TCP; dentro de cada proceso, goroutines, canales y `WaitGroup`»; pregunta 13 |
-| No explica el código Go de la API ni cómo pasa la petición al clúster | «El servidor en Go» era prosa; no se dijo que las predicciones no pasan por el clúster | Lámina 9 (el camino de un pedido) y lámina 18 (el handler); preguntas 17 a 19 |
+| No explica el código Go distribuido: listen, dial, puertos, patrones | Los listados mostraban `Ronda`, `Lloyd` y `Pool`, un nivel por encima de los sockets | Lámina 16 (el código de `net.Listen`, `Accept` y `DialContext`), lámina 17 (la ronda con su `WaitGroup`), respaldo de patrones; preguntas 10 a 16 |
+| «Incorrecto: los chunks pasan a ser nodos, el WaitGroup pasa a ser una barrera a través de la red y el canal pasa a ser una conexión TCP» | Una analogía falsa al pie de la letra | Lámina 17: «entre procesos, sockets TCP; dentro de cada proceso, goroutines, canales y `WaitGroup`»; pregunta 13 |
+| No explica el código Go de la API ni cómo pasa la petición al clúster | «El servidor en Go» era prosa; no se dijo que las predicciones no pasan por el clúster | Lámina 9 (el camino de un pedido) y lámina 19 (el handler); preguntas 17 a 19 |
 | No incluye el Dockerfile ni el docker-compose; no explica el despliegue | Los archivos iban solo en el ZIP | Lámina 8 (servicios y puertos), respaldo de Docker Compose; preguntas 22 y 23 |
 
 ## Planteamiento y datos
@@ -40,8 +41,8 @@ ahora una lámina y una respuesta que no repite el error.
 
 **Respuesta.** ¿En qué estaciones de OEFA y a qué horas el aire entra en el nivel alto de
 PM2,5/PM10, y con cuánta anticipación eso avisa de un episodio que supera el ECA? Es para las personas con enfermedades respiratorias que viven junto
-a una actividad que OEFA fiscaliza. Es, casi literal, el ejemplo del enunciado para el caso 10
-(«¿cuándo se disparará la contaminación del aire para alertar a personas con enfermedades
+a una actividad que OEFA fiscaliza. El enunciado pone una casi igual entre sus ejemplos de impacto
+social («¿cuándo se disparará la contaminación del aire para alertar a personas con enfermedades
 respiratorias?»), elegida con una criba sobre el dato entre nueve candidatas.
 
 *Dónde:* `docs/specs/2026-10-31-preguntas-candidatas.md` · *Quién:* Rody · *Lámina:* 3
@@ -78,16 +79,21 @@ pandas rehízo la limpieza: 40 de 40 chequeos sin diferencias.
 *Dónde:* `datos/doc.go` (la cascada de reglas), `configs/limpieza.json` · *Quién:* Dayana ·
 *Lámina:* 5, 6 y el respaldo de reglas
 
-### 5. ¿Por qué K-Means? ¿Por qué k = 3?
+### 5. ¿Por qué K-Means y k = 3? Si la alerta es la media de 24 h, ¿qué aporta el modelo?
 
-**Respuesta.** El enunciado recomienda K-Means o redes neuronales para el caso 10, y lo que se busca
-son niveles de aire, sin etiquetas: es clustering. Las features son PM2,5 y PM10 en µg/m³,
-estandarizadas (`configs/kmeans.json`). k = 3 salió de 1 080 corridas de calibración: la silueta
-más alta de la grilla con k ≥ 3 (0,54) y estable entre semillas (ARI 0,99). Los tres niveles: bajo
-(73,1 % de las horas), medio (24,6 %) y alto (2,3 %, el único sobre el ECA).
+**Respuesta.** El enunciado recomienda K-Means para el caso 10, y lo usamos para describir
+regímenes de aire con PM2,5 y PM10 en µg/m³ (`configs/kmeans.json`). k = 3 salió de 1 080 corridas
+de calibración: la silueta más alta de la grilla con k ≥ 3 (0,54) y estable entre semillas (ARI
+0,99). Los tres regímenes: bajo (73,1 % de las horas), medio (24,6 %) y alto (2,3 %, el único sobre
+el ECA). Qué aporta: el régimen de cada lectura, que el panel muestra junto a cada estación, y una
+señal temprana medida: en los 30 episodios, el régimen alto apareció antes (18 h en la mediana).
+Pero acierta el 35 % de las veces que suena, y el ECA ya es una etiqueta legal sobre la media de
+24 h: calcularla es exacto, aprenderla sería peor. Por eso la alerta es la norma y el régimen es
+contexto. La predicción de concentraciones del caso 10 quedó fuera: no la hicimos, y no decimos
+que el sistema pronostique.
 
 *Dónde:* `configs/kmeans.json`, `reports/calibracion_decision.md` · *Quién:* Rody · *Lámina:*
-respaldo «Por qué k = 3»
+14 y el respaldo «Por qué k = 3»
 
 ## Concurrencia en una máquina
 
@@ -96,7 +102,7 @@ respaldo «Por qué k = 3»
 **Respuesta.** Es un pipeline productor–consumidor. `trabajos` lleva los índices de bloque del
 productor a los W workers; `resultados` lleva el parcial de cada bloque al recolector; `enVuelo`
 es un canal con búfer de 2W que hace de semáforo, para que no haya más de 2W bloques leídos sin
-fusionar (la memoria no crece con el archivo). Un `WaitGroup` cierra `resultados` cuando terminan
+fusionar (la lectura no acumula más de 2W bloques en memoria). Un `WaitGroup` cierra `resultados` cuando terminan
 los workers.
 
 *Dónde:* `datos/pipeline.go:29-31` · *Quién:* Julio · *Lámina:* 11
@@ -106,8 +112,10 @@ los workers.
 **Respuesta.** Por diseño, no hay escritura compartida: cada worker escribe solo el parcial de su
 chunk, en su casilla `P[b]` de un arreglo preasignado, y los centroides son de solo lectura durante
 la iteración. Después de la barrera, `Fusionar` y `Actualizar` corren en una sola goroutine. Todas
-las pruebas corren con `go test -race` en cada push y PR, y el detector de carreras no encuentra
-ninguna.
+las pruebas corren con `go test -race` en cada push y PR, y el detector no encuentra ninguna en lo
+que ejercitan las pruebas (mira los caminos que corren; no prueba la ausencia en general). Y los
+workers ven los centroides nuevos sin carrera porque los reciben después por el canal: en Go, lo que
+una goroutine escribe antes de enviar por un canal lo ve la que recibe.
 
 *Dónde:* `kmeans/concurrente.go:34-35` (el contrato), `:58-59` (canal y barrera),
 `kmeans/parciales.go:78` (`Fusionar`), `.github/workflows/go.yml` · *Quién:* Rody · *Lámina:* 12
@@ -118,7 +126,8 @@ ninguna.
 donde hay estado compartido de verdad: la ventana de 24 h de cada estación en la API
 (`sync.RWMutex` para el mapa y un `sync.Mutex` por estación, porque llegan predicciones de varias
 estaciones a la vez), el pool de nodos (dos candados: `uso` para hablar con los nodos libres y `mu`
-para los mapas) y el hub del WebSocket. Y para publicar el modelo activo no se usa lock, sino un
+para los mapas, que se toman siempre en ese orden, primero `uso` y después `mu`, para que no haya
+interbloqueo) y el hub del WebSocket. Y para publicar el modelo activo no se usa lock, sino un
 `atomic.Pointer`.
 
 *Dónde:* `ventana/ventana.go:98` y `:107`, `cluster/pool.go:86-88`, `api/servidor.go:104`
@@ -126,17 +135,20 @@ para los mapas) y el hub del WebSocket. Y para publicar el modelo activo no se u
 
 ### 9. ¿Por qué el speedup no llega a 12 con 12 workers?
 
-**Respuesta.** El cargador llega a 4,94× (de 6,68 s a 1,35 s): la fusión en orden y las fases
-seriales, el 8,3 % del tiempo, no se reparten; Karp-Flatt da una fracción serial efectiva del 13 %.
-El K-Means llega a 3,86×: una iteración dura 2 ms y la barrera de cada iteración pesa; con chunks de
+**Respuesta.** El cargador llega a 4,94× (de 6,68 s a 1,35 s). Las fases seriales son el 8,3 % del
+tiempo, y con eso Amdahl dejaría llegar a más de 6×; Karp-Flatt da una fracción serial efectiva del
+13 %: el resto es coordinar y repartir bloques de 64 MiB, que en un CSV de 1,3 GB son pocos para 12
+workers. En Windows se ve: con 4 workers, bloques de 16 MiB tardan un 8,5 % menos que los de 64 MiB.
+El K-Means llega a 3,86×: una iteración dura 2,03 ms con 1 worker y 0,55 ms con 12, y en algo tan
+corto la barrera de cada iteración pesa; con chunks de
 10 000 filas solo hay 7 chunks para 12 workers y cae a 2,25×. En Windows, con 32 CPU, el cargador da
-4,81× con 12 workers (intervalo 3,81 a 5,99). Lo importante: el resultado es el mismo bit a bit para
-cualquier W, y también en otra máquina: Dayana rehízo la PC3 en macOS (darwin/arm64) y obtuvo los
+4,81× con 12 workers (intervalo 3,81 a 5,99). Lo importante: con el mismo chunk, el resultado es el mismo bit a
+bit para cualquier W, y se reprodujo en otra máquina: Dayana rehízo la PC3 en macOS (darwin/arm64) y obtuvo los
 mismos SHA-256 del silver y el gold, con 40 de 40 chequeos de la auditoría.
 
 *Dónde:* `reports/benchmark_cargador.json`, `reports/benchmark_kmeans.json`,
 `reports/benchmark_cargador_windows.json`, `reports/revision_dayana/` · *Quién:* Julio (cargador y
-Windows), Rody (K-Means), Dayana (macOS) · *Lámina:* 11, 13, 25 y el respaldo de speedup
+Windows), Rody (K-Means), Dayana (macOS) · *Lámina:* 11, 13, 27 y el respaldo de speedup
 
 ## Distribución: sockets, puertos y protocolo
 
@@ -148,14 +160,16 @@ conexión nueva se atiende en su propia goroutine, que espera el `HOLA` con un p
 es el que llama: `net.Dialer{Timeout: 3 s}` y `DialContext(ctx, "tcp", "api:7070")`.
 
 *Dónde:* `cmd/api/main.go:318` y `:329` (`Listen`), `cluster/reunir.go:155` y `:171` (`Accept` y
-la goroutine por conexión), `cmd/nodo/main.go:72-74` (`Dial`) · *Quién:* Julio · *Lámina:* 15
+la goroutine por conexión), `cmd/nodo/main.go:72-74` (`Dial`) · *Quién:* Julio · *Lámina:* 16
 
 ### 11. ¿Qué puertos usa el sistema?
 
 **Respuesta.** 8080, la API por HTTP (REST, Swagger y WebSocket); 7070, la API por TCP para los
 nodos; 27017 MongoDB; 6379 Redis; y el Caddy del servicio `web` en el 80 (443 con HTTPS en la
-máquina pública). En Compose, todos se publican solo en `127.0.0.1` y el 7070 ni se publica: con
-`expose` queda dentro de la red de Compose, que es donde están los nodos.
+máquina pública). En Compose, los que se publican van solo a `127.0.0.1`, y el 7070 no se publica:
+no está en `ports`, así que solo se alcanza dentro de la red de Compose, que es donde están los
+nodos. `expose` no restringe nada: es documentación, como el `EXPOSE` del Dockerfile. En el
+laboratorio el coordinador corrió fuera de Docker y escuchó en la IP de la PC.
 
 *Dónde:* `cmd/api/main.go` (flags `-addr ":8080"` y `-nodos-addr ":7070"`),
 `docker-compose.yml:32` (`expose: "7070"`), `:49`, `:74`, `:99`, `:132` · *Quién:* Julio ·
@@ -163,17 +177,18 @@ máquina pública). En Compose, todos se publican solo en `127.0.0.1` y el 7070 
 
 ### 12. ¿Por qué el nodo llama al coordinador y no al revés? ¿Por qué estrella?
 
-**Respuesta.** Porque así el nodo funciona detrás de cualquier red: Colab no acepta conexiones
-entrantes, y en las PC del laboratorio el nodo corre sin permisos de administrador, solo con
-conexiones de salida. Si pierde la conexión, vuelve a llamar solo. Estrella porque la fusión es una
+**Respuesta.** Porque así el nodo funciona detrás de cualquier red: Colab está detrás de NAT, y el
+firewall de Windows de las PC del laboratorio bloquea las conexiones entrantes (abrir el puerto pide
+administrador), mientras que las de salida pasan. Si pierde la conexión, vuelve a llamar solo. Estrella porque la fusión es una
 suma de parciales que solo necesita el coordinador: los nodos no tienen nada que decirse. En clase
 vimos otras topologías, el anillo de la papa caliente y el P2P de Agrawala, donde los procesos se
 pasan un token o compiten por un recurso; aquí no hay token que circule ni recurso que excluir: cada
 ronda es una reducción (una suma) y la estrella la hace en un solo salto. Y la medimos: con 4 PC del
-laboratorio, una ronda completa por la red tarda 0,515 ms de mediana.
+laboratorio, una ronda de `PING` a todos a la vez, sin cálculo (`cmd/smoke`), tarda 0,515 ms de
+mediana: es lo que la barrera paga en red en cada iteración.
 
 *Dónde:* `cmd/nodo/main.go:1-22`, `protocolo/doc.go` (sección Sesión), `reports/smoke_lab_4.json`
-· *Quién:* Julio · *Lámina:* 15
+· *Quién:* Julio · *Lámina:* 16
 
 ### 13. ¿Qué cambia entre el K-Means en una máquina y en el clúster?
 
@@ -182,9 +197,11 @@ coordinador manda `ITERAR` a cada nodo por su conexión y lee su `PARCIAL`. **De
 proceso**, goroutines, canales y `WaitGroup`: en el coordinador, una goroutine por conexión y un
 `WaitGroup` que espera a todas; en cada nodo, el mismo worker pool de la parte B sobre su rango.
 Lo que no cambia es el algoritmo: `Fusionar` y el cierre de la iteración son las mismas funciones.
+(El `go func()` de la ronda usa `i` y `e` del bucle sin pasarlas como parámetro: desde Go 1.22 cada
+vuelta tiene su propia variable, y el módulo usa Go 1.26.)
 
 *Dónde:* `protocolo/coordinador.go:194-203` (la ronda), `kmeans/nodo.go:38-53` (el pool del
-nodo), `cluster/lloyd.go:288` · *Quién:* Julio · *Lámina:* 16
+nodo), `cluster/lloyd.go:288` · *Quién:* Julio · *Lámina:* 17
 
 > No decir: «los chunks pasan a ser nodos, el `WaitGroup` pasa a ser una barrera por la red y el
 > canal pasa a ser una conexión TCP». El docente la marcó como incorrecta en la PC4, y lo es: el
@@ -203,27 +220,31 @@ mismo valor: la ida y vuelta no cambia ningún bit. Los plazos son los del socke
 `SetReadDeadline` y `SetWriteDeadline`.
 
 *Dónde:* `protocolo/doc.go`, `protocolo/codec.go:42` y `:123` (`bufio`), `:101` (el `\n`), `:72` (`SetWriteDeadline`) ·
-*Quién:* Julio · *Lámina:* 16
+*Quién:* Julio · *Lámina:* 17
 
 ### 15. ¿Cómo sabe que la fusión distribuida da el mismo modelo? ¿Por qué en orden de nodo?
 
 **Respuesta.** La suma en coma flotante no es asociativa: sumar los parciales en el orden de
-llegada daría centroides distintos en cada corrida. Por eso, después de la barrera, `Fusionar`
+llegada podría dar centroides distintos en cada corrida. Por eso, después de la barrera, `Fusionar`
 suma en orden de nodo, que es el orden de las filas. Con un nodo, el distribuido es el de una
-máquina bit a bit; con hasta cuatro, difiere a lo sumo en 1,3 × 10⁻¹⁵, que es redondeo. La API
+máquina bit a bit; con varios, es la misma función pero agrupar por nodo cambia el orden de la suma,
+y difiere en el orden de 10⁻¹⁵: a lo sumo 1,3 × 10⁻¹⁵ en las corridas de `cmd/distribuido` con
+hasta cuatro nodos, y 7,7 × 10⁻¹⁵ en la corrida de la captura, con dos nodos por la API. La API
 además compara cada entrenamiento con el K-Means secuencial y solo activa el modelo si la
 diferencia es ≤ 10⁻⁹.
 
 *Dónde:* `cluster/lloyd.go:142-144` y `:288`, `cluster/lloyd.go:25` (`Tolerancia`),
-`api/entrenamientos.go:517` · *Quién:* Julio · *Lámina:* 16
+`api/entrenamientos.go:517` · *Quién:* Julio · *Lámina:* 17
 
 ### 16. ¿Qué pasa si un nodo se cae a mitad del entrenamiento? ¿Y si se cae la API?
 
 **Respuesta.** Si un nodo no manda su `PARCIAL` dentro del plazo (10 s por ronda), la ronda se
-aborta con un error que lo nombra, la corrida se corta con todos y no hay modelo: uno con menos
-nodos sería otro modelo. Los nodos vuelven a llamar solos y quedan libres para relanzar. Un
+aborta con un error que lo nombra y no hay modelo: no reasignamos el rango del nodo caído (se
+podría, y el modelo sería el mismo salvo redondeo, pero no está hecho). Los nodos vuelven a llamar
+solos y se relanza con los que queden. Un
 `PARCIAL` rezagado se reconoce por su número de ronda y se descarta. Si se cae la API, el
-entrenamiento en curso se pierde (el punto de control queda en Redis, pero no se reanuda), los
+entrenamiento en curso se pierde (los centroides de la última ronda quedan en Redis, pero todavía
+no se reanuda desde ahí), los
 nodos reintentan cada 2 s y la API vuelve con el último modelo activo, que está en MongoDB y Redis.
 
 *Dónde:* `protocolo/coordinador.go:221-224`, `api/entrenamientos.go:425`,
@@ -242,7 +263,7 @@ centroide más cercano, actualiza la media de 24 h de la estación en memoria, e
 para MongoDB y Redis y responde. Nada de ese camino espera a una base de datos.
 
 *Dónde:* `api/servidor.go:203-220` (rutas), `api/servidor.go:395` y `:405` (`ruta` y `exigir`),
-`api/rutas.go:238-290` (`predecir`) · *Quién:* Julio · *Lámina:* 18
+`api/rutas.go:238-290` (`predecir`) · *Quién:* Julio · *Lámina:* 19
 
 ### 18. ¿La predicción pasa por el clúster?
 
@@ -263,9 +284,11 @@ clientes a la vez, medidos del lado del cliente. Con 64 clientes, p99 de 3,14 ms
 4,84 ms; ningún pedido sobre el límite y ningún error. Además la API mide la latencia de cada ruta
 y la publica en `GET /api/metricas`, que la pantalla Clúster dibuja con la línea de los 100 ms. Y
 la colección de Postman, que newman corre con 78 lecturas de prueba (5 casos de 14 estaciones),
-recorre la API de punta a punta.
+recorre la API de punta a punta. Mientras tanto MongoDB y Redis guardaron 80 800 predicciones cada
+uno, los 80 000 pedidos y los 800 de calentamiento, sin descartar ninguna; si una cola se llenara,
+la API descartaría y lo contaría, pero el pedido no espera.
 
-*Dónde:* `reports/api_latencia.json`, `cmd/carga/`, `docs/postman/` · *Quién:* Julio · *Lámina:* 19 y 25
+*Dónde:* `reports/api_latencia.json`, `cmd/carga/`, `docs/postman/` · *Quién:* Julio · *Lámina:* 20 y 27
 
 ### 20. ¿Cómo funciona el WebSocket? ¿Usaron una librería?
 
@@ -283,7 +306,7 @@ clientes lo maneja una sola goroutine, el hub, que lo cambia por los canales de 
 de un `select`, así que no necesita el `Lock()` del lab.
 
 *Dónde:* `api/ws.go:17-30`, `api/hub.go:58-61` (canales), `:139-153` (el `select` del hub), `:471-500` (`seguirEventos`),
-`docs/informe/capturas/tb2/pruebas/ws_latencia.json` · *Quién:* Julio · *Lámina:* 18 y 25
+`docs/informe/capturas/tb2/pruebas/ws_latencia.json` · *Quién:* Julio · *Lámina:* 19 y 27
 
 ## MongoDB y Redis
 
@@ -292,12 +315,13 @@ de un `select`, así que no necesita el `Lock()` del lab.
 **Respuesta.** El enunciado pide los dos niveles. MongoDB es lo que tiene que durar, en 5
 colecciones: `estaciones`, `predicciones`, `modelos`, `entrenamientos` (con sus rondas) y
 `eventos_cluster`, con 5 índices. Redis es la caché, lo que se lee rápido, en 3 claves: el último régimen de
-cada estación (lo que pinta el mapa), el modelo activo (para arrancar en caliente) y el punto de
-control de cada ronda. La API escribe con una cola con búfer y una goroutine por base, por lotes
-(`InsertMany` y un pipeline de Redis): bajo carga, 80 800 escrituras en cada una y 0 descartadas.
+cada estación (lo que pinta el mapa), el modelo activo (para arrancar en caliente) y los centroides
+de la última ronda de un entrenamiento (todavía no se reanuda desde ahí). La API escribe con una cola con búfer y una goroutine por base, por lotes
+(`InsertMany` y un pipeline de Redis): bajo carga, 80 800 escrituras en cada una (80 000 pedidos y
+800 de calentamiento) y 0 descartadas.
 
 *Dónde:* `almacen/mongo/mongo.go:58-62` y `:240`, `almacen/redis/redis.go:40-43` y `:146`,
-`api/escritor.go:232-240`, `docs/diagramas/entidades.png` · *Quién:* Dayana · *Lámina:* 20
+`api/escritor.go:232-240`, `docs/diagramas/entidades.png` · *Quién:* Dayana · *Lámina:* 21
 
 ## Docker
 
@@ -331,11 +355,13 @@ compilado para Windows corrió en las PC del laboratorio.
 **Respuesta.** React con Vite y TypeScript; los gráficos y el mapa en D3, sin teselas de terceros.
 Las pantallas del enunciado: ingreso, panel (el mapa con el último estado de cada estación),
 estación, simulación (un día de lecturas reales enviadas una por una), impacto y, para el admin,
-entrenamiento (nodos, réplicas y semilla; las rondas en vivo) y clúster (nodos, CPU, latencia por
-ruta y eventos). El tiempo real llega por el WebSocket.
+entrenamiento (nodos, réplicas y semilla; las rondas llegan por el WebSocket y, como el
+entrenamiento real dura milisegundos, la UI las reproduce más despacio) y clúster (nodos con su
+latido, el CPU del proceso de la API, que es el coordinador, la latencia por ruta y los eventos; el
+CPU de cada nodo no viaja por el protocolo). El tiempo real llega por el WebSocket.
 
 *Dónde:* `web/src/App.tsx:40-67`, `web/src/armazon/menu.ts:14-24`, `web/src/api/ws.ts` · *Quién:*
-Dayana · *Lámina:* 22
+Dayana · *Lámina:* 23
 
 ### 25. ¿Qué políticas de seguridad configuraron en la API?
 
@@ -350,7 +376,7 @@ del `101` (el token va en `Sec-WebSocket-Protocol`, no en la URL). CORS solo par
 
 *Dónde:* `api/jwt.go:23`, `api/servidor.go:481`, `:492` y `:518`, `api/hub.go:444` y `:478`,
 `api/cors.go`, `cmd/api/main.go:347`, `web/Caddyfile:37`, `web/src/sesion/almacen.ts:3` ·
-*Quién:* Dayana · *Lámina:* 23
+*Quién:* Dayana · *Lámina:* 25
 
 ### 26. Si la UI esconde las pantallas de admin, ¿qué impide que un usuario entre igual?
 
@@ -359,7 +385,7 @@ su rol en cada pedido. Con el token del invitado, `GET /api/metricas` responde 4
 la demo desde Swagger.
 
 *Dónde:* `api/servidor.go:405` (`exigir`), `api/servidor.go:212-217` (rutas de admin) ·
-*Quién:* Dayana o Julio · *Lámina:* 23 y la demo
+*Quién:* Dayana o Julio · *Lámina:* 25 y la demo
 
 ## Evaluación e impacto
 
@@ -373,7 +399,7 @@ gente expuesta: vivir en el distrito no es haber respirado ese aire, y por eso l
 suma entre distritos.
 
 *Dónde:* `reports/impacto.json` (`totales`, `tipos_actividad`, `distritos`, `metadatos.notas`) ·
-*Quién:* Dayana · *Lámina:* 26
+*Quién:* Dayana · *Lámina:* 28
 
 ### 28. ¿Con cuánta anticipación avisa? ¿Es un pronóstico?
 
@@ -385,7 +411,7 @@ seguida: las señales van y vienen. Y el nivel alto acierta el 35 % de las veces
 la alerta del sistema es la norma misma, la media de 24 h.
 
 *Dónde:* `reports/impacto.json` (`anticipacion`, `senales`), `ventana/ventana.go:67` (`Alerta`) ·
-*Quién:* Dayana · *Lámina:* 27
+*Quién:* Dayana · *Lámina:* 29
 
 ### 29. ¿Qué limitaciones tiene?
 
@@ -396,7 +422,7 @@ campañas de semanas y los datos son de 2018 a 2022: la UI dice «último estado
 «ahora». Y con 65 873 filas repartir no acelera: la ronda por la red cuesta lo mismo que una
 iteración en una máquina; el clúster se justifica con más datos.
 
-*Dónde:* `reports/impacto.json` (`alcance`), `reports/eda_criba.md` · *Quién:* Rody · *Lámina:* 28
+*Dónde:* `reports/impacto.json` (`alcance`), `reports/eda_criba.md` · *Quién:* Rody · *Lámina:* 30
 y el respaldo «Cuándo conviene repartir»
 
 ## Proceso
@@ -407,14 +433,33 @@ Por si preguntan fuera del sistema; no son las más probables.
   `develop`; cada entrega sale de `release/pc3`, `release/pc4` y `release/tb2` con una PR a `main`
   y un tag (`pc3`, `pc3.1`, `pc4`). El CI corre `go test -race`, `go vet`, `gofmt` y, para la UI,
   lint, pruebas y build.
-- **¿Hay Python?** Solo en el laboratorio: los notebooks de Colab (criba, calibración, auditoría y
-  figuras) y `scripts/impacto.py`. El sistema (cargador, K-Means, nodos y API) es Go. El experimento
-  de 20 GPU del laboratorio D56 usó nodos Python con PyTorch y datos sintéticos, con el coordinador
-  en Go; está fuera del sistema y su código no está en la rama entregada.
+- **¿Por qué hay Python? ¿Por qué el impacto lo calcula Python?** El sistema (cargador, K-Means,
+  nodos y API) es Go, y también todo lo que se calcula en línea: la media de 24 h, la alerta y la
+  banda INCA de cada lectura (`ventana/ventana.go`). Python solo está en el laboratorio: los
+  notebooks de Colab (criba, calibración, auditoría y figuras) y `scripts/impacto.py`, que resume el
+  gold histórico para la página de impacto y el informe con las mismas reglas que `ventana/ventana.go`
+  (lo dice `reports/impacto.json`, en `metadatos.reglas.implementacion`).
 - **Kanban.** El proyecto de GitHub «aire-distribuido · Trabajo Final CC65 (PC3, PC4 y TB2)»
   (<https://github.com/users/R0SEWT/projects/8>), con las tareas de cada entrega.
 - **IA.** Se declara en el anexo del informe: se usó Claude como asistente de código y de
   redacción, con revisión del equipo.
+
+## De reserva
+
+Preguntas menos probables, con la respuesta en una línea.
+
+- **¿Qué pasa con un cluster vacío?** `Actualizar` lo deja donde estaba: solo divide si el conteo
+  es mayor que cero (`kmeans/parciales.go:152`). En el modelo entregado no hubo ninguno.
+- **¿Cómo es el apretón de manos del WebSocket sin librería?** El cliente manda
+  `Sec-WebSocket-Key`; la API responde `101 Switching Protocols` con `Sec-WebSocket-Accept`, que es
+  el SHA-1 de la clave más una constante del RFC 6455, en base64, y le quita la conexión a
+  `net/http` con `Hijack` (`api/ws.go`).
+- **¿Por qué no reasignan el rango de un nodo caído?** Se podría y el modelo sería el mismo salvo
+  redondeo; no está hecho: la corrida se aborta y se relanza.
+- **¿Las rondas que se ven son en tiempo real?** Llegan por el WebSocket en cuanto el coordinador
+  cierra cada una; como el entrenamiento real dura milisegundos, la UI las reproduce más despacio.
+- **¿El CPU del panel es el de los nodos?** No: es el del proceso de la API, que coordina. De cada
+  nodo se ve su latido y lo que tardó en cada ronda.
 
 ## Lo que no se dice
 
@@ -422,6 +467,9 @@ Por si preguntan fuera del sistema; no son las más probables.
 |:--|:--|:--|
 | «Los chunks pasan a ser nodos, el `WaitGroup` pasa a ser una barrera por la red y el canal pasa a ser una conexión TCP» | El docente la marcó como incorrecta en la PC4 (pregunta 13) | «Entre procesos, sockets TCP; dentro de cada proceso, goroutines, canales y `WaitGroup`» |
 | «La predicción la calcula el clúster» | El clúster entrena; la API predice con el modelo en memoria | «El clúster entrena; la API predice» |
+| «Las rondas en vivo» | La UI las reproduce más despacio, y su pantalla lo dice | «Las rondas llegan por el WebSocket; la UI las reproduce» |
+| «El 7070 no se publica por el `expose`» | `expose` es documentación | «No está en `ports`» |
+| «Distribuido = secuencial» | Con varios nodos difiere a 10⁻¹⁵ | «Bit a bit con un nodo; con varios, a 10⁻¹⁵, dentro de la tolerancia» |
 | «Predecimos episodios» o «avisamos con 20 horas» | La anticipación es descriptiva, sin partición temporal; la cota baja es 1 h | «En los datos, la primera señal apareció 20 h antes, en la mediana» |
 | «34 estaciones» | El portal lo dice; en el CSV hay 33 | «33 estaciones, 17 con PM por hora» |
 | «Una hora sobre 50 µg/m³ incumple el ECA» | El ECA es una media de 24 horas | «La media de 24 horas superó el ECA» |

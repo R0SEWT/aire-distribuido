@@ -35,7 +35,7 @@ format:
 [{{< meta cifras.limpieza.filas_largas_leidas >}}]{.cifra}
 
 ::: {.sub}
-lecturas horarias de {{< meta cifras.limpieza.n_estaciones >}} estaciones, en un CSV de 1,3 GB
+filas de lecturas de {{< meta cifras.limpieza.n_estaciones >}} estaciones, en un CSV de 1,3 GB
 :::
 
 ::: {.fragment .pregunta style="font-size: 1.15em; margin-top: 1em;"}
@@ -46,8 +46,8 @@ lecturas horarias de {{< meta cifras.limpieza.n_estaciones >}} estaciones, en un
 [0:20 · Rody, todavía en la portada, la lámina anterior; al terminar, avanza] Buenas. Somos el Equipo 4: Dayana, Julio y yo, Rody. Caso 10, calidad
 del aire. Los puntos de la portada son las estaciones de OEFA en su posición real.
 [0:25 · Rody] OEFA, el organismo que fiscaliza a las actividades que contaminan, mide el aire junto
-a ellas: casi 2,9 millones de lecturas horarias de 33 estaciones, de 2018 a 2022, en un CSV de
-1,3 GB. Más de un millón de registros, como pide el enunciado.
+a ellas: casi 2,9 millones de filas, una por estación, parámetro y hora, de 33 estaciones, de 2018
+a 2022, en un CSV de 1,3 GB. Más de un millón de registros, como pide el enunciado.
 [clic] Y la pregunta de fondo: ¿qué aire se respira al lado de una mina, una fundición o una zona
 de ladrilleras?
 :::
@@ -70,8 +70,10 @@ cuánta anticipación** eso avisa de un episodio que supera el ECA?
 
 ::: {.fragment .sub style="font-size: 0.9em; margin-top: 0.8em;"}
 Para quién: las personas con enfermedades respiratorias que viven junto a una actividad
-fiscalizada. Es la pregunta que el enunciado pone de ejemplo para el caso 10.
+fiscalizada. El enunciado pone una pregunta así entre sus ejemplos de impacto social.
 :::
+
+[ECA de 24 h (DS 003-2017-MINAM): {{< meta cifras.alerta.eca_pm2_5 >}} µg/m³ de PM2,5 y {{< meta cifras.alerta.eca_pm10 >}} µg/m³ de PM10, en la media de las últimas 24 horas.]{.nota}
 
 ::: notes
 [0:30 · Rody] El material particulado entra hasta lo profundo de los pulmones. Nuestra pregunta de
@@ -80,6 +82,7 @@ PM10, y con cuánta anticipación eso avisa de un episodio que supera el ECA, el
 [clic] La PC3 respondió el dónde y el cuándo; la PC4 construyó el clúster y la API; hoy, el TB2
 cierra con el mapa, las alertas en tiempo real y la anticipación medida.
 [clic] Y la alerta es para quien más la necesita: las personas con enfermedades respiratorias.
+El ECA es la norma peruana: una media de 24 horas de 50 µg/m³ de PM2,5 y 100 de PM10.
 :::
 
 ## {background-color="#10233B" .center}
@@ -167,7 +170,7 @@ PM10 a la vez: 65 873 horas de 17 estaciones. Esa es la capa gold, la que recibe
 [2 · El sistema]{.eyebrow}
 
 ::: {.pregunta}
-Todo en Go y en contenedores: cargador, nodos, API coordinadora, MongoDB, Redis y la SPA
+En contenedores: el sistema en Go (cargador, nodos y API), MongoDB, Redis y la SPA en React
 :::
 
 ::: notes
@@ -191,8 +194,11 @@ Todo en Go y en contenedores: cargador, nodos, API coordinadora, MongoDB, Redis 
 deja el silver y el gold. B, los nodos del K-Means, abajo. C, la API coordinadora, arriba, con
 MongoDB y Redis. Y D, la SPA, a la derecha.
 Los puertos: la API escucha dos sockets, el 8080 para HTTP y el 7070 para los nodos, que es TCP
-puro. El 7070 no se publica fuera de la red de Compose: solo lo usan los nodos. MongoDB en el
-27017, Redis en el 6379, y el Caddy del servicio web es el único que da la cara al navegador.
+puro. El 7070 no está en ports: no se publica fuera de la red de Compose, que es donde están los
+nodos. (En el laboratorio, el coordinador corrió fuera de Docker y escuchó en la IP de la PC.)
+MongoDB en el 27017, Redis en el 6379, y el Caddy del servicio web es el único que da la cara al
+navegador. El cargador usa la misma imagen y corre una vez, con docker run: no queda levantado.
+(Si el diagrama no se lee, Alt + clic lo amplía.)
 Todo se levanta con docker compose up, y la cantidad de nodos es un parámetro: --scale nodo=K. Un
 solo Dockerfile, en dos etapas, compila todos los comandos de Go y deja una imagen distroless que
 usan la API y los nodos; la UI tiene el suyo, que la compila con Node y la sirve con Caddy.
@@ -328,7 +334,7 @@ En una máquina: goroutines, canales y `sync`, solo con la biblioteca estándar
 
 ::: {.lista style="font-size: 0.56em; margin-top: 0.4em;"}
 - Canal `trabajos` (índices de bloque) → W workers → canal `resultados`
-- Semáforo: un canal con búfer de 2W, `enVuelo`: la memoria no crece con el archivo
+- Semáforo: un canal con búfer de 2W, `enVuelo`: a lo sumo 2W bloques leídos sin fusionar
 - `sync.WaitGroup` para cerrar `resultados` cuando terminan los workers
 :::
 :::
@@ -343,8 +349,10 @@ con {{< meta cifras.benchmark_cargador.w >}} workers: de {{< meta cifras.benchma
 
 ::: {.lista style="font-size: 0.62em; margin-top: 0.6em;"}
 - La fusión va **en orden de bloque, no de llegada**: silver y gold idénticos para todo W
-- Eficiencia de {{< meta cifras.benchmark_cargador.eficiencia >}}: la fusión en orden y las fases
-  seriales ({{< meta cifras.limpieza.fraccion_serial >}}) no se reparten
+- Eficiencia de {{< meta cifras.benchmark_cargador.eficiencia >}}: Karp-Flatt da
+  {{< meta cifras.benchmark_cargador.karp_flatt >}} de fracción serial efectiva, más que las fases
+  seriales ({{< meta cifras.limpieza.fraccion_serial >}}): los bloques de 64 MiB son pocos para 12
+  workers
 - En Windows, con {{< meta cifras.benchmark_cargador_windows.cpus >}} CPU: {{< meta cifras.benchmark_cargador_windows.speedup >}}× con
   {{< meta cifras.benchmark_cargador_windows.w_resumen >}} workers
 :::
@@ -357,12 +365,14 @@ con {{< meta cifras.benchmark_cargador.w >}} workers: de {{< meta cifras.benchma
 [0:45 · Julio] El cargador es un pipeline productor–consumidor. Un productor parte el CSV en bloques
 de 64 MiB, cortados en un salto de línea, y manda sus índices por el canal trabajos. W workers leen
 cada uno su bloque, aplican las reglas y mandan su parcial por el canal resultados. Cada worker
-tiene su propio estado: no comparten nada, no hay Mutex.
+tiene su propio estado: no comparten estado mutable, así que no hace falta Mutex.
 El recolector fusiona en orden de bloque, no de llegada: por eso el silver y el gold son idénticos
 con 1 worker o con 12, lo comprobamos con su sha256. Un canal con búfer de 2W hace de semáforo: como
 mucho 2W bloques leídos sin fusionar.
-Con 12 workers, 4,94 veces más rápido. No es 12: la fusión en orden y las fases seriales no se
-reparten. Y lo medimos también en Windows, en una máquina de 32 CPU: 4,81 veces con 12 workers.
+Con 12 workers, 4,94 veces más rápido. No es 12: las fases seriales son el 8,3 % del tiempo, pero
+Karp-Flatt da una fracción serial efectiva del 13 %; la diferencia es coordinar, y que el CSV de
+1,3 GB da pocos bloques de 64 MiB para 12 workers. En Windows lo medimos: con bloques más chicos,
+el cargador tarda menos. Y lo medimos también en Windows, en una máquina de 32 CPU: 4,81 veces con 12 workers.
 :::
 
 ## Parte B: el K-Means en un worker pool
@@ -382,10 +392,11 @@ conteos e inercia) solo en su casilla. Nadie escribe en la casilla de otro y los
 solo lectura durante la iteración: por eso el bucle no necesita Mutex.
 La barrera es un sync.WaitGroup: espera los parciales de todos los chunks, y recién entonces
 Fusionar los suma en orden de chunk, nunca en el de llegada. La suma en coma flotante no es
-asociativa: en el orden de llegada, dos corridas iguales darían números distintos.
+asociativa: en el orden de llegada, dos corridas iguales podrían dar números distintos.
 Así no hay condiciones de carrera en la actualización de los centroides, que es lo que pide el
-enunciado: Actualizar corre en una sola goroutine, después de la barrera. Y lo comprobamos con el
-detector de carreras, go test -race, en cada push.
+enunciado: Actualizar corre en una sola goroutine, después de la barrera, y los workers ven los
+centroides nuevos porque los reciben después por el canal. El detector de carreras, go test -race,
+no encuentra ninguna en cada push.
 (Clic en W = 1 para comparar.)
 :::
 
@@ -407,14 +418,15 @@ detector de carreras, go test -race, en cada push.
 [{{< meta cifras.kmeans.inercia >}}]{.cifra .chica}
 
 ::: {.sub}
-inercia, idéntica bit a bit con {{< meta cifras.benchmark_kmeans.workers >}} workers
+inercia, idéntica bit a bit con {{< meta cifras.benchmark_kmeans.workers >}} workers y el mismo chunk
 :::
 
 ::: {.lista style="margin-top: 0.7em;"}
 - {{< meta cifras.benchmark_kmeans.speedup >}}× con 12 workers, hasta converger en
   {{< meta cifras.kmeans.iteraciones >}} iteraciones
-- Una iteración dura {{< meta cifras.benchmark_kmeans.ms_iter_seq >}} ms: coordinar pesa
-- Sin condiciones de carrera al actualizar los centroides: `go test -race` en cada push
+- Una iteración: {{< meta cifras.benchmark_kmeans.ms_iter_seq >}} ms con 1 worker y
+  {{< meta cifras.benchmark_kmeans.ms_iter_w >}} ms con 12: la barrera pesa
+- `go test -race` no detecta carreras al actualizar los centroides
 :::
 
 ::: {.fragment .lista}
@@ -425,9 +437,26 @@ inercia, idéntica bit a bit con {{< meta cifras.benchmark_kmeans.workers >}} wo
 ::::
 
 ::: notes
-[0:25 · Rody] Y se cumple en la medición: la inercia sale idéntica, bit a bit, con 1 a 12 workers. El
-speedup llega a 3,86: una iteración dura 2 milisegundos y la barrera pesa.
+[0:25 · Rody] Y se cumple en la medición: con el mismo tamaño de chunk, la inercia sale idéntica, bit
+a bit, con 1 a 12 workers. El speedup llega a 3,86: una iteración dura 2 milisegundos con un worker
+y medio milisegundo con 12, y en algo tan corto la barrera de cada iteración pesa.
 [clic] Con chunks de 10 000 filas solo hay 7 chunks para 12 workers, y cae a 2,25.
+:::
+
+## El modelo: tres regímenes de aire; solo el alto supera el ECA
+
+[Rody]{.quien}
+
+::: {.d3 data-grafico="niveles"}
+:::
+
+[Centroides en µg/m³ (`reports/regimenes.json`): régimen 0 (bajo), 2 (medio) y 1 (alto). El ECA es una media de 24 horas: una hora en el régimen alto no es, por sí sola, un incumplimiento.]{.nota}
+
+::: notes
+[0:25 · Rody] Y este es el resultado del modelo: tres regímenes de aire. El bajo, casi tres de cada
+cuatro horas; el medio, una de cada cuatro; y el alto, solo el 2,3 % de las horas, con un PM2,5 medio
+de 65 y un PM10 de 187 microgramos, por encima de las dos líneas del ECA. Es lo que el panel muestra
+junto a cada estación, y la señal temprana que medimos al final.
 :::
 
 ## {background-color="#10233B" .center}
@@ -482,12 +511,14 @@ return marcador.DialContext(ctx, "tcp", *coordinador)
 ::: {.lista style="font-size: 0.6em;"}
 - **Topología en estrella**: la API coordina; los nodos no se hablan entre sí. La fusión es una
   suma de parciales, y solo el coordinador la necesita
-- **El nodo llama** (`Dial`): Colab no acepta conexiones entrantes, y en las PC del laboratorio el
-  nodo corre sin permisos de administrador. Si pierde la conexión, vuelve a llamar solo
+- **El nodo llama** (`Dial`): Colab está detrás de NAT, y el firewall de las PC del laboratorio
+  bloquea las conexiones entrantes (abrirlas pide administrador); las de salida pasan. Si pierde la
+  conexión, vuelve a llamar solo
 - **Un mensaje = una línea de JSON** sobre la conexión TCP (`bufio` + `encoding/json` + `\n`),
   con `SetReadDeadline` y `SetWriteDeadline` para los plazos
-- En el laboratorio, con {{< meta cifras.smoke.nodos >}} PC como nodos, la barrera de una ronda
-  mide **{{< meta cifras.smoke.p50 >}} ms** de mediana
+- En el laboratorio, con {{< meta cifras.smoke.nodos >}} PC como nodos y el coordinador fuera de
+  Docker, una ronda de `PING` a todos a la vez, sin cálculo, tarda **{{< meta cifras.smoke.p50 >}} ms**
+  de mediana: lo que la barrera paga en red
 :::
 :::
 ::::
@@ -497,13 +528,13 @@ return marcador.DialContext(ctx, "tcp", *coordinador)
 nodos, y el 8080 para HTTP. Una goroutine hace Accept en un bucle y cada conexión nueva se atiende
 en su propia goroutine, que espera el HOLA del nodo con un plazo de 5 segundos.
 El nodo es el que marca, con net.Dialer y DialContext hacia api:7070. Lo hicimos así porque Colab
-no acepta conexiones entrantes y en las PC del laboratorio el nodo corre sin permisos de
-administrador: solo abre conexiones de salida. Y si el nodo pierde la conexión, vuelve a llamar solo.
+está detrás de NAT y el firewall de Windows en las PC del laboratorio bloquea las conexiones
+entrantes; las de salida pasan sin pedir nada. Y si el nodo pierde la conexión, vuelve a llamar solo.
 La topología es una estrella: los nodos no se hablan entre sí, porque la fusión es una suma de
 parciales y solo el coordinador la necesita. Cada mensaje es una línea de JSON sobre la conexión,
 leída con un bufio.Reader y escrita con un bufio.Writer, con plazos de lectura y escritura del
-propio socket. En el laboratorio, con 4 PC, una ronda
-completa por la red tarda medio milisegundo. (En la demo, la pantalla Clúster muestra la IP:puerto
+propio socket. En el laboratorio, con 4 PC, una ronda de PING a todos a la vez, sin cálculo, tarda
+medio milisegundo: eso es lo que la barrera paga en red. (En la demo, la pantalla Clúster muestra la IP:puerto
 de cada nodo: es la dirección remota de su conexión TCP.)
 :::
 
@@ -531,7 +562,7 @@ for i, e := range enlaces {
 barrera.Wait()
 ```
 
-[cluster/lloyd.go · después de la barrera, la misma suma que en una máquina]{.archivo}
+[cluster/lloyd.go · después de la barrera, la misma función que en una máquina]{.archivo}
 
 ```go
 p := kmeans.Fusionar(ps, k, dim) // en orden de nodo, no de llegada
@@ -552,7 +583,9 @@ p := kmeans.Fusionar(ps, k, dim) // en orden de nodo, no de llegada
 - **Entre procesos**, sockets TCP. **Dentro de cada proceso**, goroutines, canales y `WaitGroup`:
   cada nodo calcula su parcial con su propio worker pool, el de la parte B
 - Con 1 nodo, el modelo es el de una máquina **bit a bit**; con hasta
-  {{< meta cifras.distribuido.nodos_max >}}, difiere a lo sumo en {{< meta cifras.distribuido.dif_max >}}
+  {{< meta cifras.distribuido.nodos_max >}}, en el orden de 10⁻¹⁵ (a lo sumo
+  {{< meta cifras.distribuido.dif_max >}} en `cmd/distribuido`), porque agrupar por nodo cambia el
+  orden de la suma. La API exige ≤ {{< meta cifras.distribuido.tolerancia >}}
 :::
 :::
 ::::
@@ -563,11 +596,12 @@ ITERAR en el socket de su nodo y se bloquea leyendo el PARCIAL, con un plazo. Ca
 solo en su índice del arreglo, así que no hace falta Mutex. Un WaitGroup espera a todas: esa es la
 barrera. Si un nodo no responde a tiempo, la ronda se aborta con un error que lo nombra.
 Después de la barrera, el coordinador llama a Fusionar en orden de nodo: la misma función que suma
-los chunks en una sola máquina.
+los chunks en una sola máquina; como los parciales se agrupan por nodo, el orden de la suma cambia.
 Ojo con los dos niveles: entre procesos usamos sockets TCP, y dentro de cada proceso, goroutines,
 canales y WaitGroup. Cada nodo calcula su parcial con su propio worker pool, el mismo de la parte B.
 Resultado: con un nodo, el modelo distribuido es el de una máquina bit a bit; con hasta 4 nodos
-difiere en 10 a la menos 15, que es redondeo.
+difiere en el orden de 10 a la menos 15, que es redondeo, muy por debajo de la tolerancia de 10 a la
+menos 9 que la API exige para activar un modelo.
 :::
 
 ## {background-color="#10233B" .center}
@@ -658,13 +692,14 @@ El WebSocket también es nuestro, sobre net/http: un hub con canales de alta, ba
 ::: {.d3 data-grafico="latencia"}
 :::
 
-[{{< meta cifras.api_latencia.pedidos_total >}} pedidos a `POST /api/predicciones` con JWT ({{< meta cifras.api_latencia.pedidos_por_nivel >}} por nivel), medidos del lado del cliente con `cmd/carga`: {{< meta cifras.api_latencia.sobre_el_limite >}} sobre el límite y {{< meta cifras.api_latencia.errores >}} errores. Con MongoDB y Redis guardando: {{< meta cifras.api_latencia.escritas_mongo >}} escrituras en cada uno.]{.nota}
+[{{< meta cifras.api_latencia.pedidos_total >}} pedidos a `POST /api/predicciones` con JWT ({{< meta cifras.api_latencia.pedidos_por_nivel >}} por nivel), medidos del lado del cliente con `cmd/carga`: {{< meta cifras.api_latencia.sobre_el_limite >}} sobre el límite y {{< meta cifras.api_latencia.errores >}} errores. Con MongoDB y Redis guardando: {{< meta cifras.api_latencia.escritas_mongo >}} escrituras en cada uno (los pedidos y el calentamiento), {{< meta cifras.api_latencia.escrituras_descartadas >}} descartadas.]{.nota}
 
 ::: notes
 [0:30 · Julio] Y la medición. 80 000 pedidos de predicción, con 1, 4, 16 y 64 clientes a la vez. La
 escala es logarítmica: con 64 clientes, el 99 % de los pedidos responde en 3,1 milisegundos, más de
-30 veces por debajo del límite de 100. Ninguno pasó el límite, ninguno falló, y mientras tanto
-MongoDB y Redis guardaron cada predicción.
+30 veces por debajo del límite de 100. Ninguno pasó el límite, ninguno falló, y en esa corrida
+MongoDB y Redis no descartaron ninguna predicción. Ojo: si una cola se llenara, la API descartaría y
+lo contaría, pero el pedido no espera.
 :::
 
 ## MongoDB persiste, Redis es la caché
@@ -689,7 +724,7 @@ durar, con {{< meta cifras.datos.indices >}} índices.
 [Redis · {{< meta cifras.datos.claves >}} claves]{.t}
 
 `estacion:{id}:regimen` (el último de cada estación), `modelo:activo` (arranque en caliente) y
-`entrenamiento:{id}:punto` (el punto de control de cada ronda).
+`entrenamiento:{id}:punto` (los centroides de la última ronda; todavía no se reanuda desde ahí).
 :::
 
 ::: {}
@@ -707,8 +742,8 @@ una base lenta no frena a la otra ni al pedido.
 que durar: el catálogo de estaciones, cada predicción, los modelos, el historial de entrenamientos
 con sus rondas y las altas y bajas de los nodos.
 Redis es la caché: guarda lo que se lee rápido: el último régimen de cada estación, que es lo que pinta el mapa;
-una copia del modelo activo, para que la API arranque con el último entrenado; y el punto de control
-de cada ronda.
+una copia del modelo activo, para que la API arranque con el último entrenado; y los centroides de la
+última ronda de un entrenamiento, aunque todavía no se reanuda desde ahí.
 La API escribe con una goroutine y una cola por base: si una se pone lenta, no frena a la otra ni al
 pedido.
 :::
@@ -735,7 +770,7 @@ Una SPA que muestra el estado de cada estación, las alertas y el clúster en ti
 ::: {}
 ![](../../informe/capturas/tb2/panel/04-panel-tras-escenario-invitado.png){.app}
 
-[Panel del invitado, lleno por el WebSocket mientras el admin cargaba el escenario: 2 estaciones en alerta, las ladrilleras de Lurigancho]{.pie}
+[Panel del invitado, lleno por el WebSocket mientras el admin cargaba el escenario: 2 estaciones en alerta, las ladrilleras de Lurigancho. Banda INCA: el índice de calidad del aire del MINAM; régimen: 0 bajo, 2 medio, 1 alto]{.pie}
 :::
 
 ::: {}
@@ -744,10 +779,11 @@ Una SPA que muestra el estado de cada estación, las alertas y el clúster en ti
 [Simulación de CA-ESP-01 el 21/12/2021: lecturas reales enviadas una por una; la alerta se enciende a las 07:00 por PM10]{.pie}
 
 ::: {.lista style="font-size: 0.5em; margin-top: 0.5em;"}
-- Menú de opciones por rol: ingreso, panel, estación, simulación e impacto; para el admin,
-  entrenamiento y clúster (nodos, CPU, latencia y eventos)
-- Tiempo real por WebSocket: `estacion.regimen` y las rondas del entrenamiento
-- Configura desde la UI: estación, día y ritmo de la simulación; nodos, réplicas y semilla de un entrenamiento
+- Menú por rol: ingreso, panel, estación, simulación, impacto; el admin suma entrenamiento y
+  clúster (latido de los nodos, CPU de la API, latencia por ruta, eventos)
+- Tiempo real por WebSocket: `estacion.regimen` y las rondas (un entrenamiento dura milisegundos:
+  la UI las reproduce)
+- Parámetros desde la UI: estación, día y ritmo; nodos, réplicas y semilla
 :::
 :::
 :::
@@ -760,9 +796,45 @@ INCA y si está en alerta. Se llenó solo, por el WebSocket, mientras el admin c
 desde otro navegador; quedaron en alerta las dos ladrilleras de Lurigancho. A la derecha, la
 simulación: se eligen una estación y un día, y la UI manda las lecturas reales una por una a la API;
 se ve llenarse la ventana de 24 horas y, a las 7 de la mañana, encenderse la alerta por PM10.
-El admin ve además el entrenamiento, donde elige cuántos nodos usar y sigue cada ronda en vivo, y el
-clúster: nodos conectados, CPU, latencia por ruta y eventos. Todo lo que cambia llega por el
+El admin ve además el entrenamiento, donde elige cuántos nodos usar y ve llegar cada ronda por el
+WebSocket; como el entrenamiento real dura milisegundos, la UI las reproduce más despacio. Y el
+clúster: los nodos conectados con su latido, el CPU del proceso de la API, que es el coordinador
+(el CPU de cada nodo no viaja por el protocolo), la latencia por ruta y los eventos. Todo lo que cambia llega por el
 WebSocket, sin recargar.
+:::
+
+## Demo en vivo · aire.rosewt.dev
+
+[Rody conduce]{.quien}
+
+::: {.demo-tabla}
+| | Qué se muestra | Narra | |
+|:-|:-----------------------------------|:-|-:|
+| 1 | **Ingreso**: el diálogo de invitado y la sesión de admin, que suma Entrenamiento y Clúster al menú | Dayana | 0:15 |
+| 2 | **Panel**: el mapa, la banda INCA y las alertas de cada estación | Dayana | 0:25 |
+| 3 | **Simulación**: CA-ESP-01 el 21/12/2021; la ventana de 24 h se llena y la alerta llega al panel por WebSocket | Dayana | 0:45 |
+| 4 | **Clúster** (admin): los nodos con su IP:puerto y su latido, el CPU de la API, la latencia por ruta y los eventos | Julio | 0:30 |
+| 5 | **Entrenamiento**: K nodos, réplicas y semilla desde la UI; las 44 rondas y la diferencia con el secuencial | Rody | 0:50 |
+| 6 | **Terminal**: `docker compose ps` y el log de un nodo: `conectado desde IP:puerto a …:7070`, `CARGAR`, rondas | Julio | 0:30 |
+| 7 | **Impacto**: horas sobre el ECA por actividad | Dayana | 0:15 |
+| 8 | **Swagger** en `/docs` y un `403` en una ruta de admin con un token de usuario | Julio | 0:20 |
+:::
+
+::: {.planb}
+**Plan B si falla la red:** el mismo sistema en la laptop, levantado antes de la clase
+(`docker compose up -d --scale nodo=3`, en `localhost:8081`). **Si falla también Docker:** las
+capturas de la app en este deck, el video del TB2 y
+`go test -race -run SobreTCP -v ./protocolo/`, que corre un coordinador y un nodo sobre TCP real
+en `127.0.0.1`.
+:::
+
+::: notes
+[3:50 · Rody conduce la laptop; cada uno narra su parte] La demo va aquí, después de la SPA, para
+que no se corte si falta tiempo. El guion completo, con los comandos y la lista de lo que se revisa
+antes de la clase, está en docs/presentacion/reparto.md. En el paso 5: el entrenamiento real dura
+milisegundos y la UI reproduce sus rondas más despacio; decirlo así, no «en vivo».
+Antes de entrar: la API en línea, los nodos en el pool, una sesión de admin abierta y un token que
+dure toda la clase (JWT_DURACION=4h).
 :::
 
 ## Seguridad: la UI esconde, la API decide
@@ -791,7 +863,7 @@ WebSocket, sin recargar.
 - `Content-Security-Policy`: scripts, estilos y fuentes solo del propio origen; `frame-ancestors 'none'`
 - HTTPS con HSTS; `nosniff` y `Referrer-Policy`
 - El token en `sessionStorage`: se borra al cerrar la pestaña
-- Puertos solo en `127.0.0.1`; el 7070 de los nodos no se publica
+- En el Compose, puertos solo en `127.0.0.1`; en la máquina pública, solo 80 y 443; el 7070 no se publica
 - Secretos en `.env`, que no se versiona; el log no guarda el token
 :::
 :::
@@ -829,29 +901,30 @@ secretos van en un .env que no está en el repositorio.
 ::: {.eval}
 | Qué se probó | Cómo | Resultado |
 |:--|:--|:--|
-| Sin condiciones de carrera | `go test -race ./...` en cada push y PR (CI) | {{< meta deck.pruebas >}} funciones de prueba de Go |
+| Condiciones de carrera | `go test -race ./...` en cada push y PR (CI) | ninguna detectada en {{< meta deck.pruebas >}} funciones de prueba de Go |
 | La interfaz | Vitest, en el CI | {{< meta deck.pruebas_web >}} pruebas en {{< meta deck.archivos_web >}} archivos |
 | Tiempo real | una lectura que manda el admin llega por WebSocket al panel de un invitado ({{< meta deck.ws.lecturas >}} lecturas) | p50 de {{< meta deck.ws.p50 >}} ms y p99 de {{< meta deck.ws.p99 >}} ms; {{< meta deck.ws.sin_evento >}} sin evento |
-| Distribuido = secuencial | `cmd/distribuido` con 1 a {{< meta cifras.distribuido.nodos_max >}} nodos | 1 nodo: bit a bit; hasta {{< meta cifras.distribuido.nodos_max >}}: ≤ {{< meta cifras.distribuido.dif_max >}} |
-| Clúster en el laboratorio | `cmd/smoke`, {{< meta cifras.smoke.nodos >}} PC, {{< meta cifras.smoke.rondas >}} rondas | barrera p50 de {{< meta cifras.smoke.p50 >}} ms |
+| Distribuido frente a secuencial | `cmd/distribuido` con 1 a {{< meta cifras.distribuido.nodos_max >}} nodos | 1 nodo: bit a bit; hasta {{< meta cifras.distribuido.nodos_max >}}: ≤ {{< meta cifras.distribuido.dif_max >}} (tolerancia {{< meta cifras.distribuido.tolerancia >}}) |
+| La red del clúster en el laboratorio | `cmd/smoke`, {{< meta cifras.smoke.nodos >}} PC, {{< meta cifras.smoke.rondas >}} rondas de `PING` | p50 de {{< meta cifras.smoke.p50 >}} ms por ronda |
 | API en menos de 100 ms | `cmd/carga`, {{< meta cifras.api_latencia.pedidos_total >}} pedidos, 1 a {{< meta cifras.api_latencia.clientes_max >}} clientes | p99 ≤ {{< meta cifras.api_latencia.p99_max >}} ms; {{< meta cifras.api_latencia.sobre_el_limite >}} sobre el límite |
 | La API de punta a punta | Postman y newman, {{< meta cifras.datos_prueba.lecturas >}} lecturas de prueba | {{< meta cifras.datos_prueba.casos >}} casos, de {{< meta cifras.datos_prueba.estaciones >}} estaciones |
-| Limpieza y K-Means | Auditoría independiente en pandas y scikit-learn | {{< meta cifras.auditoria.ok >}} de {{< meta cifras.auditoria.chequeos >}} chequeos sin diferencias |
+| Limpieza y K-Means | Otra implementación, en pandas y scikit-learn (notebook de auditoría) | {{< meta cifras.auditoria.ok >}} de {{< meta cifras.auditoria.chequeos >}} chequeos sin diferencias |
 | El mismo resultado en otra máquina | La PC3 rehecha en {{< meta cifras.revision.plataforma >}} | mismos SHA-256 del silver y el gold; {{< meta cifras.revision.ok >}} de {{< meta cifras.revision.chequeos >}} chequeos |
 | El cargador en otra plataforma | {{< meta cifras.benchmark_cargador_windows.plataforma >}}, {{< meta cifras.benchmark_cargador_windows.cpus >}} CPU, {{< meta cifras.benchmark_cargador_windows.repeticiones >}} repeticiones | {{< meta cifras.benchmark_cargador_windows.speedup >}}× con {{< meta cifras.benchmark_cargador_windows.w_resumen >}} workers, {{< meta cifras.benchmark_cargador_windows.speedup_ic >}} |
 :::
 
 ::: notes
 [0:45 · Julio] La evaluación, en una tabla. Todas las pruebas de Go corren con el detector de
-carreras, en cada push y en cada PR: 549 funciones de prueba. La interfaz tiene 708 pruebas en
+carreras, en cada push y en cada PR: 549 funciones de prueba, y el detector no encuentra ninguna
+carrera en lo que ejercitan. La interfaz tiene 708 pruebas en
 Vitest. Y el tiempo real se midió entre dos sesiones distintas: lo que manda el admin le llega al
 panel de un invitado en 2,25 milisegundos de mediana.
 El distribuido da el mismo modelo que el secuencial: bit a bit con un nodo, y con hasta cuatro, a
-10 a la menos 15. En el laboratorio, con 4 PC, una ronda tarda medio milisegundo. La API, menos de
+10 a la menos 15. En el laboratorio, con 4 PC, una ronda de PING por la red tarda medio milisegundo. La API, menos de
 100 ms con 64 clientes. La colección de Postman con datos de prueba recorre la API de punta a
-punta. Una auditoría independiente rehízo la limpieza y el K-Means en scikit-learn: 40 de 40. Y
-el determinismo vale también entre máquinas: Dayana rehízo la PC3 en macOS y obtuvo los mismos
-SHA-256 del silver y el gold; el cargador, en Windows, da 4,81 veces con 12 workers.
+punta. Una segunda implementación, en pandas y scikit-learn, rehízo la limpieza y el K-Means: 40 de
+40 chequeos sin diferencias. Y se reprodujo en otra máquina: Dayana rehízo la PC3 en macOS y obtuvo
+los mismos SHA-256 del silver y el gold; el cargador, en Windows, da 4,81 veces con 12 workers.
 :::
 
 ## Lo que responde: el aire junto a cada actividad
@@ -914,8 +987,9 @@ a {{< meta deck.impacto.lh_q3 >}} h). Todos tuvieron una señal antes.
 
 [desde la primera hora en el régimen alto del K-Means]{.t}
 
-Cuartiles {{< meta deck.impacto.rg_q1 >}} a {{< meta deck.impacto.rg_q3 >}} h. El régimen alto acierta el
-{{< meta cifras.alerta.regimen_precision >}} de las veces y cubre el {{< meta cifras.alerta.regimen_recall >}}.
+Cuartiles {{< meta deck.impacto.rg_q1 >}} a {{< meta deck.impacto.rg_q3 >}} h. Pero cuando suena, acierta el
+{{< meta cifras.alerta.regimen_precision >}} de las veces (precisión), y cubre el
+{{< meta cifras.alerta.regimen_recall >}} de las horas sobre el ECA (exhaustividad).
 :::
 
 ::: {.fragment}
@@ -978,37 +1052,6 @@ Muchas midieron pocas semanas, y los datos son de 2018 a 2022: por eso la interf
 anticipación es descriptiva.
 :::
 
-## Demo en vivo · aire.rosewt.dev
-
-[Rody conduce]{.quien}
-
-::: {.demo-tabla}
-| | Qué se muestra | Narra | |
-|:-|:-----------------------------------|:-|-:|
-| 1 | **Panel**: el mapa, la banda INCA y las alertas de cada estación | Dayana | 0:30 |
-| 2 | **Simulación**: un día de una estación; la ventana de 24 h se llena y la alerta llega al panel por WebSocket | Dayana | 0:45 |
-| 3 | **Clúster** (admin): los nodos con su IP:puerto, CPU, latencia por ruta y eventos | Julio | 0:30 |
-| 4 | **Entrenamiento**: K nodos, cada ronda en vivo; al final, la diferencia con el secuencial y el modelo activado | Rody | 0:50 |
-| 5 | **Terminal**: `docker compose ps` y el log de un nodo: `conectado desde IP:puerto a …:7070`, `CARGAR`, rondas | Julio | 0:30 |
-| 6 | **Impacto**: horas sobre el ECA por actividad y la anticipación | Dayana | 0:20 |
-| 7 | **Swagger** en `/docs` y un `403` en una ruta de admin con un token de usuario | Julio | 0:20 |
-:::
-
-::: {.planb}
-**Plan B si falla la red:** el mismo sistema en la laptop, levantado antes de la clase
-(`docker compose up -d --scale nodo=3`, en `localhost:8081`). **Si falla también Docker:** las
-capturas de la app en este deck, el video del TB2 y
-`go test -race -run SobreTCP -v ./protocolo/`, que corre un coordinador y un nodo sobre TCP real
-en `127.0.0.1`.
-:::
-
-::: notes
-[4:00 · Rody conduce la laptop; cada uno narra su parte] El guion completo, con los comandos y la
-lista de lo que se revisa antes de la clase, está en docs/presentacion/reparto.md.
-Antes de entrar: la API en línea, los nodos en el pool, una sesión de admin abierta y un token que
-dure toda la clase (JWT_DURACION=4h).
-:::
-
 ## {background-color="#10233B"}
 
 [Rody]{.quien}
@@ -1019,7 +1062,7 @@ dure toda la clase (JWT_DURACION=4h).
 
 ::: {.lista style="font-size: 0.78em;"}
 - Repartir es fácil. Lo difícil es que el resultado no dependa de cómo se repartió: fusionar
-  siempre en el mismo orden, en una máquina y entre nodos.
+  siempre en el mismo orden. En una máquina, bit a bit; entre nodos, a 10⁻¹⁵.
 - Un sistema rápido es el que no espera: el modelo en memoria y las bases fuera del camino del
   pedido.
 - Antes de paralelizar, entender el dato; y decir lo que el dato no puede decir.
@@ -1044,7 +1087,7 @@ dure toda la clase (JWT_DURACION=4h).
 ::: notes
 [0:30 · Rody] Tres cosas que nos llevamos. Repartir el trabajo es fácil; lo difícil es que el
 resultado no dependa de cómo se repartió, y eso se logra fusionando siempre en el mismo orden: en
-una máquina, entre chunks, y en el clúster, entre nodos. Un sistema rápido es el que no espera: el
+una máquina sale bit a bit, y en el clúster, entre nodos, a 10 a la menos 15. Un sistema rápido es el que no espera: el
 modelo en memoria y las bases de datos fuera del camino del pedido. Y antes de paralelizar hay que
 entender el dato, y decir lo que el dato no puede decir.
 Gracias; ¿preguntas?
@@ -1076,13 +1119,13 @@ COPY --from=build /out/bin/ /usr/local/bin/
 | Servicio | Imagen | Puerto |
 |:--|:--|:--|
 | `web` | Caddy con la UI (Node la compila) | 80 → `127.0.0.1:8081` |
-| `api` | `aire-distribuido` (distroless) | 8080 → `127.0.0.1`; 7070 solo en la red interna |
+| `api` | `aire-distribuido` (distroless) | 8080 → `127.0.0.1`; 7070 fuera de `ports`: solo la red interna |
 | `nodo` × K | la misma, `nodo -coordinador api:7070` | ninguno: solo sale |
 | `mongo` | `{{< meta cifras.pc4.mongo_imagen >}}` | 27017 |
 | `redis` | `{{< meta cifras.pc4.redis_imagen >}}` | 6379 |
 | `seed` | mongosh con `seed.js` | — |
 
-[Orden por `healthcheck`: mongo y redis sanos → seed → api sana (`api -salud`: distroless no tiene curl) → web y nodos, que reintentan hasta que el 7070 responde.]{.nota}
+[Orden por `healthcheck`: mongo y redis sanos → seed → api sana (`api -salud`: distroless no tiene curl) → web y nodos, que reintentan hasta que el 7070 responde. El cargador usa la misma imagen y corre una vez: `docker run --rm aire-distribuido cargar …`.]{.nota}
 :::
 ::::
 
@@ -1098,11 +1141,11 @@ COPY --from=build /out/bin/ /usr/local/bin/
 | Latido PING → PONG, cada {{< meta cifras.pc4.latido_s >}} s | {{< meta cifras.pc4.plazo_latido_s >}} s | detectar a un nodo libre que se fue |
 
 ::: {.lista style="font-size: 0.6em; margin-top: 0.6em;"}
-- Si un nodo cae o no responde a tiempo, la ronda se aborta con un error que lo nombra, la corrida
-  se corta con todos y **no hay modelo**: uno con menos nodos sería otro modelo. Los nodos vuelven a
-  llamar solos y quedan libres para relanzar
+- Si un nodo cae o no responde a tiempo, la ronda se aborta con un error que lo nombra y **no hay
+  modelo**: no reasignamos el rango del nodo caído. Los nodos vuelven a llamar solos y se relanza con
+  los que queden
 - Un `PARCIAL` que llega tarde de una ronda abortada se reconoce por su número y se descarta
-- El punto de control de cada ronda queda en Redis, pero no se reanuda: se relanza el entrenamiento
+- Los centroides de cada ronda quedan en Redis, pero todavía no se reanuda desde ahí: se relanza
 - Un entrenamiento a la vez: un semáforo (canal con búfer de 1); el segundo pedido recibe `409`
 :::
 
@@ -1183,8 +1226,8 @@ COPY --from=build /out/bin/ /usr/local/bin/
 [Respaldo · reports/smoke_lab_4.json y reports/kmeans_distribuido_local_N.json]{.eyebrow}
 
 ::: {.lista style="font-size: 0.68em;"}
-- Una ronda por la red, con {{< meta cifras.smoke.nodos >}} PC del laboratorio: {{< meta cifras.smoke.p50 >}} ms
-  de mediana; la ida y vuelta a cada nodo, entre {{< meta cifras.smoke.latido_p50_min >}} y
+- Una ronda de `PING` a {{< meta cifras.smoke.nodos >}} PC del laboratorio, sin cálculo:
+  {{< meta cifras.smoke.p50 >}} ms de mediana; la ida y vuelta a cada nodo, entre {{< meta cifras.smoke.latido_p50_min >}} y
   {{< meta cifras.smoke.latido_p50_max >}} ms
 - Una iteración sobre todo el gold en una sola máquina con {{< meta cifras.benchmark_kmeans.w >}} workers:
   {{< meta cifras.benchmark_kmeans.ms_iter_w >}} ms
@@ -1224,7 +1267,7 @@ COPY --from=build /out/bin/ /usr/local/bin/
 ::: {}
 ![](../../informe/capturas/tb2/entrenamiento/05-resultado.png){.app}
 
-[Entrenamiento configurado desde la UI (2 nodos, 1 réplica, semilla 42): 44 rondas, convergió, 7,7 × 10⁻¹⁵ con el secuencial y el modelo activado]{.pie}
+[Entrenamiento configurado desde la UI (2 nodos, 1 réplica, semilla 42): 44 rondas, convergió, 7,7 × 10⁻¹⁵ con el secuencial (dentro de 10⁻⁹) y el modelo activado]{.pie}
 :::
 :::
 

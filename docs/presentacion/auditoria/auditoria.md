@@ -1,107 +1,132 @@
 # Auditoría de la sustentación del TB2 · Programación Concurrente y Distribuida · 28/11/2026
 
 Revisión con la skill `revisar-entrega` (modo A) de lo que el grupo presenta en la clase de la
-semana 15: el deck renderizado (`docs/presentacion/slides/_site/index.html` y su PDF, 41
-páginas), lo que se dice en cada lámina (las notas del orador de `slides/index.qmd`), el reparto
-(`reparto.md`) y las respuestas preparadas (`preguntas.md`). La sustentación cuenta para el TB2:
-cada criterio de la rúbrica dice «cumple con la exposición de su trabajo demostrando conocimiento
-total del tema». No es la DD (esa es un informe individual sobre ABET 4, aparte).
+semana 15: el deck renderizado (`slides/_site/index.html` y su PDF, 42 láminas), lo que se dice
+en cada una (las notas del orador de `slides/index.qmd`), el reparto (`reparto.md`) y las
+respuestas preparadas (`preguntas.md`). La sustentación cuenta para el TB2: cada criterio de la
+rúbrica dice «cumple con la exposición de su trabajo demostrando conocimiento total del tema». No
+es la DD, que es un informe individual sobre ABET 4 y se entrega aparte.
 
-Fuentes: rúbrica del enunciado ✓ · rúbrica del Aula (`Rubrica_Logro_1ACC0065_202620.xlsx`) ✓ ·
-enunciado ✓ · observaciones previas del docente (PC4) ✓ · material del docente, semanas 10 a 14 ✓
-· informe del TB2 (rama local `claude/tb2-informe-065625`, `e0eb784`) ✓.
+Fuentes: rúbrica del enunciado ✓ · rúbrica del Aula (`Rubrica_Logro_1ACC0065_202620.xlsx`: mismos
+criterios y puntajes, Planteamiento 3, Implementación 8, Interfaz 5, Informe 2, Video 2; agrega que
+no tener video afecta los demás) ✓ · enunciado ✓ · observaciones del docente a la PC4 ✓ · labs de
+las semanas 10 a 14 ✓ · informe del TB2 (rama local `claude/tb2-informe-065625`, `e0eb784`) ✓.
 
-Auditoría hecha con IA (Claude); la cierra una persona (sección final).
+Archivos de la auditoría, en esta carpeta: `auditoria.md` (este reporte) y `matriz.json` (el
+vocabulario por criterio, para `buscar_evidencia.py`). Los números de lámina son los que muestra
+el deck, con la portada como 1.
+
+Auditoría hecha con IA (Claude): una sesión revisó y otra, en frío, hizo de docente sin ver el
+repositorio. La cierra una persona (sección final).
 
 ## Veredicto
 
-**Listo con riesgos**: cubre los tres criterios que se juegan en la exposición con las palabras del
-docente (sockets, puertos, canales, Docker, la API y su camino al clúster), y las cifras salen de
-los JSON; los riesgos que quedan son de ejecución (la demo en vivo y el tiempo), no de contenido.
-
-{{CORRECTOR}}
+**Listo con riesgos.** Los tres criterios que se juegan en la exposición (Planteamiento,
+Implementación e Interfaz) están a la vista y con las palabras del docente: `net.Listen`, `Accept`,
+`Dial`, puertos, canales, `WaitGroup`, Docker, el camino de un pedido hasta el clúster. Las cifras
+salen de los JSON y coinciden con el informe. Los riesgos que quedan son la demo en vivo, el tiempo
+y una pregunta de fondo que el docente probablemente hará: qué aporta el K-Means si la alerta es la
+media de 24 horas, y dónde está la predicción de concentraciones del caso 10.
 
 ## Puntos en riesgo (mayor a menor)
 
 | # | Criterio (pts) | Qué buscará el docente | Qué hay hoy | Arreglo | Costo |
 |:--|:---|:---|:---|:---|:---|
-| 1 | Implementación (8) e Interfaz (5) | Que el sistema funcione en vivo («funciona correctamente», «muestra los resultados en tiempo real») | Demo en aire.rosewt.dev con plan B en tres niveles; el nivel 2 (sin Docker ni red) probado el 27/11 | Ensayar la demo completa el día anterior con la lista de `reparto.md`; subir `JWT_DURACION=4h`; comprobar que CA-ESP-01 no tenga estado posterior al 21/12/2021 | 30 min |
-| 2 | Todos («conocimiento total») | Que cada integrante responda sus preguntas sin leer | 29 preguntas con respuesta y su `archivo:línea`; reparto por quién responde | Que cada uno lea sus preguntas y abra una vez el código que cita | 1 h por persona |
-| 3 | Todos | Que la exposición entre en el tiempo que dé el docente | 14:30 más 4:00 de demo; versión corta de unos 11 + 3:20 | Ensayo con reloj; decidir antes qué versión se usa | 30 min |
-| 4 | Implementación (8) | Docker «utiliza docker»: el Dockerfile y el compose a la vista | Lámina 8 (servicios, puertos y el Dockerfile nombrado) y respaldo con el Dockerfile en dos etapas | Si pregunta, abrir el respaldo «Docker Compose» | — |
+| 1 | Implementación (8) e Interfaz (5) | Que funcione en vivo y en tiempo real | Demo en la lámina 24, en el medio para que no se corte; plan B en tres niveles, el 2 probado sin red el 27/11 | Ensayar la demo completa el día anterior con la lista de `reparto.md`; `JWT_DURACION=4h`; que CA-ESP-01 no tenga estado posterior al 21/12/2021 | 30 min |
+| 2 | Planteamiento (3) | «¿Qué aporta el K-Means? ¿Dónde está la predicción de PM2,5/PM10 del caso 10?» | Lámina 14 (los tres regímenes, nueva) y 29 (la señal temprana y su precisión); respuesta 5 | Que Rody la ensaye: el régimen es contexto y señal medida; la alerta es la norma; el pronóstico quedó fuera, dicho sin rodeos | 15 min |
+| 3 | Interfaz (5) | «Panel administrador: métricas del cluster (uso CPU…)» | El CPU que se ve es el del proceso de la API (el coordinador); el de los nodos no viaja por el protocolo | Decirlo así (lámina 23, paso 4 de la demo, respuesta 24). Mostrarlo de verdad pide cambiar el protocolo: no para este plazo | — |
+| 4 | Todos | Que la exposición entre en el tiempo | 14:55 más 3:50 de demo; versión corta de unos 12 + 3:15 | Ensayo con reloj y decidir antes qué versión se usa | 30 min |
+| 5 | Planteamiento (3) | Leer el diagrama de arquitectura | Lámina 8: proyectado, el texto de las cajas no se lee | Alt + clic (Ctrl + clic en Linux) amplía; las píldoras dicen los puertos y la lámina 9 cuenta los flujos | — |
+| 6 | Todos («conocimiento total») | Que cada uno responda sin leer | 29 preguntas con su `archivo:línea` y quién responde, más las de reserva | Que cada integrante lea las suyas y abra una vez el código que citan | 1 h por persona |
 
 ## Matriz de trazabilidad
 
-`matriz.json` tiene el vocabulario por criterio; `buscar_evidencia.py` se corrió sobre el PDF
-proyectado, sobre lo que se dice y sobre `preguntas.md`. Los números de lámina son los que muestra
-el deck (la portada es la 1).
-
 | Criterio | Pts | Vocabulario del docente (fuente) | Dónde está | ¿Con sus palabras? | Estado |
 |:---|---:|:---|:---|:---:|:---|
-| Planteamiento: problema, dataset, pregunta de impacto social | 3 | OEFA, >1M, pregunta, ECA, para quién [Rúbrica, Enunciado §4] | Láminas 2 y 3; pregunta 1 | sí | cubierto |
-| Planteamiento: diagrama de arquitectura | 3 | «diagrama de arquitectura», puertos, Docker Compose [Rúbrica] | Lámina 8 (título «Arquitectura»), 9 (el camino de un pedido); pregunta 2 | sí (corregido) | cubierto |
-| Implementación: carga concurrente de >1M | 8 | goroutines, canales, workers, `WaitGroup` [Rúbrica, Enunciado parte A, Clase sem. 10] | Láminas 6 y 11; pregunta 6 | sí | cubierto |
-| Implementación: entrenamiento paralelo sin condiciones de carrera | 8 | worker pool, barrera, `Mutex`, «condiciones de carrera» [Rúbrica, Enunciado parte B] | Láminas 12 y 13 (corregidas: «sin condiciones de carrera», `go test -race`); preguntas 7 y 8 | sí (corregido) | cubierto |
-| Implementación: distribución por sockets y puertos | 8 | `net.Listen`, `Accept`, `net.Dial`, puerto, `bufio`, JSON, goroutine por conexión [Enunciado: «Sockets y patrones»; Clase sem. 10–14] | Láminas 15 (código de `Listen`, `Accept`, `DialContext`; `bufio` agregado) y 16 (la ronda con su `WaitGroup`); preguntas 10 a 16 | sí | cubierto |
-| Implementación: Docker | 8 | Dockerfile, `docker compose`, imagen, healthcheck [Rúbrica: «utiliza docker»; Clase sem. 11] | Lámina 8 (corregida: el Dockerfile nombrado), respaldo «Docker Compose» (Dockerfile en dos etapas, servicios, `healthcheck`); preguntas 22 y 23 | sí (corregido) | cubierto |
-| Implementación: API REST, tiempo real, métricas, < 100 ms | 8 | `net/http`, JWT, `POST /api/predicciones`, p99, WebSocket [Rúbrica, Enunciado parte C] | Láminas 18 (el handler) y 19 (latencia); preguntas 17, 19 y 20 | sí | cubierto |
+| Planteamiento: problema, dataset y pregunta de impacto | 3 | OEFA, >1M, pregunta, ECA, para quién [Rúbrica; Enunciado §4] | Láminas 2 y 3 (con los valores del ECA); pregunta 1 | sí | cubierto |
+| Planteamiento: diagrama de arquitectura | 3 | «diagrama de arquitectura», puertos, Docker Compose [Rúbrica] | Láminas 8 y 9; pregunta 2 | sí | cubierto (diagrama denso: riesgo 5) |
+| Implementación: carga concurrente de >1M | 8 | goroutines, canales, workers, `WaitGroup` [Rúbrica; Enunciado A; sem. 10] | Láminas 6 y 11; pregunta 6 | sí | cubierto |
+| Implementación: entrenamiento paralelo sin condiciones de carrera | 8 | worker pool, barrera, `Mutex`, «condiciones de carrera» [Rúbrica; Enunciado B] | Láminas 12 a 14; preguntas 7 y 8 | sí | cubierto |
+| Implementación: distribución por sockets y puertos | 8 | `net.Listen`, `Accept`, `net.Dial`, puerto, `bufio`, JSON, goroutine por conexión [Enunciado: «Sockets y patrones»; sem. 10–14] | Láminas 16 y 17; preguntas 10 a 16 | sí | cubierto |
+| Implementación: Docker | 8 | Dockerfile, `docker compose`, imagen, `healthcheck` [Rúbrica: «utiliza docker»; sem. 11] | Lámina 8 (el Dockerfile nombrado), respaldo 33 (el Dockerfile en dos etapas, servicios, puertos, `healthcheck`), paso 6 de la demo; preguntas 22 y 23 | sí | cubierto |
+| Implementación: API REST, tiempo real, métricas, < 100 ms | 8 | `net/http`, JWT, `POST /api/predicciones`, p99, WebSocket [Rúbrica; Enunciado C] | Láminas 19 y 20; preguntas 17, 19 y 20 | sí | cubierto |
 | Flujo: la API coordina el clúster; la predicción no pasa por él | 8 | El camino del pedido hasta los nodos [Enunciado §6; observación de la PC4] | Lámina 9; pregunta 18 | sí | cubierto |
-| Implícito: MongoDB (persistente) y Redis (caché) | — | «Persistente: MongoDB», «Cache: Redis» [Enunciado §6] | Lámina 20 (corregida: «Redis es la caché»); pregunta 21 | sí (corregido) | cubierto |
-| Interfaz: framework, menú, parámetros, tiempo real, impacto | 5 | React, «menú de opciones», configura desde la UI, tiempo real, impacto [Rúbrica] | Lámina 22 (corregida: «menú de opciones por rol»), 26 y 27; demo; pregunta 24 | sí (corregido) | cubierto |
-| Interfaz: módulos del enunciado | 5 | ingreso, dashboard, entrenamiento y simulación, panel admin (CPU, latencia, nodos, logs) [Enunciado §6] | Lámina 22, respaldo «Las pantallas de admin», demo | sí | cubierto |
-| Entregable 3: seguridad de la API | 5 | CORS, JWT, políticas [Enunciado, Entregable 3] | Lámina 23; preguntas 25 y 26 | sí | cubierto |
-| Entregable 3: evaluación experimental | 5 | pruebas, datos de prueba, responde la pregunta de impacto [Enunciado, Entregable 3] | Láminas 25 a 27; preguntas 19, 27 y 28 | sí | cubierto |
-| Implícito: Git Flow y Kanban | 2 | Git Flow, Kanban [Enunciado; Rúbrica: Informe] | No están en el deck (son del informe); `preguntas.md`, «Proceso» (Kanban agregado) | sí | débil, a propósito |
-| Ética (ABET 4) | — | lo que el dato no puede decir | Lámina 28; láminas 26 y 27 | sí | cubierto |
+| Implícito: MongoDB persistente y Redis caché | — | «Persistente: MongoDB», «Cache: Redis» [Enunciado §6] | Lámina 21; pregunta 21 | sí | cubierto |
+| Interfaz: framework, menú, parámetros, tiempo real, impacto | 5 | React, «menú de opciones», configura desde la UI, tiempo real [Rúbrica] | Láminas 23 y 24 (demo), 28 y 29; pregunta 24 | sí | cubierto |
+| Interfaz: módulos del enunciado | 5 | ingreso, dashboard, entrenamiento y simulación, panel admin (CPU, latencia, nodos, logs) [Enunciado §6] | Lámina 23, demo (paso 1, el ingreso), respaldo 41 | sí | cubierto, salvo el CPU de los nodos (riesgo 3) |
+| Entregable 3: seguridad | 5 | CORS, JWT, políticas [Enunciado] | Lámina 25, paso 8 de la demo; preguntas 25 y 26 | sí | cubierto |
+| Entregable 3: evaluación experimental | 5 | pruebas, datos de prueba, responde la pregunta de impacto [Enunciado] | Láminas 27 a 29; preguntas 19, 27 y 28 | sí | cubierto |
+| Implícito: Git Flow y Kanban | 2 | Git Flow, Kanban [Enunciado; Rúbrica: Informe] | No están en el deck (son del informe); `preguntas.md`, «Proceso» | sí | débil, a propósito |
+| Ética (ABET 4) | — | lo que el dato no puede decir | Láminas 28 a 30 | sí | cubierto |
 
 ## Afirmaciones
 
-`afirmaciones.py` sobre el PDF, las notas, `preguntas.md` y `reparto.md`:
+`afirmaciones.py` sobre el PDF, las notas, `preguntas.md` y `reparto.md`: la única ALTA es la
+analogía que el docente marcó en la PC4, citada a propósito en «Lo que no se dice» con su reemplazo.
+Las MEDIA y las que marcó el corrector en frío quedaron así:
 
-- **ALTA (analogía)**: solo aparece la frase que el docente marcó como incorrecta en la PC4,
-  citada a propósito en «Lo que no se dice» y en la pregunta 13, con su reemplazo literal. En el
-  deck no hay ninguna.
-- **MEDIA (absolutos)**, todas con su respaldo:
-  - «bit a bit para todo W» (láminas 13 y 25): `benchmark_kmeans.json` (`identico`) y la inercia
-    idéntica con 1 a 12 workers.
-  - «con 1 nodo, bit a bit» (láminas 16 y 25): `cifras.distribuido.bit_a_bit_con` y las pruebas
-    `TestLloydConUnNodoEsElConcurrenteBitABit` y `TestUnNodoDaElModeloDeEntrenarBitABit`.
-  - «el coordinador nunca llama» (lámina 15): en el código, `net.Dial` solo está en `cmd/nodo`.
-  - «nunca "ahora"» (lámina 28) y «fusionar siempre en el mismo orden» (lámina 30): ciertas al pie
-    de la letra.
+| Frase de antes (dónde) | Problema | Ahora |
+|:---|:---|:---|
+| «2 883 877 lecturas horarias» (lámina 2) | Son filas: hay promedios diarios y filas vacías | «filas de lecturas de 33 estaciones» |
+| «Es la pregunta que el enunciado pone de ejemplo para el caso 10» (3) | El ejemplo es general | «El enunciado pone una pregunta así entre sus ejemplos de impacto social» |
+| «la memoria no crece con el archivo» (11) | El pivot sí necesita las filas válidas | «a lo sumo 2W bloques leídos sin fusionar» |
+| «no comparten nada» (notas de 11) | Comparten canales y el archivo | «no comparten estado mutable» |
+| «la fusión en orden y las fases seriales (8,3 %) no se reparten» (11) | Con 8,3 %, Amdahl daría más de 6× | Karp-Flatt (13 %) y los pocos bloques de 64 MiB para 12 workers; en Windows, bloques más chicos tardan menos |
+| «darían números distintos» (notas de 12) | Absoluto | «podrían dar» |
+| «bit a bit para todo W» (13) | Vale con el mismo chunk | «… y el mismo chunk» |
+| «Una iteración dura 2,03 ms» frente a 0,551 ms (13 y respaldo 39) | Parecía una contradicción | «2,03 ms con 1 worker y 0,551 ms con 12» |
+| «Sin condiciones de carrera: 549 funciones» (13 y 27) | El detector no prueba la ausencia | «`go test -race` no detecta carreras»; «ninguna detectada en 549 funciones» |
+| «sin permisos de administrador: solo conexiones de salida» (16) | Escuchar no pide admin; lo que bloquea es el firewall | «Colab está detrás de NAT y el firewall de las PC del laboratorio bloquea las entrantes» |
+| «la barrera de una ronda mide 0,515 ms» (16, 27, 39) | El smoke es de `PING`, sin cálculo | «una ronda de `PING` a todos a la vez, sin cálculo: lo que la barrera paga en red» |
+| «la misma suma que en una máquina» (17) | Es la misma función; agrupar por nodo cambia el orden | «la misma función»; «en el orden de 10⁻¹⁵ … porque agrupar por nodo cambia el orden de la suma» |
+| «a lo sumo 1,3 × 10⁻¹⁵» frente a 7,7 × 10⁻¹⁵ (17, 27, respaldo 41) | Dos corridas distintas sin decirlo | «a lo sumo 1,3 × 10⁻¹⁵ en `cmd/distribuido`»; la captura, «7,7 × 10⁻¹⁵ … dentro de 10⁻⁹» |
+| «Distribuido = secuencial» (27) y el cierre (31) | Entre nodos difiere a 10⁻¹⁵ | «frente a»; «en una máquina, bit a bit; entre nodos, a 10⁻¹⁵» |
+| «El 7070 no se publica» y los nodos del laboratorio (notas de 8, 16) | ¿Cómo llegaron? | En el laboratorio el coordinador corrió fuera de Docker; en Compose, el 7070 no está en `ports` |
+| «con `expose` queda dentro de la red» (pregunta 11) | `expose` es documentación | «no está en `ports`» |
+| «Puertos solo en 127.0.0.1» (25) | En la máquina pública están el 80 y el 443 | «En el Compose…; en la máquina pública, solo 80 y 443» |
+| «MongoDB y Redis guardaron cada predicción» (notas de 20) | La persistencia es de mejor esfuerzo; 80 000 frente a 80 800 | «en esa corrida, ninguna descartada»; 80 800 = 80 000 pedidos y 800 de calentamiento |
+| «el punto de control de cada ronda» (21) | Nunca se lee | «los centroides de la última ronda; todavía no se reanuda desde ahí» |
+| «sigue cada ronda en vivo» (23, demo) | La UI las reproduce, y su pantalla lo dice | «las rondas llegan por el WebSocket; la UI las reproduce» |
+| «clúster (nodos, CPU…)» (23) | Es el CPU de la API | «CPU del proceso de la API» (y el de los nodos no viaja) |
+| «no hay modelo: uno con menos nodos sería otro modelo» (respaldo 34) | Reasignando el rango sería el mismo | «no reasignamos el rango del nodo caído» |
+| «Auditoría independiente» (27) | La hizo el mismo equipo | «Otra implementación, en pandas y scikit-learn» |
+| «Todo en Go y en contenedores: … y la SPA» (7) | La SPA es TypeScript; Mongo y Redis no son Go | «En contenedores: el sistema en Go (…), MongoDB, Redis y la SPA en React» |
 
 ## Coherencia con el informe del TB2
 
-- Las 107 claves de `cifras.yml` que usa el deck son idénticas en la rama del informe.
-- Las cifras de impacto del deck (`_deck.yml`, desde `reports/impacto.json`) coinciden con
-  `cifras.impacto` del informe; dos cuartiles iban con otro formato («22» y «20» frente a «22,0» y
-  «20,0»): **corregido** en `datos.py`.
-- La pregunta de impacto social tenía otra redacción en el deck: **corregida** a la del informe
-  («¿en qué estaciones de OEFA y a qué horas el aire entra en el nivel alto de PM2,5/PM10, y con
-  cuánta anticipación eso avisa de un episodio que supera el ECA?»).
-- «Nivel alto» en la anticipación: **corregido** a «régimen alto», como el informe y la pantalla de
-  impacto.
-- Pruebas del frontend y WebSocket: el texto del informe dice 708 pruebas en 36 archivos y
-  p50 2,25 ms / p99 9,98 ms, igual que el deck. *Para el informe*: su tabla de pruebas del TB2
-  (`cifras.pruebas_tb2.web`) cuenta 587, que son los `it`/`test` declarados (las parametrizadas
-  cuentan una vez); conviene decirlo en esa tabla para que no parezca otra cifra.
+- Las 107 claves de `cifras.yml` que usa el deck son idénticas en la rama del informe; las de
+  impacto de `_deck.yml` coinciden con `cifras.impacto` (los cuartiles van ahora con una decimal,
+  como allá).
+- La pregunta de impacto social tiene la redacción del informe, y la anticipación dice «régimen
+  alto», como el informe y la pantalla de impacto.
+- Pruebas del frontend (708 en 36 archivos) y WebSocket (p50 2,25 ms, p99 9,98 ms): iguales.
+- **Para el informe** (no es de esta carpeta): su tabla de pruebas del TB2 cuenta 587 pruebas de
+  la interfaz (`cifras.pruebas_tb2.web`, los `it`/`test` declarados) y su texto dice 708 (las que
+  corre Vitest). Y el diagrama `docs/diagramas/arquitectura.png` dice que MongoDB guarda «corridas,
+  centroides, regímenes» y Redis «predicciones, centroides por ronda», distinto de las 5 colecciones
+  y 3 claves reales.
 
-## Correcciones de esta auditoría
+## Corrector en frío
 
-| Dónde | Antes | Ahora |
-|:---|:---|:---|
-| Lámina 8 | «Las cuatro partes, en Docker Compose»; el Dockerfile no se nombraba | «Arquitectura: …» y un chip «Dockerfile: una imagen para la API y los nodos»; en las notas, el Dockerfile en dos etapas |
-| Lámina 3 y pregunta 1 | Una redacción propia de la pregunta de impacto | La del informe |
-| Lámina 13 y notas de la 12 | No decía «condiciones de carrera» | «Sin condiciones de carrera al actualizar los centroides: `go test -race` en cada push» |
-| Lámina 15 | «`encoding/json` + `\n`» | «`bufio` + `encoding/json` + `\n`», como en los labs |
-| Lámina 20 | «Redis responde rápido» | «Redis es la caché», como el enunciado |
-| Lámina 22 | No decía «menú» | «Menú de opciones por rol» |
-| Lámina 27 | «nivel alto del K-Means» | «régimen alto del K-Means» |
-| Respaldo Docker Compose | Sin el Dockerfile; no decía `healthcheck` | El Dockerfile en dos etapas, como texto; el orden de arranque por `healthcheck` |
-| `reparto.md` y `preguntas.md` | Los números de lámina iban uno por detrás de los del deck (no contaban la portada) | Renumerados; la portada es la 1 y tiene su fila |
-| `preguntas.md` | 28 preguntas | 29: entra «Expliquen la arquitectura» (2); la 12 compara la estrella con el anillo y el P2P de los labs; la 14 nombra `bufio`; la 19 suma Postman; la 20 explica por qué no gorilla (lab 14) y por qué el hub no necesita su `Lock()`; la 21 dice «caché»; «Proceso» suma el Kanban |
+Un subagente nuevo hizo de docente con la rúbrica, el enunciado, los labs, el PDF, lo que se dice y
+`preguntas.md`, sin ver el repositorio. Leyó la versión anterior a las correcciones de la primera
+pasada (por eso marcó la numeración corrida y el Dockerfile ausente, ya resueltos). Su puntaje
+simulado: Planteamiento 2,5/3, Implementación 6,5/8 y Interfaz 4/5 (13/16), condicionado a la demo.
+Lo que aportó y no estaba en la matriz, con su destino:
 
-{{CORRECCIONES_FRIO}}
+| Observación | Qué se hizo |
+|:---|:---|
+| El resultado del modelo no se ve en la exposición | Lámina 14 nueva: los tres regímenes con las líneas del ECA |
+| La demo, donde se gana la Interfaz, iba al final y se podía cortar | Movida a la lámina 24, después de la SPA; suma el paso de ingreso |
+| Tres contradicciones (7070, 1,3 frente a 7,7 × 10⁻¹⁵, 2,03 frente a 0,551 ms) | Corregidas (tabla de afirmaciones) |
+| El ECA nunca se proyecta con sus valores; INCA y régimen 0/1/2 sin leyenda | Nota del ECA en la lámina 3 y sus líneas en la 14; leyenda de INCA y régimen en la 23 |
+| ¿Qué aporta el K-Means? ¿Y la predicción del caso 10? | Respuesta 5 reescrita; queda como riesgo 2 |
+| Preguntas sin respuesta preparada: el impacto en Python, `go func` antes de Go 1.22, el orden de los candados, cómo ven los workers los centroides nuevos, el cluster vacío, el apretón del WebSocket | Agregadas a las respuestas 7, 8 y 13, a «Proceso» y a «De reserva» |
+| No ofrecer por iniciativa propia el experimento de 20 GPU en Python | Quitado de «Proceso» |
+| «Error de hecho» sobre el Kanban de la PC4, dicho en la sala | Reescrito: si sale, se muestra la tarjeta #76, sin discutir |
+| La UI usa formato numérico inglés («1,184», «7.7 e-15») | Es del frontend: anotado para esa sesión |
+| Replicar el gold no es ML masivo; el clúster no acelera con la tabla real | Se mantiene, dicho con honestidad en el respaldo 39 y la respuesta 29 |
+| «20 h» como titular de la anticipación | Se mantiene, con la cota baja (1 h), el tope de 23 h y «no es un pronóstico» en la misma lámina |
 
 ## Lectura humana (la cierra una persona, no la IA)
 

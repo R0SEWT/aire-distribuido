@@ -17,8 +17,8 @@ revisa su parte antes de exponer.
 | # | Lámina | Quién | Tiempo |
 |--:|:--|:--|--:|
 | 1 | Portada: el título y las estaciones de OEFA en su posición real (no tiene notas: el saludo está en las de la 2) | Rody | 0:20 |
-| 2 | 2 883 877 lecturas: ¿qué aire se respira junto a una mina? | Rody | 0:25 |
-| 3 | La pregunta de impacto social | Rody | 0:30 |
+| 2 | 2 883 877 filas: ¿qué aire se respira junto a una mina? | Rody | 0:25 |
+| 3 | La pregunta de impacto social, con el ECA | Rody | 0:30 |
 | 4 | Separador: el dato | Dayana | 0:05 |
 | 5 | Lo que el CSV de OEFA esconde (hora, ceros, unidades) | Dayana | 0:30 |
 | 6 | El embudo de la limpieza | Dayana | 0:30 |
@@ -29,27 +29,29 @@ revisa su parte antes de exponer.
 | 11 | Parte A: el cargador (canales, semáforo, `WaitGroup`) y su speedup | Julio | 0:45 |
 | 12 | Parte B: el worker pool del K-Means (animación) | Rody | 0:50 |
 | 13 | Bit a bit para todo W, y el speedup | Rody | 0:25 |
-| 14 | Separador: la distribución | Julio | 0:05 |
-| 15 | Los sockets: `net.Listen`, `Accept`, `DialContext`, la estrella | Julio | 0:50 |
-| 16 | Una ronda: una goroutine por nodo, `WaitGroup`, fusión en orden de nodo | Julio | 0:50 |
-| 17 | Separador: el servicio | Julio | 0:05 |
-| 18 | La API en Go: el handler de una predicción | Julio | 0:50 |
-| 19 | Menos de 100 ms con 64 clientes | Julio | 0:30 |
-| 20 | MongoDB persiste, Redis es la caché | Dayana | 0:40 |
-| 21 | Separador: la interfaz | Dayana | 0:05 |
-| 22 | La SPA (capturas reales: el panel en alerta y la simulación que cruza el ECA) | Dayana | 0:45 |
-| 23 | Seguridad: la UI esconde, la API decide | Dayana | 0:40 |
-| 24 | Separador: lo que responde | Julio | 0:05 |
-| 25 | Evaluación experimental | Julio | 0:45 |
-| 26 | Lo que responde: horas sobre el ECA por actividad | Dayana | 0:45 |
-| 27 | ¿Con cuánta anticipación? | Dayana | 0:40 |
-| 28 | Lo que este sistema no puede decir | Rody | 0:35 |
-| 29 | Demo en vivo (Rody conduce; cada uno narra su parte) | los tres | 4:00 |
-| 30 | Cierre y preguntas | Rody | 0:30 |
+| 14 | El modelo: tres regímenes de aire; solo el alto supera el ECA | Rody | 0:25 |
+| 15 | Separador: la distribución | Julio | 0:05 |
+| 16 | Los sockets: `net.Listen`, `Accept`, `DialContext`, la estrella | Julio | 0:50 |
+| 17 | Una ronda: una goroutine por nodo, `WaitGroup`, fusión en orden de nodo | Julio | 0:50 |
+| 18 | Separador: el servicio | Julio | 0:05 |
+| 19 | La API en Go: el handler de una predicción | Julio | 0:50 |
+| 20 | Menos de 100 ms con 64 clientes | Julio | 0:30 |
+| 21 | MongoDB persiste, Redis es la caché | Dayana | 0:40 |
+| 22 | Separador: la interfaz | Dayana | 0:05 |
+| 23 | La SPA (capturas reales: el panel en alerta y la simulación que cruza el ECA) | Dayana | 0:45 |
+| 24 | **Demo en vivo** (Rody conduce; cada uno narra su parte) | los tres | 3:50 |
+| 25 | Seguridad: la UI esconde, la API decide | Dayana | 0:40 |
+| 26 | Separador: lo que responde | Julio | 0:05 |
+| 27 | Evaluación experimental | Julio | 0:45 |
+| 28 | Lo que responde: horas sobre el ECA por actividad | Dayana | 0:45 |
+| 29 | ¿Con cuánta anticipación? | Dayana | 0:40 |
+| 30 | Lo que este sistema no puede decir | Rody | 0:35 |
+| 31 | Cierre y preguntas | Rody | 0:30 |
 
-Exposición: **14:30** (Rody 5:00, Dayana 4:40, Julio 4:50) más **4:00** de demo. Después vienen
+Exposición: **14:55** (Rody 5:25, Dayana 4:40, Julio 4:50) más **3:50** de demo, que va en el
+medio, después de la SPA, para que no se corte si el tiempo aprieta. Después vienen
 las láminas de respaldo, que solo se abren si el docente pregunta (tecla `M` para el menú):
-Docker Compose, plazos del clúster y caída de un nodo, patrones de Go, reglas de limpieza, k = 3,
+Docker Compose (con el Dockerfile), plazos del clúster y caída de un nodo, patrones de Go, reglas de limpieza, k = 3,
 speedup con Karp-Flatt, cuándo conviene repartir, rutas de la API, las pantallas de admin
 (Clúster y Entrenamiento) y la de impacto.
 
@@ -62,17 +64,18 @@ la demo, porque tiene la sesión de admin.
 
 ### Si dan menos tiempo
 
-Versión de unos 11 minutos más 3:20 de demo, en este orden:
+Versión de unos 12 minutos más 3:15 de demo, en este orden:
 
 1. Saltar los seis separadores (−0:30).
 2. Saltar el embudo (lámina 6) y decir solo «de 2,9 millones de filas a 65 873 horas» (−0:30).
 3. Saltar «bit a bit para todo W» (13) y decirlo en la del worker pool (−0:25).
-4. Saltar la latencia (19) y decir la cifra en la de la API: «p99 de 3,1 ms con 64 clientes» (−0:30).
-5. Evaluación en 0:20, anticipación en 0:20 y límites en 0:20 (−0:60).
-6. En la demo, saltar Impacto y Swagger (−0:40).
+4. Saltar la latencia (20) y decir la cifra en la de la API: «p99 de 3,1 ms con 64 clientes» (−0:30).
+5. Evaluación en 0:20, anticipación en 0:20 y límites en 0:20 (−1:00).
+6. En la demo, saltar Impacto y Swagger (−0:35).
 
-Lo que **no** se salta nunca: el camino de un pedido (9), los sockets (15), la ronda (16) y el
-código de la API (18). Son exactamente lo que faltó en la PC4.
+Lo que **no** se salta nunca: el camino de un pedido (9), el modelo (14), los sockets (16), la
+ronda (17), el código de la API (19) y la demo (24). Son lo que faltó en la PC4 y lo que da los
+puntos de Implementación e Interfaz.
 
 ### Transiciones
 
@@ -80,32 +83,35 @@ Cada uno cierra su bloque con una frase que pasa al siguiente, para no perder ti
 
 - Rody (9) → Julio: «Julio, ¿cómo se reparte eso en una máquina?»
 - Julio (11) → Rody: «Y el K-Means usa el mismo patrón; Rody.»
-- Rody (13) → Julio: «Eso en una máquina. Entre máquinas, Julio.»
-- Julio (19) → Dayana: «Todo eso se guarda en dos bases; Dayana.»
-- Dayana (23) → Julio: «¿Y cómo sabemos que funciona?»
-- Julio (25) → Dayana: «Y lo que dice sobre el aire.»
-- Dayana (27) → Rody: «Rody, lo que no puede decir.»
+- Rody (14) → Julio: «Eso en una máquina. Entre máquinas, Julio.»
+- Julio (20) → Dayana: «Todo eso se guarda en dos bases; Dayana.»
+- Dayana (23) → Rody: «Y ahora, en vivo.» (Rody conduce la demo)
+- Demo (24) → Dayana: al terminar el Swagger con su `403`, «eso es la seguridad: Dayana».
+- Dayana (25) → Julio: «¿Y cómo sabemos que funciona?»
+- Julio (27) → Dayana: «Y lo que dice sobre el aire.»
+- Dayana (29) → Rody: «Rody, lo que no puede decir.»
 
 ## Guion de la demo
 
-Rody maneja la laptop; cada uno narra su paso. Cuatro minutos. Todo sobre
+Rody maneja la laptop; cada uno narra su paso. Tres minutos y cincuenta segundos, en la lámina 24, después de la SPA. Todo sobre
 <https://aire.rosewt.dev>, con dos ventanas del navegador lado a lado: a la izquierda el
 **Panel**, a la derecha la pantalla que toque. Así se ve el tiempo real: lo que pasa a la derecha
 cambia el panel de la izquierda sin recargar.
 
 | # | Quién narra | Qué se hace | Qué se dice (idea, no texto) |
 |--:|:--|:--|:--|
-| 1 | Dayana · 0:30 | Panel: pasar el cursor por dos o tres estaciones del mapa; abrir una en la tabla | El último estado recibido de cada estación, su banda INCA y si está en alerta. «Último estado», no «ahora»: son datos de 2018 a 2022 |
-| 2 | Dayana · 0:45 | Simulación → «Un día de una estación» → **CA-ESP-01, 21/12/2021** («cruza el ECA») → Simular, ritmo Rápida | La UI manda las lecturas reales una por una a `POST /api/predicciones`. La ventana de 24 h se llena; en la lectura 18 aparece la media; a las 07:00 la media de PM10 supera el ECA y se enciende la alerta, y el panel de la izquierda cambia solo: es el evento `estacion.regimen` por WebSocket |
-| 3 | Julio · 0:30 | Clúster: la tabla de nodos, la latencia por ruta con la línea de 100 ms y los eventos | Cada nodo con su **IP:puerto**: es la dirección remota de su conexión TCP, como la ve el coordinador. Las altas y bajas de los nodos son los eventos |
-| 4 | Rody · 0:50 | Entrenamiento: K = todos los nodos libres, réplicas 1, semilla 42 → Lanzar entrenamiento | La API toma K nodos del pool, les manda `CARGAR` y una ronda por iteración. El entrenamiento real dura unos 50 ms; la UI reproduce sus 44 rondas más despacio, con la inercia y lo que tardó cada nodo. Al final, la diferencia con el K-Means secuencial (con 2 nodos fue 7,7 × 10⁻¹⁵) y «el modelo nuevo quedó activo» porque está dentro de 10⁻⁹. Si se piden más nodos que los libres, la API responde 422 y la UI lo dice |
-| 5 | Julio · 0:30 | Terminal: `docker compose ps` y `docker compose logs --tail 15 nodo` | Los servicios con sus puertos. En el log de un nodo: `conectado desde <IP>:<puerto> a <IP>:7070`, el `CARGAR` y la primera ronda: el `Dial` del nodo, en vivo |
-| 6 | Dayana · 0:20 | Impacto: bajar hasta «Cada estación vigila una actividad» | La unidad honesta es la actividad: junto a la refinería y las ladrilleras de Lurigancho, la mayoría de las horas superó el ECA |
-| 7 | Julio · 0:20 | `/docs` (Swagger): `POST /api/auth/invitado` → copiar el token → Authorize → `GET /api/metricas` | 403: el token es de rol usuario y la ruta es de admin. La UI esconde, la API decide |
+| 1 | Dayana · 0:15 | Ingreso: abrir «No pienso crearme una cuenta aquí» y cerrarlo; mostrar que la sesión de admin suma Entrenamiento y Clúster al menú | El ingreso pide usuario y clave (JWT); el invitado entra con el rol usuario. El menú cambia según el rol, pero quien decide es la API |
+| 2 | Dayana · 0:25 | Panel: pasar el cursor por dos o tres estaciones del mapa; abrir una en la tabla | El último estado recibido de cada estación, su banda INCA y si está en alerta. «Último estado», no «ahora»: son datos de 2018 a 2022 |
+| 3 | Dayana · 0:45 | Simulación → «Un día de una estación» → **CA-ESP-01, 21/12/2021** («cruza el ECA») → Simular, ritmo Rápida | La UI manda las lecturas reales una por una a `POST /api/predicciones`. La ventana de 24 h se llena; en la lectura 18 aparece la media; a las 07:00 la media de PM10 supera el ECA y se enciende la alerta, y el panel de la izquierda cambia solo: es el evento `estacion.regimen` por WebSocket |
+| 4 | Julio · 0:30 | Clúster: la tabla de nodos, la latencia por ruta con la línea de 100 ms y los eventos | Cada nodo con su **IP:puerto**: es la dirección remota de su conexión TCP, como la ve el coordinador, y su latido. El CPU que se ve es el del proceso de la API, el coordinador: el de cada nodo no viaja por el protocolo. Las altas y bajas de los nodos son los eventos |
+| 5 | Rody · 0:50 | Entrenamiento: K = todos los nodos libres, réplicas 1, semilla 42 → Lanzar entrenamiento | La API toma K nodos del pool, les manda `CARGAR` y una ronda por iteración. Las rondas llegan por el WebSocket; como el entrenamiento real dura unos 50 ms, la UI reproduce sus 44 rondas más despacio, con la inercia y lo que tardó cada nodo: decirlo así, no «en vivo». Al final, la diferencia con el K-Means secuencial (con 2 nodos fue 7,7 × 10⁻¹⁵) y «el modelo nuevo quedó activo» porque está dentro de 10⁻⁹. Si se piden más nodos que los libres, la API responde 422 y la UI lo dice |
+| 6 | Julio · 0:30 | Terminal: `docker compose ps` y `docker compose logs --tail 15 nodo` | Los servicios con sus puertos. En el log de un nodo: `conectado desde <IP>:<puerto> a <IP>:7070`, el `CARGAR` y la primera ronda: el `Dial` del nodo, en vivo |
+| 7 | Dayana · 0:15 | Impacto: bajar hasta «Cada estación vigila una actividad» | La unidad honesta es la actividad: junto a la refinería y las ladrilleras de Lurigancho, la mayoría de las horas superó el ECA |
+| 8 | Julio · 0:20 | `/docs` (Swagger): `POST /api/auth/invitado` → copiar el token → Authorize → `GET /api/metricas` | 403: el token es de rol usuario y la ruta es de admin. La UI esconde, la API decide |
 
-Si en el paso 4 un nodo se cae o no responde, **es el comportamiento diseñado** y se cuenta así:
-«la ronda se abortó con un error que nombra al nodo; no hay modelo, porque uno con menos nodos
-sería otro modelo; los nodos vuelven a llamar solos». Se relanza con los que queden.
+Si en el paso 5 un nodo se cae o no responde, **es el comportamiento diseñado** y se cuenta así:
+«la ronda se abortó con un error que nombra al nodo y no hay modelo: no reasignamos el rango del
+nodo caído; los nodos vuelven a llamar solos». Se relanza con los que queden.
 
 ### Preparación
 
@@ -142,6 +148,8 @@ sería otro modelo; los nodos vuelven a llamar solos». Se relanza con los que q
   `alias dc='sudo docker compose -f docker-compose.yml -f despliegue/azure/compose.azure.yml'`, y
   en la demo `dc ps` y `dc logs --tail 15 nodo`. `/docs` abierto en otra pestaña.
 - [ ] Probar el proyector con el deck en pantalla completa (`F`) y la vista del orador (`S`).
+  Alt + clic (en Linux, Ctrl + clic) amplía una zona: sirve para los diagramas de las láminas 8 y
+  21, que proyectados se leen mal; otro Alt + clic vuelve.
 - [ ] Datos móviles listos para compartir internet si la red del aula falla.
 
 ### Plan B
@@ -209,3 +217,7 @@ Las frases que el docente ya corrigió, o que el dato no sostiene. Están explic
 - ~~«Una hora sobre 50 µg/m³ incumple el ECA».~~ El ECA es una media de 24 horas.
 - ~~«No usamos Mutex».~~ El bucle del K-Means no lo necesita; la API sí los usa (ventana de 24 h,
   pool de nodos, hub).
+- ~~«Las rondas del entrenamiento en vivo».~~ Llegan por el WebSocket, pero el entrenamiento dura
+  milisegundos y la UI las reproduce más despacio: su pantalla lo dice.
+- ~~«El 7070 no se publica porque está en `expose`».~~ `expose` es documentación; no se publica
+  porque no está en `ports`.

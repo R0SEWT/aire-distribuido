@@ -12,6 +12,9 @@ y responder a las preguntas del docente». El video del TB2 (6 minutos como máx
 - [`preguntas.md`](preguntas.md): las 28 preguntas más probables del docente, con una respuesta
   corta y el archivo y la línea del código que la respaldan; las observaciones de la PC4 y cómo se
   responden ahora; lo que no se dice.
+- [`auditoria/`](auditoria/auditoria.md): la revisión con la skill `revisar-entrega` (modo A) contra
+  la rúbrica, el vocabulario de los labs y el informe del TB2, con un corrector en frío: veredicto,
+  matriz, afirmaciones corregidas y riesgos. La cierra una lectura humana.
 - [`en-sencillo.md`](en-sencillo.md): la historia de la PC3 en palabras simples, escrita antes que
   las láminas.
 - **Publicado en <https://uni.rosewt.dev/concurrente/pc3/>** (la PC3), con su PDF y una portada
