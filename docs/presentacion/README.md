@@ -29,9 +29,12 @@ y responder a las preguntas del docente». El video del TB2 (6 minutos como máx
   del curso en <https://uni.rosewt.dev/concurrente/>. `bash publicar.sh tb2` renderiza el deck y lo
   publica en `/tb2/` del sitio de Netlify `concurrente-rosewt`, que el catálogo
   [uni.rosewt.dev](https://github.com/R0SEWT/uni) monta en `/concurrente/`; `sitio/index.html` es la
-  portada del curso y ya tiene la tarjeta del TB2. Netlify publica `sitio/` entero: antes de
-  publicar el TB2, `sitio/pc3/` tiene que seguir en la carpeta (si no está, se rehace desde el tag
-  `pc3.1`). El TB2 todavía no está publicado.
+  portada del curso: tiene la tarjeta de la PC4 y la del TB2 comentada, que se descomenta al
+  publicarlo (hasta entonces `/tb2/` da 404). Netlify publica `sitio/` entero: antes de publicar
+  el TB2, `sitio/pc3/` y `sitio/pc4/` tienen que seguir en la carpeta (si no están, se rehacen
+  desde el tag `pc3.1` y con `bash publicar.sh pc4`). El TB2 todavía no está publicado.
+- **La PC4 está publicada en <https://uni.rosewt.dev/concurrente/pc4/>**, con su PDF
+  (`bash publicar.sh pc4`).
 
 Mismo método que la charla de SIMBig 2026: primero la historia, después el deck, y ninguna cifra
 escrita a mano (salen de `reports/` y de las cifras del informe).
