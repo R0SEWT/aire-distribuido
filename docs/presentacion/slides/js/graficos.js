@@ -471,7 +471,7 @@
     const x = d3.scaleLinear([0, 1], [0, ancho - m.l - m.r]);
     const fila = (alto - m.t - 10) / T.length;
     svg.append("text").attr("class", "g-et").attr("x", 0).attr("y", 18)
-      .text("horas con la media de 24 h sobre el ECA, de las horas en que se puede calcular");
+      .text("horas-estación con la media de 24 h sobre el ECA, de las que tienen media calculable");
     const g = svg.selectAll("g.f").data(T).join("g").attr("class", "f")
       .attr("transform", (d, i) => `translate(0,${m.t + 18 + i * fila})`);
     const destacada = (d) => d.fraccion >= 0.5;
@@ -485,7 +485,7 @@
     g.append("text").attr("class", "g-valor").attr("x", m.l + x(1) + 16).attr("y", 28)
       .text((d) => pct(d.fraccion, d.fraccion < 0.01 && d.fraccion > 0 ? 2 : 0));
     g.append("text").attr("class", "g-num").attr("x", m.l + x(1) + 120).attr("y", 27)
-      .text((d) => `${miles(d.sobre_eca)} de ${miles(d.calculables)} h`);
+      .text((d) => `${miles(d.sobre_eca)} de ${miles(d.calculables)}`);
     g.append("text").attr("class", "g-et g-suave").attr("x", m.l + 6).attr("y", 56)
       .text((d) => d.distritos.join(" · ") + (d.poblacion ? ` · ${miles(d.poblacion)} hab. (2017)` : ""));
     const mostrar = (animar) => (animar ? b.transition().duration(900).delay((d, i) => 110 * i) : b)

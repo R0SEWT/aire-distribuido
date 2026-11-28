@@ -82,7 +82,8 @@ PM10, y con cuánta anticipación eso avisa de un episodio que supera el ECA, el
 [clic] La PC3 respondió el dónde y el cuándo; la PC4 construyó el clúster y la API; hoy, el TB2
 cierra con el mapa, las alertas en tiempo real y la anticipación medida.
 [clic] Y la alerta es para quien más la necesita: las personas con enfermedades respiratorias.
-El ECA es la norma peruana: una media de 24 horas de 50 µg/m³ de PM2,5 y 100 de PM10.
+El ECA, el estándar peruano, fija los valores de referencia para la media de 24 horas: 50 µg/m³ de
+PM2,5 y 100 de PM10.
 :::
 
 ## {background-color="#10233B" .center}
@@ -816,7 +817,7 @@ WebSocket, sin recargar.
 | 4 | **Clúster** (admin): los nodos con su IP:puerto y su latido, el CPU de la API, la latencia por ruta y los eventos | Julio | 0:30 |
 | 5 | **Entrenamiento**: K nodos, réplicas y semilla desde la UI; las 44 rondas y la diferencia con el secuencial | Rody | 0:50 |
 | 6 | **Terminal**: `docker compose ps` y el log de un nodo: `conectado desde IP:puerto a …:7070`, `CARGAR`, rondas | Julio | 0:30 |
-| 7 | **Impacto**: horas sobre el ECA por actividad | Dayana | 0:15 |
+| 7 | **Impacto**: horas-estación sobre el ECA por actividad | Dayana | 0:15 |
 | 8 | **Swagger** en `/docs` y un `403` en una ruta de admin con un token de usuario | Julio | 0:20 |
 :::
 
@@ -936,15 +937,15 @@ los mismos SHA-256 del silver y el gold; el cargador, en Windows, da 4,81 veces 
 [{{< meta deck.impacto.sobre_eca >}}]{.cifra .chica .alto}
 
 ::: {.sub style="font-size: 0.7em;"}
-horas con la media de 24 h sobre el ECA, de {{< meta deck.impacto.calculables >}} calculables
-({{< meta deck.impacto.pct_sobre_eca >}}), en {{< meta deck.impacto.episodios >}} episodios de
-{{< meta deck.impacto.estaciones_episodios >}} estaciones
+horas-estación con la media de 24 h sobre el ECA, de {{< meta deck.impacto.calculables >}} con media
+calculable ({{< meta deck.impacto.pct_sobre_eca >}}), en {{< meta deck.impacto.episodios >}} episodios de
+{{< meta deck.impacto.estaciones_episodios >}} estaciones. Una hora en dos estaciones cuenta dos
 :::
 
 ::: {.aviso style="margin-top: 0.7em; font-size: 0.5em;"}
 **{{< meta deck.impacto.peor_distrito >}} ({{< meta deck.impacto.peor_departamento >}})**:
 {{< meta deck.impacto.peor_estaciones >}} estaciones junto a una zona ladrillera y una refinería de zinc,
-{{< meta deck.impacto.peor_sobre_eca >}} de sus {{< meta deck.impacto.peor_calculables >}} horas
+{{< meta deck.impacto.peor_sobre_eca >}} de sus {{< meta deck.impacto.peor_calculables >}} horas-estación
 sobre el ECA. Su distrito tenía {{< meta deck.impacto.peor_poblacion >}} habitantes en
 {{< meta deck.impacto.peor_anio >}} (INEI).
 :::
@@ -959,10 +960,11 @@ sobre el ECA. Su distrito tenía {{< meta deck.impacto.peor_poblacion >}} habita
 [`reports/impacto.json`: {{< meta deck.impacto.estaciones_pm >}} estaciones con PM por hora; la población es del distrito y es contexto, no gente expuesta: no se suma entre distritos.]{.nota}
 
 ::: notes
-[0:45 · Dayana] Y ahora, lo que responde sobre el aire. De las 64 748 horas en que se puede calcular
-la media de 24 horas, 1 184 superaron el ECA: el 1,8 %, en 30 episodios de 8 estaciones.
+[0:45 · Dayana] Y ahora, lo que responde sobre el aire. Contamos horas-estación: la misma hora en dos
+estaciones cuenta dos veces. De las 64 748 horas-estación con media de 24 horas calculable, en 1 184
+la media superó los valores del ECA: el 1,8 %, en 30 episodios de 8 estaciones.
 Pero el promedio esconde lo importante: depende de la actividad que vigila la estación. Junto a la
-refinería de zinc de Cajamarquilla y a las ladrilleras de Huachipa, en Lurigancho, Lima, la mayoría de las horas medidas superaron el
+refinería de zinc de Cajamarquilla y a las ladrilleras de Huachipa, en Lurigancho, Lima, en la mayoría de las horas-estación medidas la media superó el
 ECA: 585 de 879. En las minas y la agroindustria, menos del 1 %.
 Una advertencia honesta: esas estaciones de Lima midieron pocas semanas, y la población del
 distrito es contexto, no gente expuesta: vivir en el distrito no es haber respirado ese aire.
@@ -989,7 +991,7 @@ a {{< meta deck.impacto.lh_q3 >}} h). Todos tuvieron una señal antes.
 
 Cuartiles {{< meta deck.impacto.rg_q1 >}} a {{< meta deck.impacto.rg_q3 >}} h. Pero cuando suena, acierta el
 {{< meta cifras.alerta.regimen_precision >}} de las veces (precisión), y cubre el
-{{< meta cifras.alerta.regimen_recall >}} de las horas sobre el ECA (exhaustividad).
+{{< meta cifras.alerta.regimen_recall >}} de las horas-estación sobre el ECA (cobertura).
 :::
 
 ::: {.fragment}
@@ -997,8 +999,8 @@ Cuartiles {{< meta deck.impacto.rg_q1 >}} a {{< meta deck.impacto.rg_q3 >}} h. P
 
 [seguida, justo antes del cruce]{.t}
 
-La cota baja: las señales se encienden y se apagan. Por eso la alerta del sistema es la norma
-misma, la media de 24 h.
+La cota baja: las señales se encienden y se apagan. Por eso la alerta compara la media de 24 h con
+el ECA, y el régimen se muestra como dato.
 :::
 :::
 
@@ -1011,8 +1013,9 @@ primera lectura horaria sobre el umbral apareció, en la mediana, 20 horas antes
 [clic] Si la señal es el régimen alto del K-Means, 18 horas. Pero el régimen alto acierta solo el 35 %
 de las veces que suena.
 [clic] Y la cota baja: justo antes del cruce, la señal estuvo encendida una hora seguida, en la
-mediana. Las señales van y vienen. Por eso la alerta del sistema es la norma misma, la media de 24
-horas, y las señales horarias se muestran como contexto.
+mediana. Las señales van y vienen. Por eso la alerta compara la media de 24 horas con los valores de
+referencia del ECA, y las señales horarias, como el régimen, se muestran como dato. Ojo: no es una
+predicción, ni garantiza que las mediciones no tengan errores.
 Lo decimos claro: es descriptivo, sobre los mismos datos del entrenamiento. No es un pronóstico.
 :::
 
@@ -1037,7 +1040,7 @@ OEFA fiscaliza, no donde vive la gente.
   {{< meta deck.impacto.estaciones_sin_pm >}} no entran en ninguna cifra
 - Muchas son campañas de semanas, y los datos van de 2018 a 2022: la UI dice «último estado
   recibido», nunca «ahora»
-- El K-Means describe niveles; la alerta es la media de 24 h
+- El K-Means describe regímenes; la alerta compara la media de 24 h con el ECA
 - La anticipación es descriptiva, sin partición temporal
 :::
 :::
@@ -1048,8 +1051,8 @@ OEFA fiscaliza, no donde vive la gente.
 puestas donde OEFA fiscaliza, no donde vive la gente: una zona sin estación no es una zona con aire
 limpio. Solo 17 miden material particulado por hora; las otras 16 no entran en ninguna cifra.
 Muchas midieron pocas semanas, y los datos son de 2018 a 2022: por eso la interfaz nunca dice
-«ahora», dice «último estado recibido». El K-Means describe niveles, la alerta es la norma, y la
-anticipación es descriptiva.
+«ahora», dice «último estado recibido». El K-Means describe regímenes; la alerta compara la media de
+24 horas con el ECA, y la anticipación es descriptiva.
 :::
 
 ## {background-color="#10233B"}

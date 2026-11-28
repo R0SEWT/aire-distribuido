@@ -87,9 +87,9 @@ de calibración: la silueta más alta de la grilla con k ≥ 3 (0,54) y estable 
 0,99). Los tres regímenes: bajo (73,1 % de las horas), medio (24,6 %) y alto (2,3 %, el único sobre
 el ECA). Qué aporta: el régimen de cada lectura, que el panel muestra junto a cada estación, y una
 señal temprana medida: en los 30 episodios, el régimen alto apareció antes (18 h en la mediana).
-Pero acierta el 35 % de las veces que suena, y el ECA ya es una etiqueta legal sobre la media de
-24 h: calcularla es exacto, aprenderla sería peor. Por eso la alerta es la norma y el régimen es
-contexto. La predicción de concentraciones del caso 10 quedó fuera: no la hicimos, y no decimos
+Pero acierta el 35 % de las veces que suena, y el ECA ya fija los valores de referencia para la
+media de 24 h: aplicar esa regla es directo, y aprenderla con un modelo no aportaría. Por eso la
+alerta compara la media de 24 h con el ECA y el régimen se muestra como dato. La predicción de concentraciones del caso 10 quedó fuera: no la hicimos, y no decimos
 que el sistema pronostique.
 
 *Dónde:* `configs/kmeans.json`, `reports/calibracion_decision.md` · *Quién:* Rody · *Lámina:*
@@ -391,9 +391,10 @@ la demo desde Swagger.
 
 ### 27. ¿Qué responde el sistema sobre el aire? ¿A cuántas personas beneficia?
 
-**Respuesta.** De 64 748 horas con media de 24 h calculable, 1 184 superaron el ECA (1,8 %), en 30
+**Respuesta.** Contamos horas-estación (la misma hora en dos estaciones cuenta dos veces). De 64 748
+horas-estación con media de 24 h calculable, en 1 184 la media superó el ECA (1,8 %), en 30
 episodios de 8 estaciones. Depende de la actividad: junto a la refinería de zinc de Cajamarquilla y
-las ladrilleras de Huachipa, en Lurigancho, 585 de 879 horas; junto a las minas y la agroindustria,
+las ladrilleras de Huachipa, en Lurigancho, 585 de 879 horas-estación; junto a las minas y la agroindustria,
 menos del 1 %. Lurigancho tenía 240 814 habitantes en 2017 (INEI), pero no decimos que esa sea la
 gente expuesta: vivir en el distrito no es haber respirado ese aire, y por eso la población no se
 suma entre distritos.
@@ -405,10 +406,12 @@ suma entre distritos.
 
 **Respuesta.** No es un pronóstico: es una medida descriptiva sobre las mismas lecturas del
 entrenamiento, sin partición temporal. En los 30 episodios, la primera lectura horaria sobre el
-umbral apareció 20 h antes del cruce (mediana; cuartiles 16,2 a 22 h), y la primera hora en el nivel
-alto del K-Means, 18 h antes. Pero justo antes del cruce la señal estuvo encendida solo 1 h
-seguida: las señales van y vienen. Y el nivel alto acierta el 35 % de las veces que suena. Por eso
-la alerta del sistema es la norma misma, la media de 24 h.
+umbral apareció 20 h antes del cruce (mediana; cuartiles 16,2 a 22,0 h), y la primera hora en el
+régimen alto del K-Means, 18 h antes. Pero justo antes del cruce la señal estuvo encendida solo 1 h
+seguida: las señales van y vienen. Y el régimen alto acierta el 35 % de las veces que suena
+(precisión) y detecta el 44 % de las horas-estación sobre el ECA (cobertura). Por eso la alerta
+compara la media de 24 h con los valores de referencia del ECA y el régimen se muestra como dato. No
+es una predicción, ni garantiza que las mediciones no tengan errores.
 
 *Dónde:* `reports/impacto.json` (`anticipacion`, `senales`), `ventana/ventana.go:67` (`Alerta`) ·
 *Quién:* Dayana · *Lámina:* 29
@@ -472,6 +475,8 @@ Preguntas menos probables, con la respuesta en una línea.
 | «Distribuido = secuencial» | Con varios nodos difiere a 10⁻¹⁵ | «Bit a bit con un nodo; con varios, a 10⁻¹⁵, dentro de la tolerancia» |
 | «Predecimos episodios» o «avisamos con 20 horas» | La anticipación es descriptiva, sin partición temporal; la cota baja es 1 h | «En los datos, la primera señal apareció 20 h antes, en la mediana» |
 | «34 estaciones» | El portal lo dice; en el CSV hay 33 | «33 estaciones, 17 con PM por hora» |
+| «La alerta es la norma misma» o «no falla» | Aplicar una regla no garantiza datos sin errores | «La alerta compara la media de 24 h con los valores de referencia del ECA» |
+| «1 184 horas sobre el ECA» | Son horas-estación: la misma hora en dos estaciones cuenta dos veces | «1 184 horas-estación» |
 | «Una hora sobre 50 µg/m³ incumple el ECA» | El ECA es una media de 24 horas | «La media de 24 horas superó el ECA» |
 | «No usamos Mutex» | La API sí los usa (pregunta 8) | «El bucle del K-Means no lo necesita» |
 | «Escala lineal» o «el clúster es más rápido» | 4,94× con 12 workers; con esta tabla, repartir no acelera | «El resultado no depende de cómo se reparte» |
