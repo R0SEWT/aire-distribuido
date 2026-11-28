@@ -1,11 +1,13 @@
-"""Datos de los gráficos del deck: lee reports/*.json y escribe datos.js.
+"""Datos de los gráficos del deck: lee reports/*.json y escribe datos.js y _deck.yml.
 
     python3 datos.py        # desde docs/presentacion/slides/ (solo biblioteca estándar)
 
-Las cifras del texto no pasan por aquí: index.qmd las toma de docs/informe/generado/cifras.yml con
-el shortcode meta, igual que el informe. Este script solo prepara las series que dibuja D3
-(js/graficos.js), sin redondear ni escribir ningún número a mano, para que el deck no pueda
-contradecir al informe. datos.js se versiona: el deck se renderiza sin correr Go ni Python.
+Las cifras del texto salen, sobre todo, de docs/informe/generado/cifras.yml con el shortcode meta,
+igual que el informe. Lo que el informe todavía no cita y el deck del TB2 sí (el impacto de
+reports/impacto.json, las pruebas del frontend) lo escribe este script en _deck.yml, con el mismo
+formato que tablas.py (espacio duro en los millares, coma decimal). Además prepara las series que
+dibuja D3 (js/graficos.js), sin redondear ni escribir ningún número a mano, para que el deck no
+pueda contradecir al informe. datos.js y _deck.yml se versionan: el deck se renderiza sin correr Go.
 """
 
 from __future__ import annotations
@@ -30,6 +32,24 @@ MOTIVOS = {
 
 def leer(nombre: str) -> dict:
     return json.loads((REPORTS / nombre).read_text(encoding="utf-8"))
+
+
+# Formato de las cifras del texto, el mismo de docs/informe/tablas.py.
+def entero(x) -> str:
+    return f"{int(round(x)):,}".replace(",", "\u00a0")
+
+
+def decimal(x, d=1) -> str:
+    return f"{x:,.{d}f}".replace(",", "\u00a0").replace(".", ",")
+
+
+def pct(x, d=0) -> str:
+    return f"{decimal(100 * x, d)}\u00a0%"
+
+
+def horas(x) -> str:
+    """Una mediana o un cuartil de horas: entero si lo es, con una decimal si no."""
+    return entero(x) if float(x).is_integer() else decimal(x, 1)
 
 
 def embudo(limpieza: dict) -> dict:
@@ -97,12 +117,132 @@ def niveles(reg: dict, limpieza: dict) -> dict:
             "convencion_hora": reg.get("convencion_hora")}
 
 
+def impacto(imp: dict) -> tuple[dict, dict]:
+    """Lo que el deck cuenta del impacto: las cifras del texto (para _deck.yml) y las series de D3.
+
+    La población es la censada del distrito de cada estación y se muestra como contexto de su fila,
+    nunca sumada entre distritos (reports/impacto.json, metadatos.notas)."""
+    al, tot, an = imp["alcance"], imp["totales"], imp["anticipacion"]
+    lh, rg = an["total"]["lectura_horaria"], an["total"]["regimen"]
+    con_episodios = [e for e in an["por_estacion"] if e["episodios"] > 0]
+    assert sum(e["episodios"] for e in con_episodios) == an["total"]["episodios"], "los episodios no suman"
+    # Por actividad fiscalizada: la unidad honesta, porque cada estación vigila una actividad.
+    tipos = []
+    for t in imp["tipos_actividad"]:
+        distritos = t["distritos"]
+        tipos.append({
+            "tipo": t["tipo_actividad"],
+            "estaciones": len(t["estaciones"]),
+            "calculables": t["horas_calculables"],
+            "sobre_eca": t["horas_sobre_eca"],
+            "fraccion": t["horas_sobre_eca"] / t["horas_calculables"],
+            "distritos": [f'{d["distrito"].title()} ({d["departamento"].title()})' for d in distritos],
+            # Solo cuando el grupo está en un único distrito: sumar distritos no es una cifra honesta.
+            "poblacion": distritos[0]["poblacion"] if len(distritos) == 1 else None,
+        })
+    tipos.sort(key=lambda t: -t["fraccion"])
+    assert sum(t["sobre_eca"] for t in tipos) == tot["horas_sobre_eca"], "los tipos no suman las horas sobre el ECA"
+    # El distrito con más horas sobre el ECA (Lurigancho, en Lima: ladrilleras y una refinería).
+    peor = max(imp["distritos"], key=lambda d: d["horas_sobre_eca"])
+    cuidado = sum(e["inca"]["umbral_de_cuidado"] for e in imp["estaciones"])
+    texto = {
+        "estaciones_ficha": entero(al["estaciones_en_la_ficha"]),
+        "estaciones_pm": entero(al["estaciones_con_pm_horario"]),
+        "estaciones_sin_pm": entero(len(al["estaciones_sin_pm_horario"])),
+        "distritos_pm": entero(al["distritos_con_pm_horario"]),
+        "lecturas": entero(tot["lecturas"]),
+        "calculables": entero(tot["horas_calculables"]),
+        "sobre_eca": entero(tot["horas_sobre_eca"]),
+        "pct_sobre_eca": pct(tot["horas_sobre_eca"] / tot["horas_calculables"], 1),
+        "episodios": entero(an["total"]["episodios"]),
+        "estaciones_episodios": entero(len(con_episodios)),
+        "con_media_previa": entero(an["total"]["con_media_previa"]),
+        "sin_senal_previa": entero(an["total"]["sin_senal_previa"]),
+        "tope": entero(an["definicion"]["tope_horas"]),
+        "lh_mediana": horas(lh["horas_antes"]["mediana"]),
+        # Los cuartiles con una decimal, como en el informe (tablas.py del TB2).
+        "lh_q1": decimal(lh["horas_antes"]["q1"], 1),
+        "lh_q3": decimal(lh["horas_antes"]["q3"], 1),
+        "lh_seguidas": horas(lh["horas_seguidas"]["mediana"]),
+        "lh_en_el_tope": entero(lh["en_el_tope"]),
+        "rg_mediana": horas(rg["horas_antes"]["mediana"]),
+        "rg_q1": decimal(rg["horas_antes"]["q1"], 1),
+        "rg_q3": decimal(rg["horas_antes"]["q3"], 1),
+        "rg_seguidas": horas(rg["horas_seguidas"]["mediana"]),
+        "peor_distrito": peor["distrito"].title(),
+        "peor_departamento": peor["departamento"].title(),
+        "peor_poblacion": entero(peor["poblacion"]),
+        "peor_anio": str(peor["anio"]),
+        "peor_estaciones": entero(len(peor["estaciones"])),
+        "peor_sobre_eca": entero(peor["horas_sobre_eca"]),
+        "peor_calculables": entero(peor["horas_calculables"]),
+        "peor_pct": pct(peor["horas_sobre_eca"] / tot["horas_sobre_eca"]),
+        "peor_desde": peor["primera_fecha"],
+        "peor_hasta": peor["ultima_fecha"],
+        "umbral_cuidado": entero(cuidado),
+    }
+    return texto, {"tipos": tipos}
+
+
+def latencia(lat: dict) -> dict:
+    """Los percentiles por nivel de concurrencia, del lado del cliente (reports/api_latencia.json)."""
+    return {
+        "limite_ms": lat["parametros"]["limite_ms"],
+        "niveles": [{"clientes": n["clientes"], "p50": n["p50_ms"], "p99": n["p99_ms"], "max": n["max_ms"],
+                     "cumple": n["cumple"]} for n in lat["niveles"]],
+    }
+
+
+PRUEBAS_TB2 = RAIZ / "docs" / "informe" / "capturas" / "tb2" / "pruebas"
+
+
+def pruebas_web() -> tuple[int, int]:
+    """Pruebas y archivos de prueba del frontend, de la corrida de Vitest que guardó la sesión de
+    capturas del TB2 (pnpm test en web-pruebas.txt). Tienen que haber pasado todas."""
+    texto = (PRUEBAS_TB2 / "web-pruebas.txt").read_text(encoding="utf-8")
+    cuenta = {}
+    for clave, patron in (("archivos", r"Test Files\s+(\d+) passed \((\d+)\)"), ("pruebas", r"Tests\s+(\d+) passed \((\d+)\)")):
+        m = re.search(patron, texto)
+        assert m and m.group(1) == m.group(2), f"web-pruebas.txt: {clave} que no pasaron o no están"
+        cuenta[clave] = int(m.group(1))
+    return cuenta["pruebas"], cuenta["archivos"]
+
+
+def tiempo_real() -> dict:
+    """De lo que manda una sesión a lo que ve otra por el WebSocket (pruebas/ws_latencia.json)."""
+    ws = json.loads((PRUEBAS_TB2 / "ws_latencia.json").read_text(encoding="utf-8"))
+    assert ws["cumple"] and not ws["metadatos"]["mismo_token"], "ws_latencia.json no cumple o es una sola sesión"
+    ev = ws["evento_ms"]
+    return {"lecturas": entero(ws["lecturas"]), "p50": decimal(ev["p50"], 2), "p99": decimal(ev["p99"], 2),
+            "sin_evento": entero(ws["sin_evento"])}
+
+
 def pruebas() -> int:
-    """Funciones Test* de los archivos versionados: lo que corre go test -race ./... (sin las copias
-    de las carpetas ocultas, como los worktrees de .claude/)."""
+    """Funciones Test* declaradas en los archivos versionados, con las de la etiqueta integracion (sin
+    las copias de las carpetas ocultas, como los worktrees de .claude/). No es lo que corre el CI:
+    ver pruebas_ci()."""
+    c = pruebas_ci()
+    return c["ci"] + c["integracion"]
+
+
+def pruebas_ci() -> dict:
+    """Las funciones Test* separadas en las que compila el CI (go test -race -short ./..., sin la
+    etiqueta de build integracion) y las de integración, que piden MongoDB y Redis y corren aparte.
+    `cortas` cuenta las que miran testing.Short(): el CI, con -short, salta parte de ellas."""
     patron = re.compile(r"^func Test\w*\(t \*testing\.T\)", re.M)
-    return sum(len(patron.findall(p.read_text(encoding="utf-8"))) for p in RAIZ.rglob("*_test.go")
-               if not any(parte.startswith(".") for parte in p.relative_to(RAIZ).parts))
+    cuenta = {"ci": 0, "integracion": 0}
+    cortas = 0
+    for p in RAIZ.rglob("*_test.go"):
+        if any(parte.startswith(".") for parte in p.relative_to(RAIZ).parts):
+            continue
+        texto = p.read_text(encoding="utf-8")
+        cabecera = "\n".join(texto.splitlines()[:5])
+        clave = "integracion" if re.search(r"^//go:build .*\bintegracion\b", cabecera, re.M) else "ci"
+        cuenta[clave] += len(patron.findall(texto))
+        cortas += sum(1 for f in re.split(r"\nfunc ", texto)
+                      if f.startswith("Test") and "testing.Short()" in f.split("\n}\n")[0])
+    cuenta["cortas"] = cortas
+    return cuenta
 
 
 def portada(limpieza: dict) -> str:
@@ -149,17 +289,32 @@ def main() -> None:
         },
         **niveles(leer("regimenes.json"), limpieza),
         "pruebas": pruebas(),
+        "latencia": latencia(leer("api_latencia.json")),
     }
+    texto_impacto, series_impacto = impacto(leer("impacto.json"))
+    datos["impacto"] = series_impacto
+    web, archivos_web = pruebas_web()
+    ws = tiempo_real()
     js = ("// Generado por datos.py desde reports/*.json. No editar a mano.\n"
           "window.DATOS = " + json.dumps(datos, ensure_ascii=False, indent=1) + ";\n")
     (AQUI / "datos.js").write_text(js, encoding="utf-8")
     # Lo que el texto del deck cita y no está en cifras.yml: se lee con {{< meta deck.x >}}
+    ci = pruebas_ci()
+    lineas = [f'  pruebas: "{entero(datos["pruebas"])}"', f'  pruebas_ci: "{entero(ci["ci"])}"',
+              f'  pruebas_integracion: "{entero(ci["integracion"])}"', f'  pruebas_cortas: "{entero(ci["cortas"])}"',
+              f'  pruebas_web: "{entero(web)}"',
+              f'  archivos_web: "{entero(archivos_web)}"', "  ws:"]
+    lineas += [f'    {k}: "{v}"' for k, v in ws.items()]
+    lineas.append("  impacto:")
+    lineas += [f'    {k}: "{v}"' for k, v in texto_impacto.items()]
     (AQUI / "_deck.yml").write_text(
-        "# Generado por datos.py. No editar a mano.\n"
-        f'deck:\n  pruebas: "{datos["pruebas"]}"\n', encoding="utf-8")
+        "# Generado por datos.py desde reports/. No editar a mano.\n"
+        "# Uso en el .qmd: shortcode meta con la clave deck.… (deck.impacto.episodios)\n"
+        "deck:\n" + "\n".join(lineas) + "\n", encoding="utf-8")
     (AQUI / "img" / "estaciones-portada.svg").write_text(portada(limpieza), encoding="utf-8")
     print(f"datos.js, _deck.yml e img/estaciones-portada.svg: {len(datos['niveles'])} niveles, "
-          f"{datos['pruebas']} pruebas")
+          f"{datos['pruebas']} pruebas de Go, {web} del frontend, WebSocket p50 {ws['p50']} ms, "
+          f"{len(series_impacto['tipos'])} tipos de actividad")
 
 
 if __name__ == "__main__":
