@@ -1,0 +1,93 @@
+---
+# Informe final del Trabajo Final (TB2, Entregable 3). Contiene los tres entregables, como pide el enunciado
+# («el informe final contiene los entregables con las correcciones»): las secciones de la PC3 (secciones/), las
+# de la PC4 (secciones/pc4/) y las del TB2 (secciones/tb2/). Las que el docente observó en la PC4 van en una copia
+# corregida en secciones/tb2/; las originales quedan como se entregaron. La estructura es la del enunciado, a) a j).
+# Se renderiza con `bash render.sh` (ver README.md).
+#
+# Reglas, las mismas de informe.qmd e informe-pc4.qmd:
+#   - Ninguna cifra a mano: tablas desde generado/tablas/ (shortcode include) y cifras de la prosa
+#     desde generado/cifras.yml (shortcode meta). Las escribe tablas.py.
+#   - Cada hueco es un aviso PENDIENTE visible, o una cifra «[PENDIENTE]»: empaquetar-tb2.sh no arma
+#     la entrega mientras quede uno.
+#   - El código va como texto, nunca como imagen (corrección de la PC4: en una imagen no se puede buscar).
+lang: es
+---
+
+{{< include secciones/tb2/_00-caratula.qmd >}}
+
+{{< pagebreak >}}
+
+{{< include secciones/tb2/_01-resumen.qmd >}}
+
+{{< pagebreak >}}
+
+::: indice
+:::
+
+{{< pagebreak >}}
+
+{{< include generado/tablas/_estado.md >}}
+
+{{< include generado/tablas/_estado_pc4.md >}}
+
+{{< include generado/tablas/_estado_tb2.md >}}
+
+{{< include secciones/_02-problema.qmd >}}
+
+{{< include secciones/tb2/_03-objetivos.qmd >}}
+
+# Desarrollo
+
+{{< include secciones/tb2/_05-mapa.qmd >}}
+
+{{< include secciones/tb2/_04-caso.qmd >}}
+
+{{< include secciones/_05-limpieza.qmd >}}
+
+{{< include secciones/tb2/_06-modelo.qmd >}}
+
+{{< include secciones/_07-paralelizacion.qmd >}}
+
+{{< include secciones/_08-evidencias.qmd >}}
+
+{{< include secciones/tb2/_12-distribucion.qmd >}}
+
+{{< include secciones/tb2/_13-api.qmd >}}
+
+{{< include secciones/pc4/_14-bases-de-datos.qmd >}}
+
+{{< include secciones/tb2/_15-evidencias.qmd >}}
+
+{{< include secciones/tb2/_16-frontend.qmd >}}
+
+{{< include secciones/tb2/_17-integracion.qmd >}}
+
+{{< include secciones/tb2/_18-evaluacion.qmd >}}
+
+# Conclusiones
+
+{{< include secciones/tb2/_09-conclusiones.qmd >}}
+
+{{< include secciones/pc4/_09-conclusiones.qmd >}}
+
+## Del Entregable 1 (PC3) {.unnumbered}
+
+{{< include secciones/_09-conclusiones.qmd >}}
+
+# Recomendaciones
+
+{{< include secciones/tb2/_10-recomendaciones.qmd >}}
+
+{{< include secciones/pc4/_10-recomendaciones.qmd >}}
+
+{{< include secciones/_10-recomendaciones.qmd >}}
+
+# Bibliografía {.unnumbered}
+
+::: {#refs}
+:::
+
+{{< pagebreak >}}
+
+{{< include secciones/tb2/_11-anexos.qmd >}}

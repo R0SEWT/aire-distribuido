@@ -11,7 +11,7 @@ una corrida de calentamiento fuera de la serie medida. Conservar todas las repet
 
 ## Para la PC4: el clúster
 
-1. **Montar el clúster sobre lo que ya está probado.** La barrera de una ronda a través de la red
+1. **Montar el clúster sobre lo que ya está probado.** La barrera de una ronda en el coordinador
    (`protocolo.Ronda`: fan-out de `ITERAR`, fan-in de `PARCIAL` en orden de nodo, plazo con error
    claro y descarte de rezagados) y las funciones `Parciales`, `Fusionar` y `Actualizar` ya tienen sus
    pruebas con `-race` (@sec-distribuido). Lo que falta es el listener TCP, el reparto de rangos y el
@@ -21,7 +21,7 @@ una corrida de calentamiento fuera de la serie medida. Conservar todas las repet
 2. **Medir el costo de la barrera, no solo el speedup.** Una iteración secuencial sobre todo el gold
    cuesta {{< meta cifras.benchmark_kmeans.ms_iter_seq >}} ms, y
    {{< meta cifras.benchmark_kmeans.ms_iter_w >}} ms con {{< meta cifras.benchmark_kmeans.w >}}
-   workers en una máquina. Una barrera de red cuya ida y vuelta sea de ese orden domina la iteración,
+   workers en una máquina. Una ronda cuya ida y vuelta por la red sea de ese orden domina la iteración,
    y con nodos heterogéneos el más lento marca el paso de todos. Por ronda hay que registrar la ida y
    vuelta de cada nodo (`Latido`), su tiempo de cálculo y la espera en la barrera, para poder decir
    qué parte del tiempo es coordinación (inferencia: con este gold, un clúster probablemente no le gane

@@ -1,0 +1,133 @@
+<!-- j) Anexos del informe final: repositorio, video, Kanban, historial de Git Flow, participación y uso de IA. Las letras
+A a E son las mismas de los informes de la PC3 y la PC4, que sus secciones citan. -->
+
+# Anexos {.unnumbered}
+
+## Anexo A. Repositorio, despliegue y video {.unnumbered}
+
+- **Repositorio (público):** <https://github.com/R0SEWT/aire-distribuido>. La versión que se entrega
+  es la rama `main` en el tag `tb2`, a la que se llega por `release/tb2`. Los entregables anteriores
+  son los tags `pc3.1` y `pc4`.
+- **Sistema desplegado:** <https://aire.rosewt.dev> (la interfaz) y <https://aire.rosewt.dev/docs>
+  (Swagger UI). Se entra con «No pienso crearme una cuenta aquí», como invitado.
+- **Video de la presentación (6 minutos como máximo, con los tres integrantes):** [PENDIENTE: enlace del video].
+
+::: {.callout-warning title="PENDIENTE"}
+El enlace del video se pone cuando el video esté subido: reemplazar el texto «PENDIENTE: enlace del
+video» de arriba por la URL.
+:::
+
+- **Cómo levantarlo:** `README.md` de la raíz. Con Docker: generar el gold con `cargar` sobre el CSV de
+  OEFA (@sec-despliegue), copiar `.env.example` a `.env`, completar la clave del JWT y los usuarios, y
+  `docker compose up --build --scale nodo=3`; la interfaz queda en
+  `http://localhost:{{< meta cifras.tb2.puerto_web >}}` y la documentación de la API en
+  `http://localhost:{{< meta cifras.pc4.puerto_http >}}/docs`.
+- **Diseño de cada entregable:** `docs/specs/` (la de la PC3, la de la PC4 y la del frontend del TB2).
+  **Contrato de la API:** `docs/api/openapi.yaml`. **Pruebas de Postman:** `docs/postman/`.
+  **Capturas y lista de punta a punta del TB2:** `docs/informe/capturas/tb2/README.md`.
+- **Datos:** no se versionan (1,3 GB). Ficha y descarga en la Plataforma Nacional de Datos Abiertos
+  [@oefa2026aire]; instrucciones en `data/README.md`. Archivo que produjo los resultados (de
+  `generado/limpieza.json`): {{< meta cifras.limpieza.entrada >}}, {{< meta cifras.limpieza.bytes >}}
+  bytes, sha256 {{< meta cifras.limpieza.sha256 >}}.
+- **Experimento de laboratorio en GPU** (@sec-gpu): sus resultados están en `reports/mapa/` y
+  `reports/kmeans_gpu/`; el código del entrenamiento en 20 GPU está en la solicitud de cambios #52,
+  sin fusionar, y no forma parte del sistema entregado.
+
+## Anexo B. Tablero Kanban {.unnumbered}
+
+Las tareas se siguieron en el tablero Kanban de GitHub Projects, público y enlazado al repositorio:
+<https://github.com/users/R0SEWT/projects/8>. La @tbl-kanban-tb2 da el enlace directo de cada tarjeta
+del TB2 y de la tarjeta de la PC4 que el docente no encontró. Cada tarjeta enlaza la solicitud de
+cambios que la cierra.
+
+::: {#tbl-kanban-tb2 tbl-colwidths="[10,60,30]"}
+| Tarjeta | Tarea | Enlace directo |
+|:---|:---|:---|
+| #88 | Spec del frontend del TB2: panel de calidad del aire (SPA) | <https://github.com/R0SEWT/aire-distribuido/pull/88> |
+| #89 | TB2 · Cerrar las decisiones abiertas de la spec | <https://github.com/R0SEWT/aire-distribuido/issues/89> |
+| #90 | TB2 · API: `GET /api/regimenes` y evento `estacion.regimen` por WebSocket | <https://github.com/R0SEWT/aire-distribuido/issues/90> |
+| #91 | TB2 · API: eventos del clúster y CPU del coordinador en métricas | <https://github.com/R0SEWT/aire-distribuido/issues/91> |
+| #92 | TB2 · web/: andamiaje, tokens de diseño, ingreso, guardas, errores, WebSocket y tipos | <https://github.com/R0SEWT/aire-distribuido/issues/92> |
+| #93 | TB2 · Servicio web en Docker Compose: un solo Caddy con la UI y sus cabeceras | <https://github.com/R0SEWT/aire-distribuido/issues/93> |
+| #94 | TB2 · Panel: mapa con los tres estados, lista y estado vacío | <https://github.com/R0SEWT/aire-distribuido/issues/94> |
+| #95 | TB2 · Estación: tarjeta, curva de la sesión y ficha | <https://github.com/R0SEWT/aire-distribuido/issues/95> |
+| #96 | TB2 · Simulación y escenario, con `series.json` | <https://github.com/R0SEWT/aire-distribuido/issues/96> |
+| #97 | TB2 · Entrenamiento: formulario, reproducción de rondas e historial | <https://github.com/R0SEWT/aire-distribuido/issues/97> |
+| #98 | TB2 · Clúster: nodos, CPU, latencia, escrituras y eventos | <https://github.com/R0SEWT/aire-distribuido/issues/98> |
+| #99 | TB2 · Impacto: script, `impacto.json` y página | <https://github.com/R0SEWT/aire-distribuido/issues/99> |
+| #100 | TB2 · Población por distrito (`reports/poblacion_distritos.csv`) | <https://github.com/R0SEWT/aire-distribuido/issues/100> |
+| #101 | TB2 · Textos de impacto y de «¿de dónde sale este número?» | <https://github.com/R0SEWT/aire-distribuido/issues/101> |
+| #102 | TB2 · Pruebas unitarias, lista de punta a punta y capturas reales | <https://github.com/R0SEWT/aire-distribuido/issues/102> |
+| #103 | TB2 · Informe del TB2 en Quarto | <https://github.com/R0SEWT/aire-distribuido/issues/103> |
+| #104 | TB2 · Video de 6 minutos con los tres integrantes | <https://github.com/R0SEWT/aire-distribuido/issues/104> |
+| #105 | TB2 · Checklist de entrega: release, tag, zip y subida al Aula | <https://github.com/R0SEWT/aire-distribuido/issues/105> |
+| #76 | PC4 · Diagrama de entidades de MongoDB y Redis (la observada) | <https://github.com/R0SEWT/aire-distribuido/issues/76> |
+
+Tarjetas del tablero Kanban del TB2, con su enlace directo
+:::
+
+![El tablero Kanban en vista de tablero el día de la entrega, con las tarjetas del TB2 marcadas](capturas/tb2/kanban/tablero.png){#fig-kanban-tb2 width=16cm}
+
+:::: {si-falta="capturas/tb2/kanban/tablero.png"}
+::: {.callout-warning title="PENDIENTE"}
+Captura real de pantalla: el tablero <https://github.com/users/R0SEWT/projects/8> en vista de
+tablero (columnas por estado) el día de la entrega, con las tarjetas del TB2 marcadas. Va en
+`docs/informe/capturas/tb2/kanban/tablero.png` (la toma el coordinador del equipo, que lleva el
+tablero).
+:::
+::::
+
+La @fig-kanban-pc4 y la @fig-kanban son el mismo tablero al entregar la PC4 y la PC3.
+
+![Tablero Kanban del proyecto con las tarjetas de la PC4](capturas/pc4/kanban.png){#fig-kanban-pc4 width=16cm}
+
+![Tablero Kanban del proyecto en GitHub Projects al entregar la PC3](capturas/kanban.png){#fig-kanban width=16cm}
+
+## Anexo C. Historial de versiones por integrante (Git Flow) {.unnumbered}
+
+El trabajo siguió Git Flow en los tres entregables: cada pieza en su rama `feature/*`, una solicitud
+de cambios hacia `develop` con la integración continua en verde, y cada entrega por una rama
+`release/*` hacia `main`, con su tag (`pc3.1`, `pc4`, `tb2`). Las tablas que siguen salen de `git` y
+de GitHub tal cual.
+
+{{< include generado/local/historial.md >}}
+
+El historial sale de `git` tal cual (`generar-historial.sh`) y no se reescribe: por eso aparecen
+mensajes de herramientas y ramas con otros prefijos. Las solicitudes de cambio se listan desde
+GitHub (`gh pr list`), porque varias se fusionaron sin commit de merge y no aparecen en
+`git log --merges`.
+
+## Anexo D. Reporte de participación {.unnumbered}
+
+{{< include generado/local/_participacion-tb2.md >}}
+
+## Anexo E. Declaración de uso de inteligencia artificial {.unnumbered}
+
+El sílabo del curso incorpora la ingeniería de prompts como herramienta, siempre contrastada con la
+teoría. En este trabajo el equipo usó asistentes de IA generativa en el desarrollo y en la
+redacción, en las tareas de la @tbl-uso-ia-tb2. Todo lo producido con ellos fue revisado por el
+equipo y validado contra el código, las pruebas y las corridas reales, que son la fuente de las
+cifras de este informe: ninguna cifra sale de la redacción.
+
+::: {#tbl-uso-ia-tb2 tbl-colwidths="[30,24,46]"}
+| Tarea | Herramienta | Cómo se verificó |
+|:---|:---|:---|
+| Código en Go (cargador, K-Means, clúster, API, almacén, comandos), sus pruebas, el Compose y los scripts | Claude Code (Anthropic) | `go test -race`, `go vet` y `gofmt` en la integración continua; las pruebas de integración contra MongoDB y Redis reales; la colección de Postman contra la API levantada; revisión de cada solicitud de cambios |
+| La interfaz (`web/`), sus pruebas, el Caddyfile y el despliegue público | Claude Code (Anthropic) | Vitest, el *lint* y la compilación en la integración continua; el recorrido de punta a punta con Playwright sobre el Compose; revisión de cada solicitud de cambios |
+| Las capturas del TB2 y las mediciones de latencia y del WebSocket | Claude Code (Anthropic), manejando un navegador con Playwright | Son corridas reales contra el Compose local: las cifras salen de los archivos que dejaron, no de la redacción |
+| Especificaciones de diseño, contrato de la API y script de impacto | Claude Code (Anthropic) | Revisión del equipo; el contrato se comprueba contra las rutas del código en cada render; el script tiene sus pruebas y sus cifras se verifican contra la API real |
+| Redacción y maquetación de los informes, tablas y diagramas, y la revisión del informe final | Claude Code (Anthropic) | Revisión del equipo; las tablas y las cifras se generan desde los reportes, el contrato y el código (`tablas.py`), no desde la redacción |
+| Experimentos de laboratorio en GPU (código en Python) | Claude Code (Anthropic) | Los resultados se comparan con el modelo de Go; se presentan como experimentos fuera del sistema |
+| Ejemplos y diagrama de entidades, configuración de MongoDB y Redis y sus evidencias (Dayana Gómez) | ChatGPT y Codex (OpenAI) | Revisión de cada solicitud de cambios; los registros se comprobaron contra las bases del Compose levantado |
+| Borrador del contrato OpenAPI, colección de Postman y revisión de los textos de impacto (Julio Meza) | ChatGPT y Codex (OpenAI) | Revisión de cada solicitud de cambios; el contrato se corrigió contra el código, la colección se corrió contra la API real y los textos, contra el informe |
+
+Uso de IA generativa en el Trabajo Final
+:::
+
+::: {.callout-warning title="PENDIENTE"}
+Confirmar con Dayana y Julio las filas de su trabajo en el TB2 (qué herramienta usó cada uno y en
+qué tarea) y ajustar la tabla.
+:::
+
+Los commits del repositorio no llevan marca de coautoría de IA: el uso se declara únicamente en
+este anexo, así que el historial del Anexo C no basta para rastrearlo.
