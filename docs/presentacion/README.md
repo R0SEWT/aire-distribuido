@@ -7,6 +7,14 @@ y responder a las preguntas del docente». El video del TB2 (6 minutos como máx
 
 - [`slides/`](slides/README.md): el deck en Quarto, reveal.js y D3. `bash slides/render.sh` deja un
   HTML que funciona sin red.
+- **La exposición de la PC4** es otro deck, [`slides/pc4.qmd`](slides/pc4.qmd)
+  (`bash slides/render.sh pc4` → `slides/_site/pc4.html`): 21 láminas y 5 de respaldo, en el orden
+  de la rúbrica de la PC4 (Distribución, API, Bases de datos, Evidencias, Documentación, GitHub y
+  Kanban). Toma del deck del TB2 las láminas del clúster, la API y las bases, y agrega una lámina
+  con las cinco observaciones del docente y dónde se responde cada una, más Docker, los registros
+  en MongoDB y Redis, una demo corta en el Compose de la laptop y el Kanban con la tarjeta #76
+  marcada (`slides/recorte_kanban.py`). Dura unos 10:45 más 2:20 de demo; cada lámina dice quién
+  habla y sus notas traen el tiempo.
 - [`reparto.md`](reparto.md): quién dice cada lámina y cuánto dura, la versión corta, el guion de
   la demo en vivo, la preparación y el plan B si falla la red.
 - [`preguntas.md`](preguntas.md): las 29 preguntas más probables del docente, con una respuesta

@@ -20,10 +20,18 @@ cd "$(dirname "$0")"
 entrega="${1:-pc3}"
 [[ "$entrega" =~ ^(pc3|pc4|tb2)$ ]] || { echo "error: la entrega es pc3, pc4 o tb2, no '$entrega'" >&2; exit 1; }
 
-bash slides/render.sh --pdf
+# La PC4 tiene su propio deck (slides/pc4.qmd); el TB2 es index.qmd. La PC3 también era index.qmd,
+# pero hoy ese archivo es el del TB2: la PC3 se rehace desde el tag pc3.1.
+if [ "$entrega" = pc4 ]; then
+  bash slides/render.sh pc4 --pdf
+  html=slides/_site/pc4.html; pdf=slides/_site/pc4.pdf
+else
+  bash slides/render.sh --pdf
+  html=slides/_site/index.html; pdf=slides/_site/deck.pdf
+fi
 mkdir -p "sitio/$entrega"
-cp slides/_site/index.html "sitio/$entrega/index.html"
-cp slides/_site/deck.pdf "sitio/$entrega/aire-distribuido-$entrega.pdf"
+cp "$html" "sitio/$entrega/index.html"
+cp "$pdf" "sitio/$entrega/aire-distribuido-$entrega.pdf"
 
 if command -v netlify >/dev/null 2>&1; then netlify=(netlify); else netlify=(npx -y netlify-cli); fi
 commit="$(git rev-parse --short HEAD)"
