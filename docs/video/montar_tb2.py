@@ -20,7 +20,9 @@ duración de cada bloque (por palabras y con la voz sintética) sin montar. --ho
 un PDF con sus textos en letra grande para leer frente a la cámara (build/tb2/guion-NOMBRE.pdf).
 
 Variables de entorno: FFMPEG, FFPROBE, AGG, CHROME (para Remotion), CLIPS (carpeta de los clips),
-RITMO_TB2 (velocidad de la voz sintética; por omisión -5 %, cerca del ritmo de una persona leyendo).
+RITMO_TB2 (velocidad de la voz sintética; por omisión -5 %, cerca del ritmo de una persona leyendo),
+CODEC_VIDEO («h264_nvenc» para codificar en una GPU NVIDIA con un ffmpeg que lo traiga; por omisión
+libx264, que es el que se probó).
 """
 
 from __future__ import annotations
@@ -49,6 +51,7 @@ CHROME = os.environ.get("CHROME", "/usr/bin/google-chrome")
 RITMO = os.environ.get("RITMO_TB2", "-5%")
 
 FFMPEG, FFPROBE = pc3.FFMPEG, pc3.FFPROBE
+CODEC_VIDEO = os.environ.get("CODEC_VIDEO", "libx264")
 ANCHO, ALTO, FPS = 1920, 1080, 30
 TOPE_INTERNO = 345  # 5:45
 TOPE = 360  # 6:00, lo que pide el enunciado
@@ -198,6 +201,19 @@ def leer_guion() -> list[Bloque]:
 
 
 # ----------------------------------------------------------------------------- ffmpeg
+
+
+def codificar(final: bool) -> list[str]:
+    """Los parámetros del codificador de video: los tramos intermedios, rápidos y casi sin pérdida; el
+    bloque final, con la calidad del entregable. Con CODEC_VIDEO=h264_nvenc, los ajustes de montar.py
+    (probados en una RTX 4060 con el video de la PC3): NVENC comprime menos que x264 a la misma
+    «calidad», así que cq va más alto para quedar en un tamaño parecido."""
+    if CODEC_VIDEO == "h264_nvenc":
+        return ["-c:v", "h264_nvenc", "-preset", "p6", "-rc", "vbr", "-cq", "27" if final else "19", "-b:v", "0",
+                "-maxrate", "8M" if final else "20M", "-bufsize", "12M" if final else "30M"]
+    if CODEC_VIDEO != "libx264":
+        sys.exit(f"CODEC_VIDEO={CODEC_VIDEO}: solo libx264 (por omisión) o h264_nvenc")
+    return ["-c:v", "libx264", "-preset", "medium" if final else "veryfast", "-crf", "20" if final else "18"]
 
 
 def correr(cmd: list[str]) -> None:
@@ -421,7 +437,7 @@ def caja_terminal(gif: Path) -> tuple[int, int, int, int]:
 
 def segmento_estatico(png: Path, d: float, salida: Path) -> None:
     correr([FFMPEG, "-y", "-loglevel", "error", "-loop", "1", "-framerate", FPS, "-t", f"{d:.3f}", "-i", png,
-            "-vf", "format=yuv420p", "-c:v", "libx264", "-preset", "veryfast", "-crf", "18", "-r", FPS, salida])
+            "-vf", "format=yuv420p", *codificar(False), "-r", FPS, salida])
 
 
 def ajustar(entrada: Path, d: float, salida: Path, velocidad: float = 1.0, extra: str = "") -> None:
@@ -430,7 +446,7 @@ def ajustar(entrada: Path, d: float, salida: Path, velocidad: float = 1.0, extra
             f"setpts=PTS/{velocidad:.4f},scale={ANCHO}:{ALTO}:force_original_aspect_ratio=decrease:flags=lanczos,"
             f"pad={ANCHO}:{ALTO}:(ow-iw)/2:(oh-ih)/2:color=0x0f1117,fps={FPS},{extra}"
             f"tpad=stop_mode=clone:stop_duration=600,format=yuv420p",
-            "-t", f"{d:.3f}", "-c:v", "libx264", "-preset", "veryfast", "-crf", "18", salida])
+            "-t", f"{d:.3f}", *codificar(False), salida])
 
 
 def render_remotion(id_: str, d: float) -> Path:
@@ -494,7 +510,7 @@ def segmento(b: Bloque, k: int, p: Pantalla, d: float) -> tuple[Path, str]:
                 "-filter_complex",
                 f"[1:v]scale={w}:{h}:flags=lanczos,tpad=stop_mode=clone:stop_duration=600[t];"
                 f"[0:v][t]overlay={x}:{y}:shortest=1,format=yuv420p[v]",
-                "-map", "[v]", "-t", f"{d:.3f}", "-r", FPS, "-c:v", "libx264", "-preset", "veryfast", "-crf", "18", salida])
+                "-map", "[v]", "-t", f"{d:.3f}", "-r", FPS, *codificar(False), salida])
         return salida, f"terminal {p.rutas[0]} a {vel:.2f}×"
     sys.exit(f"bloque {b.numero}: pantalla desconocida «{p.tipo}»")
 
@@ -519,7 +535,7 @@ def fondo_del_bloque(b: Bloque, total: float) -> tuple[Path, list[str]]:
         entradas += ["-i", s]
     correr([FFMPEG, "-y", "-loglevel", "error", *entradas, "-filter_complex",
             "".join(f"[{i}:v]" for i in range(len(segs))) + f"concat=n={len(segs)}:v=1:a=0,format=yuv420p[v]",
-            "-map", "[v]", "-c:v", "libx264", "-preset", "veryfast", "-crf", "18", salida])
+            "-map", "[v]", *codificar(False), salida])
     return salida, notas
 
 
@@ -672,7 +688,7 @@ def montar_bloque(b: Bloque, salida: Path) -> tuple[float, list[str]]:
                   f"fade=t=out:st={fin_fundido:.3f}:d={FUNDIDO}[v]")
     correr([FFMPEG, "-y", "-loglevel", "error", *entradas, "-filter_complex", ";".join(cadena + audio),
             "-map", "[v]", "-map", "[a]", "-t", f"{total:.3f}", "-r", FPS,
-            "-c:v", "libx264", "-preset", "medium", "-crf", "20", "-pix_fmt", "yuv420p",
+            *codificar(True), "-pix_fmt", "yuv420p",
             "-c:a", "aac", "-b:a", "160k", "-ar", "48000", salida])
     return total, notas
 
@@ -732,7 +748,7 @@ def montar() -> None:
     clips, resumen = [], []
     for b in bloques:
         claves = [b.titulo, b.camara, b.lado, json.dumps([p.__dict__ for p in b.pantallas], ensure_ascii=False),
-                  str(b.voz), str(b.ini), str(b.fin), "tb2-v3"]
+                  str(b.voz), str(b.ini), str(b.fin), "tb2-v3", " ".join(codificar(True))]
         for p in b.pantallas:
             if p.tipo == "pantalla":
                 claves.append(pc3.huella_insumos([str((PANTALLAS / f"{p.rutas[0]}.mp4").relative_to(RAIZ))]))

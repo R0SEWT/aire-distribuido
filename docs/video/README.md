@@ -58,6 +58,9 @@ dibujado en la página para que se vea dónde se hace clic. `node docs/video/pan
 deja la captura y el árbol de accesibilidad de una pantalla para escribir los pasos de una escena nueva.
 
 Requiere: uv, ffmpeg (o `static-ffmpeg`), agg, asciinema, Node 22, Docker, Go y Google Chrome.
+En una máquina con GPU NVIDIA y un ffmpeg con `h264_nvenc`, `CODEC_VIDEO=h264_nvenc bash docs/video/armar-tb2.sh`
+codifica en la GPU (lo mismo vale para `armar.sh`). Por omisión es libx264; cambiar de códec regenera los
+bloques.
 
 ## Video de la PC3 (Entregable 1)
 
