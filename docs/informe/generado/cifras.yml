@@ -535,6 +535,7 @@ cifras:
     poblacion_min: "3 866"
     poblacion_max: "240 814"
     distrito_mayor: "Lurigancho"
+    distrito_mayor_estaciones: "3"
     anio_poblacion: "2017"
     episodios: "30"
     cruces: "44"

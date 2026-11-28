@@ -156,17 +156,19 @@ del régimen (@sec-alerta). El TB2 responde el resto con las mismas lecturas, ca
 de impacto de la interfaz.
 
 **Cuánto tiempo.** Las {{< meta cifras.impacto.estaciones_pm >}} estaciones con PM2,5 y PM10 por hora
-suman {{< meta cifras.impacto.horas_calculables >}} horas con media de 24 horas calculable. En
+suman {{< meta cifras.impacto.horas_calculables >}} horas-estación con media de 24 horas calculable
+(una misma hora medida en dos estaciones cuenta dos veces). En
 {{< meta cifras.impacto.horas_sobre_eca >}} de ellas ({{< meta cifras.impacto.pct_sobre_eca >}}) esa
-media superó el ECA. Por banda INCA, el {{< meta cifras.impacto.inca_buena_pct >}} de las horas fue
-buena, el {{< meta cifras.impacto.inca_moderada_pct >}} moderada, el
+media superó el ECA. Por banda INCA, el {{< meta cifras.impacto.inca_buena_pct >}} de las
+horas-estación fue buena, el {{< meta cifras.impacto.inca_moderada_pct >}} moderada, el
 {{< meta cifras.impacto.inca_mala_pct >}} mala y {{< meta cifras.impacto.inca_umbral_de_cuidado >}}
-horas llegaron al umbral de cuidado.
+horas-estación llegaron al umbral de cuidado. Son mediciones históricas: describen el aire junto a
+las estaciones en las semanas en que midieron, no la exposición de la población.
 
-**Dónde y junto a qué.** Las horas sobre el ECA no se reparten: se concentran en
+**Dónde y junto a qué.** Las horas-estación sobre el ECA no se reparten: se concentran en
 {{< meta cifras.impacto.estaciones_con_horas >}} de las {{< meta cifras.impacto.estaciones_pm >}}
-estaciones, y en {{< meta cifras.impacto.estaciones_sin_horas >}} la media nunca superó el ECA
-(@tbl-impacto-estaciones). Lo que importa es leer cada fila con su periodo, porque la unidad honesta
+estaciones, y en las otras {{< meta cifras.impacto.estaciones_sin_horas >}} no se registraron
+superaciones en las medias calculables del periodo en que midieron (@tbl-impacto-estaciones). Lo que importa es leer cada fila con su periodo, porque la unidad honesta
 es la estación, que vigila una actividad:
 
 - `{{< meta cifras.impacto.top1_estacion >}}`, junto a un {{< meta cifras.impacto.top1_tipo >}} en
@@ -184,7 +186,7 @@ es la estación, que vigila una actividad:
 
 Por tipo de actividad (@tbl-impacto-actividad), las {{< meta cifras.impacto.act1 >}}
 ({{< meta cifras.impacto.act1_estaciones >}} estaciones) suman el
-{{< meta cifras.impacto.act1_pct_total >}} de todas las horas sobre el ECA, seguidas de las
+{{< meta cifras.impacto.act1_pct_total >}} de todas las horas-estación sobre el ECA, seguidas de las
 {{< meta cifras.impacto.act2 >}} y la {{< meta cifras.impacto.act3 >}}. Con tan pocas estaciones por
 tipo, es una descripción de estas estaciones y no una comparación entre industrias.
 
@@ -195,11 +197,22 @@ tipo, es una descripción de estas estaciones y no una comparación entre indust
 las {{< meta cifras.alto.hora_pico >}}; @tbl-regimenes-hora).
 
 **¿Sirve el régimen como alerta?** No sola. Usada como alerta, una lectura en el régimen que excede
-el ECA acierta el {{< meta cifras.impacto.precision_regimen >}} de las veces que suena y encuentra el
-{{< meta cifras.impacto.cobertura_regimen >}} de las horas en que la media supera el ECA; una lectura
-horaria sobre el umbral, el {{< meta cifras.impacto.precision_horaria >}} y el
-{{< meta cifras.impacto.cobertura_horaria >}} (@tbl-alerta). Por eso la alerta del sistema es la media
-de 24 horas frente al ECA, que es la norma misma.
+el ECA coincide con una media sobre el ECA en el {{< meta cifras.impacto.precision_regimen >}} de las
+horas-estación en que está encendida (precisión) y alcanza el
+{{< meta cifras.impacto.cobertura_regimen >}} de las horas-estación con la media sobre el ECA
+(cobertura); una lectura horaria sobre el umbral, el {{< meta cifras.impacto.precision_horaria >}} y el
+{{< meta cifras.impacto.cobertura_horaria >}} (@tbl-alerta, @fig-ui-senales). Son coincidencias sobre el
+conjunto histórico, con denominadores distintos, no aciertos con datos nuevos. Por eso la alerta del
+sistema aplica directamente la regla del ECA a la media de 24 horas de las lecturas disponibles.
+
+![La página de impacto, «¿Sirve la alerta?»: la precisión y la cobertura de las dos señales horarias, con sus denominadores](capturas/tb2/textos-impacto/impacto-03-senales.jpg){#fig-ui-senales width=16cm}
+
+:::: {si-falta="capturas/tb2/textos-impacto/impacto-03-senales.jpg"}
+::: {.callout-warning title="PENDIENTE"}
+Captura real de pantalla: la sección «¿Sirve la alerta?» de la página de impacto. Va en
+`docs/informe/capturas/tb2/textos-impacto/impacto-03-senales.jpg`.
+:::
+::::
 
 **¿Con cuánta anticipación?** Sobre los {{< meta cifras.impacto.episodios >}} episodios del gold (cada
 vez que la media de una estación pasa a superar el ECA sin haberlo superado en las 24 horas
@@ -237,8 +250,10 @@ Captura real de pantalla: la sección de anticipación de la página de impacto.
 :::
 ::::
 
-**Qué aporta el modelo, si la alerta no sale de él.** La alerta es la norma, y no tenía por qué ser
-otra cosa: el ECA y el INCA ya definen cuándo el aire es un riesgo. El K-Means responde la otra
+**Qué aporta el modelo, si la alerta no sale de él.** La alerta compara la media de 24 horas de las
+lecturas disponibles con el ECA, que es lo que define cuándo el aire es un riesgo. No es una
+predicción de horas futuras ni garantiza que las mediciones estén libres de errores, y sin el
+mínimo de lecturas no hay media, lo que no equivale a estar bajo el ECA. El K-Means responde la otra
 mitad de la pregunta. Dice qué tipo de aire trae cada lectura (el régimen que la API devuelve con
 cada predicción), en qué estaciones y a qué horas aparece el nivel alto (@tbl-regimenes-hora y
 @tbl-regimenes-estacion), y es la señal temprana que se midió arriba: el régimen alto aparece horas
@@ -249,16 +264,28 @@ cómputo distribuido del curso, resuelto sin cambiar el modelo (@sec-determinism
 un total. Las {{< meta cifras.impacto.estaciones_pm >}} estaciones con PM por hora están en
 {{< meta cifras.impacto.distritos >}} distritos, con poblaciones censadas en
 {{< meta cifras.impacto.anio_poblacion >}} que van de {{< meta cifras.impacto.poblacion_min >}} a
-{{< meta cifras.impacto.poblacion_max >}} habitantes ({{< meta cifras.impacto.distrito_mayor >}}). Esos
-distritos son los que tendrían, con este sistema, un aviso calculado hora por hora con la regla de la
-norma. La población no se suma, a propósito:
+{{< meta cifras.impacto.poblacion_max >}} habitantes ({{< meta cifras.impacto.distrito_mayor >}}). El
+posible beneficio es facilitar la consulta de las mediciones y de los avisos de las estaciones en
+esos distritos; los datos no permiten afirmar que antes no tuvieran otra fuente de avisos, ni contar
+cuántas personas los usarían. La población no se suma, a propósito (@fig-ui-limites):
 
 - Vivir en un distrito con una estación en alerta **no** es haber respirado ese aire: las estaciones
   de OEFA miden junto a una mina, una refinería o una zona ladrillera, no en el centro del distrito.
-- Un distrito grande decide cualquier suma: {{< meta cifras.impacto.distrito_mayor >}} solo tiene más
-  habitantes que los demás juntos, por dos estaciones junto a ladrilleras.
+- Un distrito grande decidiría cualquier suma: {{< meta cifras.impacto.distrito_mayor >}}, que entra por
+  sus {{< meta cifras.impacto.distrito_mayor_estaciones >}} estaciones, dos junto a ladrilleras y una
+  junto a una refinería de zinc. Un número grande junto a «horas-estación sobre el ECA» se lee como
+  «personas afectadas», se escriba como se escriba.
 - Un distrito sin estación, o con una de las {{< meta cifras.impacto.estaciones_sin_pm >}} que no miden
-  PM por hora, no es un distrito con aire limpio (@sec-cobertura).
+  PM por hora, no permite afirmar que el aire esté limpio (@sec-cobertura).
+
+![La página de impacto, «Lo que este dato no puede decir»: quién respiró ese aire, el total de personas, el año entero, donde no se mide, los beneficiarios y el pronóstico](capturas/tb2/textos-impacto/impacto-04-limites.jpg){#fig-ui-limites width=16cm}
+
+:::: {si-falta="capturas/tb2/textos-impacto/impacto-04-limites.jpg"}
+::: {.callout-warning title="PENDIENTE"}
+Captura real de pantalla: la sección «Lo que este dato no puede decir». Va en
+`docs/informe/capturas/tb2/textos-impacto/impacto-04-limites.jpg`.
+:::
+::::
 
 **Lo que quedó sin responder.** El diferencial de la pregunta (si los episodios son de combustión o
 de polvo) se queda con la lectura de la PC3: del nivel bajo al alto, el cociente entre la media de

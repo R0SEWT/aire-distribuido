@@ -7,7 +7,7 @@ incluyen después, como se entregaron. -->
    la visualización del impacto (@tbl-modulos), y cada pantalla dice en una frase qué significa cada
    número y de dónde sale. También muestra lo que no se sabe: las
    {{< meta cifras.impacto.estaciones_sin_pm >}} estaciones que no miden PM por hora aparecen en el
-   mapa, apagadas, porque una zona sin datos no es una zona con aire limpio.
+   mapa, apagadas, porque de una zona sin datos no se puede afirmar que el aire esté limpio.
 
 2. **El tiempo real cuesta milisegundos y no tocó el camino de la predicción.** El evento
    `estacion.regimen` sale del mismo escritor que guarda cada predicción, después de responder: una
@@ -35,13 +35,14 @@ incluyen después, como se entregaron. -->
    diferencias en la media, la alerta, la banda INCA o el régimen (@lst-salida-series).
 
 6. **La pregunta de impacto tiene una respuesta, con sus límites a la vista.** El aire superó el ECA
-   en el {{< meta cifras.impacto.pct_sobre_eca >}} de las horas medidas, concentrado en
+   en el {{< meta cifras.impacto.pct_sobre_eca >}} de las horas-estación medidas, concentrado en
    {{< meta cifras.impacto.estaciones_con_horas >}} estaciones, y en dos campañas de
    {{< meta cifras.impacto.top2_distrito >}} casi todo el tiempo. El régimen alto del K-Means anuncia los
    episodios con horas de margen, pero de forma intermitente y con muchas falsas
-   alarmas: el aviso útil es la media de 24 horas, que es la norma (@sec-impacto). Quienes se
-   beneficiarían son los {{< meta cifras.impacto.distritos >}} distritos con una estación horaria, y su
-   población no se suma, porque vivir en el distrito no es respirar el aire que mide la estación.
+   alarmas: por eso la alerta compara la media de 24 horas con el ECA (@sec-impacto). El posible
+   beneficio está en los {{< meta cifras.impacto.distritos >}} distritos con una estación horaria, donde
+   facilitaría consultar las mediciones y los avisos; su población no se suma, porque vivir en el
+   distrito no es respirar el aire que mide la estación.
 
 7. **Explicar con el vocabulario del curso es parte de la solución.** Las observaciones de la PC4
    no eran sobre el sistema, sino sobre lo que el informe mostraba: el código de los sockets estaba en

@@ -7,8 +7,8 @@ PC3 se incluyen después, como se entregaron. -->
 
 1. **Avisar con la media de 24 horas, y mostrar el régimen como contexto.** Una lectura horaria alta
    o el régimen alto anuncian casi todos los episodios, pero suenan muchas más veces de las que la
-   media cruza el ECA (@sec-impacto). Un aviso a la población debería salir de la regla de la norma,
-   como lo hace este sistema.
+   media cruza el ECA (@sec-impacto). Un aviso a la población debería aplicar la regla del ECA a la
+   media de 24 horas, como lo hace este sistema.
 2. **Medir PM por hora en más estaciones.** De las {{< meta cifras.impacto.estaciones_ficha >}}
    estaciones de la ficha, {{< meta cifras.impacto.estaciones_sin_pm >}} no tienen PM2,5 y PM10
    horarios y no pueden avisar de nada. Y las campañas de pocas semanas, como las de

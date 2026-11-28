@@ -2876,7 +2876,7 @@ class Informe:
         """reports/impacto.json (scripts/impacto.py): la respuesta a la pregunta de impacto social."""
         o = "reports/impacto.json"
         t_est = "Horas con la media de 24 horas sobre el ECA, por estación, con su actividad fiscalizada y la población de su distrito"
-        t_act = "Horas con la media de 24 horas sobre el ECA, por tipo de actividad fiscalizada"
+        t_act = "Horas-estación con la media de 24 horas sobre el ECA, por tipo de actividad fiscalizada"
         t_ant = ("Con cuánta anticipación se encienden las dos señales antes de que la media de 24 horas cruce el ECA, "
                  "sobre los episodios del gold")
         d = self.leer_reports("impacto.json")
@@ -2918,7 +2918,7 @@ class Informe:
                           entero(e["horas_calculables"]),
                           f"{entero(e['horas_sobre_eca'])} ({pct(e['horas_sobre_eca'] / e['horas_calculables'], 0)})" if e["horas_calculables"] else "—",
                           self.BANDAS.get(e["banda_mas_frecuente"], e["banda_mas_frecuente"])))
-        filas.append(("**Total**", "", f"{entero(alc['distritos_con_pm_horario'])} distritos", "", f"**{entero(calc)}**",
+        filas.append(("**Total (horas-estación)**", "", f"{entero(alc['distritos_con_pm_horario'])} distritos", "", f"**{entero(calc)}**",
                       f"**{entero(sobre)} ({pct(sobre / calc, 1)})**", ""))
         t = pd.DataFrame(filas, columns=["Estación", "Actividad y objeto fiscalizado", "Distrito y población (censo 2017)",
                                          "Periodo con datos", "Horas con media", "Sobre el ECA", "Banda más común"])
@@ -2927,7 +2927,9 @@ class Informe:
                    fuente=f"Fuente: `{o}`, escrito por `scripts/impacto.py` el {d['metadatos']['generado']} sobre el gold y el silver "
                           f"(sha256 en el archivo) y `reports/poblacion_distritos.csv`.",
                    nota="Una hora cuenta si su media de 24 horas es calculable (18 lecturas o más en la ventana, la regla de "
-                        "`ventana/ventana.go`). «Sobre el ECA»: PM2,5 > 50 o PM10 > 100 µg/m³ en esa media. La población es la censada "
+                        "`ventana/ventana.go`). «Sobre el ECA»: PM2,5 > 50 o PM10 > 100 µg/m³ en esa media. El total suma horas-estación: "
+                        "una misma hora medida en dos estaciones cuenta dos veces. Que una estación tenga 0 % dice que no se registraron "
+                        "superaciones en las medias calculables de su periodo, no que el aire estuviera limpio fuera de él. La población es la censada "
                         "del distrito (INEI, Censos Nacionales 2017; la página de cada cifra está en el archivo) y es contexto de la fila: "
                         "no se suma, porque vivir en el distrito no es respirar el aire de la estación, que mide junto a la actividad "
                         "fiscalizada.")
@@ -2939,8 +2941,8 @@ class Informe:
                           entero(ta["horas_sobre_eca"]), pct(ta["horas_sobre_eca"] / ta["horas_calculables"], 1) if ta["horas_calculables"] else "—",
                           pct(ta["horas_sobre_eca"] / sobre, 0),
                           self.BANDAS.get(ta["banda_mas_frecuente"], ta["banda_mas_frecuente"])))
-        t = pd.DataFrame(filas, columns=["Tipo de actividad", "Estaciones", "Distritos", "Horas con media", "Sobre el ECA",
-                                         "De sus horas", "Del total sobre el ECA", "Banda más común"])
+        t = pd.DataFrame(filas, columns=["Tipo de actividad", "Estaciones", "Distritos", "Horas-estación con media", "Sobre el ECA",
+                                         "De sus horas-estación", "Del total sobre el ECA", "Banda más común"])
         self.tabla("impacto_actividad.md", o, d, "tbl-impacto-actividad", t_act, markdown(t, "lrrrrrrl"),
                    anchos=[24, 10, 9, 11, 10, 10, 13, 13],
                    fuente=f"Fuente: `{o}` (`tipos_actividad`), escrito por `scripts/impacto.py`.",
@@ -2986,6 +2988,7 @@ class Informe:
              "pct_sobre_eca": pct(sobre / calc, 1), "estaciones_con_horas": entero(len(con_horas)),
              "estaciones_sin_horas": entero(len(est) - len(con_horas)),
              "poblacion_min": entero(min(pobl)), "poblacion_max": entero(max(pobl)), "distrito_mayor": titulo_lugar(mayor["distrito"]),
+             "distrito_mayor_estaciones": entero(sum(1 for e in est if e.get("ubigeo") == mayor.get("ubigeo"))),
              "anio_poblacion": str(mayor["anio"]),
              "episodios": entero(tot_a["episodios"]), "cruces": entero(an["cruces_hacia_arriba"]),
              "episodios_con_media_previa": entero(tot_a["con_media_previa"]), "episodios_sin_media_previa": entero(tot_a["sin_media_previa"]),

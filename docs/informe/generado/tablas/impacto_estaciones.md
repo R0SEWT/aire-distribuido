@@ -20,9 +20,9 @@
 | CA-MAC-01 | (no lo dice el nombre): Empresa Agroaurora S.A.C | La Huaca (Piura), 12 950 | 2021-12-09 a 2022-12-31 (349 días) | 8 148 | 0 (0 %) | buena |
 | CA-ROM-01 | agroindustria: Empresa Casa Grande S.A.A \| Empresa agroindustrial Casa Grande S.A.A | Casa Grande (La Libertad), 28 492 | 2021-12-03 a 2022-12-31 (341 días) | 7 913 | 0 (0 %) | moderada |
 | CA-TAL-01 | (no lo dice el nombre): Unidad fiscalizable Quellaveco | Torata (Moquegua), 6 198 | 2021-12-07 a 2021-12-31 (14 días) | 277 | 0 (0 %) | buena |
-| **Total** |  | 10 distritos |  | **64 748** | **1 184 (1,8 %)** |  |
+| **Total (horas-estación)** |  | 10 distritos |  | **64 748** | **1 184 (1,8 %)** |  |
 
 Horas con la media de 24 horas sobre el ECA, por estación, con su actividad fiscalizada y la población de su distrito
 :::
 
-*Nota.* Fuente: `reports/impacto.json`, escrito por `scripts/impacto.py` el 2026-11-21 sobre el gold y el silver (sha256 en el archivo) y `reports/poblacion_distritos.csv`. Una hora cuenta si su media de 24 horas es calculable (18 lecturas o más en la ventana, la regla de `ventana/ventana.go`). «Sobre el ECA»: PM2,5 > 50 o PM10 > 100 µg/m³ en esa media. La población es la censada del distrito (INEI, Censos Nacionales 2017; la página de cada cifra está en el archivo) y es contexto de la fila: no se suma, porque vivir en el distrito no es respirar el aire de la estación, que mide junto a la actividad fiscalizada.
+*Nota.* Fuente: `reports/impacto.json`, escrito por `scripts/impacto.py` el 2026-11-21 sobre el gold y el silver (sha256 en el archivo) y `reports/poblacion_distritos.csv`. Una hora cuenta si su media de 24 horas es calculable (18 lecturas o más en la ventana, la regla de `ventana/ventana.go`). «Sobre el ECA»: PM2,5 > 50 o PM10 > 100 µg/m³ en esa media. El total suma horas-estación: una misma hora medida en dos estaciones cuenta dos veces. Que una estación tenga 0 % dice que no se registraron superaciones en las medias calculables de su periodo, no que el aire estuviera limpio fuera de él. La población es la censada del distrito (INEI, Censos Nacionales 2017; la página de cada cifra está en el archivo) y es contexto de la fila: no se suma, porque vivir en el distrito no es respirar el aire de la estación, que mide junto a la actividad fiscalizada.

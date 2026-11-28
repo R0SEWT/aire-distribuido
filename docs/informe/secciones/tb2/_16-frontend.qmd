@@ -96,8 +96,8 @@ estaciones de la ficha en su lugar, cada una en uno de tres estados, con su colo
 (recibió lecturas, pero menos de {{< meta cifras.pc4.minimo_lecturas >}} en la ventana de 24 horas) y
 **no mide PM por hora**: {{< meta cifras.impacto.estaciones_sin_pm >}} estaciones son de muestreo
 manual o no tienen PM2,5 y PM10 horarios: no están en el gold ni en los datos de prueba, así que no
-tienen estado, y se dibujan apagadas, con esa leyenda. Que se vean es deliberado: una zona sin estación, o con una que no mide por hora, no es una
-zona con aire limpio.
+tienen estado, y se dibujan apagadas, con esa leyenda. Que se vean es deliberado: de una zona sin estación, o con una que no mide por hora, no se
+puede afirmar que el aire esté limpio.
 
 Arriba, tres cifras (estaciones en alerta, estaciones con estado y la fecha del último estado
 recibido) y una frase que las dice en llano. Debajo, la **lista de estaciones ordenada por
@@ -273,7 +273,8 @@ en `docs/informe/capturas/tb2/cluster/02-cluster-completa.png`.
 #### Impacto
 
 Una página para leer de arriba abajo, con las cifras de la @sec-impacto: qué son el ECA y el INCA en
-dos frases; cuánto tiempo superó el aire el ECA y cómo se reparten las horas entre las bandas INCA;
+dos frases; cuánto tiempo superó el aire el ECA y cómo se reparten las horas-estación entre las
+bandas INCA;
 dónde y junto a qué actividad, estación por estación, con las semanas en que cada una midió; quién
 vive en cada distrito, como contexto de su fila; si la alerta por régimen habría servido; con cuánta
 anticipación se encienden las señales; y lo que este dato no puede decir, a la vista y no en letra
@@ -287,11 +288,11 @@ Se calculan una vez, con el script de análisis que también verifica las series
 (el estado de las estaciones, el modelo, el clúster); recalcular en cada visita algo que no cambia
 solo agregaría carga al servidor.
 
-![La página de impacto: las horas sobre el ECA por estación, con su actividad fiscalizada y las semanas en que midió](capturas/tb2/impacto/05-por-estacion.png){#fig-ui-impacto width=16cm}
+![La página de impacto: las horas-estación sobre el ECA por estación, con su actividad fiscalizada y las semanas en que midió](capturas/tb2/impacto/05-por-estacion.png){#fig-ui-impacto width=16cm}
 
 :::: {si-falta="capturas/tb2/impacto/05-por-estacion.png"}
 ::: {.callout-warning title="PENDIENTE"}
-Captura real de pantalla: la página de impacto con las horas sobre el ECA y la tabla por estación. Va
+Captura real de pantalla: la página de impacto con las horas-estación sobre el ECA y la tabla por estación. Va
 en `docs/informe/capturas/tb2/impacto/05-por-estacion.png`.
 :::
 ::::
