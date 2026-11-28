@@ -2,7 +2,8 @@
 
 Tomadas el **27/11/2026, entre las 18:32 y las 18:45 (hora de Lima)**, con Playwright (Chromium, ventana de
 1440 × 900) manejando la UI real contra el **Docker Compose del repo, levantado limpio** (commit `6d91f4f`, la
-punta de `develop`):
+punta de `develop`). Las de `impacto/` se volvieron a tomar el 28/11 sobre `develop` `8c77341`, después de la
+PR #115 que revisó los textos de esa pantalla (ver su sección):
 
 ```bash
 docker compose -p aire-tb2-frontend up --build -d --scale nodo=2   # UI en :8081, API en :8080
@@ -104,15 +105,22 @@ página entera; las demás, lo que entra en la ventana. El 3 de `pruebas/` descr
 
 ### `impacto/`
 
+Tomadas otra vez el **28/11/2026** sobre `develop` `8c77341`, con la PR #115 ya fusionada (revisión de los textos
+de Impacto, issue #101), contra un Compose levantado limpio con dos nodos, en la misma ventana de 1440 × 900, con
+la sesión de admin y con los mismos nombres de archivo. Impacto no depende del estado del sistema: sale de
+`/datos/impacto.json`, el mismo archivo que el 27/11 (SHA-256 `489c6cab…`), así que las cifras son las mismas y
+cambian solo los textos. `06-quienes-tendrian-aviso.png` conserva el nombre aunque la sección ahora se titula «Dónde
+podría servir esta información».
+
 | Archivo | Qué muestra |
 |---|---|
-| `01-impacto.png`, `02-impacto-completa.png` | La página de impacto, arriba y entera |
+| `01-impacto.png`, `02-impacto-completa.png` | La página de impacto, arriba y entera: mediciones históricas, que no son lecturas en vivo ni una medición de la exposición |
 | `03-eca-e-inca.png` | El problema: qué es el ECA y qué es el INCA |
-| `04-horas-sobre-eca.png` | 1 184 horas sobre el ECA de 64 748 con media calculable (1.8 %), y su reparto por banda INCA |
+| `04-horas-sobre-eca.png` | 1 184 horas-estación sobre el ECA de 64 748 con media calculable (1.8 %), donde la misma hora en dos estaciones cuenta dos veces, y su reparto por banda INCA |
 | `05-por-estacion.png` | Por estación, con su actividad fiscalizada y las semanas en que midió |
-| `06-quienes-tendrian-aviso.png` | Quiénes tendrían un aviso que hoy no tienen: la población del distrito fila por fila, sin sumarla |
-| `07-acierto-de-las-senales.png` | ¿Sirve la alerta?: precisión y cobertura de las señales hora a hora |
-| `08-anticipacion.png` | ¿Con cuánta anticipación?: 30 episodios, contados de las dos maneras (desde el primer encendido y sin interrupción) |
+| `06-quienes-tendrian-aviso.png` | «Dónde podría servir esta información»: los 10 distritos con estaciones de PM por hora y su población censada fila por fila, como contexto y sin sumarla; no cuenta usuarios, avisos recibidos ni expuestos |
+| `07-acierto-de-las-senales.png` | ¿Sirve la alerta?: la alerta compara la media de 24 horas con el ECA; la precisión y la cobertura de las dos señales horarias describen el conjunto histórico, no una validación con datos nuevos |
+| `08-anticipacion.png` | ¿Con cuánta anticipación?: 30 episodios, contados de las dos maneras (desde el primer encendido y sin interrupción), con lo que la medida no es |
 | `09-lo-que-no-puede-decir.png` | Lo que este dato no puede decir, a la vista |
 
 ### `armazon/`
