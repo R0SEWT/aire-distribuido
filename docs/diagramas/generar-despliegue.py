@@ -2,6 +2,7 @@
 
     python3 generar-despliegue.py .
     drawio -x -f png -e -b 12 -s 2 -o despliegue.png despliegue.drawio
+    drawio -x -f png -e -b 12 -s 2 -o despliegue-tb2.png despliegue-tb2.drawio   # el del TB2, con el servicio web
 
 El .drawio se puede editar a mano en draw.io; este script solo evita calcular las posiciones.
 """
@@ -88,5 +89,46 @@ def despliegue():
     return d.xml()
 
 
+def despliegue_tb2():
+    """El del TB2: el mismo Compose con el servicio web (Caddy), que sirve la UI y pasa /api y /ws a la API."""
+    d = Diagrama()
+    cil = "shape=cylinder3;boundedLbl=1;backgroundOutline=1;size=12;"
+    d.caja(20, 150, 1040, 770, "Docker Compose · docker compose up --scale nodo=K · una red interna", FONDO)
+    cli = servicio(d, 60, 20, 440, 70, "Navegador y clientes HTTP", ["la SPA · Postman y newman · Swagger UI (/docs) · cmd/carga"], GRIS)
+    web = servicio(d, 40, 200, 480, 110, "web", ["imagen aire-distribuido-web · Caddy", "sirve la SPA compilada (React)",
+                                                 "pasa /api, /ws, /docs y /openapi.yaml a api:8080", "cabeceras de seguridad (CSP, nosniff, HSTS con TLS)"],
+                   AZUL)
+    api = servicio(d, 40, 360, 480, 210, "api", ["imagen aire-distribuido · cmd/api", "", "REST con JWT, Swagger UI y WebSocket",
+                                                  "coordinador del clúster: pool de nodos en :7070", "modelo activo y ventanas de 24 h en memoria",
+                                                  "colas de escritura, una por base", "", "healthcheck: api -salud"], AZUL)
+    for i in (2, 1, 0):
+        nodo = servicio(d, 40 + 12 * i, 700 + 12 * i, 330, 130, "nodo × K" if i == 0 else "",
+                        ["imagen aire-distribuido · cmd/nodo", "carga su rango del gold y responde", "cada ronda con su pool de workers",
+                         "solo abre conexiones de salida"] if i == 0 else [], AZUL)
+    mongo = servicio(d, 640, 340, 220, 140, "mongo", ["MongoDB", "volumen mongo_data", "healthcheck: mongosh ping"], VERDE, cil)
+    seed = servicio(d, 900, 355, 145, 110, "seed", ["mongosh seed.js,", "una pasada:", "colecciones, índices", "y estaciones"], GRIS)
+    redis = servicio(d, 640, 530, 220, 140, "redis", ["Redis con appendonly", "volumen redis_data", "healthcheck: redis-cli ping"], ROJO, cil)
+    gold = servicio(d, 420, 730, 230, 90, "data/gold (no se versiona)", ["oefa_features.csv", "montado de solo lectura"], GRIS,
+                    "shape=folder;tabWidth=70;tabHeight=14;tabPosition=left;")
+
+    e = ETIQUETA.replace("fontSize=10", "fontSize=12")
+    d.flecha(cli, web, e + "exitX=0.5;exitY=1;entryX=0.5;entryY=0;", "HTTP · 127.0.0.1:8081 (HTTPS en el despliegue público)", pos=-0.6)
+    d.flecha(web, api, e + "exitX=0.5;exitY=1;entryX=0.5;entryY=0;", "api:8080 (también 127.0.0.1:8080)")
+    d.flecha(nodo, api, e + "exitX=0.3;exitY=0;entryX=0.2;entryY=1;", "TCP api:7070<br>el nodo llama (HOLA)")
+    d.flecha(api, mongo, e + "exitX=1;exitY=0.25;entryX=0;entryY=0.5;", "mongo:27017")
+    d.flecha(api, redis, e + "exitX=1;exitY=0.8;entryX=0;entryY=0.5;", "redis:6379")
+    d.flecha(seed, mongo, e + "exitX=0;exitY=0.5;entryX=1;entryY=0.5;", "")
+    d.flecha(gold, api, e + "dashed=1;dashPattern=5 4;endArrow=open;exitX=0.25;exitY=0;entryX=0.91;entryY=1;", "para entrenar")
+    d.flecha(gold, nodo, e + "dashed=1;dashPattern=5 4;endArrow=open;exitX=0;exitY=0.6;entryX=1;entryY=0.5;", "su rango")
+    d.caja(700, 700, 345, 210, "<b>Orden de arranque</b>: mongo y redis sanos → seed termina con 0 → api sana → web y nodos; los "
+           "nodos reintentan hasta que api:7070 responde.<br><b>Puertos</b>: al anfitrión se publican, solo en 127.0.0.1, el 8081 (web), "
+           "el 8080 (api), el 27017 (mongo) y el 6379 (redis). El 7070 no se publica: lo usan los nodos de la red interna.<br>"
+           "<b>Secretos</b>: JWT_SECRETO, API_USUARIOS y API_INVITADO llegan por .env, que no se versiona.",
+           TEXTO.replace("fontSize=11", "fontSize=12"))
+    return d.xml()
+
+
 (DEST / "despliegue.drawio").write_text(despliegue(), encoding="utf-8")
 print("escrito", DEST / "despliegue.drawio")
+(DEST / "despliegue-tb2.drawio").write_text(despliegue_tb2(), encoding="utf-8")
+print("escrito", DEST / "despliegue-tb2.drawio")

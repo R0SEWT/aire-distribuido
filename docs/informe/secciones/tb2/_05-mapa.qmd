@@ -1,0 +1,58 @@
+<!-- f) Inicio del Desarrollo del informe final: dónde está cada punto del enunciado y de la rúbrica, y las
+observaciones del docente a la PC4 con dónde se atendió cada una. El título «Desarrollo» lo pone informe-tb2.qmd. -->
+
+Este es el informe final del Trabajo Final y contiene los tres entregables, como pide el enunciado:
+la PC3 (carga, limpieza y modelo), la PC4 (distribución, API y bases de datos) y el TB2 (interfaz,
+integración y evaluación experimental). Las secciones de los dos primeros van con las correcciones
+que el docente pidió a la PC4 (@sec-correcciones). Donde las secciones de la PC3 y la PC4 anuncian lo
+que haría el entregable siguiente, se conservan como se escribieron: la @tbl-cambios-pc3 y la
+@tbl-recomendaciones-pc4 dicen qué pasó con cada anuncio. La @tbl-mapa-tb2 dice dónde está cada punto, en
+el orden de la rúbrica del Trabajo Final y de los puntos de cada entregable.
+
+::: {#tbl-mapa-tb2 tbl-colwidths="[42,58]"}
+| Criterio de la rúbrica o punto del enunciado | Dónde está en este informe |
+|:---|:---|
+| **Rúbrica del Trabajo Final** | |
+| Planteamiento: problema, *dataset*, diagrama de arquitectura detallado, restricciones del trabajo | El problema y la pregunta en la @sec-pregunta; el caso y la arquitectura en la @sec-caso (@fig-arquitectura); el despliegue en la @fig-despliegue |
+| Implementación: carga concurrente de más de 1 M de registros, entrenamiento paralelo con goroutines, Docker, puertos, canales, API que consume el frontend, predicciones en tiempo real y métricas | Carga: @sec-limpieza y @sec-paralelizacion. Entrenamiento distribuido y sockets: @sec-distribucion y @sec-sockets. Docker: @sec-despliegue. API: @sec-api, con el camino al clúster en la @sec-camino |
+| Interfaz: framework, menú, parámetros desde la interfaz, tiempo real, experiencia de usuario, impacto social | @sec-frontend: módulos (@tbl-modulos), experiencia de usuario (@sec-ux) y tiempo real (@sec-tiempo-real) |
+| Informe: estructura, resultados y conclusiones, historial de versiones con Git Flow, Kanban, participación | Este documento; historial en el Anexo C, Kanban en el Anexo B, participación en el Anexo D |
+| Video de 6 minutos | Anexo A |
+| **Entregable 3 (TB2)** | |
+| Desarrollo del frontend web, con un diseño adecuado a la experiencia del usuario final | @sec-frontend |
+| Integración del frontend con la API concentradora y políticas de seguridad de la API | @sec-integracion: un solo origen (@sec-mismo-origen), políticas (@tbl-politicas) y su prueba (@sec-politicas-probadas) |
+| Evaluación experimental: datos de prueba, pruebas de funcionalidad, respuesta a la pregunta de impacto social | @sec-evaluacion: datos de prueba (@tbl-series), pruebas (@sec-pruebas-funcionalidad), latencia (@sec-latencia-tb2) e impacto (@sec-impacto) |
+| Documentación: el informe final contiene los entregables con las correcciones | Este documento; las correcciones en la @sec-correcciones |
+| GitHub, Kanban y reporte de participación | Anexos A a D |
+| **Entregable 2 (PC4)** | |
+| Distribución: clúster de nodos, topología de red y funcionamiento en Go | @sec-distribucion: topología (@sec-topologia), sockets y puertos (@sec-sockets), barrera, fusión y fallas |
+| API: Swagger, funcionamiento en Go, menos de 100 ms, pruebas con Postman | @sec-api: Swagger (@sec-swagger), servidor (@sec-servidor), latencia (@sec-latencia) y Postman (@sec-postman) |
+| Bases de datos: entidades y registros | @sec-bases |
+| Evidencias de implementación y pruebas de funcionamiento | @sec-evidencias-pc4 |
+| **Entregable 1 (PC3)** | |
+| Caso, problema, motivación y pregunta de impacto social | @sec-caso y @sec-pregunta |
+| Limpieza y análisis de datos | @sec-limpieza |
+| Diseño del modelo de ML distribuido | @sec-modelo |
+| Paralelización del cálculo en Go | @sec-paralelizacion |
+| Evidencias de la implementación de la PC3 | @sec-evidencias |
+
+Dónde está cada criterio de la rúbrica y cada punto de los tres entregables
+:::
+
+## Observaciones de la PC4 y cómo se atendieron {#sec-correcciones}
+
+El docente hizo cinco observaciones al informe de la PC4. La @tbl-correcciones las resume, con lo que
+se cambió y dónde está ahora. Además de esas cinco, todo el código del informe va ahora como texto:
+en la PC4 los listados se insertaban como imágenes, y en una imagen no se puede buscar una palabra.
+
+::: {#tbl-correcciones tbl-colwidths="[30,42,28]"}
+| Observación del docente (resumida) | Qué se cambió | Dónde está ahora |
+|:---|:---|:---|
+| No explica el código Go de la distribución: `net.Listen`, `net.Dial`, los puertos, los patrones | Una sección nueva con los sockets: quién escucha, quién llama y en qué puerto, el bucle de `Accept`, el `Dial` del nodo, cómo se serializa y se lee cada mensaje y una sesión tal como queda en el cable; los patrones, lado a lado con los de los laboratorios del curso | @sec-sockets: @tbl-sockets, @tbl-puertos y del @lst-listen al @lst-leer; la ronda en el @lst-enlace-ronda |
+| «Incorrecto: los chunks pasan a ser nodos, el WaitGroup pasa a ser una barrera a través de la red y el canal pasa a ser una conexión TCP» | La analogía se quitó. En su lugar va la descripción literal: dos niveles de reparto (rangos entre nodos, chunks dentro de cada nodo), un `WaitGroup` local en el coordinador que espera a una goroutine por nodo, y mensajes JSON por un flujo TCP. Las frases de la PC3 que decían algo parecido (en el diseño del modelo y en una recomendación) se corrigieron igual | Inicio de la @sec-distribucion; @sec-modelo |
+| No explica el código Go de la API ni cómo pasa la petición al clúster | El registro de las rutas, las capas de autenticación y medición y el `http.Server`, como código; el recorrido completo de un entrenamiento, del navegador a los nodos y de vuelta, paso por paso; y, dicho explícitamente, que las predicciones no pasan por el clúster, con sus razones | @sec-servidor (@lst-rutas, @lst-exigir, @lst-http) y @sec-camino (@lst-camino, @tbl-que-pasa) |
+| No incluye el Dockerfile ni el `docker-compose` en el informe, ni explica el despliegue | Los dos Dockerfile y el Compose completos, como texto, con la razón de cada instrucción y una tabla de decisiones de despliegue; el Caddyfile del servicio web | @sec-despliegue (@lst-dockerfile, @lst-dockerfile-web, @lst-compose, @tbl-decisiones-compose) y @lst-caddy |
+| No se ubica en el Kanban la tarea «Diagrama de entidades de MongoDB y Redis» | La tarjeta estaba (la #76, cerrada antes de la entrega), pero la captura era una tabla de 95 filas sin marcar. Ahora el anexo da el enlace directo de cada tarjeta, incluida esa, y la captura del tablero va en vista de tablero con las tarjetas del TB2 marcadas | Anexo B (@tbl-kanban-tb2) |
+
+Observaciones del docente a la PC4 y dónde se atendieron
+:::

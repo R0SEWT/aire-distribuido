@@ -1,7 +1,28 @@
 <!-- Generado por tablas.py desde docs/informe/capturas/pc4/carga.txt. No editar a mano. -->
 
 ::: {#lst-salida-carga}
-![](generado/imagenes/salida_carga.png){width=15.9cm}
+```text
+$ go version
+go version go1.27.4 linux/amd64
+$ CARGA_CLAVE="$CLAVE_DEMO" CARGA_CLAVE_ADMIN="$CLAVE_ADMIN" go run ./cmd/carga \
+    -pedidos 20000
+POST http://localhost:8080/api/predicciones · 78 lecturas de \
+    docs/postman/lecturas_prueba.csv · 20000 pedidos por nivel (+200 de \
+    calentamiento) · límite 100 ms
+servidor: {"api":"ok","mongo":"ok","redis":"ok","nodos_en_pool":3,"modelo_activo":"ent \
+    renado-e-20261120-1710"}
+ clientes pedidos errores distintas p50 ms p95 ms p99 ms máx ms pedidos/s < límite
+        1   20000       0         0  0.141  0.183  0.227  1.615      6620       sí
+        4   20000       0         0  0.133  0.227  0.409  1.429     25521       sí
+       16   20000       0         0  0.308  0.806  1.214  2.266     40297       sí
+       64   20000       0         0  0.932  2.177  2.891  5.013     55201       sí
+escrituras de las 80800 predicciones aceptadas (GET /api/metricas, después menos \
+    antes; espera de 0.00 s):
+ mongo 80800 escritas · 0 descartadas · 0 fallidas · 23168 lotes
+ redis 80800 escritas · 0 descartadas · 0 fallidas · 31793 lotes
+informe: reports/api_latencia.json
+código de salida: 0
+```
 
 `cmd/carga`: latencia de la predicción con 1, 4, 16 y 64 clientes a la vez (salida real, `docs/informe/capturas/pc4/carga.txt`)
 :::

@@ -1,0 +1,136 @@
+<!-- f.11) TB2 · Integrar el frontend con la API concentradora (configuración de políticas de seguridad de API).
+Las salidas reales vienen de docs/informe/salidas-tb2/seguridad.txt (curl contra el despliegue público). -->
+
+## Integración del frontend con la API y políticas de seguridad {#sec-integracion}
+
+El enunciado pide «integrar el frontend con el API concentradora (configuración de políticas de
+seguridad de API)». Esta sección dice cómo llega cada pedido de la interfaz a la API y qué políticas
+lo protegen, con el código de cada una y la prueba de que funciona.
+
+### Un solo origen para la interfaz y la API {#sec-mismo-origen}
+
+La interfaz no le habla directo a la API: habla con el servicio `web`, un Caddy que hace dos
+cosas: sirve los archivos compilados de la interfaz y pasa a `api:{{< meta cifras.pc4.puerto_http >}}`
+todo lo que es de la API (`/api/*`, el WebSocket de `/ws`, Swagger en `/docs` y el contrato en
+`/openapi.yaml`). Para el navegador, la interfaz y la API están en el **mismo origen** (el mismo
+esquema, host y puerto), y eso tiene dos consecuencias:
+
+- **No hace falta abrir CORS.** Un pedido de la interfaz a `/api/...` no es de otro origen, así que
+  el navegador no exige encabezados de CORS. En el despliegue, la lista de orígenes permitidos de la
+  API está vacía y un pedido desde cualquier otro sitio queda bloqueado (@lst-salida-politicas).
+- **El WebSocket pasa el control de origen de la API sin configurar nada**, porque Caddy reenvía el
+  encabezado `Host` tal como llega (@lst-ws-apreton).
+
+El @lst-caddy es la configuración completa de ese servidor, sin sus comentarios. En el despliegue
+público, la variable `SITIO` lleva el nombre de la máquina y Caddy saca y renueva solo su certificado
+TLS; en el Compose local escucha HTTP en el puerto 80 del contenedor, publicado solo en
+`127.0.0.1:{{< meta cifras.tb2.puerto_web >}}`.
+
+{{< include generado/tablas/frag_caddy.md >}}
+
+Del lado de la interfaz, todos los pedidos salen de un único cliente generado desde el contrato
+(`web/src/api/cliente.ts`). Un *middleware* le pone a cada pedido el token de la sesión en el
+encabezado `Authorization: Bearer` y, si la API responde 401 a un pedido que llevaba el token
+vigente, cierra la sesión y la interfaz vuelve al ingreso (@lst-cliente-token). Las pantallas no
+miran códigos HTTP: un solo módulo (`web/src/api/errores.ts`) traduce cada respuesta de error a lo
+que se le dice al usuario.
+
+{{< include generado/tablas/frag_cliente_token.md >}}
+
+El WebSocket no admite encabezados desde el navegador, así que el token viaja como subprotocolo:
+`new WebSocket(url, ["aire.jwt", token])` llega al servidor como `Sec-WebSocket-Protocol: aire.jwt,
+<token>`, y la API confirma `aire.jwt` en su respuesta 101. Así el token no queda en la URL, donde lo
+guardarían los registros de los servidores y el historial del navegador. La API también lo acepta
+en la consulta (`/ws?token=…`), para probar a mano con `curl`; la interfaz nunca lo manda así, y
+Caddy lo tapa en su registro si alguien lo hace.
+
+### Las políticas de seguridad {#sec-politicas}
+
+La @tbl-politicas reúne lo que se configuró, dónde está y cómo se comprobó. La regla de fondo es que
+**la interfaz esconde y la API decide**: la interfaz no muestra Entrenamiento ni Clúster a un usuario
+común, pero quien lo impide es la API, que responde 403 aunque alguien escriba la ruta a mano.
+
+::: {#tbl-politicas tbl-colwidths="[17,43,18,22]"}
+| Política | Qué se configuró | Dónde | Cómo se comprobó |
+|:---|:---|:---|:---|
+| Autenticación con JWT | Token HS256 por usuario y clave, o de invitado; firmado con un secreto de al menos {{< meta cifras.pc4.jwt_secreto_bytes >}} bytes que llega por variable de entorno; dura {{< meta cifras.tb2.jwt_duracion >}} y no se renueva | `api/jwt.go`, `api/rutas.go` | `api/jwt_test.go`; sin token, 401; vencido, con `alg=none` o con el rol alterado, 401 (@lst-salida-tokens) |
+| Autorización por rol | Cada ruta declara sus roles, `usuario` o `admin` (@lst-rutas); `exigir` compara el rol del token (@lst-exigir) | `api/servidor.go` | Con el token del invitado, `GET /api/metricas` responde 403 (@lst-salida-politicas) |
+| El token en el navegador | En `sessionStorage`, no en `localStorage`: sobrevive a recargar la página y se borra al cerrar la pestaña. La interfaz nunca lo pone en una URL; en el WebSocket va como subprotocolo | `web/src/sesion/almacen.ts`, `web/src/api/ws.ts` | Pruebas de `web/src/sesion/` y `web/src/api/` (@tbl-pruebas-tb2) |
+| CORS | Lista de orígenes permitidos (`CORS_ORIGENES`), vacía en el despliegue. Un origen ajeno no recibe encabezados y su *preflight* recibe 403; sin credenciales; solo `{{< meta cifras.tb2.cors_metodos >}}` y los encabezados `{{< meta cifras.tb2.cors_encabezados >}}`; `Vary: Origin` | `api/cors.go` (@lst-cors) | `api/cors_test.go`; el *preflight* desde otro sitio, 403 (@lst-salida-politicas) |
+| Origen del WebSocket | CORS no se aplica a un WebSocket: la API mira el `Origin` (mismo host o permitido), el token y el rol antes de responder 101 | `api/hub.go` (@lst-ws-apreton) | `api/cors_test.go`, `api/ws_test.go`; desde otro origen, 403; sin token, 401 (@lst-salida-tokens) |
+| Cabeceras HTTP | `Content-Security-Policy` estricta (scripts, estilos y fuentes solo del propio origen; nadie la mete en un marco), `X-Content-Type-Options: nosniff`, `Referrer-Policy: no-referrer`, sin `Server`; con TLS, `Strict-Transport-Security` de {{< meta cifras.tb2.hsts_s >}} segundos (un año) | `web/Caddyfile` (@lst-caddy) | `web/pruebas/caddy.test.ts`; las cabeceras del despliegue (@lst-salida-cabeceras) |
+| Swagger en `/docs` | Su propia política: solo esa versión de Swagger UI ({{< meta cifras.tb2.swagger_ui >}}) desde su CDN y solo su script de arranque, por su hash | `web/Caddyfile` | `web/pruebas/caddy.test.ts` (si cambia el script, la prueba da el hash nuevo) |
+| Ingreso de invitado | `POST /api/auth/invitado` da un token de la cuenta que nombra `API_INVITADO`, sin que sus credenciales pasen por el navegador. Tiene que ser de rol `usuario`: con una de administrador, la API no arranca. Sin la variable, 404 | `api/rutas.go` (@lst-invitado), `cmd/api/main.go` | `api/invitado_test.go`, `cmd/api/invitado_test.go`; el token del despliegue es de rol `usuario` (@lst-salida-politicas) |
+| Límites del servidor | Cuerpo de a lo sumo {{< meta cifras.pc4.limite_cuerpo_kib >}} KiB y un solo objeto JSON; plazos de lectura y escritura del `http.Server` (@lst-http); lecturas con fecha futura o PM fuera de rango, rechazadas | `api/servidor.go`, `cmd/api/main.go` | `api/servidor_test.go` |
+| Superficie de red | En el despliegue solo se publican el 80 y el 443 de Caddy; la API, MongoDB, Redis y el puerto de los nodos no salen de la red de Compose. En local, todo publicado solo en `127.0.0.1` | `despliegue/azure/compose.azure.yml`, `docker-compose.yml` | Declarado en el Compose (@tbl-decisiones-compose) |
+| Registros sin tokens | Caddy borra de su registro el subprotocolo del WebSocket y tapa un `?token=` de la URL | `web/Caddyfile` | — |
+
+Políticas de seguridad de la API y de la interfaz
+:::
+
+**CORS, en el código.** Un pedido sin `Origin` no viene de otro sitio y pasa sin cambios. Uno con un
+`Origin` que no está en la lista no recibe ningún encabezado de CORS: el servidor responde, pero el
+navegador no deja leer la respuesta. Y el *preflight* (el `OPTIONS` que el navegador manda antes de
+un pedido con token o con cuerpo JSON) se responde con 403 y un mensaje que dice por qué
+(@lst-cors). La API autentica con un token en un encabezado y no con *cookies*, así que no hace falta
+`Access-Control-Allow-Credentials`: permitir un origen no le presta a nadie la sesión de otro.
+
+{{< include generado/tablas/frag_cors.md >}}
+
+**El apretón de manos del WebSocket** valida todo antes de tomar la conexión, mientras todavía se
+puede responder con un error HTTP: que sea un apretón válido (400), el origen (403), el token (401)
+y el rol (403). Solo entonces se toma la conexión, se anota en el hub y sale el 101
+(@lst-ws-apreton).
+
+{{< include generado/tablas/frag_ws_apreton.md >}}
+
+**El invitado.** El enunciado nombra un inicio de sesión, y la interfaz lo tiene; pero pedirle a
+quien evalúa o a quien solo quiere mirar que se cree una cuenta es una barrera. El ingreso de
+invitado la quita sin abrir una puerta trasera: el token es de una cuenta común, con su rol y su
+vencimiento, y la API decide qué cuenta es (@lst-invitado). Tiene un costo, y está dicho en
+`.env.example`: un invitado puede mandar lecturas, que cambian el último estado de las estaciones
+para todos. Habilitarlo en una máquina pública es una decisión de quien la levanta.
+
+{{< include generado/tablas/frag_invitado.md >}}
+
+![El diálogo del invitado, que se abre con «No pienso crearme una cuenta aquí»](capturas/tb2/ingreso/03-dialogo-invitado.png){#fig-ui-invitado width=13cm}
+
+:::: {si-falta="capturas/tb2/ingreso/03-dialogo-invitado.png"}
+::: {.callout-warning title="PENDIENTE"}
+Captura real de pantalla: el diálogo del ingreso de invitado. Va en
+`docs/informe/capturas/tb2/ingreso/03-dialogo-invitado.png`.
+:::
+::::
+
+### Las políticas, probadas con `curl` {#sec-politicas-probadas}
+
+Además de las pruebas automáticas, cada política se comprobó con `curl`, de dos maneras. Contra el
+despliegue público: el @lst-salida-cabeceras son las cabeceras que pone Caddy en la interfaz y en
+Swagger UI, y el @lst-salida-politicas, lo que responde la API a un *preflight* desde un sitio ajeno,
+a un pedido sin token y a un invitado que intenta leer las métricas del clúster. Contra el Compose
+local, por el Caddy de la interfaz, el @lst-salida-tokens prueba los roles ruta por ruta, tres tokens
+que no valen (uno vencido, uno con `alg=none` y uno al que se le cambió el rol a mano) y las reglas
+del WebSocket. Los tokens van tapados.
+
+{{< include generado/tablas/salida_cabeceras.md >}}
+
+{{< include generado/tablas/salida_politicas.md >}}
+
+{{< include generado/tablas/salida_tokens.md >}}
+
+### Lo que estas políticas no cubren {#sec-seguridad-limites}
+
+- **MongoDB y Redis no tienen usuario ni clave.** Están protegidas porque no se publican fuera de
+  la red de Compose; un despliegue con más de una máquina necesitaría credenciales y TLS entre los
+  servicios.
+- **El puerto de los nodos no tiene autenticación ni cifrado.** Nunca se publica en el despliegue;
+  en el laboratorio, los mensajes entre los PC y el coordinador viajaron en claro por la red del
+  aula. Un nodo malicioso podría mandar parciales falsos: la compuerta del modelo, que compara con el
+  K-Means secuencial antes de activar, impide que llegue a predecir (@sec-coordinador).
+- **No hay un límite de pedidos.** Ni `POST /api/auth/token` ni las predicciones tienen un tope
+  por cliente: nada frena a quien pruebe claves una tras otra, salvo la comparación en tiempo
+  constante, que no las delata. En una máquina pública convendría un límite en Caddy o en la API.
+- **Un token no se puede revocar antes de que venza.** Dura {{< meta cifras.tb2.jwt_duracion >}}; salir
+  de la interfaz lo borra del navegador, no del servidor.
+- **Swagger UI se carga de un CDN.** La política de `/docs` lo acota a una versión y un script, pero
+  depende de que ese CDN esté disponible.

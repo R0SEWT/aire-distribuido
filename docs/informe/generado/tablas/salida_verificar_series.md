@@ -1,0 +1,23 @@
+<!-- Generado por tablas.py desde docs/informe/salidas-tb2/verificar-series.txt. No editar a mano. -->
+
+::: {#lst-salida-series}
+```text
+$ python3 scripts/verificar_series_api.py --api http://127.0.0.1:18093
+escenario (667 lecturas): 14 de 14 estaciones coinciden en la última lectura y en el \
+    estado guardado
+  CA-HUA-01-2021-12-20 (limpio, 48 lecturas): coincide
+  CA-JUPR-01-2022-05-03 (limpio, 48 lecturas): coincide
+  CA-SOC-01-2021-12-19 (mala_sin_alerta, 48 lecturas): coincide
+  CA-ESP-01-2021-12-21 (cruza_eca, 48 lecturas): coincide
+  CA-HU-09-2021-12-21 (cruza_eca, 48 lecturas): coincide
+  CA-HU-04-2021-12-19 (en_alerta, 48 lecturas): coincide
+  CA-RZC-02-2021-12-21 (umbral_de_cuidado, 47 lecturas): coincide
+  CA-CG-02-2022-06-02 (huecos_con_media, 43 lecturas): coincide
+  CA-MAC-01-2022-05-26 (huecos_sin_media, 41 lecturas): coincide
+días sueltos: 9 de 9 coinciden
+1086 lecturas enviadas al modelo sembrado-kmeans-json; 0 diferencias
+[salida: 0]
+```
+
+Las series de prueba enviadas a la API real con `scripts/verificar_series_api.py`, comparadas con lo calculado sin la API (salida real, `docs/informe/salidas-tb2/verificar-series.txt`)
+:::
