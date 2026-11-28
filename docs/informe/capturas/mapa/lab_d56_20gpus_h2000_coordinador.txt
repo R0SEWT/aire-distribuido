@@ -1,5 +1,5 @@
 # aire-distribuido · mapa nacional de PM · local SGD en el laboratorio D56
-# 2026-11-14 20:06:50 -0500 · A019803 · 10.11.97.211/22
+# 2026-11-14 20:06:50 -0500 · rosewt-lenovo · 10.11.97.211/22
 # commit 60de7c2 (rama feature/mapa-nacional, con cambios sin commit)
 $ ./mapa-coord -escuchar 10.11.97.211:7071 -nodos 20 -manifiesto http://10.11.97.211:8090/mapa-sint168/manifiesto.json -pesos-iniciales pesos64/pesos_0.bin -hiper hiper64.json -rondas 5 -pasos 2000 -validacion SIN-01,SIN-02 -salida mapa_gpu_20_h2000_a64.json -pesos-finales pesos_final_20_h2000_a64.bin
 20:06:50 escuchando en 10.11.97.211:7071; los nodos pueden llamar a:
