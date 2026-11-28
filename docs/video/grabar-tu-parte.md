@@ -15,20 +15,20 @@ entregarlo el domingo.
 
 | Archivo | Quién | Bloque | Duración | Cámara |
 |---|---|---|---|---|
-| `01-rody.mp4` | Rody | Quiénes somos y qué pregunta respondemos | 0:25 | completa |
+| `01-rody.mp4` | Rody | Quiénes somos y qué pregunta respondemos | 0:23 | completa |
 | `02-rody.mp4` | Rody | Arquitectura | 0:20 | círculo |
-| `03-dayana.mp4` | Dayana | El dato de OEFA y el cargador concurrente | 0:35 | círculo |
+| `03-dayana.mp4` | Dayana | El dato de OEFA y el cargador concurrente | 0:40 | círculo |
 | `04-rody.mp4` | Rody | El clúster: K-Means distribuido por sockets TCP | 0:40 | círculo |
 | `05-julio.mp4` | Julio | La API coordinadora | 0:35 | círculo |
 | `06-dayana.mp4` | Dayana | MongoDB y Redis | 0:25 | círculo |
-| `07-julio.mp4` | Julio | Demo: ingreso, escenario y tiempo real | 0:30 | círculo |
+| `07-julio.mp4` | Julio | Demo: ingreso, escenario y tiempo real | 0:27 | círculo |
 | `08-julio.mp4` | Julio | Demo: simular un día | 0:20 | círculo |
 | `09-rody.mp4` | Rody | Demo: entrenamiento y clúster desde la UI | 0:25 | círculo |
 | `10-dayana.mp4` | Dayana | Impacto social | 0:40 | círculo |
-| `11-julio.mp4` | Julio | Pruebas y despliegue | 0:20 | círculo |
+| `11-julio.mp4` | Julio | Pruebas y despliegue | 0:25 | círculo |
 | `12-rody.mp4` | Rody | Cierre | 0:15 | completa |
 
-Por persona: **Dayana**, 3 clips (1:40 en total); **Julio**, 4 clips (1:45); **Rody**, 5 clips (2:05).
+Por persona: **Dayana**, 3 clips (1:45 en total); **Julio**, 4 clips (1:47); **Rody**, 5 clips (2:03).
 Cada clip se graba completo de una vez: son cortos, y si alguien se equivoca, repite el bloque entero.
 
 ## Cómo grabar

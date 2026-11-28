@@ -5,14 +5,14 @@ como máximo** con «la presentación de la solución, puntos importantes de su 
 funcionamiento (end to end)», donde **participen todos los integrantes y demuestren conocimiento del
 tema**. Sin video se pierden los 2 puntos de la rúbrica y se afecta el resto.
 
-**Duración objetivo: 5:30** (12 bloques). El tope interno es **5:45**: deja 15 segundos de margen sobre
+**Duración objetivo: 5:35** (12 bloques). El tope interno es **5:45**: deja 15 segundos de margen sobre
 los 6 minutos por si alguien habla más lento. `armar-tb2.sh` lo comprueba y avisa.
 
 | Quién | Bloques | Tiempo | Qué explica |
 |---|---|---|---|
-| **Rody** | 01, 02, 04, 09, 12 | 2:05 | Apertura, arquitectura, el clúster por sockets TCP, el entrenamiento desde la UI y el cierre |
-| **Dayana** | 03, 06, 10 | 1:40 | El dato y el cargador concurrente, MongoDB y Redis, el impacto social |
-| **Julio** | 05, 07, 08, 11 | 1:45 | La API coordinadora, la demo de punta a punta, las pruebas y el despliegue |
+| **Rody** | 01, 02, 04, 09, 12 | 2:03 | Apertura, arquitectura, el clúster por sockets TCP, el entrenamiento desde la UI y el cierre |
+| **Dayana** | 03, 06, 10 | 1:45 | El dato y el cargador concurrente (y su reproducción en macOS), MongoDB y Redis, el impacto social |
+| **Julio** | 05, 07, 08, 11 | 1:47 | La API coordinadora, la demo de punta a punta, las pruebas (y el cargador en Windows) y el despliegue |
 
 Cada quien explica lo técnico de la parte que construyó o documentó (reporte de participación de la PC3
 y de la PC4): Dayana el dato y las bases, Julio la API (contrato, Postman, latencia) y Rody el clúster.
@@ -58,7 +58,7 @@ corchetes). Ninguna es inventada.
 ## Bloque 01 · Quiénes somos y qué pregunta respondemos
 
 - Quién: Rody
-- Duración: 0:25
+- Duración: 0:23
 - Cámara: completa
 - Pantalla: `caratula`
 - Qué se ve: Rody a cámara completa, con el título del trabajo, el curso y los tres nombres sobre la
@@ -67,9 +67,9 @@ corchetes). Ninguna es inventada.
 
 ```dice
 Hola, somos Rody Vilchez, Dayana Gómez y Julio Meza, y este es aire-distribuido, nuestro trabajo final
-de Programación Concurrente y Distribuida. Trabajamos el caso diez con las lecturas horarias de calidad
-del aire de OEFA. La pregunta es en qué estaciones y a qué horas el aire supera el estándar de calidad
-ambiental, el ECA, y con cuánta anticipación se puede avisar.
+del curso. Trabajamos el caso diez, las lecturas horarias de calidad del aire de OEFA, con una pregunta:
+en qué estaciones y a qué horas el aire supera el estándar de calidad ambiental, el ECA, y con cuánta
+anticipación se puede avisar.
 ```
 
 ## Bloque 02 · Arquitectura
@@ -90,21 +90,25 @@ guarda en MongoDB y Redis y atiende a una SPA en React. Docker Compose levanta t
 ## Bloque 03 · El dato de OEFA y el cargador concurrente
 
 - Quién: Dayana
-- Duración: 0:35
+- Duración: 0:40
 - Cámara: burbuja arriba
-- Pantalla: `remotion PipelineCargador | El pipeline del cargador (cmd/cargar): bloques por bytes, un pool de workers y la fusión en orden de bloque`
+- Pantalla: `remotion PipelineCargador | El pipeline del cargador (cmd/cargar): bloques por bytes, un pool de workers y la fusión en orden de bloque | parte=0.8`
+- Pantalla: `texto El mismo SHA-256 en tres sistemas | Linux, el benchmark del informe: silver 63b707f4…, gold 2fdace5a… ; Windows (#42, Julio): los mismos, con bloques de 16, 64 y 128 MiB y de 1 a 12 workers ; macOS (#45, Dayana): los mismos, y la auditoría 40 de 40`
 - Qué se ve: la escena animada del pipeline: el CSV, los bloques, los workers, la fusión y el gold, y al
-  final las tarjetas con 1,33 s y 4,94×.
+  final las tarjetas con 1,33 s y 4,94×; después, la tarjeta con las huellas en los tres sistemas.
 - Cifras: 1,3 GB [limpieza.bytes], 2 883 877 filas [limpieza.filas_largas_leidas], bloques de 64 MiB
   [benchmark_cargador.bloque], 12 workers y 1,33 s [limpieza.workers, limpieza.duracion_s], 4,94×
-  [benchmark_cargador.speedup].
+  [benchmark_cargador.speedup]; las huellas de silver y gold en `reports/benchmark_cargador.json`,
+  `reports/benchmark_cargador_windows.json` y `reports/revision_dayana/ejecucion.json`
+  [revision.mismos_hashes, revision.ok, revision.chequeos].
 
 ```dice
 Soy Dayana. El dato de OEFA es un CSV de 1,3 gigabytes con 2 millones 883 mil filas, una por
 parámetro y por hora. El cargador lo parte en bloques de 64 megabytes y manda los índices por un
 canal a un pool de 12 workers. Cada worker limpia su bloque en su propia memoria, sin candados, y un
 recolector fusiona los parciales en orden de bloque. Por eso el resultado es el mismo con cualquier
-número de workers: el archivo entero en 1,3 segundos.
+número de workers: el archivo entero en 1,3 segundos. Y lo reproduje en una Mac: el mismo SHA-256 que
+en Linux.
 ```
 
 ## Bloque 04 · El clúster: K-Means distribuido por sockets TCP
@@ -169,7 +173,7 @@ carga entraron 80 800 escrituras sin perder ninguna.
 ## Bloque 07 · Demo: ingreso, escenario y tiempo real
 
 - Quién: Julio
-- Duración: 0:30
+- Duración: 0:27
 - Cámara: burbuja
 - Pantalla: `pantalla escenario | La SPA contra el Compose local: ingreso, panel vacío, escenario y el mapa que se llena por WebSocket`
 - Qué se ve: el ingreso; el panel vacío; «cargar el escenario»; el mapa del Perú y la lista que se
@@ -180,7 +184,7 @@ carga entraron 80 800 escrituras sin perder ninguna.
 Ahora la interfaz, de punta a punta. Entro con usuario y clave, y la API me devuelve el token. El panel
 empieza vacío, porque el sistema no recibe lecturas solo. Cargo el escenario: 48 horas reales de
 diciembre de 2021. Cada lectura es un POST, y el mapa se pinta a medida que llegan los eventos por el
-WebSocket. Las estaciones en alerta suben primero.
+WebSocket.
 ```
 
 ## Bloque 08 · Demo: simular un día
@@ -240,17 +244,22 @@ estaciones miden por hora: una zona sin estación no es una zona con aire limpio
 ## Bloque 11 · Pruebas y despliegue
 
 - Quién: Julio
-- Duración: 0:20
+- Duración: 0:25
 - Cámara: burbuja
-- Pantalla: `terminal pruebas | go test -race -count=1 ./... (grabación real) | parte=0.5 | vel=6`
-- Pantalla: `terminal compose | docker compose up --build --scale nodo=3 y docker compose ps (grabación real)`
-- Qué se ve: las pruebas de todos los paquetes con el detector de carreras; el Compose con la UI, la
-  API, tres nodos, MongoDB y Redis sanos.
+- Pantalla: `terminal pruebas | go test -race -count=1 ./... (grabación real) | parte=0.3 | vel=6`
+- Pantalla: `figura docs/informe/capturas/benchmark-windows-workers.png | El cargador sobre el CSV completo en Windows (#42): medianas por número de workers y los SHA-256 de silver y gold | parte=0.3`
+- Pantalla: `terminal compose | docker compose up --scale nodo=3, docker compose ps y la salud de la API (grabación real)`
+- Qué se ve: las pruebas de todos los paquetes con el detector de carreras; la captura real de la
+  terminal de Windows con el benchmark y las huellas; el Compose con la UI, la API, tres nodos, MongoDB y
+  Redis sanos.
+- Cifras: 4,8× con 12 workers en Windows [benchmark_cargador_windows.speedup, 4,81 con medias
+  recortadas]; las huellas de silver y gold iguales a las de Linux.
 
 ```dice
-Todo se prueba con go test y el detector de carreras, guion race, también en la integración continua de
-GitHub. Docker Compose levanta la interfaz, la API, MongoDB, Redis y los nodos, que se escalan con
-scale. Y está desplegado en aire punto rosewt punto dev.
+Todo se prueba con go test y el detector de carreras, guion race, también en la integración continua.
+En Windows, el cargador dio el mismo SHA-256 y fue 4,8 veces más rápido con 12 workers. Docker Compose
+levanta la interfaz, la API, las bases y los nodos, que se escalan con scale. Y está desplegado en aire
+punto rosewt punto dev.
 ```
 
 ## Bloque 12 · Cierre

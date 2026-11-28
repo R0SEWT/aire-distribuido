@@ -6,8 +6,8 @@ de cada integrante.
 ## Video del TB2 (Entregable 3)
 
 Seis minutos como máximo, con la presentación de la solución, su construcción y su funcionamiento de
-punta a punta, y con los tres integrantes. Doce bloques que suman **5:30**: Rody 2:05, Dayana 1:40 y
-Julio 1:45.
+punta a punta, y con los tres integrantes. Doce bloques que suman **5:35**: Rody 2:03, Dayana 1:45 y
+Julio 1:47.
 
 | Archivo | Qué es |
 |---|---|

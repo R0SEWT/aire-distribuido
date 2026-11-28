@@ -371,26 +371,29 @@ def diapositiva_figura(b: Bloque, rutas: list[str], pie: str) -> Image.Image:
     caja_w = (ANCHO - 180 - 40 * (len(figs) - 1)) // len(figs)
     x = 90
     for fig in figs:
-        escala = min(caja_w / fig.width, (y1 - y0) / fig.height, 1.4)
+        escala = min(caja_w / fig.width, (y1 - y0) / fig.height, 1.6)
         nueva = fig.resize((round(fig.width * escala), round(fig.height * escala)), Image.LANCZOS)
         d.rounded_rectangle([x - 6, y0 - 6, x + caja_w + 6, y1 + 6], radius=18, fill=PANEL, outline=BORDE, width=2)
         im.paste(nueva, (x + (caja_w - nueva.width) // 2, y0 + (y1 - y0 - nueva.height) // 2))
         x += caja_w + 40
     if pie:
-        for i, linea in enumerate(pc3.envolver(d, pie, fuente(26), ANCHO - 180)[:2]):
+        # El pie no llega a la esquina de la cámara.
+        for i, linea in enumerate(pc3.envolver(d, pie, fuente(26), ANCHO - 180 - 620)[:2]):
             d.text((90, y1 + 24 + i * 34), linea, font=fuente(26), fill=MUDO)
     return im
 
 
 def diapositiva_texto(b: Bloque, titulo: str, lineas: list[str]) -> Image.Image:
+    # El texto empieza más abajo y termina antes de la columna de la cámara (300 px más el nombre).
     im, d = lienzo()
-    y = encabezado(d, titulo or b.titulo) + 20
+    y = max(encabezado(d, titulo or b.titulo) + 60, 300)
+    f = fuente(44)
     for linea in lineas:
-        d.ellipse([96, y + 14, 112, y + 30], fill=ACENTO)
-        for l in pc3.envolver(d, linea, fuente(36), ANCHO - 400):
-            d.text((140, y), l, font=fuente(36), fill=TEXTO)
-            y += 48
-        y += 22
+        d.ellipse([96, y + 18, 114, y + 36], fill=ACENTO)
+        for l in pc3.envolver(d, linea, f, ANCHO - 140 - 520):
+            d.text((140, y), l, font=f, fill=TEXTO)
+            y += 58
+        y += 30
     return im
 
 
@@ -723,7 +726,7 @@ def montar() -> None:
     clips, resumen = [], []
     for b in bloques:
         claves = [b.titulo, b.camara, b.lado, json.dumps([p.__dict__ for p in b.pantallas], ensure_ascii=False),
-                  str(b.voz), str(b.ini), str(b.fin), "tb2-v1"]
+                  str(b.voz), str(b.ini), str(b.fin), "tb2-v2"]
         for p in b.pantallas:
             if p.tipo == "pantalla":
                 claves.append(pc3.huella_insumos([str((PANTALLAS / f"{p.rutas[0]}.mp4").relative_to(RAIZ))]))

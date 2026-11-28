@@ -10,12 +10,12 @@ carpeta de Drive donde dice `[enlace de Drive]` y, si la rama ya está en GitHub
 
 > Chicos, el video del TB2 ya está armado salvo nuestras voces y caras 🎬. Las animaciones, la interfaz y
 > la terminal se graban solas; nos toca a cada uno grabar unos clips cortos leyendo el guion a la cámara.
-> El video total dura 5:30 (el máximo es 6:00) y salimos los tres.
+> El video total dura 5:35 (el máximo es 6:00) y salimos los tres.
 >
-> *Dayana*: 3 clips → `03-dayana` (0:35, el dato y el cargador), `06-dayana` (0:25, MongoDB y Redis) y
+> *Dayana*: 3 clips → `03-dayana` (0:40, el dato, el cargador y tu reproducción en la Mac), `06-dayana` (0:25, MongoDB y Redis) y
 > `10-dayana` (0:40, impacto social).
-> *Julio*: 4 clips → `05-julio` (0:35, la API), `07-julio` (0:30, demo: ingreso y tiempo real),
-> `08-julio` (0:20, demo: simulación) y `11-julio` (0:20, pruebas y despliegue).
+> *Julio*: 4 clips → `05-julio` (0:35, la API), `07-julio` (0:27, demo: ingreso y tiempo real),
+> `08-julio` (0:20, demo: simulación) y `11-julio` (0:25, pruebas, tu benchmark de Windows y despliegue).
 > Yo grabo los míos (apertura, arquitectura, clúster, entrenamiento y cierre).
 >
 > Cómo grabar:
@@ -36,12 +36,13 @@ carpeta de Drive donde dice `[enlace de Drive]` y, si la rama ya está en GitHub
 
 > *Dayana: tus 3 textos*
 >
-> *03-dayana · El dato de OEFA y el cargador concurrente (0:35)*
-> Soy Dayana. El dato de OEFA es un CSV de 1,3 gigabytes con 2 millones 883 mil filas, una por parámetro
-> y por hora. El cargador lo parte en bloques de 64 megabytes y manda los índices por un canal a un pool
-> de 12 workers. Cada worker limpia su bloque en su propia memoria, sin candados, y un recolector fusiona
-> los parciales en orden de bloque. Por eso el resultado es el mismo con cualquier número de workers: el
-> archivo entero en 1,3 segundos.
+> *03-dayana · El dato de OEFA y el cargador concurrente (0:40)*
+> Soy Dayana. El dato de OEFA es un CSV de 1,3 gigabytes con 2 millones 883 mil filas, una por
+> parámetro y por hora. El cargador lo parte en bloques de 64 megabytes y manda los índices por un
+> canal a un pool de 12 workers. Cada worker limpia su bloque en su propia memoria, sin candados, y un
+> recolector fusiona los parciales en orden de bloque. Por eso el resultado es el mismo con cualquier
+> número de workers: el archivo entero en 1,3 segundos. Y lo reproduje en una Mac: el mismo SHA-256 que
+> en Linux.
 >
 > *06-dayana · MongoDB y Redis (0:25)*
 > Guardamos en dos niveles. MongoDB es el persistente: predicciones, entrenamientos, modelos, estaciones
@@ -67,18 +68,19 @@ carpeta de Drive donde dice `[enlace de Drive]` y, si la rama ya está en GitHub
 > 80 mil pedidos y hasta 64 clientes a la vez, el percentil 99 no pasó de 6 milisegundos, muy debajo de
 > los 100.
 >
-> *07-julio · Demo: ingreso, escenario y tiempo real (0:30)*
+> *07-julio · Demo: ingreso, escenario y tiempo real (0:27)*
 > Ahora la interfaz, de punta a punta. Entro con usuario y clave, y la API me devuelve el token. El panel
 > empieza vacío, porque el sistema no recibe lecturas solo. Cargo el escenario: 48 horas reales de
 > diciembre de 2021. Cada lectura es un POST, y el mapa se pinta a medida que llegan los eventos por el
-> WebSocket. Las estaciones en alerta suben primero.
+> WebSocket.
 >
 > *08-julio · Demo: simular un día (0:20)*
 > En Simulación elijo una estación, un día y la velocidad. Las lecturas se mandan una por una: se ve cómo
 > se llena la ventana de 24 horas, cuándo aparece la media, con 18 lecturas, y en qué hora se enciende la
 > alerta.
 >
-> *11-julio · Pruebas y despliegue (0:20)*
-> Todo se prueba con go test y el detector de carreras, guion race, también en la integración continua de
-> GitHub. Docker Compose levanta la interfaz, la API, MongoDB, Redis y los nodos, que se escalan con
-> scale. Y está desplegado en aire punto rosewt punto dev.
+> *11-julio · Pruebas y despliegue (0:25)*
+> Todo se prueba con go test y el detector de carreras, guion race, también en la integración continua.
+> En Windows, el cargador dio el mismo SHA-256 y fue 4,8 veces más rápido con 12 workers. Docker Compose
+> levanta la interfaz, la API, las bases y los nodos, que se escalan con scale. Y está desplegado en aire
+> punto rosewt punto dev.
