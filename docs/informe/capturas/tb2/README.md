@@ -2,7 +2,7 @@
 
 Tomadas el **27/11/2026, entre las 18:32 y las 18:45 (hora de Lima)**, con Playwright (Chromium, ventana de
 1440 × 900) manejando la UI real contra el **Docker Compose del repo, levantado limpio** (commit `6d91f4f`, la
-punta de `develop`):
+punta de `develop`), salvo las de `impacto/`, que se volvieron a tomar aparte el 28/11 (abajo):
 
 ```bash
 docker compose -p aire-tb2-frontend up --build -d --scale nodo=2   # UI en :8081, API en :8080
@@ -15,8 +15,11 @@ reales de OEFA: el escenario y los días salen de `web/public/datos/series.json`
 `CA-AYAS-01` del 16/12/2021 a la 01:00 tal como está en el silver (PM2.5 2.8, PM10 3.3 µg/m³). Nada se
 inventó ni se editó después.
 
-El orden de abajo es el de la corrida: cada captura depende de lo que pasó antes. Las «completa» son la
-página entera; las demás, lo que entra en la ventana. El 3 de `pruebas/` describe cómo se midió la latencia.
+El orden de abajo es el de la corrida del 27/11: cada captura de esa corrida depende de lo que pasó antes. La
+excepción son las nueve de `impacto/`: se volvieron a tomar por separado el 28/11 sobre `develop` `8c77341`, después
+de la PR #115 que revisó los textos de esa pantalla, en otro Compose limpio. No dependen del estado de la corrida
+del 27/11: Impacto sale de `/datos/impacto.json`, no de lo que se mandó a la API. Las «completa» son la página
+entera; las demás, lo que entra en la ventana. El 3 de `pruebas/` describe cómo se midió la latencia.
 
 ## 1. Lista de punta a punta (spec del frontend, §12)
 
@@ -37,7 +40,7 @@ página entera; las demás, lo que entra en la ventana. El 3 de `pruebas/` descr
 | 13 | Entrenamiento configurado desde la UI (2 nodos, 1 réplica, semilla 42): 44 rondas reproducidas, convergió, diferencia con el secuencial 7.7e-15, el modelo nuevo queda activo | ✅ | `entrenamiento/03` a `06` |
 | 14 | Medición larga (300 réplicas) en curso: las rondas llegan por el WebSocket mientras el entrenamiento sigue | ✅ | `entrenamiento/07` |
 | 15 | Clúster: número de nodos, CPU del coordinador, latencia por ruta (peor p99 2.2 ms), escrituras sin pérdidas y los eventos de altas y bajas | ✅ | `cluster/01`, `cluster/02` |
-| 16 | Impacto con los datos reales del gold, sin suma de población y con lo que el dato no puede decir a la vista | ✅ | `impacto/01` a `09` |
+| 16 | Impacto con los datos reales del gold, sin suma de población y con lo que el dato no puede decir a la vista | ✅ | `impacto/01` a `09` (tomadas otra vez el 28/11, con los textos de la PR #115) |
 | 17 | Modo proyector | ✅ | `armazon/01` |
 | 18 | La sesión avisa 5 minutos antes de vencer y, al vencer, vuelve al ingreso con «La sesión venció.» | ✅ | `seguridad/02`, `seguridad/03` |
 | 19 | Ninguna violación de la CSP en la consola de la ventana principal (invitado y después admin) en toda la corrida: los únicos errores son el 401 del paso 2 y el 422 del paso 12, a propósito | ✅ | consola de Playwright |
@@ -104,15 +107,22 @@ página entera; las demás, lo que entra en la ventana. El 3 de `pruebas/` descr
 
 ### `impacto/`
 
+Tomadas otra vez el **28/11/2026** sobre `develop` `8c77341`, con la PR #115 ya fusionada (revisión de los textos
+de Impacto, issue #101), contra un Compose levantado limpio con dos nodos, en la misma ventana de 1440 × 900, con
+la sesión de admin y con los mismos nombres de archivo. Impacto no depende del estado del sistema: sale de
+`/datos/impacto.json`, el mismo archivo que el 27/11 (SHA-256 `489c6cab…`), así que las cifras son las mismas y
+cambian solo los textos. `06-quienes-tendrian-aviso.png` conserva el nombre aunque la sección ahora se titula «Dónde
+podría servir esta información».
+
 | Archivo | Qué muestra |
 |---|---|
-| `01-impacto.png`, `02-impacto-completa.png` | La página de impacto, arriba y entera |
+| `01-impacto.png`, `02-impacto-completa.png` | La página de impacto, arriba y entera: mediciones históricas, que no son lecturas en vivo ni una medición de la exposición |
 | `03-eca-e-inca.png` | El problema: qué es el ECA y qué es el INCA |
-| `04-horas-sobre-eca.png` | 1 184 horas sobre el ECA de 64 748 con media calculable (1.8 %), y su reparto por banda INCA |
+| `04-horas-sobre-eca.png` | 1 184 horas-estación sobre el ECA de las 64 748 con media calculable (1.8 %); la misma hora en dos estaciones cuenta dos veces. Debajo, cómo se reparten entre las bandas INCA esas 64 748 horas-estación con media calculable, no solo las que superaron el ECA |
 | `05-por-estacion.png` | Por estación, con su actividad fiscalizada y las semanas en que midió |
-| `06-quienes-tendrian-aviso.png` | Quiénes tendrían un aviso que hoy no tienen: la población del distrito fila por fila, sin sumarla |
-| `07-acierto-de-las-senales.png` | ¿Sirve la alerta?: precisión y cobertura de las señales hora a hora |
-| `08-anticipacion.png` | ¿Con cuánta anticipación?: 30 episodios, contados de las dos maneras (desde el primer encendido y sin interrupción) |
+| `06-quienes-tendrian-aviso.png` | «Dónde podría servir esta información»: los 10 distritos con estaciones de PM por hora y su población censada fila por fila, como contexto y sin sumarla; no cuenta usuarios, avisos recibidos ni expuestos |
+| `07-acierto-de-las-senales.png` | ¿Sirve la alerta?: la alerta compara la media de 24 horas con el ECA; la precisión y la cobertura de las dos señales horarias describen el conjunto histórico, no una validación con datos nuevos |
+| `08-anticipacion.png` | ¿Con cuánta anticipación?: 30 episodios, contados de dos maneras. En la mediana, la lectura horaria pasó el umbral por primera vez 20 horas antes de que la media cruzara el ECA, pero encendida sin interrupción llevaba apenas 1 hora (18 y 0.5 horas con el régimen alto). La pantalla dice lo que la medida no es: una descripción de lo que pasó en las mismas lecturas con que se entrenó el modelo, no un pronóstico de cuánto antes avisaría el sistema con datos nuevos |
 | `09-lo-que-no-puede-decir.png` | Lo que este dato no puede decir, a la vista |
 
 ### `armazon/`
