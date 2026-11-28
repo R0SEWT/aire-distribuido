@@ -1,24 +1,24 @@
 {
-  "fechaUTC": "2026-11-26T06:31:41.613345+00:00",
-  "fuente": "Capturas reales de Chrome, sin reconstruir la interfaz ni editar las cifras",
-  "baseCodigo": "6d91f4fb694bb9a6c4c811ff1d2f0a0e4caf7e79",
-  "textos": "Cambios locales de la issue #101, aun sin commit al capturar",
-  "entorno": "Compose local separado, API real, MongoDB, Redis y tres nodos",
-  "alcance": "No es una corrida en los PC fisicos del laboratorio ni una prueba de produccion",
+  "fechaUTC": "2026-11-28T07:38:06.679000+00:00",
+  "fuente": "Capturas reales de Chromium manejado con Playwright, sin reconstruir la interfaz ni editar las cifras",
+  "baseCodigo": "887e51e3c6a5fd7b92b618c62325f36f9c6d2790",
+  "textos": "Los de la PR #115 con develop (93f497c) integrado y los commits de horas-estación; sin cambios locales al capturar",
+  "entorno": "Compose local separado (proyecto aire-tb2-pr115), API real, MongoDB, Redis y tres nodos; ventana de 1905 x 904",
+  "alcance": "No es una corrida en los PC físicos del laboratorio ni una prueba de producción",
   "impactoJSONSHA256": "489c6cab9fc425c7282aaa54adc3267c75639c9ec58c5ee9db47755dfcad06bb",
   "capturasSHA256": {
-    "impacto-01-alcance.jpg": "e62be7759978031f51e520616401317ffbb2d06d960fd4c020e1457e0eb1d251",
-    "impacto-02-fuentes.jpg": "accebe7fd5812722027806bb46a1eba8e6dec2dd8567e4017e2863f313282140",
-    "impacto-03-senales.jpg": "a1907604dab410fd79e3a3180263df8770d74a7bcc41248a95ac2ded37b10f71",
-    "impacto-04-limites.jpg": "85d1016304536979c6bf98e8c6e08b5b39963918eeaaf86ddbf4a43f0638e979"
+    "impacto-01-alcance.jpg": "3b7b9310ef181bf536e8c6536c95cf41ad4d2823fd3e355e19e7eb400f14b5fc",
+    "impacto-02-fuentes.jpg": "e636c91708ec2094d8016abed0a2054d6a911ff37c4a3c0d78b026d6cbc6e069",
+    "impacto-03-senales.jpg": "49f271fe822a14bfbb5c4e45aa189e9be5f0d9050965485209932301afb231bc",
+    "impacto-04-limites.jpg": "0a9d02159a39f4fa9264619ec3eec8c8e707be01b2257fafa48ecf7bbd2ab821"
   },
   "codigoSHA256LF": {
-    "web/src/App.test.tsx": "a3cd6ac03091e55fb8a099812b7ad6cb57e6b8853a44eb717c135e6687b6d0d7",
-    "web/src/pantallas/Impacto.test.tsx": "0309de6e38dc412e0fcb3f1284d187f64f356fe9093f9a0923156bcc35ae4709",
+    "web/src/App.test.tsx": "a05a72ae8a2765853ae6b0f6cacc56dbba0c41ef1973f3b59a55e8114f7fbcdd",
+    "web/src/pantallas/Impacto.test.tsx": "613bdde7e2784a9c4170b4246c89046086fb49117d59affcc3b8155ccc933539",
     "web/src/pantallas/Impacto.tsx": "c66663ba1af38bad9985abb1110f2c085d9b71ed183deec47549acc7634cdb23",
-    "web/src/pantallas/impacto/Alerta.tsx": "14a13b1391a6892bbe773505b145c72fbfb7460ac30cd2e8aba449cd8cfed3ad",
-    "web/src/pantallas/impacto/Medido.tsx": "88c362ac852d588384f394b8b63cc62612e2c00da9df36ad61c2f88df2d2a982",
-    "web/src/pantallas/impacto/apoyo.tsx": "e94eeeb84c15f928d0bbfd46e3a9c58574ed3cd61528bb5bf4b20eef63b4754e"
+    "web/src/pantallas/impacto/Alerta.tsx": "a6b6b631cccbb798a1e66b2f83a8965c9cd69d7b84e6636cc6a256bf4a267371",
+    "web/src/pantallas/impacto/Medido.tsx": "98053e0a46524cf4a7bfd3ca047ddac3228312b38ca3b6ea5d6645b1f0b7a011",
+    "web/src/pantallas/impacto/apoyo.tsx": "4552742e3a49b552311186e5729e6e73fd8bb1c3b4f825f120ebffcabd9eb6f9"
   },
-  "impactoJSONOrigenHuella": "Bytes LF servidos en /datos/impacto.json; coinciden con el blob versionado de la base del codigo"
+  "impactoJSONOrigenHuella": "Bytes LF servidos en /datos/impacto.json; coinciden con el blob versionado de la base del código"
 }

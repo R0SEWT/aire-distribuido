@@ -70,8 +70,8 @@ un impacto sanitario ni una evaluación con lecturas futuras.
 
 ## Capturas de la revisión
 
-La interfaz se revisó en Chrome contra una instancia separada de la API real, con
-MongoDB, Redis y tres nodos. Estas imágenes son capturas del navegador; no se
+La interfaz se revisó contra una instancia separada de la API real, con MongoDB,
+Redis y tres nodos. Estas imágenes son capturas del navegador; no se
 reconstruyeron los gráficos ni se editaron las cifras:
 
 - [Alcance histórico y horas-estación](informe/capturas/tb2/textos-impacto/impacto-01-alcance.jpg).
@@ -80,9 +80,9 @@ reconstruyeron los gráficos ni se editaron las cifras:
 - [Limitaciones de los datos y la anticipación](informe/capturas/tb2/textos-impacto/impacto-04-limites.jpg).
 
 La [procedencia de las capturas](informe/capturas/tb2/textos-impacto/procedencia.json)
-identifica la base del código, los textos locales aún sin commit, las huellas del
-código revisado y del JSON de impacto, y las de las propias imágenes. No son
-evidencias de una corrida en el laboratorio ni de rendimiento en producción.
+identifica el commit capturado, las huellas del código revisado y del JSON de
+impacto, y las de las propias imágenes. No son evidencias de una corrida en el
+laboratorio ni de rendimiento en producción.
 
 ## Ajustes de la revisión del PR #115 — 27 de noviembre
 
@@ -95,3 +95,21 @@ Con esos ajustes pasan las 708 pruebas, lint y build en Linux con Node 22. En un
 copia temporal se quitaron la advertencia y se reintrodujo el total antiguo con
 ambas unidades: las pruebas fallaron en los tres casos esperados. Los archivos de
 la aplicación se conservaron corregidos; las regresiones solo se simularon en esa copia.
+
+## Ajustes de la revisión del PR #115 — 28 de noviembre
+
+Quedaban totales que suman estaciones dichos en «horas»: el rótulo «De las
+horas-estación con media calculable», «esas 64,748 horas-estación» de la barra de
+bandas y la unidad de cada banda, «el 44 % de las horas-estación sobre el ECA» de
+la cobertura, el detalle de las señales y su «¿De dónde sale este número?». Ahora
+dicen horas-estación. Las horas de una sola estación, las de la anticipación y el
+título de la sección siguen en horas. La prueba de las cifras de otro
+`impacto.json` exige el rótulo y la frase de la barra con horas-estación, y falla
+si se vuelve a escribir «horas».
+
+La captura de las fuentes mostraba la etiqueta anterior de la fuente gold, que el
+segundo commit ya había corregido, y por eso las huellas de la procedencia no
+coincidían con el código. Las cuatro capturas se volvieron a tomar con
+Chromium manejado con Playwright, en una ventana de 1905 × 904, contra el Compose
+de esta rama con develop integrado y sin cambios locales; la procedencia se
+regeneró con el commit capturado.
