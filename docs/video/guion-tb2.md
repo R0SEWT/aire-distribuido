@@ -25,7 +25,8 @@ y de la PC4): Dayana el dato y las bases, Julio la API (contrato, Postman, laten
 - `Duración`: el tiempo objetivo. Sale de leer el texto a ritmo natural (unas 2,3 palabras por segundo).
   El montaje ajusta lo que se ve a lo que dure el clip de verdad.
 - `Cámara`: `burbuja` (un círculo con la cámara sobre lo que se ve, abajo a la derecha; `izq` lo pasa a
-  la izquierda) o `completa` (la cámara llena la pantalla con el nombre abajo).
+  la izquierda y `arriba`, arriba a la derecha) o `completa` (la cámara llena la pantalla con el nombre
+  abajo). Sin video en el clip (solo audio), va un círculo con las iniciales.
 - `Pantalla`: qué se ve detrás. Puede haber varias líneas `Pantalla`; `parte=0.4` dice qué fracción
   del bloque ocupa cada una (las que no lo dicen se reparten el resto). Los tipos:
   - `remotion ID | pie`: una escena animada de `docs/video/remotion/`, renderizada a la duración del
@@ -90,7 +91,7 @@ guarda en MongoDB y Redis y atiende a una SPA en React. Docker Compose levanta t
 
 - Quién: Dayana
 - Duración: 0:35
-- Cámara: burbuja izq
+- Cámara: burbuja arriba
 - Pantalla: `remotion PipelineCargador | El pipeline del cargador (cmd/cargar): bloques por bytes, un pool de workers y la fusión en orden de bloque`
 - Qué se ve: la escena animada del pipeline: el CSV, los bloques, los workers, la fusión y el gold, y al
   final las tarjetas con 1,33 s y 4,94×.
@@ -136,13 +137,14 @@ parciales se fusionan en orden de nodo. Con uno a cuatro nodos sale el mismo mod
 - Qué se ve: Swagger con las rutas y el `POST /api/predicciones` abierto; después la medición de latencia
   en la terminal, con el p99 de cada nivel y «cumple».
 - Cifras: 80 000 pedidos [api_latencia.pedidos_total], 64 clientes [api_latencia.clientes_max], p99 de
-  3,14 ms [api_latencia.p99_peor], 0 errores [api_latencia.errores], límite de 100 ms.
+  3,14 ms en el informe [api_latencia.p99_peor] y de 5,9 ms en la corrida grabada (la máquina estaba grabando a
+  la vez: por eso se dice «no pasó de 6»), 0 errores [api_latencia.errores], límite de 100 ms.
 
 ```dice
 Soy Julio. La API está hecha con net/http, sin frameworks, y su contrato está en OpenAPI. Los pedidos
 llevan un token JWT con su rol, usuario o admin. Una lectura entra por POST: la API le asigna el régimen,
 actualiza la media de 24 horas de la estación, decide la alerta y la avisa por WebSocket. Con 80 mil
-pedidos y hasta 64 clientes a la vez, el percentil 99 fue de 3 milisegundos, muy debajo de los 100.
+pedidos y hasta 64 clientes a la vez, el percentil 99 no pasó de 6 milisegundos, muy debajo de los 100.
 ```
 
 ## Bloque 06 · MongoDB y Redis
@@ -220,18 +222,19 @@ los nodos con su latencia, el CPU del coordinador, la latencia de cada ruta y lo
 - Duración: 0:40
 - Cámara: burbuja
 - Pantalla: `pantalla impacto | Impacto: con datos reales del gold (reports/impacto.json)`
-- Qué se ve: la página de impacto de arriba abajo: cuánto tiempo, dónde y junto a qué, quién vive ahí,
-  si sirve la alerta, la anticipación y lo que el dato no puede decir.
+- Qué se ve: la página de impacto de arriba abajo, en el orden en que se narra: las horas sobre el ECA,
+  la población de cada distrito, la anticipación (las dos medidas) y lo que el dato no puede decir.
 - Cifras: 64 748 horas calculables y 1 184 sobre el ECA [alerta.horas_calculables,
-  alerta.horas_sobre_eca]; 30 episodios, mediana de 20 horas [impacto.anticipacion.total]; 17 de 33
-  estaciones con PM por hora, en 10 distritos [impacto.alcance].
+  alerta.horas_sobre_eca]; 30 episodios, mediana de 20 horas desde el primer encendido y de 1 hora
+  encendida sin interrupción [impacto.anticipacion.total.lectura_horaria]; 17 de 33 estaciones con PM
+  por hora, en 10 distritos [impacto.alcance].
 
 ```dice
-¿Y para qué sirve? De 64 748 horas con media de 24 horas, 1 184 superaron el ECA. En los 30 episodios
-en que la media cruzó la norma, la primera lectura sobre el umbral apareció una mediana de 20 horas
-antes: es una medida sobre los mismos datos, no un pronóstico. Cada estación muestra la población de su
-distrito, sin sumarla. Y una advertencia: solo 17 de las 33 estaciones miden por hora, y una zona sin
-estación no es una zona con aire limpio.
+¿Y para qué sirve? De 64 748 horas con media de 24 horas, 1 184 superaron el ECA. Cada estación muestra
+la población de su distrito, sin sumarla: es quien tendría un aviso que hoy no tiene. En los 30 episodios
+en que la media cruzó la norma, la lectura horaria pasó el umbral por primera vez una mediana de 20 horas
+antes, pero seguida, apenas una hora: es una descripción, no un pronóstico. Y solo 17 de las 33
+estaciones miden por hora: una zona sin estación no es una zona con aire limpio.
 ```
 
 ## Bloque 11 · Pruebas y despliegue
@@ -239,7 +242,7 @@ estación no es una zona con aire limpio.
 - Quién: Julio
 - Duración: 0:20
 - Cámara: burbuja
-- Pantalla: `terminal tests | go test -race -count=1 ./... (grabación real) | parte=0.5 | vel=8`
+- Pantalla: `terminal pruebas | go test -race -count=1 ./... (grabación real) | parte=0.5 | vel=6`
 - Pantalla: `terminal compose | docker compose up --build --scale nodo=3 y docker compose ps (grabación real)`
 - Qué se ve: las pruebas de todos los paquetes con el detector de carreras; el Compose con la UI, la
   API, tres nodos, MongoDB y Redis sanos.

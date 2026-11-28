@@ -50,11 +50,11 @@ carpeta de Drive donde dice `[enlace de Drive]` y, si la rama ya está en GitHub
 > de carga entraron 80 800 escrituras sin perder ninguna.
 >
 > *10-dayana · Impacto social (0:40)*
-> ¿Y para qué sirve? De 64 748 horas con media de 24 horas, 1 184 superaron el ECA. En los 30 episodios
-> en que la media cruzó la norma, la primera lectura sobre el umbral apareció una mediana de 20 horas
-> antes: es una medida sobre los mismos datos, no un pronóstico. Cada estación muestra la población de su
-> distrito, sin sumarla. Y una advertencia: solo 17 de las 33 estaciones miden por hora, y una zona sin
-> estación no es una zona con aire limpio.
+> ¿Y para qué sirve? De 64 748 horas con media de 24 horas, 1 184 superaron el ECA. Cada estación muestra
+> la población de su distrito, sin sumarla: es quien tendría un aviso que hoy no tiene. En los 30 episodios
+> en que la media cruzó la norma, la lectura horaria pasó el umbral por primera vez una mediana de 20 horas
+> antes, pero seguida, apenas una hora: es una descripción, no un pronóstico. Y solo 17 de las 33
+> estaciones miden por hora: una zona sin estación no es una zona con aire limpio.
 
 ## Mensaje 3 (Julio)
 
@@ -64,8 +64,8 @@ carpeta de Drive donde dice `[enlace de Drive]` y, si la rama ya está en GitHub
 > Soy Julio. La API está hecha con net/http, sin frameworks, y su contrato está en OpenAPI. Los pedidos
 > llevan un token JWT con su rol, usuario o admin. Una lectura entra por POST: la API le asigna el
 > régimen, actualiza la media de 24 horas de la estación, decide la alerta y la avisa por WebSocket. Con
-> 80 mil pedidos y hasta 64 clientes a la vez, el percentil 99 fue de 3 milisegundos, muy debajo de los
-> 100.
+> 80 mil pedidos y hasta 64 clientes a la vez, el percentil 99 no pasó de 6 milisegundos, muy debajo de
+> los 100.
 >
 > *07-julio · Demo: ingreso, escenario y tiempo real (0:30)*
 > Ahora la interfaz, de punta a punta. Entro con usuario y clave, y la API me devuelve el token. El panel
