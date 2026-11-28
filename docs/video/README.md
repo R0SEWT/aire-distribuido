@@ -38,6 +38,25 @@ bash docs/video/armar-tb2.sh --tiempos   # cuánto dura cada bloque con los clip
 bash docs/video/armar-tb2.sh --hojas     # build/tb2/guion-NOMBRE.pdf: los textos de cada uno en letra grande
 ```
 
+**La ronda de revisión** cuando llegan clips (la coordinadora los copia a `docs/video/clips/`):
+
+```bash
+bash docs/video/revisar-clips.sh              # cada clip contra el guion → build/tb2/revision/revision-clips.md
+bash docs/video/armar-tb2.sh --final          # o sin --final mientras falten: lo que falta va con voz sintética
+bash docs/video/revisar-clips.sh --solo-video # transcripción del mp4 montado, bloque por bloque
+```
+
+`revisar-clips.sh` corre en exodia (`revisar_clips.py`, con ffprobe, ffmpeg y faster-whisper «small» en un
+entorno efímero de uv; la caché queda en `exodia:~/Code/exprimental/temp/cache-whisper/`). Por clip mide
+la voz sin los silencios de los bordes contra la duración del guion (observación si se pasa por más de
+5 s), la imagen (horizontal y 720p o más, o si es solo audio), el nivel (saturado desde -0,5 dBTP, muy
+bajo bajo -35 LUFS) y los silencios, y compara la transcripción con el texto: **una cifra distinta o que
+no se oye es una observación**, con el segundo y la frase; las palabras dichas de otra forma son
+informativas. La transcripción automática se equivoca: antes de pedir que se regrabe, escuchar el
+segundo. Lo que depende de quien grabó (una cifra, un clip vertical, audio inservible) no se arregla en
+el montaje: se reporta y lo decide Rody. Después del montaje, la auditoría (`revisar-entrega`, modo A) y
+el corrector en frío leen `transcripcion-video.md` y los fotogramas de `build/tb2/fotogramas/`.
+
 **Dónde se codifica.** En la laptop de Rody no se corre ffmpeg que codifique (skill `ffmpeg-exodia`):
 si está `exodia-ff`, `armar-tb2.sh` prepara aquí lo que no necesita ffmpeg (las voces sintéticas que
 falten, las escenas de Remotion, que traen su propio ffmpeg, y los GIF de la terminal con agg), arma el
