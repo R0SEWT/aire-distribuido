@@ -1050,7 +1050,7 @@
   },
   "metadatos": {
     "momento": "2026-11-01T23:56:22.680357814-05:00",
-    "maquina": "A019803",
+    "maquina": "rosewt-lenovo",
     "version_go": "go1.27.3",
     "gomaxprocs": 14,
     "cpus_logicas": 14,
