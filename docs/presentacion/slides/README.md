@@ -40,7 +40,8 @@ En línea, la de la PC3: <https://uni.rosewt.dev/concurrente/pc3/>. La del TB2 s
 
 - **El texto** los toma de `docs/informe/generado/cifras.yml`, los mismos del informe, con el
   shortcode `{{< meta cifras.… >}}`. Lo que solo cita el deck lo escribe `datos.py` en `_deck.yml`
-  (`{{< meta deck.… >}}`): las funciones de prueba de Go, los archivos de prueba del frontend y las
+  (`{{< meta deck.… >}}`): las funciones de prueba de Go, las pruebas del frontend, la latencia del
+  WebSocket y las
   cifras de impacto de `reports/impacto.json` (horas sobre el ECA, episodios, anticipación, el
   distrito con más horas sobre el ECA), con el mismo formato que `tablas.py`.
 - **Los gráficos de D3** leen `datos.js`, que `datos.py` arma desde `reports/*.json` sin redondear
@@ -49,12 +50,13 @@ En línea, la de la PC3: <https://uni.rosewt.dev/concurrente/pc3/>. La del TB2 s
 - **El código Go** de las láminas de sockets, de la ronda y de la API es texto, no imagen, con el
   archivo encima: son extractos del código real (las referencias con su línea están en
   `../preguntas.md`). Si el código cambia, hay que revisarlos a mano.
-- **Las capturas de la app**: `img/app-{panel,simulacion,impacto}.png` son de
-  <https://aire.rosewt.dev> a 1440×860, tomadas el 27/11/2026 con la cuenta de invitado;
-  `img/app-{cluster,entrenamiento}.png` son copias de `docs/informe/capturas/tb2/` (PR #117), de la
-  corrida de punta a punta sobre el Compose del repo. Si se vuelven a tomar, se reemplazan aquí.
+- **Las capturas de la app** son las de `docs/informe/capturas/tb2/`, de la corrida de punta a
+  punta del 27/11/2026 sobre el Compose del repo (su README dice cómo se tomaron): referenciadas,
+  no copiadas, como las figuras del informe.
 - **Las cifras de otras plataformas** (el cargador en Windows y la reproducción en macOS) son
-  `cifras.benchmark_cargador_windows` y `cifras.revision`, del informe.
+  `cifras.benchmark_cargador_windows` y `cifras.revision`, del informe. Las pruebas del frontend
+  y la latencia del WebSocket entre dos sesiones las lee `datos.py` de
+  `docs/informe/capturas/tb2/pruebas/` (`web-pruebas.txt` y `ws_latencia.json`).
 - **Las figuras y diagramas** son los del informe (`docs/diagramas/`,
   `docs/informe/generado/figuras/`), referenciados, no copiados.
 - **Las capturas de terminal** son la pantalla entera y en una lámina no se leen: `recortes.py`

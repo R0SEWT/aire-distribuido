@@ -36,7 +36,7 @@ revisa su parte antes de exponer.
 | 18 | Menos de 100 ms con 64 clientes | Julio | 0:30 |
 | 19 | MongoDB y Redis | Dayana | 0:40 |
 | 20 | Separador: la interfaz | Dayana | 0:05 |
-| 21 | La SPA (capturas reales de aire.rosewt.dev) | Dayana | 0:45 |
+| 21 | La SPA (capturas reales: el panel en alerta y la simulación que cruza el ECA) | Dayana | 0:45 |
 | 22 | Seguridad: la UI esconde, la API decide | Dayana | 0:40 |
 | 23 | Separador: lo que responde | Julio | 0:05 |
 | 24 | Evaluación experimental | Julio | 0:45 |
@@ -191,7 +191,7 @@ go test -race -run SobreTCP -v ./protocolo/
 reales de la app (la lámina de la SPA y dos respaldos: las pantallas de admin, Clúster y
 Entrenamiento, y la de Impacto), y el video del TB2 muestra el sistema de punta a punta. Las
 capturas completas de cada pantalla, con su lista de punta a punta, están en
-`docs/informe/capturas/tb2/` (PR #117).
+`docs/informe/capturas/tb2/`.
 
 ## Lo que no se dice
 

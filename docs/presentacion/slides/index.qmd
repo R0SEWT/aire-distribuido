@@ -725,15 +725,15 @@ Una SPA que muestra el estado de cada estación, las alertas y el clúster en ti
 
 ::: {.apps}
 ::: {}
-![](img/app-panel.png){.app}
+![](../../informe/capturas/tb2/panel/04-panel-tras-escenario-invitado.png){.app}
 
-[Panel: el último estado de cada estación en el mapa, con la banda INCA y la alerta]{.pie}
+[Panel del invitado, lleno por el WebSocket mientras el admin cargaba el escenario: 2 estaciones en alerta, las ladrilleras de Lurigancho]{.pie}
 :::
 
 ::: {}
-![](img/app-simulacion.png){.app}
+![](../../informe/capturas/tb2/simulacion/06-dia-cruza-eca-terminado.png){.app}
 
-[Simulación: lecturas reales enviadas una por una; la ventana de 24 h se llena y la alerta se enciende]{.pie}
+[Simulación de CA-ESP-01 el 21/12/2021: lecturas reales enviadas una por una; la alerta se enciende a las 07:00 por PM10]{.pie}
 
 ::: {.lista style="font-size: 0.5em; margin-top: 0.5em;"}
 - Ingreso, panel, estación, simulación e impacto; para el admin, entrenamiento y clúster (nodos,
@@ -747,9 +747,11 @@ Una SPA que muestra el estado de cada estación, las alertas y el clúster en ti
 ::: notes
 [0:45 · Dayana] La interfaz es una SPA en React con TypeScript, y los gráficos y el mapa en D3, sin
 teselas de terceros: funciona sin internet.
-A la izquierda, el panel: el último estado recibido de cada estación, con su banda INCA y si está en
-alerta. A la derecha, la simulación: se eligen una estación y un día, y la UI manda las lecturas
-reales una por una a la API; se ve llenarse la ventana de 24 horas y encenderse la alerta.
+A la izquierda, el panel de un invitado: el último estado recibido de cada estación, con su banda
+INCA y si está en alerta. Se llenó solo, por el WebSocket, mientras el admin cargaba un escenario
+desde otro navegador; quedaron en alerta las dos ladrilleras de Lurigancho. A la derecha, la
+simulación: se eligen una estación y un día, y la UI manda las lecturas reales una por una a la API;
+se ve llenarse la ventana de 24 horas y, a las 7 de la mañana, encenderse la alerta por PM10.
 El admin ve además el entrenamiento, donde elige cuántos nodos usar y sigue cada ronda en vivo, y el
 clúster: nodos conectados, CPU, latencia por ruta y eventos. Todo lo que cambia llega por el
 WebSocket, sin recargar.
@@ -820,7 +822,8 @@ secretos van en un .env que no está en el repositorio.
 | Qué se probó | Cómo | Resultado |
 |:--|:--|:--|
 | Sin condiciones de carrera | `go test -race ./...` en cada push y PR (CI) | {{< meta deck.pruebas >}} funciones de prueba de Go |
-| La interfaz | Vitest, en el CI | {{< meta deck.pruebas_web >}} archivos de prueba |
+| La interfaz | Vitest, en el CI | {{< meta deck.pruebas_web >}} pruebas en {{< meta deck.archivos_web >}} archivos |
+| Tiempo real | una lectura que manda el admin llega por WebSocket al panel de un invitado ({{< meta deck.ws.lecturas >}} lecturas) | p50 de {{< meta deck.ws.p50 >}} ms y p99 de {{< meta deck.ws.p99 >}} ms; {{< meta deck.ws.sin_evento >}} sin evento |
 | Distribuido = secuencial | `cmd/distribuido` con 1 a {{< meta cifras.distribuido.nodos_max >}} nodos | 1 nodo: bit a bit; hasta {{< meta cifras.distribuido.nodos_max >}}: ≤ {{< meta cifras.distribuido.dif_max >}} |
 | Clúster en el laboratorio | `cmd/smoke`, {{< meta cifras.smoke.nodos >}} PC, {{< meta cifras.smoke.rondas >}} rondas | barrera p50 de {{< meta cifras.smoke.p50 >}} ms |
 | API en menos de 100 ms | `cmd/carga`, {{< meta cifras.api_latencia.pedidos_total >}} pedidos, 1 a {{< meta cifras.api_latencia.clientes_max >}} clientes | p99 ≤ {{< meta cifras.api_latencia.p99_max >}} ms; {{< meta cifras.api_latencia.sobre_el_limite >}} sobre el límite |
@@ -828,13 +831,13 @@ secretos van en un .env que no está en el repositorio.
 | Limpieza y K-Means | Auditoría independiente en pandas y scikit-learn | {{< meta cifras.auditoria.ok >}} de {{< meta cifras.auditoria.chequeos >}} chequeos sin diferencias |
 | El mismo resultado en otra máquina | La PC3 rehecha en {{< meta cifras.revision.plataforma >}} | mismos SHA-256 del silver y el gold; {{< meta cifras.revision.ok >}} de {{< meta cifras.revision.chequeos >}} chequeos |
 | El cargador en otra plataforma | {{< meta cifras.benchmark_cargador_windows.plataforma >}}, {{< meta cifras.benchmark_cargador_windows.cpus >}} CPU, {{< meta cifras.benchmark_cargador_windows.repeticiones >}} repeticiones | {{< meta cifras.benchmark_cargador_windows.speedup >}}× con {{< meta cifras.benchmark_cargador_windows.w_resumen >}} workers, {{< meta cifras.benchmark_cargador_windows.speedup_ic >}} |
-| La pregunta de impacto | `scripts/impacto.py` sobre el gold y el silver | la lámina siguiente |
 :::
 
 ::: notes
 [0:45 · Julio] La evaluación, en una tabla. Todas las pruebas de Go corren con el detector de
-carreras, en cada push y en cada PR: 549 funciones de prueba. La interfaz tiene sus pruebas en
-Vitest.
+carreras, en cada push y en cada PR: 549 funciones de prueba. La interfaz tiene 708 pruebas en
+Vitest. Y el tiempo real se midió entre dos sesiones distintas: lo que manda el admin le llega al
+panel de un invitado en 2,25 milisegundos de mediana.
 El distribuido da el mismo modelo que el secuencial: bit a bit con un nodo, y con hasta cuatro, a
 10 a la menos 15. En el laboratorio, con 4 PC, una ronda tarda medio milisegundo. La API, menos de
 100 ms con 64 clientes. La colección de Postman con datos de prueba recorre la API de punta a
@@ -1190,17 +1193,17 @@ Gracias; ¿preguntas?
 
 ## Las pantallas de admin: clúster y entrenamiento {.respaldo}
 
-[Respaldo · plan B de la demo · docs/informe/capturas/tb2/ (PR #117)]{.eyebrow}
+[Respaldo · plan B de la demo · docs/informe/capturas/tb2/]{.eyebrow}
 
 ::: {.apps style="grid-template-columns: 1fr 1fr;"}
 ::: {}
-![](img/app-cluster.png){.app}
+![](../../informe/capturas/tb2/cluster/01-cluster.png){.app}
 
 [Clúster: cada nodo con la IP:puerto de su conexión TCP, el latido y la ronda; CPU de la API, peor p99 y los eventos de altas y bajas]{.pie}
 :::
 
 ::: {}
-![](img/app-entrenamiento.png){.app}
+![](../../informe/capturas/tb2/entrenamiento/05-resultado.png){.app}
 
 [Entrenamiento configurado desde la UI (2 nodos, 1 réplica, semilla 42): 44 rondas, convergió, 7,7 × 10⁻¹⁵ con el secuencial y el modelo activado]{.pie}
 :::
@@ -1210,8 +1213,8 @@ Gracias; ¿preguntas?
 
 ## Impacto: la pantalla de la app {.respaldo}
 
-[Respaldo · aire.rosewt.dev/impacto]{.eyebrow}
+[Respaldo · docs/informe/capturas/tb2/impacto/]{.eyebrow}
 
-![](img/app-impacto.png){.app style="max-height: 470px;"}
+![](../../informe/capturas/tb2/impacto/01-impacto.png){.app style="max-height: 470px;"}
 
 [Las bandas INCA (RM 181-2016-MINAM) de las {{< meta cifras.alerta.horas_calculables >}} horas calculables: buena {{< meta cifras.alerta.inca_buena >}}, moderada {{< meta cifras.alerta.inca_moderada >}}, mala {{< meta cifras.alerta.inca_mala >}} y umbral de cuidado {{< meta cifras.alerta.inca_umbral >}}.]{.nota}

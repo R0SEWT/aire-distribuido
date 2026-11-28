@@ -2,7 +2,13 @@
 # Uso en el .qmd: shortcode meta con la clave deck.… (deck.impacto.episodios)
 deck:
   pruebas: "549"
-  pruebas_web: "36"
+  pruebas_web: "708"
+  archivos_web: "36"
+  ws:
+    lecturas: "132"
+    p50: "2,25"
+    p99: "9,98"
+    sin_evento: "0"
   impacto:
     estaciones_ficha: "33"
     estaciones_pm: "17"

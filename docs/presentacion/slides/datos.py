@@ -192,10 +192,28 @@ def latencia(lat: dict) -> dict:
     }
 
 
-def pruebas_web() -> int:
-    """Archivos de prueba del frontend (Vitest): web/src/**/*.test.ts(x) y web/pruebas/."""
-    web = RAIZ / "web"
-    return sum(1 for p in web.rglob("*.test.ts*") if "node_modules" not in p.parts)
+PRUEBAS_TB2 = RAIZ / "docs" / "informe" / "capturas" / "tb2" / "pruebas"
+
+
+def pruebas_web() -> tuple[int, int]:
+    """Pruebas y archivos de prueba del frontend, de la corrida de Vitest que guardó la sesión de
+    capturas del TB2 (pnpm test en web-pruebas.txt). Tienen que haber pasado todas."""
+    texto = (PRUEBAS_TB2 / "web-pruebas.txt").read_text(encoding="utf-8")
+    cuenta = {}
+    for clave, patron in (("archivos", r"Test Files\s+(\d+) passed \((\d+)\)"), ("pruebas", r"Tests\s+(\d+) passed \((\d+)\)")):
+        m = re.search(patron, texto)
+        assert m and m.group(1) == m.group(2), f"web-pruebas.txt: {clave} que no pasaron o no están"
+        cuenta[clave] = int(m.group(1))
+    return cuenta["pruebas"], cuenta["archivos"]
+
+
+def tiempo_real() -> dict:
+    """De lo que manda una sesión a lo que ve otra por el WebSocket (pruebas/ws_latencia.json)."""
+    ws = json.loads((PRUEBAS_TB2 / "ws_latencia.json").read_text(encoding="utf-8"))
+    assert ws["cumple"] and not ws["metadatos"]["mismo_token"], "ws_latencia.json no cumple o es una sola sesión"
+    ev = ws["evento_ms"]
+    return {"lecturas": entero(ws["lecturas"]), "p50": decimal(ev["p50"], 2), "p99": decimal(ev["p99"], 2),
+            "sin_evento": entero(ws["sin_evento"])}
 
 
 def pruebas() -> int:
@@ -254,12 +272,16 @@ def main() -> None:
     }
     texto_impacto, series_impacto = impacto(leer("impacto.json"))
     datos["impacto"] = series_impacto
-    web = pruebas_web()
+    web, archivos_web = pruebas_web()
+    ws = tiempo_real()
     js = ("// Generado por datos.py desde reports/*.json. No editar a mano.\n"
           "window.DATOS = " + json.dumps(datos, ensure_ascii=False, indent=1) + ";\n")
     (AQUI / "datos.js").write_text(js, encoding="utf-8")
     # Lo que el texto del deck cita y no está en cifras.yml: se lee con {{< meta deck.x >}}
-    lineas = [f'  pruebas: "{entero(datos["pruebas"])}"', f'  pruebas_web: "{entero(web)}"', "  impacto:"]
+    lineas = [f'  pruebas: "{entero(datos["pruebas"])}"', f'  pruebas_web: "{entero(web)}"',
+              f'  archivos_web: "{entero(archivos_web)}"', "  ws:"]
+    lineas += [f'    {k}: "{v}"' for k, v in ws.items()]
+    lineas.append("  impacto:")
     lineas += [f'    {k}: "{v}"' for k, v in texto_impacto.items()]
     (AQUI / "_deck.yml").write_text(
         "# Generado por datos.py desde reports/. No editar a mano.\n"
@@ -267,7 +289,7 @@ def main() -> None:
         "deck:\n" + "\n".join(lineas) + "\n", encoding="utf-8")
     (AQUI / "img" / "estaciones-portada.svg").write_text(portada(limpieza), encoding="utf-8")
     print(f"datos.js, _deck.yml e img/estaciones-portada.svg: {len(datos['niveles'])} niveles, "
-          f"{datos['pruebas']} pruebas de Go, {web} archivos de prueba del frontend, "
+          f"{datos['pruebas']} pruebas de Go, {web} del frontend, WebSocket p50 {ws['p50']} ms, "
           f"{len(series_impacto['tipos'])} tipos de actividad")
 
 

@@ -254,10 +254,12 @@ y la publica en `GET /api/metricas`, que la pantalla Clúster dibuja con la lín
 handler valida el apretón de manos, el origen y el token antes de responder `101`, y le quita la
 conexión a `net/http` con `Hijack`. Un hub con canales de alta, baja y difusión reparte los eventos:
 `estacion.regimen` cuando cambia una estación y `entrenamiento.ronda` en cada ronda. Cada cliente
-tiene un búfer de 256 mensajes; si no lee a ese ritmo, se cierra con el código 1008.
+tiene un búfer de 256 mensajes; si no lee a ese ritmo, se cierra con el código 1008. Medido entre
+dos sesiones distintas (lo que manda el admin, lo que recibe un invitado que solo escucha), un
+evento llega en 2,25 ms de mediana y 9,98 ms en el p99, sobre 132 lecturas.
 
-*Dónde:* `api/ws.go:17-30`, `api/hub.go:58-61` (canales), `:471-500` (`seguirEventos`) · *Quién:*
-Julio · *Lámina:* 17
+*Dónde:* `api/ws.go:17-30`, `api/hub.go:58-61` (canales), `:471-500` (`seguirEventos`),
+`docs/informe/capturas/tb2/pruebas/ws_latencia.json` · *Quién:* Julio · *Lámina:* 17 y 24
 
 ## MongoDB y Redis
 
