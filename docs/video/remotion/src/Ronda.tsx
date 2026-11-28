@@ -71,7 +71,7 @@ const Nodo: React.FC<{ fps: number; i: number }> = ({ fps, i }) => {
     <Caja fps={fps} x={NX} y={NY[i]} w={NW} h={NH} color={C.cian} aparece={llega} desde={llega} hasta={llega + 1.6} apagada={0.9}>
       <div style={{ padding: "14px 22px 0", display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
         <span style={{ fontSize: 30, fontWeight: 700, color: C.texto }}>nodo-{i + 1}</span>
-        <span style={{ fontSize: 19, color: C.mudo, fontFamily: MONO }}>net.Dial("tcp", "api:{datos.puerto_nodos}")</span>
+        <span style={{ fontSize: 19, color: C.mudo, fontFamily: MONO }}>net.Dialer → api:{datos.puerto_nodos}</span>
       </div>
       <Rango fps={fps} i={i} />
       <Goroutines fps={fps} i={i} />
@@ -79,7 +79,8 @@ const Nodo: React.FC<{ fps: number; i: number }> = ({ fps, i }) => {
   );
 };
 
-// La barrera: tres casillas que se llenan cuando llega el PARCIAL de cada nodo.
+// La espera: una goroutine por nodo manda ITERAR y lee su PARCIAL; el WaitGroup espera a las tres.
+// Cada casilla se llena cuando llega el PARCIAL de su nodo.
 const Barrera: React.FC<{ fps: number; llegadas: number[] }> = ({ fps, llegadas }) => {
   const frame = useCurrentFrame();
   const n = llegadas.filter((t) => frame >= t * fps).length;
@@ -89,9 +90,9 @@ const Barrera: React.FC<{ fps: number; llegadas: number[] }> = ({ fps, llegadas 
     <Aparece fps={fps} a={17.4} b={33} style={{ left: 28, top: 225, width: CW - 56 }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
         <div style={{ fontSize: 26, color: C.texto, fontWeight: 600 }}>
-          <span style={{ fontFamily: MONO, color: libre ? C.verde : C.ambar }}>WaitGroup</span> · barrera
+          <span style={{ fontFamily: MONO, color: libre ? C.verde : C.ambar }}>WaitGroup</span> · 3 goroutines
         </div>
-        <div style={{ fontSize: 22, color: C.mudo, fontFamily: MONO }}>
+        <div style={{ fontSize: 22, color: C.mudo, fontFamily: MONO, whiteSpace: "nowrap" }}>
           {libre ? "Wait() volvió" : `${n}/${llegadas.length} parciales`}
         </div>
       </div>
@@ -186,20 +187,19 @@ const Fusion: React.FC<{ fps: number }> = ({ fps }) => {
 const Tabla: React.FC<{ fps: number }> = ({ fps }) => {
   const frame = useCurrentFrame();
   const fondo = entre(frame, fps, 34.8, 35.4);
-  const columnas = "150px 210px 300px 260px";
+  const columnas = "150px 240px 340px";
   return (
     <>
       <div style={{ position: "absolute", inset: 0, background: C.bg, opacity: fondo * 0.95 }} />
       <Aparece fps={fps} a={35} style={{ left: 260, top: 250, width: 1080 }}>
         <div style={{ fontSize: 46, fontWeight: 700, color: C.texto }}>El mismo modelo con 1 a 4 nodos</div>
         <div style={{ fontSize: 26, color: C.mudo, marginTop: 6 }}>
-          {datos.filas_txt} filas del gold, k = {datos.k}, la misma semilla
+          {datos.filas_txt} filas del gold, k = {datos.k}, la misma semilla; nodos como procesos locales en una misma máquina
         </div>
         <div style={{ display: "grid", gridTemplateColumns: columnas, marginTop: 28, fontSize: 24, color: C.mudo }}>
           <div>nodos</div>
           <div>iteraciones</div>
           <div>inercia final</div>
-          <div>sus rondas (ms)</div>
         </div>
         {datos.corridas.map((c, k) => (
           <div
@@ -217,7 +217,6 @@ const Tabla: React.FC<{ fps: number }> = ({ fps }) => {
             <div style={{ color: C.cian }}>{c.nodos}</div>
             <div>{c.iteraciones}</div>
             <div style={{ color: C.verde }}>{c.inercia}</div>
-            <div>{c.ms_rondas.toFixed(1).replace(".", ",")}</div>
           </div>
         ))}
         <div style={{ fontSize: 26, color: C.mudo, marginTop: 26, opacity: entre(frame, fps, 37, 37.5) }}>
@@ -273,7 +272,7 @@ export const Ronda: React.FC<RondaProps> = () => {
       ))}
 
       <Aparece fps={fps} a={8} b={12} style={{ left: CX, top: 850, width: NX + NW - CX }}>
-        <div style={{ fontSize: 24, color: C.mudo }}>Un mensaje por línea, en JSON, sobre la misma conexión TCP:</div>
+        <div style={{ fontSize: 24, color: C.mudo }}>Un mensaje por línea, en JSON, sobre la misma conexión TCP (json.Marshal al escribir, bufio.Reader al leer):</div>
         <div
           style={{
             marginTop: 10,

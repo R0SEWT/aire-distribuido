@@ -363,11 +363,13 @@ def diapositiva_final() -> Image.Image:
     return im
 
 
-def diapositiva_figura(b: Bloque, rutas: list[str], pie: str) -> Image.Image:
+def diapositiva_figura(b: Bloque, rutas: list[str], pie: str, crop: tuple | None = None) -> Image.Image:
     im, d = lienzo()
     y0 = encabezado(d, b.titulo)
     y1 = ALTO - (130 if pie else 80)
     figs = [Image.open(RAIZ / r).convert("RGB") for r in rutas]
+    if crop and len(figs) == 1:  # crop=x,y,ancho,alto: el área de la captura que responde lo que se narra
+        figs = [figs[0].crop((crop[0], crop[1], crop[0] + crop[2], crop[1] + crop[3]))]
     caja_w = (ANCHO - 180 - 40 * (len(figs) - 1)) // len(figs)
     x = 90
     for fig in figs:
@@ -465,7 +467,8 @@ def segmento(b: Bloque, k: int, p: Pantalla, d: float) -> tuple[Path, str]:
         elif p.tipo == "texto":
             im = diapositiva_texto(b, p.rutas[0] if p.rutas else "", [l.strip() for l in p.pie.split(";") if l.strip()])
         else:
-            im = diapositiva_figura(b, p.rutas, p.pie)
+            crop = tuple(int(v) for v in p.extras["crop"].split(",")) if "crop" in p.extras else None
+            im = diapositiva_figura(b, p.rutas, p.pie, crop)
         im.save(png)
         segmento_estatico(png, d, salida)
         return salida, p.tipo
@@ -558,8 +561,11 @@ def capa_burbuja(b: Bloque, con_avatar: bool) -> Path:
     fn, fr = fuente(34, True), fuente(24)
     w = int(max(d.textlength(p["nombre"], font=fn), d.textlength(p["rol"], font=fr))) + 48
     h = 96
-    cy = y + DIAMETRO - h - 10 if b.lado != "arriba" else y + 10
-    cx = x + DIAMETRO + 24 if b.lado == "izq" else x - 24 - w
+    if b.lado == "arriba":  # debajo del círculo: a su izquierda está el título de la escena
+        cx, cy = x + DIAMETRO - w, y + DIAMETRO + 18
+    else:
+        cy = y + DIAMETRO - h - 10
+        cx = x + DIAMETRO + 24 if b.lado == "izq" else x - 24 - w
     d.rounded_rectangle([cx, cy, cx + w, cy + h], radius=16, fill=(15, 17, 23, 225), outline=p["color"] + (255,), width=2)
     d.text((cx + 24, cy + 12), p["nombre"], font=fn, fill=TEXTO + (255,))
     d.text((cx + 24, cy + 56), p["rol"], font=fr, fill=MUDO + (255,))
@@ -726,7 +732,7 @@ def montar() -> None:
     clips, resumen = [], []
     for b in bloques:
         claves = [b.titulo, b.camara, b.lado, json.dumps([p.__dict__ for p in b.pantallas], ensure_ascii=False),
-                  str(b.voz), str(b.ini), str(b.fin), "tb2-v2"]
+                  str(b.voz), str(b.ini), str(b.fin), "tb2-v3"]
         for p in b.pantallas:
             if p.tipo == "pantalla":
                 claves.append(pc3.huella_insumos([str((PANTALLAS / f"{p.rutas[0]}.mp4").relative_to(RAIZ))]))

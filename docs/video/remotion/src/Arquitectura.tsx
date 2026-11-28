@@ -11,7 +11,7 @@ import datos from "./datos-tb2.json";
 //   6,8–10  «un clúster de nodos entrena un K-Means distribuido»: B
 //   10–18   «una API coordinadora habla con los nodos por TCP, guarda en MongoDB y Redis
 //            y atiende a una SPA en React»: C, el enlace TCP, las bases y D
-//   18–20   «Docker Compose levanta todo»: el marco del Compose
+//   18–20   «Docker Compose levanta todo eso, menos el cargador»: el marco del Compose, sin A
 // La esquina de abajo a la derecha queda libre para la cámara del que habla.
 export const BASE_ARQUITECTURA = 20;
 
@@ -88,7 +88,7 @@ export const Arquitectura: React.FC<ArquitecturaProps> = () => {
 
       <Caja fps={fps} x={520} y={230} w={340} h={440} color={C.cian} aparece={1.9} desde={6.8} hasta={10}>
         <Encabezado letra="B" titulo="Clúster" color={C.cian} />
-        <Renglones lineas={["K-Means distribuido", "cada nodo, los parciales de su rango"]} />
+        <Renglones lineas={["K-Means: 3 regímenes por PM2,5 y PM10", "cada nodo, los parciales de su rango"]} />
         {[1, 2, 3].map((i) => (
           <NodoMini key={i} i={i} />
         ))}
@@ -141,20 +141,23 @@ export const Arquitectura: React.FC<ArquitecturaProps> = () => {
       <div
         style={{
           position: "absolute",
-          left: 40,
+          left: 490,
           top: 200,
-          width: 1840,
+          width: 1400,
           height: 750,
           borderRadius: 30,
           border: `3px dashed ${C.azul}`,
           opacity: marco,
         }}
       />
-      <Aparece fps={fps} a={18.2} style={{ left: 70, top: 968, fontSize: 32, color: C.azul, fontFamily: MONO }}>
+      <Aparece fps={fps} a={18.2} style={{ left: 520, top: 968, fontSize: 32, color: C.azul, fontFamily: MONO }}>
         docker compose up --scale nodo=3
       </Aparece>
-      <Aparece fps={fps} a={18.5} style={{ left: 70, top: 1014, fontSize: 24, color: C.mudo }}>
+      <Aparece fps={fps} a={18.5} style={{ left: 520, top: 1014, fontSize: 24, color: C.mudo }}>
         web · api · nodo ×3 · mongo · redis
+      </Aparece>
+      <Aparece fps={fps} a={18.5} style={{ left: 70, top: 640, width: 340, fontSize: 22, color: C.mudo, lineHeight: 1.3 }}>
+        corre antes, fuera del Compose: el gold se monta en la API y en los nodos
       </Aparece>
     </AbsoluteFill>
   );
