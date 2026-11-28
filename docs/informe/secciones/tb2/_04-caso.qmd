@@ -211,7 +211,10 @@ Capas de datos (medallón) y quién produce cada una
 
 ### Restricciones del trabajo
 
-- **Todo el sistema en Go** 1.26, solo con la biblioteca estándar, y contenerizado en Docker.
+- **Todo el sistema en Go** 1.26, con la biblioteca estándar, y contenerizado en Docker. Desde la PC4,
+  las únicas dependencias de Go son los drivers de MongoDB y de Redis, confinados en dos paquetes; la
+  interfaz del TB2 es React, servida por Caddy. Python solo analiza y genera datos para el informe y
+  la interfaz: no corre en el sistema.
 - **Pruebas primero y siempre con `go test -race`**: un test que pasa sin `-race` no demuestra nada
   sobre una sección crítica. La integración continua corre `go test -race`, `go vet` y `gofmt`.
 - **Git Flow**: una rama `feature/*` por pieza (cargador, K-Means, diseño, informe, notebooks),
@@ -219,4 +222,6 @@ Capas de datos (medallón) y quién produce cada una
   entrega sale de `release/pc3` hacia `main` (@sec-evidencias).
 - **Los datos no se versionan**: el CSV pesa 1,3 GB; el repositorio lleva solo una muestra pequeña
   en `data/sample/` para las pruebas y la integración continua.
-- **Capturas reales** de la terminal para cada ejecución que cita el informe.
+- **Capturas reales** de la terminal para cada ejecución que cita el informe. En la PC4, las salidas de
+  los pedidos se volcaron a imagen, con el pedido a la vista, y se dice así donde aparecen; en el
+  TB2, las salidas van como texto y las capturas son de la interfaz real.

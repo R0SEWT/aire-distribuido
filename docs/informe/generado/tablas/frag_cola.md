@@ -12,6 +12,7 @@ func (c *cola) encolar(p almacen.Prediccion) bool {
     }
 }
 
+// …
 func (c *cola) completar(lote []almacen.Prediccion) []almacen.Prediccion {
     for len(lote) < maxLote {
         select {

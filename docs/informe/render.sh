@@ -111,6 +111,19 @@ if [ -f "$arquitectura" ]; then
     cp "$arquitectura" generado/local/arquitectura-girada.png
   fi
 fi
+# La captura de la pantalla del Clúster es la página entera (1425 × 2452): a lo ancho de la hoja no se
+# lee. Se recorta la tarjeta de la latencia por ruta (de y = 1500 a 2385); si la captura cambia, hay
+# que revisar el recorte.
+cluster=capturas/tb2/cluster/02-cluster-completa.png
+if [ -f "$cluster" ]; then
+  if command -v magick >/dev/null 2>&1; then
+    magick "$cluster" -crop 1425x885+0+1500 +repage generado/local/cluster-latencia.png
+  elif command -v convert >/dev/null 2>&1; then
+    convert "$cluster" -crop 1425x885+0+1500 +repage generado/local/cluster-latencia.png
+  else
+    cp "$cluster" generado/local/cluster-latencia.png
+  fi
+fi
 if ! ./generar-historial.sh; then
   echo "aviso: no se pudo generar el historial; se usa generado/historial.ejemplo.md" >&2
   cp generado/historial.ejemplo.md generado/local/historial.md

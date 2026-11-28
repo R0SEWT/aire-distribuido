@@ -31,11 +31,11 @@ ECA, concentradas en {{< meta cifras.impacto.estaciones_con_horas >}} de
 {{< meta cifras.impacto.estaciones_pm >}} estaciones; en dos campañas de
 {{< meta cifras.impacto.top2_dias >}} días en {{< meta cifras.impacto.top2_distrito >}}, una junto a ladrilleras y otra junto a una
 refinería de zinc, la media estuvo sobre el ECA el {{< meta cifras.impacto.top2_pct >}} y el
-{{< meta cifras.impacto.top3_pct >}} de las horas. Antes de los
-{{< meta cifras.impacto.episodios >}} episodios del gold siempre hubo una señal (una lectura horaria
-sobre el umbral, con una mediana de {{< meta cifras.impacto.mediana_horaria >}} horas de margen), pero
-intermitente y con muchas falsas alarmas: por eso el sistema avisa con la media de 24 horas, que es
-la norma. Las evidencias son {{< meta cifras.pruebas_tb2.go_repo >}} pruebas de Go con el detector de
+{{< meta cifras.impacto.top3_pct >}} de las horas. En los
+{{< meta cifras.impacto.episodios >}} episodios del gold, el régimen alto del K-Means apareció antes
+de que la media cruzara el ECA, con una mediana de {{< meta cifras.impacto.mediana_regimen >}} horas de
+margen, pero de forma intermitente y con muchas falsas alarmas: por eso el sistema avisa con la
+media de 24 horas, que es la norma, y da el régimen como contexto. Las evidencias son {{< meta cifras.pruebas_tb2.go_repo >}} pruebas de Go con el detector de
 carreras, {{< meta cifras.frontend.vitest_pruebas >}} de la interfaz, una verificación de
 {{< meta cifras.series.verificadas >}} lecturas reales contra la API con
 {{< meta cifras.series.diferencias >}} diferencias y capturas de corridas reales.

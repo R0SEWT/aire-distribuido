@@ -32,7 +32,9 @@ Falta `docs/diagramas/despliegue-tb2.png` (se genera con `generar-despliegue.py`
 ::::
 
 **La imagen de la API y de los nodos** (@lst-dockerfile) es una sola: trae todos los comandos de Go
-(`api`, `nodo`, `cargar`, `entrenar` y los demás) y el Compose elige cuál corre cada servicio.
+(`api`, `nodo`, `cargar`, `entrenar` y los demás) y el Compose elige cuál corre cada servicio. Es la
+misma imagen de la PC3 (la de la sección «Despliegue con Docker» de sus evidencias), que entonces
+solo traía la carga, el entrenamiento y el benchmark, y que creció con los comandos de la PC4.
 
 {{< include generado/tablas/frag_dockerfile.md >}}
 
@@ -65,7 +67,16 @@ final.
 {{< include generado/tablas/frag_dockerfile_web.md >}}
 
 **El Compose** (@lst-compose) declara los seis servicios, sus puertos, sus volúmenes y el orden en
-que arrancan.
+que arrancan. La carga (parte A) no es un servicio: se corre una vez, antes, con la misma imagen,
+sobre el CSV de OEFA, y deja el gold que el Compose monta en la API y en los nodos:
+
+```bash
+docker build -t aire-distribuido .
+docker run --rm -v "$PWD/data:/datos" aire-distribuido cargar \
+  -entrada /datos/bronze/oefa.csv -silver /datos/silver/oefa_ancho.csv \
+  -gold /datos/gold/oefa_features.csv -reports /datos/reports
+docker compose up --build --scale nodo=3
+```
 
 {{< include generado/tablas/frag_compose.md >}}
 
@@ -111,7 +122,8 @@ El @lst-salida-compose-tb2 es el sistema del TB2 recién levantado, con el servi
 
 Los paquetes de la PC4 se escribieron con sus pruebas, y todas corren con el detector de
 carreras (`go test -race`), en la laptop y en la integración continua de GitHub en cada cambio. La
-@tbl-pruebas-pc4 las cuenta por paquete; con las de la PC3 (@tbl-pruebas), el repositorio tiene
+@tbl-pruebas-pc4 las cuenta por paquete, contadas hoy: incluyen las que el TB2 sumó a esos mismos
+paquetes, que la @tbl-pruebas-tb2 detalla. Con las de la PC3 (@tbl-pruebas), el repositorio tiene
 {{< meta cifras.pruebas.repo >}}.
 
 {{< include generado/tablas/pruebas_pc4.md >}}
@@ -322,8 +334,10 @@ Captura real de pantalla: El `POST /api/entrenamientos` y el `GET` del detalle c
 
 ### Latencia bajo carga {#sec-evidencia-carga}
 
-El @lst-salida-carga es la salida de la prueba de carga de la que sale la @tbl-api-latencia, y el
-@lst-salida-metricas, lo que el propio servidor midió por ruta durante esa corrida.
+El @lst-salida-carga es una corrida de la misma prueba de carga, hecha para la captura de pantalla,
+y el @lst-salida-metricas, lo que el propio servidor midió por ruta durante esa corrida. La
+@tbl-api-latencia sale de otra corrida igual, la que quedó guardada en `reports/api_latencia.json`:
+por eso sus cifras difieren en décimas de milisegundo, y en las dos ningún pedido llega a 5 ms.
 
 {{< include generado/tablas/salida_carga.md >}}
 

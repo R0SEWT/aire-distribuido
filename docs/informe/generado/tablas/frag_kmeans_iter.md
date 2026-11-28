@@ -9,6 +9,7 @@ for it := 1; it <= op.MaxIter; it++ {
     }
 }
 
+// …
 // repartir manda los chunks al pool y espera la barrera.
 func repartir(trabajos chan<- trabajo, barrera *sync.WaitGroup, cantChunks int, asignar bool) {
     barrera.Add(cantChunks)

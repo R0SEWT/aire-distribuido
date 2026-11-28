@@ -11,6 +11,7 @@
 // son múltiplo de D son un error de programación y entran en pánico.
 func Parciales(d *Datos, centroides []float64, desde, hasta int) Parcial {
 
+// …
 // Actualizar recalcula los centroides a partir de un parcial fusionado y dice
 // cuánto se movieron: el mayor desplazamiento de una coordenada,
 // max_j ||mu_j(t) - mu_j(t-1)||inf, que es la norma del criterio de parada del

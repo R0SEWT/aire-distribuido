@@ -17,7 +17,7 @@
     <mxCell id="compose" value="Docker Compose" style="swimlane;html=1;startSize=28;fontStyle=1;fontSize=13;fillColor=#ffffff;strokeColor=#555555;strokeWidth=2;swimlaneFillColor=#ffffff;" vertex="1" parent="1">
       <mxGeometry x="190" y="100" width="1540" height="600" as="geometry"/>
     </mxCell>
-    <mxCell id="cargar" value="cargar · Parte A · PC3" style="swimlane;html=1;startSize=26;fontStyle=0;fontSize=12;fillColor=#fafafa;strokeColor=#9a9a9a;swimlaneFillColor=#fafafa;" vertex="1" parent="compose">
+    <mxCell id="cargar" value="cargar · Parte A · PC3 · se corre una vez (docker run), antes del Compose" style="swimlane;html=1;startSize=26;fontStyle=0;fontSize=12;fillColor=#fafafa;strokeColor=#9a9a9a;swimlaneFillColor=#fafafa;" vertex="1" parent="compose">
       <mxGeometry x="20" y="44" width="660" height="150" as="geometry"/>
     </mxCell>
     <mxCell id="lector" value="&lt;b&gt;lector&lt;/b&gt;&lt;br&gt;bloques de 64 MB" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#e3f1e5;strokeColor=#2e7d32;fontColor=#1b3d1f;fontSize=12;" vertex="1" parent="cargar">

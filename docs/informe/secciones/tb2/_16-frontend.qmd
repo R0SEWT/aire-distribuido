@@ -84,7 +84,7 @@ que el ingreso normal (@sec-integracion).
 :::: {si-falta="capturas/tb2/ingreso/01-ingreso.png"}
 ::: {.callout-warning title="PENDIENTE"}
 Captura real de pantalla: la pantalla de ingreso con el formulario y el botón del invitado. Va en
-`docs/informe/capturas/tb2/ingreso/01-ingreso.png` (la produce la sesión del frontend).
+`docs/informe/capturas/tb2/ingreso/01-ingreso.png`.
 :::
 ::::
 
@@ -113,8 +113,7 @@ simulación. El panel se actualiza solo cuando llega un estado nuevo por el WebS
 :::: {si-falta="capturas/tb2/panel/05-panel-admin.png"}
 ::: {.callout-warning title="PENDIENTE"}
 Captura real de pantalla: el panel después de cargar el escenario, con el mapa, las tres cifras y la
-lista por gravedad. Va en `docs/informe/capturas/tb2/panel/05-panel-admin.png` (la produce la sesión del
-frontend).
+lista por gravedad. Va en `docs/informe/capturas/tb2/panel/05-panel-admin.png`.
 :::
 ::::
 
@@ -134,7 +133,7 @@ está, las fechas en que midió y la población de su distrito.
 :::: {si-falta="capturas/tb2/estacion/01-estacion-ca-esp-01.png"}
 ::: {.callout-warning title="PENDIENTE"}
 Captura real de pantalla: una estación en alerta, con la tarjeta de las medias, la frase y la curva.
-Va en `docs/informe/capturas/tb2/estacion/01-estacion-ca-esp-01.png` (la produce la sesión del frontend).
+Va en `docs/informe/capturas/tb2/estacion/01-estacion-ca-esp-01.png`.
 :::
 ::::
 
@@ -161,8 +160,7 @@ cualquier pantalla y el navegador pregunta antes de cerrar la pestaña.
 :::: {si-falta="capturas/tb2/simulacion/06-dia-cruza-eca-terminado.png"}
 ::: {.callout-warning title="PENDIENTE"}
 Captura real de pantalla: una simulación de un día que termina en alerta, con los controles a la
-vista. Va en `docs/informe/capturas/tb2/simulacion/06-dia-cruza-eca-terminado.png` (la produce la sesión del
-frontend).
+vista. Va en `docs/informe/capturas/tb2/simulacion/06-dia-cruza-eca-terminado.png`.
 :::
 ::::
 
@@ -174,20 +172,22 @@ rechazos de la API se muestran con sus palabras: «ya hay un entrenamiento en cu
 nodos libres en el pool y se pidieron 4» (422).
 
 Un entrenamiento real sobre el gold dura milisegundos, así que no hay nada que ver «avanzar». La
-interfaz abre el WebSocket antes de lanzarlo, recibe todas las rondas (`entrenamiento.ronda`) y las
-**reproduce a ritmo humano**: la inercia por iteración, una curva que baja, y el tiempo de cada nodo
+interfaz abre el WebSocket antes de lanzarlo, recibe todas las rondas (`entrenamiento.ronda`) a
+medida que llegan y las **reproduce a ritmo humano**: la inercia por iteración, una curva que baja, y el tiempo de cada nodo
 en cada ronda, en barras. La pantalla dice cuánto duró de verdad y que lo que se ve es una
 reproducción. Al terminar muestra el resultado: iteraciones, motivo de parada, diferencia con el
 K-Means secuencial, tiempo total y si el modelo quedó activo; si abortó, el error con el nodo que
-falló. Con más de una réplica es una medición y no cambia el modelo activo, y la pantalla lo dice.
-Debajo, el historial de entrenamientos.
+falló. Para ver las rondas llegar en vivo está el preajuste «medición larga»: unas 300 réplicas del
+gold, que tardan lo suficiente para que cada ronda aparezca en cuanto el coordinador la cierra
+(@fig-ui-medicion-larga). Con más de una réplica es una medición y no cambia el modelo activo, y la
+pantalla lo dice. Debajo, el historial de entrenamientos.
 
 ![El formulario del entrenamiento con los parámetros ingresados desde la interfaz: dos nodos, una réplica y la semilla 42](capturas/tb2/entrenamiento/03-formulario-configurado.png){#fig-ui-entrenamiento-formulario width=16cm}
 
 :::: {si-falta="capturas/tb2/entrenamiento/03-formulario-configurado.png"}
 ::: {.callout-warning title="PENDIENTE"}
 Captura real de pantalla: el formulario del entrenamiento con los nodos libres. Va en
-`docs/informe/capturas/tb2/entrenamiento/03-formulario-configurado.png` (la produce la sesión del frontend).
+`docs/informe/capturas/tb2/entrenamiento/03-formulario-configurado.png`.
 :::
 ::::
 
@@ -196,8 +196,16 @@ Captura real de pantalla: el formulario del entrenamiento con los nodos libres. 
 :::: {si-falta="capturas/tb2/entrenamiento/04-rondas-reproduciendose.png"}
 ::: {.callout-warning title="PENDIENTE"}
 Captura real de pantalla: las rondas de un entrenamiento, con la curva de inercia y las barras por
-nodo. Va en `docs/informe/capturas/tb2/entrenamiento/04-rondas-reproduciendose.png` (la produce la
-sesión del frontend).
+nodo. Va en `docs/informe/capturas/tb2/entrenamiento/04-rondas-reproduciendose.png`.
+:::
+::::
+
+![Una medición larga en curso (300 réplicas): las rondas llegan en vivo por el WebSocket mientras el entrenamiento sigue, con los nodos ocupados](capturas/tb2/entrenamiento/07-medicion-larga-en-curso.png){#fig-ui-medicion-larga width=16cm}
+
+:::: {si-falta="capturas/tb2/entrenamiento/07-medicion-larga-en-curso.png"}
+::: {.callout-warning title="PENDIENTE"}
+Captura real de pantalla: una medición larga en curso. Va en
+`docs/informe/capturas/tb2/entrenamiento/07-medicion-larga-en-curso.png`.
 :::
 ::::
 
@@ -206,7 +214,7 @@ sesión del frontend).
 :::: {si-falta="capturas/tb2/entrenamiento/05-resultado.png"}
 ::: {.callout-warning title="PENDIENTE"}
 Captura real de pantalla: el resultado de un entrenamiento terminado, con el modelo activo. Va en
-`docs/informe/capturas/tb2/entrenamiento/05-resultado.png` (la produce la sesión del frontend).
+`docs/informe/capturas/tb2/entrenamiento/05-resultado.png`.
 :::
 ::::
 
@@ -229,15 +237,36 @@ métricas, cada una con su nombre verdadero:
 
 Completan la pantalla las escrituras por almacén (escritas, descartadas y fallidas) y la salud de la
 API, de MongoDB, de Redis y del modelo activo. Los datos se vuelven a pedir cada
-{{< meta cifras.tb2.cluster_cada_s >}} segundos.
+{{< meta cifras.tb2.cluster_cada_s >}} segundos. La @fig-ui-cluster es la parte de arriba de la
+pantalla; la @fig-ui-eventos, los eventos y las escrituras; y la @fig-ui-latencia, la latencia por
+ruta.
 
-![El panel de administración del clúster, la página entera: el número de nodos, el CPU y la memoria del coordinador, la salud, los eventos, las escrituras y la latencia por ruta con la línea de los 100 ms](capturas/tb2/cluster/02-cluster-completa.png){#fig-ui-cluster width=10.5cm}
+![El panel de administración del clúster: el número de nodos con su latencia y su tiempo por ronda, el CPU del proceso coordinador, la peor latencia de la API y las escrituras perdidas](capturas/tb2/cluster/01-cluster.png){#fig-ui-cluster width=16cm}
+
+:::: {si-falta="capturas/tb2/cluster/01-cluster.png"}
+::: {.callout-warning title="PENDIENTE"}
+Captura real de pantalla: la pantalla del clúster. Va en `docs/informe/capturas/tb2/cluster/01-cluster.png`.
+:::
+::::
+
+![Los «logs» del clúster (altas, bajas y errores de nodos) y las escrituras por almacén](capturas/tb2/cluster/03-eventos-y-escrituras.png){#fig-ui-eventos width=10cm}
+
+:::: {si-falta="capturas/tb2/cluster/03-eventos-y-escrituras.png"}
+::: {.callout-warning title="PENDIENTE"}
+Captura real de pantalla: los eventos y las escrituras. Va en
+`docs/informe/capturas/tb2/cluster/03-eventos-y-escrituras.png`.
+:::
+::::
+
+<!-- Recorte que arma render.sh en generado/local/ desde capturas/tb2/cluster/02-cluster-completa.png (la página
+entera no se lee a lo ancho de la hoja). El aviso si-falta mira la captura original. -->
+
+![La latencia de la API por ruta, medida dentro del servidor: pedidos, percentiles 50, 95 y 99, y la línea de los 100 ms](generado/local/cluster-latencia.png){#fig-ui-latencia width=16cm}
 
 :::: {si-falta="capturas/tb2/cluster/02-cluster-completa.png"}
 ::: {.callout-warning title="PENDIENTE"}
-Captura real de pantalla: el clúster con tres nodos, el CPU y la memoria del coordinador, la latencia
-por ruta con la línea de 100 ms y los eventos. Va en `docs/informe/capturas/tb2/cluster/02-cluster-completa.png`
-(la produce la sesión del frontend).
+Captura real de pantalla: la página entera del clúster, de la que se recorta la latencia por ruta. Va
+en `docs/informe/capturas/tb2/cluster/02-cluster-completa.png`.
 :::
 ::::
 
@@ -251,12 +280,19 @@ anticipación se encienden las señales; y lo que este dato no puede decir, a la
 chica. Las cifras salen de un archivo generado desde el gold (`impacto.json`), el mismo del que sale
 la @sec-impacto de este informe: la página y el informe no pueden decir cosas distintas.
 
+Es la única pantalla que no le pide sus datos a la API, y es a propósito. Sus cifras son un resumen
+fijo de las lecturas históricas del gold: no cambian con las predicciones ni con los entrenamientos.
+Se calculan una vez, con el script de análisis que también verifica las series de prueba
+(`scripts/impacto.py`), y viajan con la interfaz como un archivo estático. La API sirve lo que cambia
+(el estado de las estaciones, el modelo, el clúster); recalcular en cada visita algo que no cambia
+solo agregaría carga al servidor.
+
 ![La página de impacto: las horas sobre el ECA por estación, con su actividad fiscalizada y las semanas en que midió](capturas/tb2/impacto/05-por-estacion.png){#fig-ui-impacto width=16cm}
 
 :::: {si-falta="capturas/tb2/impacto/05-por-estacion.png"}
 ::: {.callout-warning title="PENDIENTE"}
 Captura real de pantalla: la página de impacto con las horas sobre el ECA y la tabla por estación. Va
-en `docs/informe/capturas/tb2/impacto/05-por-estacion.png` (la produce la sesión del frontend).
+en `docs/informe/capturas/tb2/impacto/05-por-estacion.png`.
 :::
 ::::
 
@@ -291,7 +327,7 @@ siguen todas las pantallas:
 :::: {si-falta="capturas/tb2/armazon/01-modo-proyector-panel.png"}
 ::: {.callout-warning title="PENDIENTE"}
 Captura real de pantalla: el panel en modo proyector. Va en
-`docs/informe/capturas/tb2/armazon/01-modo-proyector-panel.png` (la produce la sesión del frontend).
+`docs/informe/capturas/tb2/armazon/01-modo-proyector-panel.png`.
 :::
 ::::
 
@@ -317,14 +353,14 @@ aplicativo con parámetros ingresados desde la UI». Las dos cosas pasan por la 
   que solo reciben los administradores.
 - **Los parámetros.** La simulación toma de la interfaz la estación, el día y el ritmo; la lectura a
   mano, los valores de PM2,5 y PM10; y el entrenamiento, los nodos, las réplicas y la semilla, que
-  van tal cual en el cuerpo de `POST /api/entrenamientos` y llegan a los nodos como el reparto de la
-  @sec-camino.
+  van tal cual en el cuerpo de `POST /api/entrenamientos` y llegan a los nodos como el reparto que
+  describe la @sec-camino.
 
 ![Tiempo real: el panel de un invitado, en otra sesión, a mitad del escenario que carga un administrador; se llena solo por el WebSocket](capturas/tb2/panel/03-panel-en-vivo-invitado.png){#fig-ui-en-vivo width=16cm}
 
 :::: {si-falta="capturas/tb2/panel/03-panel-en-vivo-invitado.png"}
 ::: {.callout-warning title="PENDIENTE"}
 Captura real de pantalla: el panel del invitado a mitad del escenario. Va en
-`docs/informe/capturas/tb2/panel/03-panel-en-vivo-invitado.png` (la produce la sesión del frontend).
+`docs/informe/capturas/tb2/panel/03-panel-en-vivo-invitado.png`.
 :::
 ::::

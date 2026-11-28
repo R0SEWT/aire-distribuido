@@ -12,6 +12,7 @@ func (s *Servidor) ruta(patron string, roles []string, h http.HandlerFunc) {
     s.mux.Handle(patron, s.metricas.Medir(patron, sig))
 }
 
+// …
 func (s *Servidor) exigir(roles []string, sig http.Handler) http.Handler {
     return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
         tok, ok := tokenBearer(r)

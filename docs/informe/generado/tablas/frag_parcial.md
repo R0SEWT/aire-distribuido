@@ -16,6 +16,7 @@ const (
     Error   Tipo = "ERROR"   // ambos sentidos: aborta lo que se estaba haciendo.
 )
 
+// …
 // ITERAR y PARCIAL. Iter es el número de ronda: crece estrictamente en toda
 // la vida de la conexión, también entre corridas, y es lo que permite
 // descartar un PARCIAL rezagado de una ronda abortada.

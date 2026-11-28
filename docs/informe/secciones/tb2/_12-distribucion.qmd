@@ -30,7 +30,7 @@ La @tbl-repo-pc4 dice qué código es nuevo.
 ::: {#tbl-repo-pc4 tbl-colwidths="[26,74]"}
 | Ruta | Contenido |
 |:---|:---|
-| `cluster/` | El K-Means sobre el clúster: el nodo, la espera de nodos, el reparto en rangos, Lloyd con la barrera de red y el pool de nodos de la API |
+| `cluster/` | El K-Means sobre el clúster: el nodo, la espera de nodos, el reparto en rangos, Lloyd con la barrera de cada ronda y el pool de nodos de la API |
 | `cmd/nodo/` | El nodo de cómputo: llama al coordinador, carga su rango del gold y responde cada ronda |
 | `cmd/distribuido/` | Coordinador de línea de comandos: espera N nodos, corre el K-Means y lo compara con el de una sola máquina |
 | `cmd/smoke/` | Coordinador de prueba: mide la barrera con rondas de latido |
@@ -51,9 +51,11 @@ al coordinador. El enunciado pide que la API haga «de coordinador del clúster,
 nodos de cómputo y unificando resultados»; la estrella es esa frase dibujada. Tres razones la
 sostienen:
 
-1. **La barrera necesita todos los parciales en un solo lugar** para recalcular los centroides. Ese
-   lugar es el coordinador, y en una estrella cada ronda cuesta dos mensajes por nodo: la ida y la
-   vuelta.
+1. **En este diseño, los centroides se recalculan en un solo lugar**, el coordinador, que además
+   publica el modelo; para eso necesita todos los parciales. Con una reducción de todos con todos
+   (*allreduce*), cada nodo tendría la suma y podría actualizar por su cuenta, pero igual haría falta
+   alguien que guarde y publique el modelo. En una estrella cada ronda cuesta dos mensajes por nodo:
+   la ida y la vuelta.
 2. **Una reducción en anillo o en árbol no gana nada con mensajes tan chicos.** Las versiones de
    K-Means para memoria distribuida reducen en árbol [@dhillon2000], y eso conviene cuando lo que se
    reduce es grande. Aquí cada nodo recibe $k \cdot D$ centroides y devuelve $k \cdot D$ sumas, $k$
@@ -150,6 +152,13 @@ nodo vuelve a llamar a los {{< meta cifras.pc4.espera_nodo_s >}} segundos: por e
 pueden levantar antes que la API, o reiniciarla sin tocarlos.
 
 {{< include generado/tablas/frag_dial.md >}}
+
+`llamar` es lo que usa `conectar` (@lst-conectar), el bucle de rol cliente del nodo: llama, y si el
+coordinador no contesta espera y vuelve a llamar, avisando en el primer fallo y después cada
+{{< meta cifras.tb2.aviso_nodo_s >}} segundos. Con la conexión abierta, `Correr` la pasa a `Atender`; cuando la corrida termina y la
+conexión se cierra, vuelve a `conectar`.
+
+{{< include generado/tablas/frag_conectar.md >}}
 
 Con la conexión abierta, el nodo hace lo del @lst-atender: crea su codificador y su decodificador
 sobre la conexión, manda `HOLA` y entra en un bucle que lee un mensaje, lo atiende según su tipo y
@@ -282,8 +291,8 @@ recibe la inercia, lo que tardó la barrera, lo que tardó la fusión, lo que ta
 copia de los centroides. Con eso la API guarda la ronda, la avisa por WebSocket y escribe el punto
 de control (@sec-coordinador).
 
-Del otro lado, el nodo hace con su rango lo mismo que un worker hacía con su chunk, y con el mismo
-código (@lst-nodo-iterar): `kmeans.ParcialesPorChunks` parte el rango en chunks de
+Del otro lado, el nodo calcula el parcial de su rango con el mismo código del K-Means paralelo de la
+PC3 (@lst-nodo-iterar): `kmeans.ParcialesPorChunks` parte el rango en chunks de
 {{< meta cifras.pc4.chunk >}} filas, los reparte en su propio pool de workers y los fusiona en orden
 de chunk. Hay entonces **dos niveles de paralelismo**: entre nodos, por la red, y dentro de cada
 nodo, entre sus núcleos.

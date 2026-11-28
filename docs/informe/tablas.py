@@ -1737,7 +1737,12 @@ class Informe:
                 self.fragmento_pendiente(archivo, ident, ruta, titulo, f"El patrón ya no aparece en `{ruta}`")
                 continue
             codigo, rangos = [], []
-            for a, b in tramos:
+            # Entre dos tramos de un mismo archivo va una línea que dice que ahí se saltó código: si no, los
+            # tramos se leen como un solo bloque.
+            salto = {"yaml": "# …", "dockerfile": "# …", "text": "…", "json": "…"}.get(opciones.get("lenguaje", ""), "// …")
+            for nt, (a, b) in enumerate(tramos):
+                if nt > 0:
+                    codigo.append(salto)
                 bloque = lineas[a:b + 1]
                 if opciones.get("sin_comentarios"):
                     bloque = [l for l in bloque if not l.lstrip().startswith("#")]
@@ -1747,7 +1752,7 @@ class Informe:
                     bloque = [l.lstrip("\t")[len(opciones["quitar"]):] if l.lstrip("\t").startswith(opciones["quitar"]) else l
                               for l in bloque]
                 sangria = min((len(l) - len(l.lstrip("\t")) for l in bloque if l.strip()), default=0)
-                codigo += [l[sangria:].replace("\t", "    ") for l in bloque] + [""]
+                codigo += [l[sangria:].replace("\t", "    ") for l in bloque] + ([""] if nt < len(tramos) - 1 else [])
                 rangos.append(f"{a + 1}–{b + 1}")
             n = sum(1 for l in codigo if l.strip()) if opciones.get("sin_comentarios") else sum(b - a + 1 for a, b in tramos)
             if n > opciones.get("max", 30):
@@ -2062,7 +2067,7 @@ class Informe:
         locales = [d for d, _ in filas if self.es_loopback(d)]
         lab = [d for d, _ in filas if not self.es_loopback(d)]
         nota = ("«Iter.» son las iteraciones hasta converger. «Frente a `cmd/entrenar`» compara los centroides con `reports/kmeans.json`: bit a bit, o la mayor diferencia "
-                "absoluta en el espacio estandarizado. «Ronda» es la barrera de red de una iteración (del primer `ITERAR` al último "
+                "absoluta en el espacio estandarizado. «Ronda» es lo que tarda la barrera de una iteración en el coordinador (del primer `ITERAR` al último "
                 "`PARCIAL`) y «Fusión», lo que el coordinador hace después. ")
         if locales:
             m = locales[0].get("metadatos") or {}
@@ -2152,7 +2157,9 @@ class Informe:
                         f"({entero(max(v['filas'] for d in ds for v in d['velocidad']))} filas).")
 
         def dif(prec):
-            return cientifica(max(c["dif_max_centroides_go"] for d in ds for c in d["convergencia"] if c["precision"] == prec))
+            # La prosa compara con Go sumando con el producto de matrices (la suma atómica tiene su propia fila en la tabla).
+            return cientifica(max(c["dif_max_centroides_go"] for d in ds for c in d["convergencia"]
+                                  if c["precision"] == prec and c.get("suma") == "matmul"))
 
         self.cifras["gpu"] = {
             "equipos": entero(len(ds)), "dispositivo": str(ds[0].get("dispositivo")), "dif_fp64": dif("float64"), "dif_fp32": dif("float32"),
@@ -2712,7 +2719,7 @@ class Informe:
         """Las pruebas de los paquetes de la PC4, contadas del código (func Test…)."""
         import re
         o = "los archivos _test.go de cluster/, protocolo/, api/, almacen/, modelo/, ventana/ y cmd/"
-        titulo = "Pruebas automáticas de los paquetes del Entregable 2"
+        titulo = "Pruebas automáticas de los paquetes del Entregable 2, contadas hoy"
         filas, total, integ_total = [], 0, 0
         for paquete, que in self.PAQUETES_PC4:
             carpeta = RAIZ / paquete
@@ -2735,7 +2742,8 @@ class Informe:
         t = pd.DataFrame(filas, columns=["Paquete", "Qué comprueban", "Pruebas", "De integración"])
         self.tabla("pruebas_pc4.md", o, {}, "tbl-pruebas-pc4", titulo, markdown(t, "llrr"), anchos=[18, 58, 11, 13],
                    fuente="Fuente: las funciones `Test…` de los archivos `_test.go` de cada paquete, contadas del código en cada render.",
-                   nota="«De integración» son las que llevan la etiqueta de compilación `integracion`: corren contra el MongoDB y el "
+                   nota="Se cuentan del código actual, así que incluyen las que el TB2 sumó a estos paquetes (en `api/` y `cmd/api/`). "
+                        "«De integración» son las que llevan la etiqueta de compilación `integracion`: corren contra el MongoDB y el "
                         "Redis del Compose (`go test -race -tags integracion ./almacen/... ./cmd/api/`), no en la integración continua, que "
                         "usa el doble en memoria.")
         self.cifras["pruebas"] = {"pc4": entero(total), "pc4_integracion": entero(integ_total), "paquetes_pc4": entero(len(filas)),
@@ -3174,6 +3182,7 @@ class Informe:
         ("write_timeout_s", "cmd/api/main.go", r"WriteTimeout:\s+(\d+) \* time\.Second", str),
         ("cluster_cada_s", "web/src/pantallas/Cluster.tsx", r"const CADA_MS = (\d+)_000", str),
         ("aviso_ms", "api/avisos.go", r"cadaAvisoPorOmision = (\d+) \* time\.Millisecond", str),
+        ("aviso_nodo_s", "cluster/nodo.go", r"time\.Since\(ultimoAviso\) >= (\d+)\*time\.Second", str),
         ("ritmo_lenta", "web/src/pantallas/simulacion/ritmos.ts", r"etiqueta: 'Lenta', horasPorSegundo: (\d+)", str),
         ("ritmo_normal", "web/src/pantallas/simulacion/ritmos.ts", r"etiqueta: 'Normal', horasPorSegundo: (\d+)", str),
         ("ritmo_rapida", "web/src/pantallas/simulacion/ritmos.ts", r"etiqueta: 'Rápida', horasPorSegundo: (\d+)", str),
@@ -3278,6 +3287,9 @@ class Informe:
         ("frag_dial", "lst-dial", "cmd/nodo/main.go",
          [("lineas", r"^\tmarcador := &net\.Dialer\{", 4)],
          "Rol cliente: el nodo llama al coordinador con net.Dialer, en la dirección IP:puerto que recibe por parámetro"),
+        ("frag_conectar", "lst-conectar", "cluster/nodo.go",
+         [("funcion", r"^func \(n \*Nodo\) conectar\(")],
+         "El nodo llama hasta que el coordinador contesta: reintenta cada espera y avisa sin llenar la pantalla"),
         ("frag_atender", "lst-atender", "cluster/nodo.go",
          [("bloque", r"^func \(n \*Nodo\) Atender\(conn net\.Conn\) error \{")],
          "El nodo sobre su conexión: manda HOLA y responde cada mensaje del coordinador hasta el FIN", {"max": 46}),

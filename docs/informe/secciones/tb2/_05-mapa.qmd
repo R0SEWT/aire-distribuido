@@ -4,7 +4,9 @@ observaciones del docente a la PC4 con dónde se atendió cada una. El título �
 Este es el informe final del Trabajo Final y contiene los tres entregables, como pide el enunciado:
 la PC3 (carga, limpieza y modelo), la PC4 (distribución, API y bases de datos) y el TB2 (interfaz,
 integración y evaluación experimental). Las secciones de los dos primeros van con las correcciones
-que el docente pidió a la PC4 (@sec-correcciones). La @tbl-mapa-tb2 dice dónde está cada punto, en
+que el docente pidió a la PC4 (@sec-correcciones). Donde las secciones de la PC3 y la PC4 anuncian lo
+que haría el entregable siguiente, se conservan como se escribieron: la @tbl-cambios-pc3 y la
+@tbl-recomendaciones-pc4 dicen qué pasó con cada anuncio. La @tbl-mapa-tb2 dice dónde está cada punto, en
 el orden de la rúbrica del Trabajo Final y de los puntos de cada entregable.
 
 ::: {#tbl-mapa-tb2 tbl-colwidths="[42,58]"}
@@ -47,7 +49,7 @@ en la PC4 los listados se insertaban como imágenes, y en una imagen no se puede
 | Observación del docente (resumida) | Qué se cambió | Dónde está ahora |
 |:---|:---|:---|
 | No explica el código Go de la distribución: `net.Listen`, `net.Dial`, los puertos, los patrones | Una sección nueva con los sockets: quién escucha, quién llama y en qué puerto, el bucle de `Accept`, el `Dial` del nodo, cómo se serializa y se lee cada mensaje y una sesión tal como queda en el cable; los patrones, lado a lado con los de los laboratorios del curso | @sec-sockets: @tbl-sockets, @tbl-puertos y del @lst-listen al @lst-leer; la ronda en el @lst-enlace-ronda |
-| «Incorrecto: los chunks pasan a ser nodos, el WaitGroup pasa a ser una barrera a través de la red y el canal pasa a ser una conexión TCP» | La analogía se quitó. En su lugar va la descripción literal: dos niveles de reparto (rangos entre nodos, chunks dentro de cada nodo), un `WaitGroup` local en el coordinador que espera a una goroutine por nodo, y mensajes JSON por un flujo TCP. Dos frases de la PC3 que decían algo parecido se corrigieron igual | Inicio de la @sec-distribucion; @sec-modelo |
+| «Incorrecto: los chunks pasan a ser nodos, el WaitGroup pasa a ser una barrera a través de la red y el canal pasa a ser una conexión TCP» | La analogía se quitó. En su lugar va la descripción literal: dos niveles de reparto (rangos entre nodos, chunks dentro de cada nodo), un `WaitGroup` local en el coordinador que espera a una goroutine por nodo, y mensajes JSON por un flujo TCP. Las frases de la PC3 que decían algo parecido (en el diseño del modelo y en una recomendación) se corrigieron igual | Inicio de la @sec-distribucion; @sec-modelo |
 | No explica el código Go de la API ni cómo pasa la petición al clúster | El registro de las rutas, las capas de autenticación y medición y el `http.Server`, como código; el recorrido completo de un entrenamiento, del navegador a los nodos y de vuelta, paso por paso; y, dicho explícitamente, que las predicciones no pasan por el clúster, con sus razones | @sec-servidor (@lst-rutas, @lst-exigir, @lst-http) y @sec-camino (@lst-camino, @tbl-que-pasa) |
 | No incluye el Dockerfile ni el `docker-compose` en el informe, ni explica el despliegue | Los dos Dockerfile y el Compose completos, como texto, con la razón de cada instrucción y una tabla de decisiones de despliegue; el Caddyfile del servicio web | @sec-despliegue (@lst-dockerfile, @lst-dockerfile-web, @lst-compose, @tbl-decisiones-compose) y @lst-caddy |
 | No se ubica en el Kanban la tarea «Diagrama de entidades de MongoDB y Redis» | La tarjeta estaba (la #76, cerrada antes de la entrega), pero la captura era una tabla de 95 filas sin marcar. Ahora el anexo da el enlace directo de cada tarjeta, incluida esa, y la captura del tablero va en vista de tablero con las tarjetas del TB2 marcadas | Anexo B (@tbl-kanban-tb2) |

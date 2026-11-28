@@ -18,6 +18,7 @@ devolver := func(motivo string) {
 }
 rangos, err := cluster.Repartir(par.Replicas*n, len(miembros))
 
+// …
 lanzado = true
 go c.correr(e, miembros, rangos, inicio)
 s.responder(w, r, http.StatusAccepted, struct {
@@ -25,6 +26,7 @@ s.responder(w, r, http.StatusAccepted, struct {
     Estado string `json:"estado"`
 }{e.ID, almacen.EstadoEnCurso})
 
+// …
 _, err := cluster.CargarCtx(c.ctx, enlaces, rangos, cluster.HuellaDeSha256(c.ent.Sha256), t0.Add(c.ent.plazoCarga()))
 if err == nil {
     corrida, err = cluster.LloydCtx(c.ctx, enlaces, inicio.Centroides, op,

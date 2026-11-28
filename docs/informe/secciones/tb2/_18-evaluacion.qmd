@@ -40,8 +40,11 @@ usa la colección de Postman, siguen vigentes.
 {{< meta cifras.series.lecturas >}} lecturas de la @tbl-series a una API levantada, en su orden, y
 compara cada respuesta con la regla aplicada a lo ya enviado; en la última lectura de cada estación,
 además, con lo esperado del archivo, y al final pide el último estado guardado de cada estación, que
-es lo que vería el panel. Para este informe corrió contra la API compilada del commit que se entrega
-(`cmd/api -demo`, con el modelo sembrado y las bases en memoria). El resultado: de
+es lo que vería el panel. Para este informe corrió contra el binario de la API del commit que se
+entrega, con el modelo sembrado y las bases en memoria (`cmd/api -demo`): la regla que se compara
+vive en la API, no en las bases. Con MongoDB y Redis, en el Compose, la interfaz repitió la
+comparación del escenario y las {{< meta cifras.series.escenario_estaciones >}} estaciones coincidieron
+(@fig-ui-comparacion). El resultado de la verificación: de
 {{< meta cifras.series.verificadas >}} lecturas, {{< meta cifras.series.diferencias >}} diferencias;
 las {{< meta cifras.series.estaciones_coinciden >}} estaciones del escenario y los
 {{< meta cifras.series.dias_coinciden >}} días sueltos coinciden (@lst-salida-series).
@@ -88,8 +91,7 @@ El recorrido de punta a punta en la interfaz
 :::: {si-falta="capturas/tb2/simulacion/09-comparacion-con-lo-esperado.png"}
 ::: {.callout-warning title="PENDIENTE"}
 Captura real de pantalla: la tabla de comparación al terminar el escenario. Va en
-`docs/informe/capturas/tb2/simulacion/09-comparacion-con-lo-esperado.png` (la produce la sesión del
-frontend).
+`docs/informe/capturas/tb2/simulacion/09-comparacion-con-lo-esperado.png`.
 :::
 ::::
 
@@ -98,8 +100,7 @@ frontend).
 :::: {si-falta="capturas/tb2/seguridad/01-usuario-sin-permiso-cluster.png"}
 ::: {.callout-warning title="PENDIENTE"}
 Captura real de pantalla: una sesión de rol `usuario` en `/cluster`. Va en
-`docs/informe/capturas/tb2/seguridad/01-usuario-sin-permiso-cluster.png` (la produce la sesión del
-frontend).
+`docs/informe/capturas/tb2/seguridad/01-usuario-sin-permiso-cluster.png`.
 :::
 ::::
 
@@ -205,10 +206,12 @@ vez que la media de una estación pasa a superar el ECA sin haberlo superado en 
 anteriores), la @tbl-impacto-anticipacion mide cuánto antes se encendió cada señal. La respuesta
 tiene dos caras, y hay que decir las dos:
 
-- **Siempre hubo una señal antes.** En los {{< meta cifras.impacto.episodios >}} episodios, una
-  lectura horaria sobre el umbral apareció dentro de las 24 horas previas, con una mediana de
-  {{< meta cifras.impacto.mediana_horaria >}} horas antes del cruce; una lectura en el régimen alto,
-  con una mediana de {{< meta cifras.impacto.mediana_regimen >}} horas.
+- **El régimen alto apareció antes en todos los episodios.** En los
+  {{< meta cifras.impacto.episodios >}}, una lectura del régimen que excede el ECA ya estaba dentro de
+  la ventana, con una mediana de {{< meta cifras.impacto.mediana_regimen >}} horas antes del cruce.
+  Para la lectura horaria sobre el umbral eso no es un hallazgo sino una consecuencia de la regla
+  (una media sobre el umbral necesita al menos una lectura sobre el umbral); lo que sí dice algo es
+  cuánto antes apareció: una mediana de {{< meta cifras.impacto.mediana_horaria >}} horas.
 - **Pero la señal no se sostiene.** Contadas las horas seguidas que estuvo encendida justo antes del
   cruce, la mediana es de {{< meta cifras.impacto.seguidas_mediana_horaria >}} hora para la lectura
   horaria y de {{< meta cifras.impacto.seguidas_mediana_regimen >}} para el régimen: la señal se
@@ -230,9 +233,17 @@ cuentas juntas (@fig-ui-anticipacion).
 :::: {si-falta="capturas/tb2/impacto/08-anticipacion.png"}
 ::: {.callout-warning title="PENDIENTE"}
 Captura real de pantalla: la sección de anticipación de la página de impacto. Va en
-`docs/informe/capturas/tb2/impacto/08-anticipacion.png` (la produce la sesión del frontend).
+`docs/informe/capturas/tb2/impacto/08-anticipacion.png`.
 :::
 ::::
+
+**Qué aporta el modelo, si la alerta no sale de él.** La alerta es la norma, y no tenía por qué ser
+otra cosa: el ECA y el INCA ya definen cuándo el aire es un riesgo. El K-Means responde la otra
+mitad de la pregunta. Dice qué tipo de aire trae cada lectura (el régimen que la API devuelve con
+cada predicción), en qué estaciones y a qué horas aparece el nivel alto (@tbl-regimenes-hora y
+@tbl-regimenes-estacion), y es la señal temprana que se midió arriba: el régimen alto aparece horas
+antes de que la media cruce. Y su entrenamiento repartido entre los nodos es el problema de
+cómputo distribuido del curso, resuelto sin cambiar el modelo (@sec-determinismo).
 
 **¿A cuántas personas podría beneficiar?** El enunciado lo pregunta así, y la respuesta honesta no es
 un total. Las {{< meta cifras.impacto.estaciones_pm >}} estaciones con PM por hora están en
@@ -250,7 +261,9 @@ norma. La población no se suma, a propósito:
   PM por hora, no es un distrito con aire limpio (@sec-cobertura).
 
 **Lo que quedó sin responder.** El diferencial de la pregunta (si los episodios son de combustión o
-de polvo) se queda con la lectura de la PC3: la fracción fina baja de
-{{< meta cifras.meteo.bajo_fraccion_fina >}} en el nivel bajo a {{< meta cifras.meteo.alto_fraccion_fina >}}
-en el alto, compatible con polvo (@tbl-meteorologia); probarlo estación por estación no se hizo. Tampoco
+de polvo) se queda con la lectura de la PC3: del nivel bajo al alto, el cociente entre la media de
+PM2,5 y la de PM10 baja de {{< meta cifras.bajo.cociente >}} a {{< meta cifras.alto.cociente >}}, y la
+media de la fracción fina hora por hora, de {{< meta cifras.meteo.bajo_fraccion_fina >}} a
+{{< meta cifras.meteo.alto_fraccion_fina >}} (@tbl-meteorologia). Son dos medidas de lo mismo y las
+dos apuntan a más partícula gruesa, compatible con polvo; probarlo estación por estación no se hizo. Tampoco
 se hizo el contraste con SENAMHI en Lima (Q8), que la PC3 había dejado para el TB2.

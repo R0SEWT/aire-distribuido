@@ -371,8 +371,8 @@ cifras:
   gpu:
     equipos: "4"
     dispositivo: "NVIDIA T1000 8GB"
-    dif_fp64: "5,7 × 10⁻¹⁵"
-    dif_fp32: "1,1 × 10⁻⁵"
+    dif_fp64: "4,4 × 10⁻¹⁶"
+    dif_fp32: "9,1 × 10⁻⁷"
     ms_iter_1: "1,02–1,03"
     ms_iter_max: "259,7–262,4"
     replicas_max: "300"
@@ -651,6 +651,7 @@ cifras:
     write_timeout_s: "30"
     cluster_cada_s: "2"
     aviso_ms: "250"
+    aviso_nodo_s: "30"
     ritmo_lenta: "1"
     ritmo_normal: "4"
     ritmo_rapida: "12"

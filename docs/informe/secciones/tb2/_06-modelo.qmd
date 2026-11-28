@@ -181,8 +181,9 @@ los mensajes y su codificación (`mensaje.go`, `codec.go`) y la barrera de una i
 del coordinador (`coordinador.go`). Sus pruebas cubren la fusión en orden de nodo y no de llegada
 (`TestRondaConDosNodosFusionaEnOrdenDeNodo`, `TestFusionEnOrdenDeNodoNoDeLlegada`), el plazo que
 vence con un error claro (`TestNodoQueNoRespondeVenceElPlazoYDaUnErrorClaro`) y el parcial
-rezagado que se descarta (`TestParcialRezagadoSeDescarta`). Lo que falta es el clúster: el
-listener TCP, el reparto de rangos y el bucle de Lloyd sobre esas piezas, que son la PC4.
+rezagado que se descarta (`TestParcialRezagadoSeDescarta`). Lo que faltaba al cerrar la PC3 era
+el clúster: el listener TCP, el reparto de rangos y el bucle de Lloyd sobre esas piezas, que
+construyó la PC4 (@sec-distribucion).
 
 **Determinismo entre nodos.** Fusionar por nodo es otro árbol de suma que fusionar por chunk en una
 máquina, y la suma en coma flotante no es asociativa: 1 nodo y 2 nodos coinciden **con tolerancia**,
@@ -194,8 +195,9 @@ partición y una barrera por iteración, lo que pide el enunciado) y por semilla
 entero con su semilla; el coordinador se queda con la menor inercia, sin sincronización). El segundo
 ya corre en una máquina en esta PC3, entre goroutines (@tbl-semillas); en la PC4 se reparte entre
 nodos. La diferencia entre los dos es el costo de coordinar. El protocolo de la barrera (nodos, coordinador,
-timeout y un nodo que puede caerse) se modela en Promela y se verifica con Spin en la PC4: que no
-haya deadlock y que toda iteración termine o aborte.
+timeout y un nodo que puede caerse) se anunció para la PC4 como un modelo en Promela verificado con
+Spin; no se hizo, y la barrera quedó cubierta por pruebas con `-race` (@tbl-cambios-pc3). El
+paralelismo por semillas entre nodos tampoco se hizo.
 
 La @fig-secuencia muestra una iteración: el coordinador manda los centroides, espera los
 parciales de todos los nodos (la barrera) y recién entonces actualiza.
@@ -213,7 +215,7 @@ Falta `docs/diagramas/secuencia-iteracion.png` (se exporta con draw.io desde
 
 El @alg-kmeans-paralelo resume el K-Means de la PC3: Lloyd sobre el worker pool persistente de la
 @sec-paralelizacion. Las líneas 1 a 5 son `Parciales`, la función que llama un worker sobre su
-chunk y, en la PC4, un nodo sobre su partición. La barrera de las líneas 12 y 13 es la única
+chunk; en la PC4 la llaman los workers de cada nodo, sobre los chunks de su rango. La barrera de las líneas 12 y 13 es la única
 sincronización de cada iteración, y la fusión de la línea 14 suma en orden de chunk: por eso el
 resultado es idéntico bit a bit para cualquier número de workers. El código de esas líneas está en
 el @lst-kmeans-pool, el @lst-kmeans-iter y el @lst-fusionar (@sec-evidencias).
@@ -224,7 +226,7 @@ Entrada: X, n filas de D features; c, k centroides iniciales (k-means++);
          W workers; chunks de B filas; tolerancia tol; máximo de T iteraciones
 Salida:  centroides c, asignaciones a e inercia J
 
-    función Parciales(X, c, desde, hasta)   // un worker; en la PC4, un nodo
+    función Parciales(X, c, desde, hasta)   // la llama un worker sobre su chunk
  1      S ← ceros(k × D); N ← ceros(k); J ← 0
  2      para i = desde, ..., hasta - 1 hacer
  3          j ← argmin_j |X[i] - c[j]|²     // empate: gana el índice menor

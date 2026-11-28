@@ -37,8 +37,8 @@ incluyen después, como se entregaron. -->
 6. **La pregunta de impacto tiene una respuesta, con sus límites a la vista.** El aire superó el ECA
    en el {{< meta cifras.impacto.pct_sobre_eca >}} de las horas medidas, concentrado en
    {{< meta cifras.impacto.estaciones_con_horas >}} estaciones, y en dos campañas de
-   {{< meta cifras.impacto.top2_distrito >}} casi todo el tiempo. Las lecturas horarias y el régimen alto
-   anuncian los episodios con horas de margen, pero de forma intermitente y con muchas falsas
+   {{< meta cifras.impacto.top2_distrito >}} casi todo el tiempo. El régimen alto del K-Means anuncia los
+   episodios con horas de margen, pero de forma intermitente y con muchas falsas
    alarmas: el aviso útil es la media de 24 horas, que es la norma (@sec-impacto). Quienes se
    beneficiarían son los {{< meta cifras.impacto.distritos >}} distritos con una estación horaria, y su
    población no se suma, porque vivir en el distrito no es respirar el aire que mide la estación.

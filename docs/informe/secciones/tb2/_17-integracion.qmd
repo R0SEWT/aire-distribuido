@@ -40,7 +40,9 @@ que se le dice al usuario.
 El WebSocket no admite encabezados desde el navegador, así que el token viaja como subprotocolo:
 `new WebSocket(url, ["aire.jwt", token])` llega al servidor como `Sec-WebSocket-Protocol: aire.jwt,
 <token>`, y la API confirma `aire.jwt` en su respuesta 101. Así el token no queda en la URL, donde lo
-guardarían los registros de los servidores y el historial del navegador.
+guardarían los registros de los servidores y el historial del navegador. La API también lo acepta
+en la consulta (`/ws?token=…`), para probar a mano con `curl`; la interfaz nunca lo manda así, y
+Caddy lo tapa en su registro si alguien lo hace.
 
 ### Las políticas de seguridad {#sec-politicas}
 
@@ -53,7 +55,7 @@ común, pero quien lo impide es la API, que responde 403 aunque alguien escriba 
 |:---|:---|:---|:---|
 | Autenticación con JWT | Token HS256 por usuario y clave, o de invitado; firmado con un secreto de al menos {{< meta cifras.pc4.jwt_secreto_bytes >}} bytes que llega por variable de entorno; dura {{< meta cifras.tb2.jwt_duracion >}} y no se renueva | `api/jwt.go`, `api/rutas.go` | `api/jwt_test.go`; sin token, 401; vencido, con `alg=none` o con el rol alterado, 401 (@lst-salida-tokens) |
 | Autorización por rol | Cada ruta declara sus roles, `usuario` o `admin` (@lst-rutas); `exigir` compara el rol del token (@lst-exigir) | `api/servidor.go` | Con el token del invitado, `GET /api/metricas` responde 403 (@lst-salida-politicas) |
-| El token en el navegador | En `sessionStorage`, no en `localStorage`: sobrevive a recargar la página y se borra al cerrar la pestaña. Nunca en una URL; en el WebSocket, como subprotocolo | `web/src/sesion/almacen.ts`, `web/src/api/ws.ts` | Pruebas de `web/src/sesion/` y `web/src/api/` (@tbl-pruebas-tb2) |
+| El token en el navegador | En `sessionStorage`, no en `localStorage`: sobrevive a recargar la página y se borra al cerrar la pestaña. La interfaz nunca lo pone en una URL; en el WebSocket va como subprotocolo | `web/src/sesion/almacen.ts`, `web/src/api/ws.ts` | Pruebas de `web/src/sesion/` y `web/src/api/` (@tbl-pruebas-tb2) |
 | CORS | Lista de orígenes permitidos (`CORS_ORIGENES`), vacía en el despliegue. Un origen ajeno no recibe encabezados y su *preflight* recibe 403; sin credenciales; solo `{{< meta cifras.tb2.cors_metodos >}}` y los encabezados `{{< meta cifras.tb2.cors_encabezados >}}`; `Vary: Origin` | `api/cors.go` (@lst-cors) | `api/cors_test.go`; el *preflight* desde otro sitio, 403 (@lst-salida-politicas) |
 | Origen del WebSocket | CORS no se aplica a un WebSocket: la API mira el `Origin` (mismo host o permitido), el token y el rol antes de responder 101 | `api/hub.go` (@lst-ws-apreton) | `api/cors_test.go`, `api/ws_test.go`; desde otro origen, 403; sin token, 401 (@lst-salida-tokens) |
 | Cabeceras HTTP | `Content-Security-Policy` estricta (scripts, estilos y fuentes solo del propio origen; nadie la mete en un marco), `X-Content-Type-Options: nosniff`, `Referrer-Policy: no-referrer`, sin `Server`; con TLS, `Strict-Transport-Security` de {{< meta cifras.tb2.hsts_s >}} segundos (un año) | `web/Caddyfile` (@lst-caddy) | `web/pruebas/caddy.test.ts`; las cabeceras del despliegue (@lst-salida-cabeceras) |
@@ -96,7 +98,7 @@ para todos. Habilitarlo en una máquina pública es una decisión de quien la le
 :::: {si-falta="capturas/tb2/ingreso/03-dialogo-invitado.png"}
 ::: {.callout-warning title="PENDIENTE"}
 Captura real de pantalla: el diálogo del ingreso de invitado. Va en
-`docs/informe/capturas/tb2/ingreso/03-dialogo-invitado.png` (la produce la sesión del frontend).
+`docs/informe/capturas/tb2/ingreso/03-dialogo-invitado.png`.
 :::
 ::::
 
@@ -125,6 +127,9 @@ del WebSocket. Los tokens van tapados.
   en el laboratorio, los mensajes entre los PC y el coordinador viajaron en claro por la red del
   aula. Un nodo malicioso podría mandar parciales falsos: la compuerta del modelo, que compara con el
   K-Means secuencial antes de activar, impide que llegue a predecir (@sec-coordinador).
+- **No hay un límite de pedidos.** Ni `POST /api/auth/token` ni las predicciones tienen un tope
+  por cliente: nada frena a quien pruebe claves una tras otra, salvo la comparación en tiempo
+  constante, que no las delata. En una máquina pública convendría un límite en Caddy o en la API.
 - **Un token no se puede revocar antes de que venza.** Dura {{< meta cifras.tb2.jwt_duracion >}}; salir
   de la interfaz lo borra del navegador, no del servidor.
 - **Swagger UI se carga de un CDN.** La política de `/docs` lo acota a una versión y un script, pero

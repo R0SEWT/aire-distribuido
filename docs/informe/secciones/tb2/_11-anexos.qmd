@@ -13,12 +13,13 @@ A a E son las mismas de los informes de la PC3 y la PC4, que sus secciones citan
 - **Video de la presentación (6 minutos como máximo, con los tres integrantes):** [PENDIENTE: enlace del video].
 
 ::: {.callout-warning title="PENDIENTE"}
-El enlace del video lo pone la sesión del video (`docs/video/`) cuando esté subido: reemplazar el
-texto «PENDIENTE: enlace del video» de arriba por la URL.
+El enlace del video se pone cuando el video esté subido: reemplazar el texto «PENDIENTE: enlace del
+video» de arriba por la URL.
 :::
 
-- **Cómo levantarlo:** `README.md` de la raíz. Con Docker: copiar `.env.example` a `.env`, completar
-  la clave del JWT y los usuarios, y `docker compose up --build --scale nodo=3`; la interfaz queda en
+- **Cómo levantarlo:** `README.md` de la raíz. Con Docker: generar el gold con `cargar` sobre el CSV de
+  OEFA (@sec-despliegue), copiar `.env.example` a `.env`, completar la clave del JWT y los usuarios, y
+  `docker compose up --build --scale nodo=3`; la interfaz queda en
   `http://localhost:{{< meta cifras.tb2.puerto_web >}}` y la documentación de la API en
   `http://localhost:{{< meta cifras.pc4.puerto_http >}}/docs`.
 - **Diseño de cada entregable:** `docs/specs/` (la de la PC3, la de la PC4 y la del frontend del TB2).
@@ -71,8 +72,8 @@ Tarjetas del tablero Kanban del TB2, con su enlace directo
 ::: {.callout-warning title="PENDIENTE"}
 Captura real de pantalla: el tablero <https://github.com/users/R0SEWT/projects/8> en vista de
 tablero (columnas por estado) el día de la entrega, con las tarjetas del TB2 marcadas. Va en
-`docs/informe/capturas/tb2/kanban/tablero.png` (la produce la sesión coordinadora, dueña del
-Kanban).
+`docs/informe/capturas/tb2/kanban/tablero.png` (la toma el coordinador del equipo, que lleva el
+tablero).
 :::
 ::::
 

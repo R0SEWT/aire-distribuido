@@ -129,7 +129,7 @@ PY
 
 estado="final"
 [ "${#problemas[@]}" -eq 0 ] || estado="PRELIMINAR (${#problemas[@]} problemas: ver la salida del script)"
-[[ "$tag" =~ ^tb2(\.[0-9]+)?$ ]] || estado="$estado; la ref no es un tag de la TB2 (tb2, tb2.1…)"
+[[ "$tag" =~ ^tb2(\.[0-9]+)?$ ]] || estado="$estado; la ref no es un tag del TB2 (tb2, tb2.1…)"
 [ -z "$(git status --porcelain -- .)" ] || estado="$estado; hay cambios sin commitear en docs/informe"
 
 {
