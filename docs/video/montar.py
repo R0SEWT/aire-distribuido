@@ -18,7 +18,8 @@ punch-ins, sacudidas, rótulos con borde negro, ojos rojos y efectos de sonido s
 ffmpeg (ver la cabecera de guion-cursed.md). La versión seria no cambia: el modo solo agrega.
 
 Variables de entorno: FFMPEG, FFPROBE, AGG, VOZ (voz de edge-tts), RITMO (su velocidad, p. ej.
-"+10%"), TONO (su tono, solo cursed), EQUIPO (ruta al equipo.yml), CURSED.
+"+10%"), TONO (su tono, solo cursed), EQUIPO (ruta al equipo.yml), CURSED, CODEC_VIDEO
+("h264_nvenc" para codificar en una GPU NVIDIA; por defecto libx264).
 """
 
 from __future__ import annotations
@@ -395,11 +396,19 @@ def interpretar_pantalla(esc: Escena) -> tuple[str, list[str], str, dict]:
     return tipo, rutas, pie, extras
 
 
+CODEC_VIDEO = os.environ.get("CODEC_VIDEO", "libx264")  # "h264_nvenc" para codificar en una GPU NVIDIA
+
+
 def codec_salida(salida: Path) -> list[str]:
     # El modo cursed comprime más (el deep-fry pesa) y codifica más rápido.
-    calidad = ["-preset", "faster", "-crf", "25"] if CURSED else ["-preset", "medium", "-crf", "20"]
+    if CODEC_VIDEO == "h264_nvenc":
+        # NVENC comprime menos que x264 a la misma «calidad»: cq más alto para quedar en un tamaño parecido.
+        calidad = ["-c:v", "h264_nvenc", "-preset", "p6", "-rc", "vbr", "-cq", "33" if CURSED else "27", "-b:v", "0",
+                   "-maxrate", "6M" if CURSED else "8M", "-bufsize", "12M"]
+    else:
+        calidad = ["-c:v", "libx264"] + (["-preset", "faster", "-crf", "25"] if CURSED else ["-preset", "medium", "-crf", "20"])
     return [
-        "-c:v", "libx264", *calidad, "-r", str(FPS),
+        *calidad, "-r", str(FPS),
         "-c:a", "aac", "-b:a", "128k", "-ar", "48000", str(salida),
     ]
 
@@ -907,6 +916,7 @@ def montar() -> None:
         base = f"escena-{esc.numero:02d}"
         claves = [esc.titulo, esc.pantalla, str(voz), f"{dur_voz:.3f}", str(total), " ".join(equipo),
                   huella_insumos(rutas)]
+        claves.append(" ".join(codec_salida(Path("x"))[:-1]))  # el clip cambia si cambia el códec o su calidad
         if CURSED:
             claves += [esc.efectos, json.dumps(esc.textos, ensure_ascii=False), "cursed-v4"]
         clip = BUILD / f"{base}-{huella(*claves)}.mp4"

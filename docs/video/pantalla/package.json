@@ -1,0 +1,13 @@
+{
+  "name": "pantalla-tb2",
+  "private": true,
+  "description": "Graba la SPA de punta a punta con Playwright para el video del TB2 (docs/video/guion-tb2.md)",
+  "type": "module",
+  "license": "UNLICENSED",
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "playwright-core": "1.65.0"
+  }
+}

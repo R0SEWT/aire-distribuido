@@ -39,6 +39,10 @@ coverage.*
 .env
 
 docs/video/build/
+# Clips de voz y cámara de cada integrante (pesan; viven en Drive: aire-distribuido/video/tb2/clips)
+docs/video/clips/
+# Dependencias del grabador de la SPA (Playwright)
+docs/video/pantalla/node_modules/
 entrega-pc3/
 
 .DS_Store

@@ -1,11 +1,9 @@
 import React from "react";
-import {
-  AbsoluteFill,
-  Easing,
-  interpolate,
-  useCurrentFrame,
-  useVideoConfig,
-} from "remotion";
+import { AbsoluteFill, Easing, interpolate, useCurrentFrame } from "remotion";
+import { useFpsEscena } from "./tiempo";
+
+// Duración original de la escena; con la prop `segundos` se estira en proporción.
+export const BASE_PIPELINE = 24;
 
 // Escena: el pipeline del cargador concurrente (parte A). Las cifras son las de
 // reports/limpieza.json y reports/benchmark_cargador.json sobre el CSV completo.
@@ -22,6 +20,7 @@ export type PipelineProps = {
   readonly duracionS: string;
   readonly speedup: string;
   readonly cpus: number;
+  readonly segundos?: number;
 };
 
 const C = {
@@ -58,7 +57,7 @@ const fase = (frame: number, fps: number, desde: number, hasta: number) =>
 
 const Titulo: React.FC = () => {
   const frame = useCurrentFrame();
-  const { fps } = useVideoConfig();
+  const fps = useFpsEscena(BASE_PIPELINE);
   return (
     <div
       style={{
@@ -88,7 +87,7 @@ const Estacion: React.FC<{
   children: React.ReactNode;
 }> = ({ titulo, x, desde, hasta, children }) => {
   const frame = useCurrentFrame();
-  const { fps } = useVideoConfig();
+  const fps = useFpsEscena(BASE_PIPELINE);
   const aparece = interpolate(frame, [(desde - 0.4) * fps, desde * fps], [0, 1], {
     ...clamp,
     easing: suave,
@@ -142,7 +141,7 @@ const Flecha: React.FC<{ x: number; desde: number; hasta: number; fichas: number
   color,
 }) => {
   const frame = useCurrentFrame();
-  const { fps } = useVideoConfig();
+  const fps = useFpsEscena(BASE_PIPELINE);
   const y = ARRIBA + ALTO / 2;
   const largo = 50;
   const p = fase(frame, fps, desde, hasta);
@@ -186,7 +185,7 @@ const Flecha: React.FC<{ x: number; desde: number; hasta: number; fichas: number
 
 const Csv: React.FC<{ bytesGB: string; filasLargas: string }> = ({ bytesGB, filasLargas }) => {
   const frame = useCurrentFrame();
-  const { fps } = useVideoConfig();
+  const fps = useFpsEscena(BASE_PIPELINE);
   const lineas = 14;
   return (
     <div style={{ position: "relative", height: "100%" }}>
@@ -234,7 +233,7 @@ const Csv: React.FC<{ bytesGB: string; filasLargas: string }> = ({ bytesGB, fila
 
 const Bloques: React.FC<{ bloques: number; bloqueMB: number }> = ({ bloques, bloqueMB }) => {
   const frame = useCurrentFrame();
-  const { fps } = useVideoConfig();
+  const fps = useFpsEscena(BASE_PIPELINE);
   const cols = 4;
   const w = 58;
   const h = 40;
@@ -291,7 +290,7 @@ const Workers: React.FC<{ workers: number; bloques: number; procesadas: string; 
   descartadas,
 }) => {
   const frame = useCurrentFrame();
-  const { fps } = useVideoConfig();
+  const fps = useFpsEscena(BASE_PIPELINE);
   const altoCarril = 19;
   const gap = 5;
   return (
@@ -358,7 +357,7 @@ const Workers: React.FC<{ workers: number; bloques: number; procesadas: string; 
 
 const Fusion: React.FC<{ bloques: number; filasAnchas: string }> = ({ bloques, filasAnchas }) => {
   const frame = useCurrentFrame();
-  const { fps } = useVideoConfig();
+  const fps = useFpsEscena(BASE_PIPELINE);
   const filas = 10;
   return (
     <div style={{ position: "relative", height: "100%" }}>
@@ -402,7 +401,7 @@ const Fusion: React.FC<{ bloques: number; filasAnchas: string }> = ({ bloques, f
 
 const Gold: React.FC<{ filasGold: string }> = ({ filasGold }) => {
   const frame = useCurrentFrame();
-  const { fps } = useVideoConfig();
+  const fps = useFpsEscena(BASE_PIPELINE);
   const puntos = 28;
   const p = interpolate(frame, [18.3 * fps, 20.3 * fps], [0, 1], { ...clamp, easing: suave });
   return (
@@ -454,7 +453,7 @@ const Pie: React.FC<{ duracionS: string; speedup: string; cpus: number; workers:
   workers,
 }) => {
   const frame = useCurrentFrame();
-  const { fps } = useVideoConfig();
+  const fps = useFpsEscena(BASE_PIPELINE);
   const op = interpolate(frame, [21.6 * fps, 22.4 * fps], [0, 1], { ...clamp, easing: suave });
   return (
     <div
@@ -486,7 +485,7 @@ const Pie: React.FC<{ duracionS: string; speedup: string; cpus: number; workers:
 
 const Leyenda: React.FC = () => {
   const frame = useCurrentFrame();
-  const { fps } = useVideoConfig();
+  const fps = useFpsEscena(BASE_PIPELINE);
   const textos: Array<[number, number, string]> = [
     [1.5, 4, "El archivo entero no cabe en una sola pasada cómoda: se lee por bloques."],
     [4, 8, "Un lector corta el archivo en bloques de 64 MB alineados al salto de línea y los manda por un canal."],
@@ -518,7 +517,7 @@ const Leyenda: React.FC = () => {
 
 export const Pipeline: React.FC<PipelineProps> = (p) => {
   const frame = useCurrentFrame();
-  const { fps } = useVideoConfig();
+  const fps = useFpsEscena(BASE_PIPELINE);
   const vaPie = frame > 21.6 * fps;
   return (
     <AbsoluteFill style={{ background: C.bg, fontFamily: "Inter, 'Segoe UI', Ubuntu, sans-serif" }}>
