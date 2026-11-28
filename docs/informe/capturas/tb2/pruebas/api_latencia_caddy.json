@@ -1,0 +1,117 @@
+{
+  "metadatos": {
+    "momento": "2026-11-27T18:43:24.022795758-05:00",
+    "maquina": "A019803",
+    "version_go": "go1.27.4",
+    "gomaxprocs": 14,
+    "cpus_logicas": 14,
+    "commit": "6d91f4fb694bb9a6c4c811ff1d2f0a0e4caf7e79",
+    "arbol_sucio": true
+  },
+  "parametros": {
+    "url": "http://localhost:8081",
+    "ruta": "POST /api/predicciones",
+    "lecturas": "docs/postman/lecturas_prueba.csv",
+    "lecturas_sha256": "67e78001d098d10f5932fc3af04384f7bffecb21a1922d4af06f53c6dfc5e85c",
+    "filas": 78,
+    "clientes": [
+      1,
+      4,
+      16,
+      64
+    ],
+    "pedidos_por_nivel": 5000,
+    "calentamiento": 200,
+    "limite_ms": 100,
+    "plazo_pedido": "5s"
+  },
+  "servidor": {
+    "api": "ok",
+    "mongo": "ok",
+    "redis": "ok",
+    "nodos_en_pool": 2,
+    "modelo_activo": "entrenado-e-20261127-1837"
+  },
+  "medicion": "Latencia del lado del cliente: desde antes de enviar el pedido hasta leer el cuerpo completo de la respuesta, con un JWT y sobre conexiones keep-alive ya abiertas por el calentamiento. Cada nivel tiene siempre `clientes` pedidos en vuelo. Percentiles por rango más cercano sobre los pedidos que respondieron 200; pedidos_por_segundo son esos pedidos sobre duracion_s. respuestas_distintas: respondieron 200 con un régimen que no es el regimen_esperado del archivo. cumple: sin errores, sin respuestas distintas y p99_ms \u003c limite_ms. escrituras: lo que GET /api/metricas sumó en cada almacén entre antes y después de la corrida, con el calentamiento; la API responde antes de escribir, así que una predicción descartada o fallida respondió 200 igual. No entra en cumple.",
+  "niveles": [
+    {
+      "clientes": 1,
+      "pedidos": 5000,
+      "errores": 0,
+      "respuestas_distintas": 0,
+      "duracion_s": 1.9434595639999999,
+      "pedidos_por_segundo": 2572.7316856076354,
+      "p50_ms": 0.353069,
+      "p95_ms": 0.518821,
+      "p99_ms": 0.907362,
+      "max_ms": 3.754226,
+      "media_ms": 0.3788669836000004,
+      "sobre_el_limite": 0,
+      "cumple": true
+    },
+    {
+      "clientes": 4,
+      "pedidos": 5000,
+      "errores": 0,
+      "respuestas_distintas": 0,
+      "duracion_s": 0.560132303,
+      "pedidos_por_segundo": 8926.462503984527,
+      "p50_ms": 0.375834,
+      "p95_ms": 0.766348,
+      "p99_ms": 1.136655,
+      "max_ms": 3.29248,
+      "media_ms": 0.4305331512000001,
+      "sobre_el_limite": 0,
+      "cumple": true
+    },
+    {
+      "clientes": 16,
+      "pedidos": 5000,
+      "errores": 0,
+      "respuestas_distintas": 0,
+      "duracion_s": 0.329993374,
+      "pedidos_por_segundo": 15151.819381682493,
+      "p50_ms": 0.909454,
+      "p95_ms": 1.949566,
+      "p99_ms": 2.496568,
+      "max_ms": 3.889423,
+      "media_ms": 1.0165376379999986,
+      "sobre_el_limite": 0,
+      "cumple": true
+    },
+    {
+      "clientes": 64,
+      "pedidos": 5000,
+      "errores": 0,
+      "respuestas_distintas": 0,
+      "duracion_s": 0.315418691,
+      "pedidos_por_segundo": 15851.945818898857,
+      "p50_ms": 3.38587,
+      "p95_ms": 7.825086,
+      "p99_ms": 12.949772,
+      "max_ms": 20.079681,
+      "media_ms": 3.864527729200005,
+      "sobre_el_limite": 0,
+      "cumple": true
+    }
+  ],
+  "cumple": true,
+  "escrituras": {
+    "medido": true,
+    "predicciones_aceptadas": 20800,
+    "completas": true,
+    "espera_s": 0.001606042,
+    "mongo": {
+      "escritas": 20800,
+      "descartadas": 0,
+      "fallidas": 0,
+      "lotes": 8138
+    },
+    "redis": {
+      "escritas": 20800,
+      "descartadas": 0,
+      "fallidas": 0,
+      "lotes": 10099
+    }
+  }
+}

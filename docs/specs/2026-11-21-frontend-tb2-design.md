@@ -461,6 +461,24 @@ Cada una con su PR y su criterio de aceptación, y ninguna frena al resto:
 3. El botón «reiniciar las estaciones» (§5.4).
 4. Reparto de tareas y calendario (§13).
 
+### 14.1 Cómo quedaron (27/11)
+
+1. **[cerrada] Población: Censo 2017 del INEI, población censada.** `reports/poblacion_distritos.csv` trae los
+   16 distritos de la ficha con el enlace a la página del tomo del censo de cada cifra (d410f77, PR #106). La
+   página de Impacto la muestra fila por fila y no la suma.
+2. **[cerrada] Anticipación: la versión acotada.** `scripts/impacto.py` la calcula sobre el gold y la deja en
+   `impacto.json → anticipacion` (30 episodios; en la mediana, la primera lectura horaria sobre el umbral
+   dentro de las 24 horas previas llega 20 horas antes de que la media de 24 h cruce el ECA, pero encendida
+   sin interrupción lleva solo 1 hora), con su definición y lo que no es a la vista. La página de Impacto
+   la dibuja (`graficos/AnticipacionEpisodios.tsx`).
+3. **[cerrada] Sin botón «reiniciar las estaciones».** No se agregó la ruta: el escenario se carga sobre un
+   sistema limpio con `docker compose down -v`, y la Simulación dice antes de empezar si el sistema está limpio
+   para ese tramo (`pantallas/simulacion/limpieza.ts`).
+4. **[cerrada] Reparto y calendario**: se siguieron en los beads del epic `infelix-distribuido-aex` y en el
+   Kanban del TB2. Dos cosas del alcance cambiaron respecto de §11 a §13: la UI sí se desplegó en la máquina de
+   Azure (PR #113), y las capturas de punta a punta se tomaron manejando un navegador con Playwright (las
+   pruebas automáticas siguen siendo Vitest; no hay una suite de Playwright).
+
 ## 15. Notas para quien implemente
 
 - El texto real del 422 es «hay 2 nodos libres en el pool y se pidieron 4»; el nodo que falló llega dentro

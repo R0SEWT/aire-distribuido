@@ -229,11 +229,20 @@ func lecturasChicas(t *testing.T) []lectura {
 	return ls
 }
 
+// limiteHolgadoMs es el límite de las pruebas que esperan que un nivel cumpla.
+// Lo que prueban es la cuenta (sin errores y con el p99 bajo el límite, cumple),
+// no la velocidad de la máquina: con -race y los paquetes de ./... corriendo a
+// la vez, el p99 de 200 pedidos a un httptest llegó a 102 ms y un límite de
+// 100 ms hacía fallar la prueba sin que nada estuviera mal. El caso contrario,
+// un p99 que pasa el límite, lo prueba TestMedirNivelNoCumpleSiElP99PasaElLimite
+// con un límite de 1 ms.
+const limiteHolgadoMs = 10_000
+
 func TestMedirNivelHaceTodosLosPedidos(t *testing.T) {
 	api := nuevaAPIFalsa(t, responderBien)
 	c := nuevoCliente(api.URL, tokenDePrueba, 5*time.Second)
 
-	n, err := medirNivel(context.Background(), c, lecturasChicas(t), 8, 200, 16, 100)
+	n, err := medirNivel(context.Background(), c, lecturasChicas(t), 8, 200, 16, limiteHolgadoMs)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -365,7 +374,7 @@ func configDePrueba(t *testing.T, url string) config {
 	}
 	return config{
 		url: url, usuario: "demo", clave: "secreta", lecturas: lecturas, clientes: []int{1, 4},
-		pedidos: 40, calentamiento: 4, limiteMs: 100, plazo: 5 * time.Second,
+		pedidos: 40, calentamiento: 4, limiteMs: limiteHolgadoMs, plazo: 5 * time.Second,
 		salida: filepath.Join(dir, "reports", "api_latencia.json"),
 		admin:  "admin", claveAdmin: "secreta-admin", esperaEscrituras: 2 * time.Second,
 	}
@@ -429,7 +438,7 @@ func TestCorrerEscribeElInforme(t *testing.T) {
 	}
 	p := leido.Parametros
 	if p.URL != api.URL || p.Ruta != "POST /api/predicciones" || p.Filas != 3 || p.PedidosPorNivel != 40 ||
-		p.Calentamiento != 4 || p.LimiteMs != 100 || len(p.LecturasSha256) != 64 || len(p.Clientes) != 2 {
+		p.Calentamiento != 4 || p.LimiteMs != limiteHolgadoMs || len(p.LecturasSha256) != 64 || len(p.Clientes) != 2 {
 		t.Errorf("parámetros = %+v", p)
 	}
 	if leido.Servidor["modelo_activo"] != "sembrado-kmeans-json" {

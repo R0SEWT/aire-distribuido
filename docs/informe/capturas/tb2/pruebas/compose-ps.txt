@@ -1,0 +1,11 @@
+$ docker compose -p aire-tb2-frontend ps   # 2026-11-27 18:43 -05, tras las capturas y las mediciones
+NAME                        IMAGE                                                                     STATUS                    PORTS
+aire-tb2-frontend-api-1     sha256:f82275fd31ae844ea1456109c892cf94df90427833d764377dfbb4e949ee0c06   Up 11 minutes (healthy)   7070/tcp, 127.0.0.1:8080->8080/tcp
+aire-tb2-frontend-mongo-1   mongo:8.0.38                                                              Up 11 minutes (healthy)   127.0.0.1:27017->27017/tcp
+aire-tb2-frontend-nodo-1    sha256:f82275fd31ae844ea1456109c892cf94df90427833d764377dfbb4e949ee0c06   Up 11 minutes             
+aire-tb2-frontend-nodo-2    sha256:f82275fd31ae844ea1456109c892cf94df90427833d764377dfbb4e949ee0c06   Up 11 minutes             
+aire-tb2-frontend-redis-1   redis:7.4.12-alpine                                                       Up 11 minutes (healthy)   127.0.0.1:6379->6379/tcp
+aire-tb2-frontend-web-1     sha256:23220bc910f26b96d1fbedb3825b0d45c62891b44895318a23c643a216abbb9e   Up 11 minutes             443/tcp, 2019/tcp, 443/udp, 127.0.0.1:8081->80/tcp
+
+$ git rev-parse --short HEAD
+6d91f4f
