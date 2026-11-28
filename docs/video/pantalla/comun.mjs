@@ -3,7 +3,7 @@
 
 import { spawnSync } from 'node:child_process'
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
-import { dirname, join, resolve } from 'node:path'
+import { basename, dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { chromium } from 'playwright-core'
 
@@ -16,6 +16,9 @@ export const BASE = (process.env.AIRE_URL ?? 'http://localhost:8091').replace(/\
 export const VISTA = { width: 1536, height: 864 }
 export const ESCALA = 1.25
 const FFMPEG = process.env.FFMPEG ?? 'ffmpeg'
+// Con exodia-ff (skill ffmpeg-exodia) el mp4 se arma en exodia y aquí no se codifica nada;
+// FFMPEG_LOCAL=1 lo arma en esta máquina.
+const EN_EXODIA = process.env.FFMPEG_LOCAL !== '1' && spawnSync('sh', ['-c', 'command -v exodia-ff']).status === 0
 
 /** ¿La URL es un Compose local (donde se puede escribir) o un sitio público (solo lectura)? */
 export function esLocal(url = BASE) {
@@ -170,22 +173,26 @@ export async function grabar(pagina, nombre, accion) {
   const dir = join(SALIDA, `${nombre}-cuadros`)
   rmSync(dir, { recursive: true, force: true })
   mkdirSync(dir, { recursive: true })
+  // La lista lleva solo el nombre de cada cuadro: ffmpeg los busca junto a ella, aquí o en exodia.
   const lineas = []
   cuadros.forEach((c, i) => {
-    const archivo = join(dir, `${String(i).padStart(6, '0')}.jpg`)
-    writeFileSync(archivo, Buffer.from(c.datos, 'base64'))
+    const archivo = `${String(i).padStart(6, '0')}.jpg`
+    writeFileSync(join(dir, archivo), Buffer.from(c.datos, 'base64'))
     const siguiente = i + 1 < cuadros.length ? cuadros[i + 1].t : Math.max(fin, c.t + 0.04)
     lineas.push(`file '${archivo}'`, `duration ${Math.max(0.001, siguiente - c.t).toFixed(4)}`)
   })
-  lineas.push(`file '${join(dir, `${String(cuadros.length - 1).padStart(6, '0')}.jpg`)}'`)
+  lineas.push(`file '${String(cuadros.length - 1).padStart(6, '0')}.jpg'`)
   writeFileSync(join(dir, 'lista.txt'), lineas.join('\n') + '\n')
   const mp4 = join(SALIDA, `${nombre}.mp4`)
-  const r = spawnSync(FFMPEG, [
-    '-y', '-loglevel', 'error', '-f', 'concat', '-safe', '0', '-i', join(dir, 'lista.txt'),
-    '-vf', 'scale=1920:1080:flags=lanczos,fps=30,format=yuv420p', '-c:v', 'libx264', '-preset', 'medium', '-crf', '18',
-    '-movflags', '+faststart', mp4,
-  ], { stdio: 'inherit' })
-  if (r.status !== 0) throw new Error(`${nombre}: ffmpeg falló`)
+  const filtro = ['-vf', 'scale=1920:1080:flags=lanczos,fps=30,format=yuv420p', '-c:v', 'libx264', '-preset', 'medium',
+    '-crf', '18', '-movflags', '+faststart']
+  const r = EN_EXODIA
+    ? spawnSync('exodia-ff', ['run', '-w', '-n', `pantalla-${nombre}`, '--in', dir, '-f', SALIDA, '--sh',
+      `ffmpeg -nostdin -y -loglevel error -f concat -safe 0 -i in/${basename(dir)}/lista.txt ${filtro.join(' ')} out/${nombre}.mp4`],
+    { stdio: 'inherit' })
+    : spawnSync(FFMPEG, ['-y', '-loglevel', 'error', '-f', 'concat', '-safe', '0', '-i', join(dir, 'lista.txt'), ...filtro, mp4],
+      { stdio: 'inherit' })
+  if (r.status !== 0 || !existsSync(mp4)) throw new Error(`${nombre}: no se armó el mp4 (${EN_EXODIA ? 'exodia-ff' : 'ffmpeg'})`)
   rmSync(dir, { recursive: true, force: true })
   const segundos = (cuadros.at(-1).t - cuadros[0].t).toFixed(1)
   console.log(`grabada: ${mp4} (${cuadros.length} cuadros, ${segundos} s de pantalla, ${(fin - inicio).toFixed(1)} s en total)`)

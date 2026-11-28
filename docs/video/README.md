@@ -30,12 +30,25 @@ bash docs/video/grabar.sh carga bases pruebas compose   # la terminal → casts/
 # 2. Los clips de cada uno, con el nombre de la tabla de grabar-tu-parte.md
 rclone copy gdrive:aire-distribuido/video/tb2/clips docs/video/clips/
 
-# 3. El montaje
-bash docs/video/armar-tb2.sh --tiempos   # cuánto dura cada bloque con los clips que hay
-bash docs/video/armar-tb2.sh             # borrador: lo que falta va con voz sintética y la marca BORRADOR
+# 3. El montaje (con los 12 clips en docs/video/clips/, es este solo comando)
 bash docs/video/armar-tb2.sh --final     # exige los 12 clips y 6:00 o menos → build/tb2/video-tb2.mp4
+
+bash docs/video/armar-tb2.sh             # borrador: lo que falta va con voz sintética y la marca BORRADOR
+bash docs/video/armar-tb2.sh --tiempos   # cuánto dura cada bloque con los clips que hay
 bash docs/video/armar-tb2.sh --hojas     # build/tb2/guion-NOMBRE.pdf: los textos de cada uno en letra grande
 ```
+
+**Dónde se codifica.** En la laptop de Rody no se corre ffmpeg que codifique (skill `ffmpeg-exodia`):
+si está `exodia-ff`, `armar-tb2.sh` prepara aquí lo que no necesita ffmpeg (las voces sintéticas que
+falten, las escenas de Remotion, que traen su propio ffmpeg, y los GIF de la terminal con agg), arma el
+paquete `build/tb2/exodia/repo` con la estructura del repo y lo sube a
+`exodia:~/Code/exprimental/temp/<JOB>/`. Allá `montar_tb2.py` corre completo en tmux con
+`INSUMOS_PREVIOS=1` (ffmpeg 7 estático y el ffprobe del sistema, Python con Pillow y las fuentes del
+paquete) y el mp4, `bloques.json` y un fotograma cada 20 s se bajan solos a `build/tb2/`.
+`exodia-ff ls` muestra el trabajo y `ssh -t exodia tmux attach -t ff-<JOB>` lo deja ver en vivo. Las
+escenas de Remotion se renderizan aquí a la duración estimada de cada voz y allá se ajustan a la real
+(unos segundos de diferencia, sin que se note). `--local` hace todo en la máquina, como antes. Lo mismo
+vale para `grabar-pantalla.sh`: los mp4 de la SPA se arman en exodia (`FFMPEG_LOCAL=1` los arma aquí).
 
 Qué hace el montaje con cada clip: recorta el silencio del inicio y del final (`silencedetect`), limpia
 la voz (pasa altos, `afftdn`) y la nivela a -16 LUFS (`loudnorm`). La duración de cada bloque es la de su

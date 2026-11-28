@@ -19,6 +19,10 @@ y concatena todo en docs/video/build/tb2/video-tb2.mp4 (video-tb2-borrador.mp4 s
 duración de cada bloque (por palabras y con la voz sintética) sin montar. --hojas escribe, por persona,
 un PDF con sus textos en letra grande para leer frente a la cámara (build/tb2/guion-NOMBRE.pdf).
 
+En exodia (lo que hace armar-tb2.sh): --preparar, en la Lenovo, deja en build/tb2/exodia/repo todo lo
+que el montaje necesita sin codificar nada con ffmpeg (voces sintéticas, escenas de Remotion, GIF de la
+terminal, clips, grabaciones y figuras); allá, con INSUMOS_PREVIOS=1, se monta igual que en local.
+
 Variables de entorno: FFMPEG, FFPROBE, AGG, CHROME (para Remotion), CLIPS (carpeta de los clips),
 RITMO_TB2 (velocidad de la voz sintética; por omisión -5 %, cerca del ritmo de una persona leyendo),
 CODEC_VIDEO («h264_nvenc» para codificar en una GPU NVIDIA con un ffmpeg que lo traiga; por omisión
@@ -49,6 +53,12 @@ PANTALLAS = BUILD / "pantalla"
 REMOTION = VIDEO / "remotion"
 CHROME = os.environ.get("CHROME", "/usr/bin/google-chrome")
 RITMO = os.environ.get("RITMO_TB2", "-5%")
+# Montaje en exodia (armar-tb2.sh): en la Lenovo no se codifica con ffmpeg. Allá se preparan las voces
+# sintéticas, las escenas de Remotion (traen su propio ffmpeg) y los GIF de la terminal (agg), en
+# build/tb2/previos/; con INSUMOS_PREVIOS=1, el montaje los toma de ahí en vez de generarlos.
+PREVIOS = BUILD / "previos"
+EN_EXODIA = os.environ.get("INSUMOS_PREVIOS") == "1"
+PAQUETE = BUILD / "exodia" / "repo"  # lo que se sube a exodia, con la misma estructura del repo
 
 FFMPEG, FFPROBE = pc3.FFMPEG, pc3.FFPROBE
 CODEC_VIDEO = os.environ.get("CODEC_VIDEO", "libx264")
@@ -106,7 +116,8 @@ def fuente(tamano: int, negrita: bool = False, mono: bool = False) -> ImageFont.
         return _FUENTES[clave]
     f = None
     if not mono:
-        for ttc in (Path.home() / ".local/share/fonts/Inter/Inter.ttc", Path("/usr/share/fonts/truetype/inter/Inter.ttc")):
+        extra = [Path(os.environ["FUENTES"]) / "Inter.ttc"] if os.environ.get("FUENTES") else []
+        for ttc in (*extra, Path.home() / ".local/share/fonts/Inter/Inter.ttc", Path("/usr/share/fonts/truetype/inter/Inter.ttc")):
             if not ttc.exists():
                 continue
             for i in range(40):
@@ -282,17 +293,25 @@ def buscar_clip(b: Bloque) -> Path | None:
     return (exactos or sorted(candidatos, key=lambda p: p.stat().st_mtime))[-1]
 
 
+def voz_sintetica(b: Bloque) -> Path:
+    """El mp3 de edge-tts del bloque (cacheado por voz, ritmo y texto). No usa ffmpeg."""
+    p = PERSONAS[b.quien]
+    mp3 = BUILD / f"tts-{b.numero:02d}-{pc3.huella(p['voz'], RITMO, b.texto)}.mp3"
+    if not mp3.exists():
+        if EN_EXODIA:
+            sys.exit(f"falta {mp3.name}: la voz sintética se prepara en la Lenovo (montar_tb2.py --preparar)")
+        for viejo in BUILD.glob(f"tts-{b.numero:02d}-*.mp3"):
+            viejo.unlink()
+        correr(["uvx", "--from", "edge-tts", "edge-tts", "--voice", p["voz"], f"--rate={RITMO}",
+                "--text", b.texto, "--write-media", mp3])
+    return mp3
+
+
 def preparar_voz(b: Bloque) -> None:
     """Deja en b.voz un WAV limpio y nivelado, y en b.ini/b.fin el tramo del clip que se usa."""
     b.clip = buscar_clip(b)
     if b.clip is None:
-        p = PERSONAS[b.quien]
-        mp3 = BUILD / f"tts-{b.numero:02d}-{pc3.huella(p['voz'], RITMO, b.texto)}.mp3"
-        if not mp3.exists():
-            for viejo in BUILD.glob(f"tts-{b.numero:02d}-*.mp3"):
-                viejo.unlink()
-            correr(["uvx", "--from", "edge-tts", "edge-tts", "--voice", p["voz"], f"--rate={RITMO}",
-                    "--text", b.texto, "--write-media", mp3])
+        mp3 = voz_sintetica(b)
         b.sintetica = True
         wav = BUILD / f"voz-{b.numero:02d}-tts-{pc3.huella(str(mp3))}.wav"
         if not wav.exists():
@@ -489,6 +508,11 @@ def segmento(b: Bloque, k: int, p: Pantalla, d: float) -> tuple[Path, str]:
         segmento_estatico(png, d, salida)
         return salida, p.tipo
     if p.tipo == "remotion":
+        if EN_EXODIA:  # renderizada en la Lenovo a la duración estimada: aquí se ajusta a la real
+            previo = PREVIOS / "remotion" / f"{p.rutas[0]}.mp4"
+            vel = duracion(previo) / d
+            ajustar(previo, d, salida, vel)
+            return salida, f"remotion {p.rutas[0]} a {vel:.2f}×"
         ajustar(render_remotion(p.rutas[0], d), d, salida)
         return salida, f"remotion {p.rutas[0]}"
     if p.tipo == "video":
@@ -503,7 +527,11 @@ def segmento(b: Bloque, k: int, p: Pantalla, d: float) -> tuple[Path, str]:
         return salida, f"pantalla {p.rutas[0]} a {vel:.2f}×"
     if p.tipo == "terminal":
         vel = float(p.extras["vel"]) if "vel" in p.extras else None
-        gif, vel = pc3.render_terminal(p.rutas[0], objetivo=d * 0.85, velocidad=vel)
+        if EN_EXODIA:  # el GIF lo hizo agg en la Lenovo
+            gif = PREVIOS / "gif" / f"{p.rutas[0]}.gif"
+            vel = json.loads((PREVIOS / "manifiesto.json").read_text(encoding="utf-8"))["gif"][p.rutas[0]]
+        else:
+            gif, vel = pc3.render_terminal(p.rutas[0], objetivo=d * 0.85, velocidad=vel)
         fondo_terminal(b, p.pie).save(png)
         w, h, x, y = caja_terminal(gif)
         correr([FFMPEG, "-y", "-loglevel", "error", "-loop", "1", "-framerate", FPS, "-i", png, "-i", gif,
@@ -515,12 +543,16 @@ def segmento(b: Bloque, k: int, p: Pantalla, d: float) -> tuple[Path, str]:
     sys.exit(f"bloque {b.numero}: pantalla desconocida «{p.tipo}»")
 
 
-def fondo_del_bloque(b: Bloque, total: float) -> tuple[Path, list[str]]:
+def partes(b: Bloque) -> list[float]:
+    """Qué fracción del bloque ocupa cada pantalla: las que dicen parte=, eso; las otras, el resto."""
     fijas = [float(p.extras["parte"]) for p in b.pantallas if "parte" in p.extras]
     libres = [p for p in b.pantallas if "parte" not in p.extras]
     resto = max(0.0, 1.0 - sum(fijas))
-    partes = [float(p.extras["parte"]) if "parte" in p.extras else resto / max(1, len(libres)) for p in b.pantallas]
-    duraciones = [total * f for f in partes]
+    return [float(p.extras["parte"]) if "parte" in p.extras else resto / max(1, len(libres)) for p in b.pantallas]
+
+
+def fondo_del_bloque(b: Bloque, total: float) -> tuple[Path, list[str]]:
+    duraciones = [total * f for f in partes(b)]
     duraciones[-1] = total - sum(duraciones[:-1])
     segs, notas = [], []
     for k, (p, d) in enumerate(zip(b.pantallas, duraciones)):
@@ -718,6 +750,86 @@ def hojas(bloques: list[Bloque]) -> None:
             print(f"  {ruta.relative_to(RAIZ)} ({len(paginas)} páginas)")
 
 
+# ----------------------------------------------------------------------------- preparar para exodia
+
+
+def enlazar(origen: Path, destino: Path) -> None:
+    """Pone el archivo en el paquete sin copiarlo si se puede (enlace duro, mismo disco)."""
+    import shutil
+    destino.parent.mkdir(parents=True, exist_ok=True)
+    if destino.exists():
+        destino.unlink()
+    try:
+        os.link(origen, destino)
+    except OSError:
+        shutil.copy2(origen, destino)
+
+
+def preparar_para_exodia(bloques: list[Bloque], final: bool) -> None:
+    """En la Lenovo, sin codificar con ffmpeg: las voces sintéticas que falten (edge-tts), las escenas de
+    Remotion y los GIF de la terminal a la duración estimada de cada bloque, y el paquete que se sube a
+    exodia (build/tb2/exodia/repo, con la estructura del repo). La duración real se conoce allá, después
+    de recortar los silencios; las escenas y los GIF se ajustan a ella con una diferencia de pocos
+    segundos. ffprobe solo lee metadatos."""
+    import shutil
+    faltan = []
+    archivos: set[Path] = {VIDEO / "montar.py", VIDEO / "montar_tb2.py", GUION}
+    manifiesto: dict = {"remotion": {}, "gif": {}}
+    for d in ("remotion", "gif"):
+        shutil.rmtree(PREVIOS / d, ignore_errors=True)
+        (PREVIOS / d).mkdir(parents=True, exist_ok=True)
+    for b in bloques:
+        b.clip = buscar_clip(b)
+        if b.clip is None:
+            faltan.append(f"{b.numero:02d}-{b.quien}")
+            mp3 = voz_sintetica(b)
+            archivos.add(mp3)
+            estimada = duracion(mp3) + ANTES + DESPUES
+            origen = "voz sintética"
+        else:
+            archivos.add(b.clip)
+            estimada = max(3.0, sondear(b.clip)["duracion"] - 1.2)  # los silencios de los bordes se recortan allá
+            origen = b.clip.name
+        print(f"  bloque {b.numero:2d}  ~{estimada:5.1f} s  {origen}", flush=True)
+        for p, f in zip(b.pantallas, partes(b)):
+            d = estimada * f
+            if p.tipo == "remotion":
+                enlazar(render_remotion(p.rutas[0], d), PREVIOS / "remotion" / f"{p.rutas[0]}.mp4")
+                manifiesto["remotion"][p.rutas[0]] = round(d, 2)
+            elif p.tipo == "terminal":
+                vel = float(p.extras["vel"]) if "vel" in p.extras else None
+                gif, vel = pc3.render_terminal(p.rutas[0], objetivo=d * 0.85, velocidad=vel)
+                enlazar(gif, PREVIOS / "gif" / f"{p.rutas[0]}.gif")
+                manifiesto["gif"][p.rutas[0]] = vel
+                archivos.add(pc3.CASTS / f"{p.rutas[0]}.cast")
+            elif p.tipo == "pantalla":
+                rec = PANTALLAS / f"{p.rutas[0]}.mp4"
+                if not rec.exists():
+                    sys.exit(f"bloque {b.numero}: falta {rec.relative_to(RAIZ)} (bash docs/video/grabar-pantalla.sh)")
+                archivos.add(rec)
+            elif p.tipo in ("figura", "figuras", "video"):
+                archivos.update(RAIZ / r for r in p.rutas)
+    if final and faltan:
+        sys.exit(f"--final: faltan los clips {', '.join(faltan)} en {CLIPS}")
+    (PREVIOS / "manifiesto.json").write_text(json.dumps(manifiesto, ensure_ascii=False, indent=2), encoding="utf-8")
+    archivos.update((PREVIOS / "remotion").glob("*.mp4"))
+    archivos.update((PREVIOS / "gif").glob("*.gif"))
+    archivos.add(PREVIOS / "manifiesto.json")
+
+    shutil.rmtree(PAQUETE, ignore_errors=True)
+    for a in sorted(archivos):
+        # Los clips van a docs/video/clips del paquete aunque aquí estén en otra carpeta (CLIPS).
+        rel = Path("docs/video/clips") / a.name if a.parent == CLIPS else a.relative_to(RAIZ)
+        enlazar(a, PAQUETE / rel)
+    for ttc in (Path.home() / ".local/share/fonts/Inter/Inter.ttc", Path("/usr/share/fonts/truetype/inter/Inter.ttc")):
+        if ttc.exists():
+            enlazar(ttc, PAQUETE / "fuentes" / "Inter.ttc")
+            break
+    peso = sum(f.stat().st_size for f in PAQUETE.rglob("*") if f.is_file())
+    print(f"paquete: {PAQUETE.relative_to(RAIZ)} ({len(archivos)} archivos, {peso / 1e6:.0f} MB)"
+          + (f"; {len(faltan)} bloques con voz sintética" if faltan else ""))
+
+
 # ----------------------------------------------------------------------------- montaje
 
 
@@ -728,6 +840,9 @@ def montar() -> None:
     bloques = leer_guion()
     if "--hojas" in sys.argv:
         hojas(bloques)
+        return
+    if "--preparar" in sys.argv:
+        preparar_para_exodia(bloques, final)
         return
     for b in bloques:
         preparar_voz(b)
