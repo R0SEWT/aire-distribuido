@@ -97,7 +97,7 @@ API coordinadora habla con los nodos por TCP, guarda en MongoDB y Redis y atiend
 - Duración: 0:41
 - Cámara: burbuja arriba
 - Pantalla: `remotion PipelineCargador | El pipeline del cargador (cmd/cargar): bloques por bytes, un pool de workers y la fusión en orden de bloque | parte=0.58`
-- Pantalla: `figura docs/informe/capturas/cargar.png | go run ./cmd/cargar sobre el CSV completo de OEFA: leídas, procesadas y lo que descarta cada regla (captura real de la PC3) | parte=0.24 | crop=0,380,1500,700`
+- Pantalla: `figura docs/informe/capturas/cargar.png | go run ./cmd/cargar sobre el CSV completo de OEFA: leídas, procesadas y lo que descarta cada regla (captura real de la PC3) | parte=0.24 | crop=0,314,1240,578`
 - Pantalla: `texto El mismo SHA-256 en tres sistemas | Linux, el benchmark del informe: silver 63b707f4…, gold 2fdace5a… ; Windows (#42, Julio): los mismos, con bloques de 16, 64 y 128 MiB y de 1 a 12 workers ; macOS (#45, Dayana): los mismos, y la auditoría 40 de 40`
 - Qué se ve: la escena animada del pipeline (el CSV, los bloques, los workers, la fusión y el gold); la captura
   real de `cmd/cargar` sobre el CSV completo, con lo que descarta cada regla; y la tarjeta con las
