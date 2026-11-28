@@ -54,10 +54,9 @@ sin los nodos por VPN que no se hicieron; va girada a página completa, como la 
 escribe en el campo las entradas con sus páginas medidas con LibreOffice: fuera de Word (el visor del Aula,
 LibreOffice, un PDF) el índice ya no sale vacío.
 
-**Antes de entregar el TB2**: fusionar la rama de las capturas, `equipo.local.yml` con los códigos reales, la
-captura del Kanban, el enlace del video en el Anexo A, la participación llenada
-(`participacion-tb2.local.md`), las filas del Anexo E confirmadas, `FETCH=1 bash render.sh` y
-`./empaquetar-tb2.sh tb2`.
+**Antes de entregar el TB2**: `equipo.local.yml` con los códigos reales, la captura del Kanban, la
+participación llenada (`participacion-tb2.local.md`), las filas del Anexo E confirmadas,
+`FETCH=1 bash render.sh` y `./empaquetar-tb2.sh tb2`. El Anexo A ya enlaza la carpeta de Drive del video.
 
 ## Lo propio de la PC4
 

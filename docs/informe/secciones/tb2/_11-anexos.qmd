@@ -10,13 +10,10 @@ A a E son las mismas de los informes de la PC3 y la PC4, que sus secciones citan
   son los tags `pc3.1` y `pc4`.
 - **Sistema desplegado:** <https://aire.rosewt.dev> (la interfaz) y <https://aire.rosewt.dev/docs>
   (Swagger UI). Se entra con «No pienso crearme una cuenta aquí», como invitado.
-- **Video de la presentación (6 minutos como máximo, con los tres integrantes):** [PENDIENTE: enlace del video].
-
-::: {.callout-warning title="PENDIENTE"}
-El enlace del video se pone cuando el video esté subido: reemplazar el texto «PENDIENTE: enlace del
-video» de arriba por la URL.
-:::
-
+- **Video de la presentación:** la carpeta de Google Drive donde se publica el video del TB2, de 6
+  minutos como máximo y con los tres integrantes, como pide el enunciado:
+  <https://drive.google.com/drive/folders/13lqOw75W_t7JaJG4ecQRiVUxjV2K9Eyf>. Cualquiera con el enlace
+  puede verla.
 - **Cómo levantarlo:** `README.md` de la raíz. Con Docker: generar el gold con `cargar` sobre el CSV de
   OEFA (@sec-despliegue), copiar `.env.example` a `.env`, completar la clave del JWT y los usuarios, y
   `docker compose up --build --scale nodo=3`; la interfaz queda en
