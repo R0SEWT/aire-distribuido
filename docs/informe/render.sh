@@ -12,13 +12,14 @@
 #
 # Pasos:
 #   1. tablas.py: generado/*.json → generado/tablas/*.md y generado/cifras.yml
-#   2. generado/local/ (no versionado): equipo.yml (de equipo.local.yml o, si no existe, de
+#   2. verificar_limpieza.py: valida y regenera reports/revision_limpieza.md
+#   3. generado/local/ (no versionado): equipo.yml (de equipo.local.yml o, si no existe, de
 #      equipo.ejemplo.yml), _participacion.md (de participacion.local.md o de la plantilla
 #      _participacion.md), entidades-girado.png (el diagrama de entidades girado, para la PC4) e
 #      historial.md (generar-historial.sh o, si falla, el de ejemplo)
-#   3. quarto render informe.qmd (o informe-pc4.qmd) -M codigo:<código> por cada integrante de `equipo`
-#   4. quarto render participacion.qmd (o participacion-pc4.qmd)
-#   5. w:updateFields en cada .docx: Word pregunta al abrir si actualiza los campos (el índice)
+#   4. quarto render informe.qmd (o informe-pc4.qmd) -M codigo:<código> por cada integrante de `equipo`
+#   5. quarto render participacion.qmd (o participacion-pc4.qmd)
+#   6. w:updateFields en cada .docx: Word pregunta al abrir si actualiza los campos (el índice)
 set -euo pipefail
 cd "$(dirname "$0")"
 
@@ -42,6 +43,8 @@ else
   exit 1
 fi
 
+echo "→ verificación de limpieza"
+python3 ../../scripts/verificar_limpieza.py
 # Los listados de código y de terminal pasan a imagen (una línea larga se parte mal en Word).
 # Solo en el informe de la PC4.
 # Necesita Chrome y pygments; si falta alguno, se avisa y los listados quedan como texto, que es como

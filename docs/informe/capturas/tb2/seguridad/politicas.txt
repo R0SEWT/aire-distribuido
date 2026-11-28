@@ -1,0 +1,65 @@
+# Políticas de seguridad de la API vistas desde la UI (Compose local, 2026-11-27 18:32 -05)
+# Todo por el Caddy del servicio web (http://localhost:8081), el mismo origen que usa la SPA.
+# Los tokens y las claves se tapan: <token>, <clave>.
+
+## 1. Cabeceras de la SPA (GET /)
+HTTP/1.1 200 OK
+Cache-Control: no-cache
+Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self'; font-src 'self'; img-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'
+Referrer-Policy: no-referrer
+X-Content-Type-Options: nosniff
+
+## 2. Cabeceras de /docs (Swagger, política aparte)
+HTTP/1.1 200 OK
+Content-Security-Policy: default-src 'none'; script-src https://cdn.jsdelivr.net/npm/swagger-ui-dist@5.17.14/ 'sha256-Bh/L1I8Jz3e+G6+99nT+g0tTChazroLfSG0Sz+e0ZVc='; style-src https://cdn.jsdelivr.net/npm/swagger-ui-dist@5.17.14/ 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; connect-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'
+
+## 3. Un asset compilado sale inmutable; un /datos/ se revalida
+HTTP/1.1 200 OK
+Cache-Control: public, max-age=31536000, immutable
+HTTP/1.1 200 OK
+Cache-Control: no-cache
+
+## 4. Ingreso: usuario o clave incorrectos -> 401
+{"error":"usuario o clave incorrectos"}
+  HTTP 401
+
+## 5. Ingreso correcto (rol y expiración; el token se tapa)
+{"token": "<token>", "rol": "admin", "expira": "2026-11-27T22:32:13-05:00"}
+
+## 6. Ingreso de invitado (POST /api/auth/invitado, sin clave): rol usuario
+{"token": "<token>", "rol": "usuario", "expira": "2026-11-27T22:32:13-05:00"}
+
+## 7. Roles: el JWT decide qué rutas responde la API
+GET /api/regimenes sin token ............................ 401 {"error":"token ausente, inválido o expirado"}
+GET /api/regimenes con token de usuario (invitado) ...... 200 []
+GET /api/cluster/nodos con token de usuario .............. 403 {"error":"se requiere el rol admin"}
+GET /api/metricas con token de usuario ................... 403 {"error":"se requiere el rol admin"}
+POST /api/entrenamientos con token de usuario ............ 403 {"error":"se requiere el rol admin"}
+GET /api/cluster/nodos con token de admin ................ 200 [{"nombre":"6621ecd33694-1","direccion":"172.20.0.6:6027
+
+## 8. Tokens que no valen
+token vencido (firmado bien, exp hace una hora) .......... 401 {"error":"token ausente, inválido o expirado"}
+token con alg=none ....................................... 401 {"error":"token ausente, inválido o expirado"}
+token de usuario con el rol cambiado a admin a mano ...... 401 {"error":"token ausente, inválido o expirado"}
+
+## 9. CORS: en el Compose la UI y la API comparten origen y CORS_ORIGENES está vacía
+Preflight desde https://otro-sitio.example directo a la API (8080):
+HTTP/1.1 403 Forbidden
+(sin Access-Control-Allow-Origin: el navegador bloquea la lectura)
+GET con Origin ajeno por el Caddy:
+HTTP/1.1 200 OK
+(sin Access-Control-Allow-Origin)
+
+## 10. WebSocket /ws: origen, token en Sec-WebSocket-Protocol y rol
+Mismo origen, token de usuario:
+HTTP/1.1 101 Switching Protocols
+Sec-WebSocket-Protocol: aire.jwt
+Origen ajeno, token válido:
+HTTP/1.1 403 Forbidden
+{"error":"el origen https://otro-sitio.example no puede abrir este WebSocket"}
+Mismo origen, sin token:
+HTTP/1.1 401 Unauthorized
+{"error":"token ausente, inválido o expirado"}
+Mismo origen, token vencido:
+HTTP/1.1 401 Unauthorized
+{"error":"token ausente, inválido o expirado"}

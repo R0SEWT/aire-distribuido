@@ -46,3 +46,5 @@ docs/video/pantalla/node_modules/
 entrega-pc3/
 
 .DS_Store
+# Lo que deja el servidor MCP de Playwright (instantáneas y consola de cada corrida)
+.playwright-mcp/
