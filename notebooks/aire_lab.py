@@ -50,6 +50,12 @@ DERIVADAS = ["fraccion_fina"]  # pm2_5 / pm10, recortada a [0, 1]
 ECA = {"pm2_5": 50.0, "pm10": 100.0}
 
 DESFASE_LIMA = "-05:00"  # hora local de Lima, sin horario de verano
+MARCADORES_FORMULA_CSV = ("=", "+", "-", "@", "\t", "\r")
+
+
+def texto_seguro_csv(valor):
+    """Neutraliza texto que una hoja de cálculo interpretaría como fórmula."""
+    return "'" + valor if isinstance(valor, str) and valor.startswith(MARCADORES_FORMULA_CSV) else valor
 
 UNIDAD_TXT = {
     "pm2_5": "µg/m³", "pm10": "µg/m³", "no2": "µg/m³", "so2": "µg/m³", "co": "µg/m³",
