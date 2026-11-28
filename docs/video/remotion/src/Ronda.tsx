@@ -281,7 +281,7 @@ export const Ronda: React.FC<RondaProps> = () => {
             background: "#0b0d13",
             border: `2px solid ${C.borde}`,
             fontFamily: MONO,
-            fontSize: 25,
+            fontSize: 29,
             color: C.texto,
           }}
         >
@@ -298,7 +298,7 @@ export const Ronda: React.FC<RondaProps> = () => {
             background: "#0b0d13",
             border: `2px solid ${C.borde}`,
             fontFamily: MONO,
-            fontSize: 25,
+            fontSize: 29,
             color: C.texto,
           }}
         >

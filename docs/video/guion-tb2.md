@@ -25,8 +25,9 @@ y de la PC4): Dayana el dato y las bases, Julio la API (contrato, Postman, laten
 - `Duración`: el tiempo objetivo. Sale de leer el texto a ritmo natural (unas 2,3 palabras por segundo).
   El montaje ajusta lo que se ve a lo que dure el clip de verdad.
 - `Cámara`: `burbuja` (un círculo con la cámara sobre lo que se ve, abajo a la derecha; `izq` lo pasa a
-  la izquierda y `arriba`, arriba a la derecha) o `completa` (la cámara llena la pantalla con el nombre
-  abajo). Sin video en el clip (solo audio), va un círculo con las iniciales.
+  la izquierda, `arriba`, arriba a la derecha, y `columna` reduce lo que se ve a la izquierda y pone la
+  cámara y el nombre en una columna a la derecha, para no tapar nada de la SPA) o `completa` (la cámara
+  llena la pantalla con el nombre abajo). Sin video en el clip (solo audio), va un círculo con las iniciales.
 - `Pantalla`: qué se ve detrás. Puede haber varias líneas `Pantalla`; `parte=0.4` dice qué fracción
   del bloque ocupa cada una (las que no lo dicen se reparten el resto). Los tipos:
   - `remotion ID | pie`: una escena animada de `docs/video/remotion/`, renderizada a la duración del
@@ -147,7 +148,7 @@ WaitGroup espera a todas y los parciales se fusionan en orden de nodo.
 
 - Quién: Julio
 - Duración: 0:34
-- Cámara: burbuja
+- Cámara: burbuja columna
 - Pantalla: `pantalla swagger | Swagger UI en /docs: el contrato docs/api/openapi.yaml, servido por la propia API | parte=0.55`
 - Pantalla: `terminal carga | go run ./cmd/carga: 20 000 pedidos por nivel con 1, 4, 16 y 64 clientes (grabación real contra el Compose)`
 - Qué se ve: Swagger con las rutas y el `POST /api/predicciones` abierto; después la medición de latencia
@@ -187,7 +188,7 @@ la prueba de carga llegaron las 80 800 predicciones, contando el calentamiento, 
 
 - Quién: Julio
 - Duración: 0:26
-- Cámara: burbuja
+- Cámara: burbuja columna
 - Pantalla: `pantalla escenario | La SPA contra el Compose local: ingreso, panel vacío, escenario y el mapa que se llena por WebSocket`
 - Qué se ve: el ingreso; el panel vacío; «cargar el escenario»; el mapa del Perú y la lista que se
   llenan solas, con las estaciones en alerta arriba.
@@ -204,7 +205,7 @@ se pinta solo.
 
 - Quién: Julio
 - Duración: 0:17
-- Cámara: burbuja
+- Cámara: burbuja columna
 - Pantalla: `pantalla simulacion | Simulación: un día real de una estación, lectura por lectura`
 - Qué se ve: la pantalla de simulación con la estación, el día y la velocidad; la ventana que se llena,
   la media que aparece y la alerta que se enciende.
@@ -220,7 +221,7 @@ alerta.
 
 - Quién: Rody
 - Duración: 0:24
-- Cámara: burbuja
+- Cámara: burbuja columna
 - Pantalla: `pantalla entrenamiento | Entrenamiento con los tres nodos del Compose: las rondas llegan por WebSocket y se reproducen | parte=0.6`
 - Pantalla: `pantalla cluster | Clúster: nodos y su latencia, CPU del coordinador, latencia de la API por ruta y eventos`
 - Qué se ve: el formulario con 3 nodos, la curva de inercia que baja ronda a ronda y el resultado;
@@ -237,7 +238,7 @@ los nodos con su latencia, el CPU del coordinador, la latencia de cada ruta y lo
 
 - Quién: Dayana
 - Duración: 0:40
-- Cámara: burbuja
+- Cámara: burbuja columna
 - Pantalla: `pantalla impacto | Impacto: con datos reales del gold (reports/impacto.json)`
 - Qué se ve: la página de impacto de arriba abajo, en el orden en que se narra, con los textos de la #115:
   las horas-estación sobre el ECA, «Dónde podría servir esta información» (la población de cada distrito),

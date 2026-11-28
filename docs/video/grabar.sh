@@ -4,7 +4,7 @@
 #
 #   bash docs/video/grabar.sh            # graba las cinco escenas de la PC3 en docs/video/casts/
 #   bash docs/video/grabar.sh cargar     # solo una (cargar, entrenar, benchmark, tests, docker)
-#   bash docs/video/grabar.sh carga bases pruebas compose # las del TB2 (ver abajo)
+#   bash docs/video/grabar.sh carga bases pruebas compose cargar-tb2   # las del TB2 (ver abajo)
 #
 # Las del TB2 (carga, bases, compose) corren contra el Compose del video, el proyecto
 # aire-tb2-video que levanta grabar-pantalla.sh (API en el 8090): se graban después de la SPA,
@@ -85,6 +85,11 @@ if quiere bases "${pedidas[@]}" && [ $# -gt 0 ]; then
     "docker compose exec -T mongo mongosh --quiet aire_distribuido --eval 'for (const c of [\"estaciones\",\"predicciones\",\"modelos\",\"entrenamientos\",\"eventos_cluster\"]) print(c.padEnd(16), db.getCollection(c).countDocuments())'" \
     "docker compose exec -T redis redis-cli --scan --pattern 'estacion:*' | sort | head -4" \
     "docker compose exec -T redis redis-cli GET estacion:CA-HU-04:regimen | jq -c ."
+fi
+if quiere cargar-tb2 "${pedidas[@]}" && [ $# -gt 0 ]; then
+  # La corrida del bloque 03: el CSV completo con 12 workers (como reports/limpieza.json), sin tocar los
+  # reports versionados, y solo las líneas que se narran.
+  escena cargar-tb2 "go run ./cmd/cargar -entrada \"$CSV\" -workers 12 -silver /tmp/silver.csv -gold /tmp/gold.csv -reports /tmp/reports | grep -E '^(paralelismo|duración|  leídas|  procesadas  |  descartadas|    periodo|    sin_valor|    fuera_de_rango|    bloque_en_cero|    duplicado_unidad)'"
 fi
 if quiere pruebas "${pedidas[@]}" && [ $# -gt 0 ]; then
   escena pruebas "go test -race -count=1 ./..."   # la de la PC3 (tests) queda como se entregó

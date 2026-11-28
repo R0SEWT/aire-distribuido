@@ -19,7 +19,7 @@ import { abrir, BASE, clic, cuentas, esLocal, grabar, ingresar, moverA } from '.
 const pausa = (pagina, s) => pagina.waitForTimeout(s * 1000)
 
 /** Desliza la página hasta que el elemento quede con su borde de arriba a `margen` px, en `ms`. */
-async function deslizarA(pagina, locator, { margen = 90, ms = 1200 } = {}) {
+async function deslizarA(pagina, locator, { margen = 28, ms = 1200 } = {}) {
   const caja = await locator.boundingBox()
   if (!caja) return
   await pagina.evaluate(async ({ dy, ms }) => {
@@ -86,7 +86,7 @@ const ESCENAS = {
       // La corrida sigue en la pestaña: en el panel se ve llegar cada estado por el WebSocket.
       await clic(pagina, pagina.getByRole('navigation', { name: 'Pantallas' }).getByRole('link', { name: 'Panel' }))
       await pausa(pagina, 9)
-      await deslizarA(pagina, pagina.locator('#lista-de-estaciones'), { margen: 70, ms: 1800 })
+      await deslizarA(pagina, pagina.locator('#lista-de-estaciones'), { ms: 1800 })
       await pausa(pagina, 3.5)
     })
   },
@@ -101,18 +101,20 @@ const ESCENAS = {
       () => ![...document.querySelectorAll('button')].some((b) => b.textContent?.trim() === 'Pausar'),
       null, { timeout: 60_000 },
     )
+    // El día se elige antes de grabar: si no, el primer cuadro muestra el que viene por omisión («Día
+    // limpio») y no el que se simula.
+    await pagina.getByRole('button', { name: 'Un día de una estación', exact: true }).click()
+    const dia = pagina.getByRole('combobox', { name: 'Estación y día' })
+    const opcion = await dia.locator('option').filter({ hasText: 'Cruza el ECA' }).first().textContent()
+    await dia.selectOption({ label: opcion.trim() })
+    await pausa(pagina, 1)
     await grabar(pagina, 'simulacion', async () => {
-      await pausa(pagina, 1)
-      await clic(pagina, pagina.getByRole('button', { name: 'Un día de una estación', exact: true }))
-      await pausa(pagina, 1)
-      const dia = pagina.getByRole('combobox', { name: 'Estación y día' })
+      await pausa(pagina, 1.2)
       await moverA(pagina, dia)
-      const opcion = await dia.locator('option').filter({ hasText: 'Cruza el ECA' }).first().textContent()
-      await dia.selectOption({ label: opcion.trim() })
-      await pausa(pagina, 2)
+      await pausa(pagina, 1.5)
       await clic(pagina, pagina.getByRole('button', { name: 'Simular este día' }))
       await pausa(pagina, 0.8)
-      await deslizarA(pagina, pagina.getByText(/^Progreso · /), { margen: 80, ms: 1500 })
+      await deslizarA(pagina, pagina.getByText(/^Progreso · /), { ms: 1500 })
       await pagina.getByText('Terminó', { exact: true }).first().waitFor({ timeout: 40_000 }).catch(() => {})
       await pausa(pagina, 2.5)
     })
@@ -128,10 +130,10 @@ const ESCENAS = {
       await pausa(pagina, 1.5)
       await clic(pagina, lanzar)
       await pausa(pagina, 1.2)
-      await deslizarA(pagina, seccion(pagina, 'Rondas del entrenamiento'), { margen: 80, ms: 1200 })
+      await deslizarA(pagina, seccion(pagina, 'Rondas del entrenamiento'), { ms: 1200 })
       await seccion(pagina, 'Resultado').waitFor({ timeout: 40_000 })
       await pausa(pagina, 1)
-      await deslizarA(pagina, seccion(pagina, 'Resultado'), { margen: 80, ms: 1200 })
+      await deslizarA(pagina, seccion(pagina, 'Resultado'), { ms: 1200 })
       await pausa(pagina, 3)
     })
   },
@@ -143,11 +145,11 @@ const ESCENAS = {
     await pausa(pagina, 1.5)
     await grabar(pagina, 'cluster', async () => {
       await pausa(pagina, 2.5)
-      await deslizarA(pagina, seccion(pagina, 'Uso de CPU y memoria'), { margen: 90, ms: 1500 })
+      await deslizarA(pagina, seccion(pagina, 'Uso de CPU y memoria'), { ms: 1500 })
       await pausa(pagina, 2)
-      await deslizarA(pagina, seccion(pagina, 'Latencia de la API por ruta'), { margen: 90, ms: 1500 })
+      await deslizarA(pagina, seccion(pagina, 'Latencia de la API por ruta'), { ms: 1500 })
       await pausa(pagina, 2.5)
-      await deslizarA(pagina, seccion(pagina, /^Eventos/), { margen: 90, ms: 1500 })
+      await deslizarA(pagina, seccion(pagina, /^Eventos/), { ms: 1500 })
       await pausa(pagina, 2.5)
     })
   },
@@ -159,19 +161,22 @@ const ESCENAS = {
     await pausa(pagina, 1.5)
     await grabar(pagina, 'impacto', async () => {
       await pausa(pagina, 1.5)
-      await deslizarA(pagina, seccion(pagina, 'Las horas en que la media de 24 horas superó el ECA'), { margen: 80, ms: 1500 })
+      await deslizarA(pagina, seccion(pagina, 'Las horas en que la media de 24 horas superó el ECA'), { ms: 1500 })
       await pausa(pagina, 6)
-      await deslizarA(pagina, seccion(pagina, 'Dónde podría servir esta información'), { margen: 80, ms: 2200 })
+      await deslizarA(pagina, seccion(pagina, 'Dónde podría servir esta información'), { ms: 2200 })
       await pausa(pagina, 6)
-      await deslizarA(pagina, seccion(pagina, 'Depende de cómo se cuente: las dos medidas van juntas'), { margen: 80, ms: 2200 })
+      await deslizarA(pagina, seccion(pagina, 'Depende de cómo se cuente: las dos medidas van juntas'), { ms: 2200 })
       await pausa(pagina, 11)
-      await deslizarA(pagina, seccion(pagina, 'Lo que este dato no puede decir'), { margen: 80, ms: 2000 })
+      await deslizarA(pagina, seccion(pagina, 'Lo que este dato no puede decir'), { ms: 2000 })
       await pausa(pagina, 7)
     })
   },
 }
 
-const ORDEN = ['swagger', 'escenario', 'simulacion', 'entrenamiento', 'cluster', 'impacto']
+// Swagger va al final: carga Swagger UI desde un CDN, que a veces no responde; si falla, se avisa y se
+// conserva la grabación anterior, sin cortar las demás.
+const ORDEN = ['escenario', 'simulacion', 'entrenamiento', 'cluster', 'impacto', 'swagger']
+const OPCIONALES = new Set(['swagger'])
 const SOLO_LECTURA = new Set(['swagger', 'impacto'])
 const NECESITAN_ADMIN = new Set(['escenario', 'simulacion', 'entrenamiento', 'cluster'])
 
@@ -201,7 +206,12 @@ try {
       adentro = true
     }
     console.log(`escena ${escena}`)
-    await ESCENAS[escena](pagina)
+    try {
+      await ESCENAS[escena](pagina)
+    } catch (e) {
+      if (!OPCIONALES.has(escena)) throw e
+      console.log(`AVISO: no se pudo grabar ${escena} (${e.message.split('\n')[0]}); queda la grabación anterior`)
+    }
     if (escena === 'escenario') adentro = true
   }
 } finally {

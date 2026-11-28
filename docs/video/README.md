@@ -17,7 +17,7 @@ Julio 1:41.
 | `armar-tb2.sh` | Monta el mp4: verifica herramientas, renderiza lo que falta y comprueba duración y formato. |
 | `montar_tb2.py` | El montador que llama `armar-tb2.sh` (Pillow + ffmpeg + edge-tts para los borradores). |
 | `grabar-pantalla.sh`, `pantalla/` | Graba la SPA con Playwright y el Chrome del sistema contra un Compose propio y limpio. |
-| `grabar.sh carga bases pruebas compose` | Graba la terminal del TB2 con asciinema contra ese mismo Compose. |
+| `grabar.sh carga bases pruebas compose cargar-tb2` | Graba la terminal del TB2 con asciinema contra ese mismo Compose. |
 | `remotion/` | Las escenas animadas: `Arquitectura` (bloque 02), `PipelineCargador` (03) y `RondaDistribuida` (04). |
 
 ### Cómo se arma
@@ -25,7 +25,7 @@ Julio 1:41.
 ```bash
 # 1. Lo que se ve (una vez; hace falta el .env del video, ver abajo, y el gold en GOLD_DIR)
 bash docs/video/grabar-pantalla.sh                      # Compose limpio y la SPA → build/tb2/pantalla/*.mp4
-bash docs/video/grabar.sh carga bases pruebas compose   # la terminal → casts/*.cast
+bash docs/video/grabar.sh carga bases pruebas compose cargar-tb2   # la terminal → casts/*.cast
 
 # 2. Los clips de cada uno, con el nombre de la tabla de grabar-tu-parte.md
 rclone copy gdrive:aire-distribuido/video/tb2/clips docs/video/clips/
@@ -37,6 +37,29 @@ bash docs/video/armar-tb2.sh             # borrador: lo que falta va con voz sin
 bash docs/video/armar-tb2.sh --tiempos   # cuánto dura cada bloque con los clips que hay
 bash docs/video/armar-tb2.sh --hojas     # build/tb2/guion-NOMBRE.pdf: los textos de cada uno en letra grande
 ```
+
+**Si la grabación es un solo video continuo** (por ejemplo, la de la clase): no hace falta el montaje,
+ese video es la entrega; basta con revisarlo contra el guion (`revisar-clips.sh` necesita los clips por
+bloque, así que para un video entero se usa la transcripción: dejarlo en `build/tb2/`, apuntar
+`build/tb2/salida.txt` a él y correr `revisar-clips.sh --solo-video` con un `bloques.json` de un solo bloque,
+o simplemente verlo). Si se quiere sumarle las escenas, las grabaciones de la SPA y la terminal, se corta en
+los doce bloques del guion con un comando por bloque en exodia, sin recodificar:
+
+```bash
+exodia-ff run -w -- ffmpeg -ss 0:00:12 -to 0:00:37 -i ~/Videos/clase.mp4 -c copy docs/video/clips/01-rody.mp4
+```
+
+(`-ss` y `-to` son el inicio y el fin de cada bloque en la grabación; el montaje recorta el silencio que
+sobre). Después, `bash docs/video/armar-tb2.sh --final` como con los clips.
+
+**Dos grabaciones pendientes, con la laptop libre** (con otra carga, las cifras salen infladas y
+contradicen lo que se dice): `casts/carga.cast` es de la API en el 8090 (el p99 de 5,93 ms calza con «no
+pasó de 6 milisegundos»; para que el puerto calce con el :8080 del diagrama, levantar el Compose con
+`API_PORT=8080 WEB_PORT=8081 MONGO_PORT=27017 REDIS_PORT=6379` y correr
+`API_VIDEO=http://localhost:8080 bash docs/video/grabar.sh carga`, y conservarla solo si el p99 de cada
+nivel queda bajo 6 ms). Y el bloque 03 muestra la captura de la PC3 (14 workers, 1,319 s); para una corrida
+actual con 12 workers, `bash docs/video/grabar.sh cargar-tb2` y, si la duración queda bajo 1,5 s, cambiar la
+pantalla del bloque 03 por `terminal cargar-tb2 | … | parte=0.24`.
 
 **La ronda de revisión** cuando llegan clips (la coordinadora los copia a `docs/video/clips/`):
 
@@ -55,7 +78,8 @@ no se oye es una observación**, con el segundo y la frase; las palabras dichas 
 informativas. La transcripción automática se equivoca: antes de pedir que se regrabe, escuchar el
 segundo. Lo que depende de quien grabó (una cifra, un clip vertical, audio inservible) no se arregla en
 el montaje: se reporta y lo decide Rody. Después del montaje, la auditoría (`revisar-entrega`, modo A) y
-el corrector en frío leen `transcripcion-video.md` y los fotogramas de `build/tb2/fotogramas/`.
+el corrector en frío lee `transcripcion-docente.md` (solo lo que se oye, sin el guion) y los fotogramas
+de `build/tb2/fotogramas/`; `transcripcion-video.md` pone al lado el guion y las cifras que no calzan.
 
 **Dónde se codifica.** En la laptop de Rody no se corre ffmpeg que codifique (skill `ffmpeg-exodia`):
 si está `exodia-ff`, `armar-tb2.sh` prepara aquí lo que no necesita ffmpeg (las voces sintéticas que

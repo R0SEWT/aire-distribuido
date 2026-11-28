@@ -438,7 +438,7 @@ def fondo_terminal(b: Bloque, pie: str) -> Image.Image:
     im, d = lienzo()
     d.text((90, 40), b.titulo, font=fuente(40, True), fill=TEXTO)
     if pie:
-        linea = pc3.envolver(d, pie, fuente(24), ANCHO - 180)[0]
+        linea = pc3.envolver(d, pie, fuente(24), ANCHO - 180 - 620)[0]  # no llega al nombre de abajo a la derecha
         d.text((90, ALTO - 58), linea, font=fuente(24), fill=MUDO)
     return im
 
@@ -574,7 +574,15 @@ def fondo_del_bloque(b: Bloque, total: float) -> tuple[Path, list[str]]:
 # ----------------------------------------------------------------------------- la cámara
 
 
+# Modo «columna»: lo que se ve se reduce a la izquierda (sin que nada quede tapado) y la cámara y el
+# nombre van en una columna a la derecha. Para las grabaciones de la SPA, que llenan la pantalla.
+COLUMNA_W = 1580
+COLUMNA_H = round(COLUMNA_W * 9 / 16 / 2) * 2
+
+
 def posicion(lado: str) -> tuple[int, int]:
+    if lado == "columna":
+        return COLUMNA_W + (ANCHO - COLUMNA_W - DIAMETRO) // 2, ALTO - MARGEN - DIAMETRO
     if lado == "izq":
         return MARGEN, ALTO - MARGEN - DIAMETRO
     if lado == "arriba":
@@ -611,6 +619,8 @@ def capa_burbuja(b: Bloque, con_avatar: bool) -> Path:
     h = 96
     if b.lado == "arriba":  # debajo del círculo: a su izquierda está el título de la escena
         cx, cy = x + DIAMETRO - w, y + DIAMETRO + 18
+    elif b.lado == "columna":  # encima del círculo, centrado en la columna
+        cx, cy = COLUMNA_W + (ANCHO - COLUMNA_W - w) // 2, y - h - 22
     else:
         cy = y + DIAMETRO - h - 10
         cx = x + DIAMETRO + 24 if b.lado == "izq" else x - 24 - w
@@ -646,12 +656,13 @@ def capa_completa(b: Bloque) -> Path:
     d.text((122, ALTO - 176), p["nombre"], font=fuente(52, True), fill=(255, 255, 255, 255))
     d.text((124, ALTO - 110), p["rol"], font=fuente(32), fill=(220, 225, 232, 255))
     if any(x.tipo == "caratula" for x in b.pantallas):
-        for i in range(260):
-            a = int(200 * (1 - i / 260) ** 1.6)
+        for i in range(330):  # velo: el título se lee sobre cualquier fondo
+            a = int(235 * (1 - i / 330) ** 1.3)
             d.line([(0, i), (ANCHO, i)], fill=(10, 12, 16, a))
-        d.text((90, 50), TITULO_TRABAJO, font=fuente(64, True), fill=(255, 255, 255, 255))
-        d.text((92, 132), SUBTITULO, font=fuente(32), fill=(220, 225, 232, 255))
-        d.text((92, 178), CURSO, font=fuente(24), fill=(200, 205, 215, 255))
+        borde = {"stroke_width": 3, "stroke_fill": (10, 12, 16, 255)}
+        d.text((90, 50), TITULO_TRABAJO, font=fuente(64, True), fill=(255, 255, 255, 255), **borde)
+        d.text((92, 132), SUBTITULO, font=fuente(32), fill=(235, 238, 242, 255), **borde)
+        d.text((92, 178), CURSO, font=fuente(24), fill=(220, 225, 232, 255), **borde)
     if b.sintetica:
         marca_borrador(d, b)
     ruta = BUILD / f"capa-{b.numero:02d}.png"
@@ -704,17 +715,24 @@ def montar_bloque(b: Bloque, salida: Path) -> tuple[float, list[str]]:
     else:
         x, y = posicion(b.lado)
         entradas = ["-i", fondo]
+        base = "[0:v]"
+        if b.lado == "columna":
+            base = "[f]"
+            reducir = (f"[0:v]scale={COLUMNA_W}:{COLUMNA_H}:flags=lanczos,"
+                       f"pad={ANCHO}:{ALTO}:0:{(ALTO - COLUMNA_H) // 2}:color=0x0f1117[f]")
         if b.tiene_video:
             entradas += ["-i", b.clip, "-i", b.voz, "-loop", "1", "-framerate", FPS, "-t", f"{total:.3f}", "-i", mascara(),
                          "-loop", "1", "-framerate", FPS, "-t", f"{total:.3f}", "-i", capa]
             cadena = [filtro_camara(b, "burbuja"),
-                      f"[0:v][cam]overlay={x}:{y}:shortest=1[v0]",
+                      f"{base}[cam]overlay={x}:{y}:shortest=1[v0]",
                       "[v0][4:v]overlay=0:0:shortest=1[v1]"]
         else:
             # Sin cámara: un relleno en la entrada 1 para que la voz siga siendo la 2.
             entradas += ["-f", "lavfi", "-i", "anullsrc=r=48000:cl=stereo", "-i", b.voz,
                          "-loop", "1", "-framerate", FPS, "-t", f"{total:.3f}", "-i", capa]
-            cadena = ["[0:v][3:v]overlay=0:0:shortest=1[v1]"]
+            cadena = [f"{base}[3:v]overlay=0:0:shortest=1[v1]"]
+        if b.lado == "columna":
+            cadena.insert(0, reducir)
         ultimo = "[v1]"
     cadena.append(f"{ultimo}fps={FPS},format=yuv420p,fade=t=in:st=0:d={FUNDIDO},"
                   f"fade=t=out:st={fin_fundido:.3f}:d={FUNDIDO}[v]")
@@ -863,7 +881,7 @@ def montar() -> None:
     clips, resumen = [], []
     for b in bloques:
         claves = [b.titulo, b.camara, b.lado, json.dumps([p.__dict__ for p in b.pantallas], ensure_ascii=False),
-                  str(b.voz), str(b.ini), str(b.fin), "tb2-v3", " ".join(codificar(True))]
+                  str(b.voz), str(b.ini), str(b.fin), "tb2-v4", " ".join(codificar(True))]
         for p in b.pantallas:
             if p.tipo == "pantalla":
                 claves.append(pc3.huella_insumos([str((PANTALLAS / f"{p.rutas[0]}.mp4").relative_to(RAIZ))]))
