@@ -416,8 +416,88 @@
     };
   }
 
+  // ------------------------------------------------------------------ latencia de la API frente a los 100 ms
+  // Escala logarítmica: el p99 más alto queda a más de un orden de magnitud del límite, y en una
+  // escala lineal todos los puntos se pegarían al cero. Cada fila es un nivel de clientes en vuelo.
+  function latencia(el) {
+    const L = window.DATOS.latencia;
+    const ancho = 1180, alto = 400, m = { t: 34, r: 150, b: 60, l: 190 };
+    const svg = lienzo(el, ancho, alto, "g-latencia");
+    const x = d3.scaleLog([0.1, L.limite_ms * 1.5], [m.l, ancho - m.r]);
+    const y = d3.scaleBand(L.niveles.map((n) => n.clientes), [m.t + 10, alto - m.b]).padding(0.35);
+    const ms = (v) => `${dec(v, v < 1 ? 2 : 1)} ms`;
+    svg.append("g").attr("class", "g-eje").attr("transform", `translate(0,${alto - m.b})`)
+      .call(d3.axisBottom(x).tickValues([0.1, 0.3, 1, 3, 10, 30, 100]).tickFormat((v) => `${dec(v, v < 1 ? 1 : 0)} ms`).tickSizeOuter(0));
+    svg.append("line").attr("class", "g-eca").attr("x1", x(L.limite_ms)).attr("x2", x(L.limite_ms))
+      .attr("y1", m.t - 6).attr("y2", alto - m.b);
+    svg.append("text").attr("class", "g-eca-t").attr("x", x(L.limite_ms) + 8).attr("y", m.t + 6).text("límite: 100 ms");
+    const g = svg.selectAll("g.f").data(L.niveles).join("g").attr("class", "f")
+      .attr("transform", (d) => `translate(0,${y(d.clientes) + y.bandwidth() / 2})`);
+    g.append("text").attr("class", "g-titulo").attr("x", m.l - 24).attr("y", 8).attr("text-anchor", "end")
+      .text((d) => `${d.clientes} ${d.clientes === 1 ? "cliente" : "clientes"}`);
+    const tramo = g.append("line").attr("class", "l-tramo").attr("y1", 0).attr("y2", 0);
+    const p50 = g.append("circle").attr("class", "l-p50").attr("r", 9);
+    const p99 = g.append("circle").attr("class", "l-p99").attr("r", 11);
+    const et = g.append("text").attr("class", "g-valor l-valor").attr("y", 9).attr("opacity", 0).text((d) => `p99 ${ms(d.p99)}`);
+    const ley = svg.append("g").attr("transform", `translate(${m.l},${alto - 14})`);
+    ley.append("circle").attr("class", "l-p50").attr("r", 8).attr("cy", -6);
+    ley.append("text").attr("class", "g-et").attr("x", 16).text("p50: la mitad de los pedidos tarda menos");
+    ley.append("circle").attr("class", "l-p99").attr("r", 9).attr("cx", 420).attr("cy", -6);
+    ley.append("text").attr("class", "g-et").attr("x", 436).text("p99: 99 de cada 100 pedidos tardan menos");
+    function mostrar(animar) {
+      const t = (sel, i = 0) => (animar ? sel.transition().duration(900).delay(150 * i).ease(d3.easeCubicOut) : sel);
+      t(tramo).attr("x1", (d) => x(d.p50)).attr("x2", (d) => x(d.p99));
+      t(p50).attr("cx", (d) => x(d.p50));
+      t(p99).attr("cx", (d) => x(d.p99));
+      t(et).attr("x", (d) => x(d.p99) + 22).attr("opacity", 1);
+    }
+    function reiniciar() {
+      tramo.attr("x1", m.l).attr("x2", m.l); p50.attr("cx", m.l); p99.attr("cx", m.l); et.attr("x", m.l).attr("opacity", 0);
+    }
+    return {
+      entrar() { reiniciar(); mostrar(true); },
+      final() { mostrar(false); },
+    };
+  }
+
+  // ------------------------------------------------------------------ impacto por actividad fiscalizada
+  // Qué fracción de las horas con media de 24 h calculable superó el ECA, por tipo de actividad que
+  // vigila la estación. La población es la del distrito y solo cuando el grupo está en uno solo:
+  // vivir en el distrito no es haber respirado ese aire, y no se suma entre distritos.
+  function impacto(el) {
+    const T = window.DATOS.impacto.tipos;
+    const ancho = 1180, alto = 470, m = { t: 34, l: 330, r: 360 };
+    const svg = lienzo(el, ancho, alto, "g-impacto");
+    const x = d3.scaleLinear([0, 1], [0, ancho - m.l - m.r]);
+    const fila = (alto - m.t - 10) / T.length;
+    svg.append("text").attr("class", "g-et").attr("x", 0).attr("y", 18)
+      .text("horas con la media de 24 h sobre el ECA, de las horas en que se puede calcular");
+    const g = svg.selectAll("g.f").data(T).join("g").attr("class", "f")
+      .attr("transform", (d, i) => `translate(0,${m.t + 18 + i * fila})`);
+    const destacada = (d) => d.fraccion >= 0.5;
+    g.append("text").attr("class", "g-titulo").attr("x", m.l - 18).attr("y", 20).attr("text-anchor", "end")
+      .text((d) => d.tipo.replace(" (refinación o fundición)", ""));
+    g.append("text").attr("class", "g-et g-suave").attr("x", m.l - 18).attr("y", 44).attr("text-anchor", "end")
+      .text((d) => `${d.estaciones} ${d.estaciones === 1 ? "estación" : "estaciones"}`);
+    g.append("rect").attr("class", "i-fondo").attr("x", m.l).attr("y", 4).attr("height", 30).attr("width", x(1)).attr("rx", 4);
+    const b = g.append("rect").attr("class", (d) => (destacada(d) ? "n n-alto" : "n n-alto-suave"))
+      .attr("x", m.l).attr("y", 4).attr("height", 30).attr("width", 0).attr("rx", 4);
+    g.append("text").attr("class", "g-valor").attr("x", m.l + x(1) + 16).attr("y", 28)
+      .text((d) => pct(d.fraccion, d.fraccion < 0.01 && d.fraccion > 0 ? 2 : 0));
+    g.append("text").attr("class", "g-num").attr("x", m.l + x(1) + 120).attr("y", 27)
+      .text((d) => `${miles(d.sobre_eca)} de ${miles(d.calculables)} h`);
+    g.append("text").attr("class", "g-et g-suave").attr("x", m.l + 6).attr("y", 56)
+      .text((d) => d.distritos.join(" · ") + (d.poblacion ? ` · ${miles(d.poblacion)} hab. (2017)` : ""));
+    const mostrar = (animar) => (animar ? b.transition().duration(900).delay((d, i) => 110 * i) : b)
+      .attr("width", (d) => x(d.fraccion));
+    return {
+      entrar() { b.attr("width", 0); mostrar(true); },
+      final() { mostrar(false); },
+    };
+  }
+
   // ------------------------------------------------------------------ enlace con reveal.js
-  const GRAFICOS = { embudo, speedup, pool, niveles, horas, estaciones };
+  const GRAFICOS = { embudo, speedup, pool, niveles, horas, estaciones, latencia, impacto };
   const instancias = [];
 
   function pasoVisible(lamina) {

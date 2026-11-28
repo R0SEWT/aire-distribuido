@@ -359,5 +359,123 @@ window.DATOS = {
   "pm10": 100
  },
  "convencion_hora": "fin",
- "pruebas": 240
+ "pruebas": 549,
+ "latencia": {
+  "limite_ms": 100,
+  "niveles": [
+   {
+    "clientes": 1,
+    "p50": 0.153343,
+    "p99": 0.27405,
+    "max": 2.91579,
+    "cumple": true
+   },
+   {
+    "clientes": 4,
+    "p50": 0.139282,
+    "p99": 0.431682,
+    "max": 1.428743,
+    "cumple": true
+   },
+   {
+    "clientes": 16,
+    "p50": 0.339155,
+    "p99": 1.292459,
+    "max": 2.913786,
+    "cumple": true
+   },
+   {
+    "clientes": 64,
+    "p50": 0.997229,
+    "p99": 3.13644,
+    "max": 4.836658,
+    "cumple": true
+   }
+  ]
+ },
+ "impacto": {
+  "tipos": [
+   {
+    "tipo": "metalurgia (refinación o fundición)",
+    "estaciones": 1,
+    "calculables": 228,
+    "sobre_eca": 215,
+    "fraccion": 0.9429824561403509,
+    "distritos": [
+     "Lurigancho (Lima)"
+    ],
+    "poblacion": 240814
+   },
+   {
+    "tipo": "ladrilleras",
+    "estaciones": 2,
+    "calculables": 651,
+    "sobre_eca": 370,
+    "fraccion": 0.5683563748079877,
+    "distritos": [
+     "Lurigancho (Lima)"
+    ],
+    "poblacion": 240814
+   },
+   {
+    "tipo": "corredor vial",
+    "estaciones": 2,
+    "calculables": 17562,
+    "sobre_eca": 513,
+    "fraccion": 0.029210796036897847,
+    "distritos": [
+     "Capacmarca (Cusco)",
+     "Espinar (Cusco)"
+    ],
+    "poblacion": null
+   },
+   {
+    "tipo": "minería",
+    "estaciones": 4,
+    "calculables": 13698,
+    "sobre_eca": 58,
+    "fraccion": 0.004234194772959556,
+    "distritos": [
+     "San Marcos (Ancash)",
+     "Tinyahuarco (Pasco)"
+    ],
+    "poblacion": null
+   },
+   {
+    "tipo": "agroindustria",
+    "estaciones": 3,
+    "calculables": 14941,
+    "sobre_eca": 25,
+    "fraccion": 0.0016732481092296366,
+    "distritos": [
+     "Casa Grande (La Libertad)"
+    ],
+    "poblacion": 28492
+   },
+   {
+    "tipo": "no lo dice el nombre",
+    "estaciones": 4,
+    "calculables": 16484,
+    "sobre_eca": 3,
+    "fraccion": 0.00018199466148992964,
+    "distritos": [
+     "Socabaya (Arequipa)",
+     "Torata (Moquegua)",
+     "La Huaca (Piura)"
+    ],
+    "poblacion": null
+   },
+   {
+    "tipo": "zona industrial",
+    "estaciones": 1,
+    "calculables": 1184,
+    "sobre_eca": 0,
+    "fraccion": 0.0,
+    "distritos": [
+     "Chimbote (Ancash)"
+    ],
+    "poblacion": 206213
+   }
+  ]
+ }
 };

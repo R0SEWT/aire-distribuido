@@ -1,5 +1,9 @@
 # La PC3 en sencillo
 
+> Es la historia de la PC3. Para la sustentación del TB2, el reparto está en
+> [`reparto.md`](reparto.md) y las preguntas probables, verificadas contra el código, en
+> [`preguntas.md`](preguntas.md).
+
 Marco de la exposición, antes de pensar en láminas. Sigue el método de la charla de SIMBig 2026:
 primero la historia en palabras simples, después el deck, y ninguna cifra escrita a mano.
 

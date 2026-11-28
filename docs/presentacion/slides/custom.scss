@@ -241,3 +241,62 @@ svg.g .p-orden { font-family: $font-family-monospace; font-size: 17px; }
   border-radius: 999px; padding: 0.3em 0.9em; cursor: pointer;
 }
 .p-botones button.activo { background: $tinta; color: #FFFFFF; border-color: $tinta; }
+
+// ------------------------------------------------------------------ TB2
+// Código Go en la lámina: texto, no imagen, para que se lea y se pueda buscar (observación de la PC4)
+.reveal .codigo pre { font-size: 0.5em; margin: 0.25em 0 0; }
+.reveal .codigo pre code { padding: 0.6em 0.9em; line-height: 1.38; }
+.reveal .codigo .archivo { display: block; font-family: $font-family-monospace; font-size: 0.42em; color: $suave;
+  margin-top: 0.5em; }
+.reveal .codigo.chico pre { font-size: 0.45em; }
+
+// El camino de un pedido: cajas en fila con flechas
+.flujo { display: flex; align-items: stretch; gap: 0.25em; margin-top: 0.4em; }
+.flujo > div { flex: 1; background: $niebla; border-radius: 12px; padding: 0.45em 0.55em; font-size: 0.5em;
+  line-height: 1.3; border-top: 5px solid $borde; }
+.flujo > div strong { display: block; font-family: $presentation-heading-font; font-size: 1.15em; margin-bottom: 0.2em; }
+.flujo > div code { font-size: 0.9em; }
+.flujo > .flecha { flex: 0 0 auto; background: none; border: 0; padding: 0; align-self: center; font-size: 0.9em;
+  color: $gris; }
+.flujo > .web { border-top-color: $alto; }
+.flujo > .api { border-top-color: $azul; }
+.flujo > .mem { border-top-color: $medio; }
+.flujo > .nodo { border-top-color: $azul-oscuro; }
+.flujo > .base { border-top-color: $critico; }
+.flujo-t { font-family: $font-family-monospace; font-size: 0.48em; color: $suave; margin-top: 0.7em; display: block;
+  text-transform: uppercase; letter-spacing: 0.08em; }
+
+// Tarjetas en dos columnas
+.dos { display: grid; grid-template-columns: 1fr 1fr; gap: 0.8em; margin-top: 0.5em; }
+.dos > div { background: $niebla; border-radius: 14px; padding: 0.55em 0.75em; }
+.dos > div .lista { font-size: 0.6em; }
+.dos.apilado { grid-template-columns: 1fr; gap: 0.45em; }
+.dos.apilado > div p { font-size: 0.5em; line-height: 1.35; margin: 0.15em 0 0; }
+.dos.apilado > div p .t { font-size: 1.45em; }
+.dos > div .t { display: block; font-family: $presentation-heading-font; font-weight: 700; font-size: 0.8em;
+  margin-bottom: 0.25em; }
+
+// Capturas de la aplicación en vivo
+.reveal img.app { border-radius: 10px; box-shadow: 0 10px 30px rgba($tinta, 0.25); border: 1px solid #22344B; }
+.apps { display: grid; grid-template-columns: 1.25fr 1fr; gap: 0.6em; margin-top: 0.3em; align-items: start; }
+.apps .pie { display: block; font-size: 0.45em; color: $suave; margin-top: 0.25em; }
+
+// Guion de la demo: la tabla (.demo-tabla) y el plan B
+.planb { background: rgba($alto, 0.1); border-left: 6px solid $alto; border-radius: 8px; padding: 0.4em 0.7em;
+  font-size: 0.52em; line-height: 1.35; margin-top: 0.5em; }
+.planb b { font-family: $presentation-heading-font; }
+
+// Tabla de la evaluación experimental, más legible
+.reveal .eval table { font-size: 0.6em; width: 100%; }
+.reveal .demo-tabla table { font-size: 0.54em; width: 100%; }
+.reveal .demo-tabla td:first-child { font-family: $presentation-heading-font; font-weight: 800; color: $alto; }
+.reveal .demo-tabla td:nth-child(3), .reveal .demo-tabla td:nth-child(4) { white-space: nowrap; color: $suave; }
+
+// Latencia de la API
+svg.g .l-tramo { stroke: $azul-medio; stroke-width: 6; stroke-linecap: round; }
+svg.g .l-p50 { fill: $azul-medio; }
+svg.g .l-p99 { fill: $azul-oscuro; }
+svg.g .l-valor { fill: $azul-oscuro; font-size: 23px; }
+
+// Impacto por actividad
+svg.g .i-fondo { fill: $niebla; }
