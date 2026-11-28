@@ -24,11 +24,11 @@ entregarlo el domingo.
 | `07-julio.mp4` | Julio | Demo: ingreso, escenario y tiempo real | 0:26 | círculo |
 | `08-julio.mp4` | Julio | Demo: simular un día | 0:17 | círculo |
 | `09-rody.mp4` | Rody | Demo: entrenamiento y clúster desde la UI | 0:24 | círculo |
-| `10-dayana.mp4` | Dayana | Impacto social | 0:37 | círculo |
+| `10-dayana.mp4` | Dayana | Impacto social | 0:40 | círculo |
 | `11-julio.mp4` | Julio | Pruebas y despliegue | 0:24 | círculo |
 | `12-rody.mp4` | Rody | Cierre | 0:15 | completa |
 
-Por persona: **Dayana**, 3 clips (1:45 en total); **Julio**, 4 clips (1:41); **Rody**, 5 clips (2:08).
+Por persona: **Dayana**, 3 clips (1:48 en total); **Julio**, 4 clips (1:41); **Rody**, 5 clips (2:08).
 Cada clip se graba completo de una vez: son cortos, y si alguien se equivoca, repite el bloque entero.
 
 ## Cómo grabar

@@ -44,6 +44,11 @@ Cifras que quedan y de dónde salen: 2 883 877 filas y 1,3 GB (`limpieza.json`);
 de 2021 (`series.json`); 18 lecturas, ventana de 24 h; 64 748 y 1 184 horas, 30 episodios, medianas de 20 h
 y de 1 h, 17 de 33 estaciones (`impacto.json`, igual que `cifras.impacto` del informe).
 
+**Después de la #115** (textos de Impacto, 28/11): el bloque 10 usa las palabras de la pantalla corregida:
+«horas-estación» (la misma hora en dos estaciones cuenta dos veces), la población «como contexto», «los 30
+episodios sobre el ECA» (un episodio agrupa superaciones; no es cada cruce) y «donde no se mide, no se puede
+afirmar que el aire esté limpio». El grabador busca el título nuevo, «Dónde podría servir esta información».
+
 ## Matriz: lo que el enunciado pide del video
 
 | Pedido (fuente) | Dónde está | Estado |

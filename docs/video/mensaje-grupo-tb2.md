@@ -10,10 +10,10 @@ carpeta de Drive donde dice `[enlace de Drive]` y, si la rama ya está en GitHub
 
 > Chicos, el video del TB2 ya está armado salvo nuestras voces y caras 🎬. Las animaciones, la interfaz y
 > la terminal se graban solas; nos toca a cada uno grabar unos clips cortos leyendo el guion a la cámara.
-> El video total dura 5:34 (el máximo es 6:00) y salimos los tres.
+> El video total dura 5:37 (el máximo es 6:00) y salimos los tres.
 >
 > *Dayana*: 3 clips → `03-dayana` (0:41, el dato, el cargador y tu reproducción en la Mac), `06-dayana` (0:27, MongoDB y Redis) y
-> `10-dayana` (0:37, impacto social).
+> `10-dayana` (0:40, impacto social).
 > *Julio*: 4 clips → `05-julio` (0:34, la API), `07-julio` (0:26, demo: ingreso y tiempo real),
 > `08-julio` (0:17, demo: simulación) y `11-julio` (0:24, pruebas, tu corrida en Windows y despliegue).
 > Yo grabo los míos (apertura, arquitectura, clúster, entrenamiento y cierre).
@@ -50,12 +50,13 @@ carpeta de Drive donde dice `[enlace de Drive]` y, si la rama ya está en GitHub
 > predicción no espera a las bases: va a un canal con búfer y una goroutine por base escribe en lotes. En
 > la prueba de carga llegaron las 80 800 predicciones, contando el calentamiento, sin descartar ninguna.
 >
-> *10-dayana · Impacto social (0:37)*
-> ¿Y para qué sirve? De 64 748 horas con media de 24 horas, 1 184 superaron el ECA. Cada estación muestra
-> la población de su distrito, sin sumarla. En los 30 episodios en que la media cruzó la norma, la lectura
-> horaria ya había pasado el umbral una mediana de 20 horas antes; pero se prende y se apaga, y seguida
-> llevaba apenas una hora. Es una descripción, no un pronóstico. Y solo 17 de las 33 estaciones miden PM
-> por hora: una zona sin estación no es una zona con aire limpio.
+> *10-dayana · Impacto social (0:40)*
+> ¿Y para qué sirve? De 64 748 horas-estación con media de 24 horas, 1 184 superaron el ECA; la misma hora
+> en dos estaciones cuenta dos veces. Cada estación muestra la población de su distrito como contexto, sin
+> sumarla. En los 30 episodios sobre el ECA, la lectura horaria ya había pasado el umbral una mediana de
+> 20 horas antes; pero se prende y se apaga, y seguida llevaba apenas una hora. Es una descripción, no un
+> pronóstico. Y solo 17 de las 33 estaciones miden PM por hora: donde no se mide, no se puede afirmar que
+> el aire esté limpio.
 
 ## Mensaje 3 (Julio)
 

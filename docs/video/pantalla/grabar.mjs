@@ -161,7 +161,7 @@ const ESCENAS = {
       await pausa(pagina, 1.5)
       await deslizarA(pagina, seccion(pagina, 'Las horas en que la media de 24 horas superó el ECA'), { margen: 80, ms: 1500 })
       await pausa(pagina, 6)
-      await deslizarA(pagina, seccion(pagina, 'Quiénes tendrían un aviso que hoy no tienen'), { margen: 80, ms: 2200 })
+      await deslizarA(pagina, seccion(pagina, 'Dónde podría servir esta información'), { margen: 80, ms: 2200 })
       await pausa(pagina, 6)
       await deslizarA(pagina, seccion(pagina, 'Depende de cómo se cuente: las dos medidas van juntas'), { margen: 80, ms: 2200 })
       await pausa(pagina, 11)

@@ -5,13 +5,13 @@ como máximo** con «la presentación de la solución, puntos importantes de su 
 funcionamiento (end to end)», donde **participen todos los integrantes y demuestren conocimiento del
 tema**. Sin video se pierden los 2 puntos de la rúbrica y se afecta el resto.
 
-**Duración objetivo: 5:34** (12 bloques). El tope interno es **5:45**: deja 15 segundos de margen sobre
+**Duración objetivo: 5:37** (12 bloques). El tope interno es **5:45**: deja 15 segundos de margen sobre
 los 6 minutos por si alguien habla más lento. `armar-tb2.sh` lo comprueba y avisa.
 
 | Quién | Bloques | Tiempo | Qué explica |
 |---|---|---|---|
 | **Rody** | 01, 02, 04, 09, 12 | 2:08 | Apertura, arquitectura, el clúster por sockets TCP, el entrenamiento desde la UI y el cierre |
-| **Dayana** | 03, 06, 10 | 1:45 | El dato y el cargador concurrente (y su reproducción en macOS), MongoDB y Redis, el impacto social |
+| **Dayana** | 03, 06, 10 | 1:48 | El dato y el cargador concurrente (y su reproducción en macOS), MongoDB y Redis, el impacto social |
 | **Julio** | 05, 07, 08, 11 | 1:41 | La API coordinadora, la demo de punta a punta, las pruebas (y su corrida en Windows) y el despliegue |
 
 Cada quien explica lo técnico de la parte que construyó o documentó (reporte de participación de la PC3
@@ -236,22 +236,24 @@ los nodos con su latencia, el CPU del coordinador, la latencia de cada ruta y lo
 ## Bloque 10 · Impacto social
 
 - Quién: Dayana
-- Duración: 0:37
+- Duración: 0:40
 - Cámara: burbuja
 - Pantalla: `pantalla impacto | Impacto: con datos reales del gold (reports/impacto.json)`
-- Qué se ve: la página de impacto de arriba abajo, en el orden en que se narra: las horas sobre el ECA,
-  la población de cada distrito, la anticipación (las dos medidas) y lo que el dato no puede decir.
+- Qué se ve: la página de impacto de arriba abajo, en el orden en que se narra, con los textos de la #115:
+  las horas-estación sobre el ECA, «Dónde podría servir esta información» (la población de cada distrito),
+  la anticipación (las dos medidas) y lo que el dato no puede decir.
 - Cifras: 64 748 horas calculables y 1 184 sobre el ECA [alerta.horas_calculables,
   alerta.horas_sobre_eca]; 30 episodios, mediana de 20 horas desde el primer encendido y de 1 hora
   encendida sin interrupción [impacto.anticipacion.total.lectura_horaria]; 17 de 33 estaciones con PM
   por hora, en 10 distritos [impacto.alcance].
 
 ```dice
-¿Y para qué sirve? De 64 748 horas con media de 24 horas, 1 184 superaron el ECA. Cada estación muestra
-la población de su distrito, sin sumarla. En los 30 episodios en que la media cruzó la norma, la lectura
-horaria ya había pasado el umbral una mediana de 20 horas antes; pero se prende y se apaga, y seguida
-llevaba apenas una hora. Es una descripción, no un pronóstico. Y solo 17 de las 33 estaciones miden PM
-por hora: una zona sin estación no es una zona con aire limpio.
+¿Y para qué sirve? De 64 748 horas-estación con media de 24 horas, 1 184 superaron el ECA; la misma hora
+en dos estaciones cuenta dos veces. Cada estación muestra la población de su distrito como contexto, sin
+sumarla. En los 30 episodios sobre el ECA, la lectura horaria ya había pasado el umbral una mediana de
+20 horas antes; pero se prende y se apaga, y seguida llevaba apenas una hora. Es una descripción, no un
+pronóstico. Y solo 17 de las 33 estaciones miden PM por hora: donde no se mide, no se puede afirmar que
+el aire esté limpio.
 ```
 
 ## Bloque 11 · Pruebas y despliegue
