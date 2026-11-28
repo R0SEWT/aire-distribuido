@@ -9,7 +9,8 @@ canales, `WaitGroup`, `Mutex`, patrones y Docker. Por eso las respuestas usan es
 nombran la función de Go, no una abstracción nuestra. Las cifras son las del deck, que salen de
 `reports/` y de `docs/informe/generado/cifras.yml`; si cambian, manda el deck.
 
-Las referencias `archivo:línea` son de la rama `develop` del 27/11/2026 (commit `6d91f4f`).
+Las referencias `archivo:línea` son de la rama `develop` del 27/11/2026 (commit `785c2d0`; el
+código Go no cambió desde `6d91f4f`).
 Respuestas verificadas contra el código con ayuda de IA (Claude); cada integrante revisa las
 suyas antes de la sustentación.
 
@@ -115,11 +116,14 @@ para los mapas) y el hub del WebSocket. Y para publicar el modelo activo no se u
 **Respuesta.** El cargador llega a 4,94× (de 6,68 s a 1,35 s): la fusión en orden y las fases
 seriales, el 8,3 % del tiempo, no se reparten; Karp-Flatt da una fracción serial efectiva del 13 %.
 El K-Means llega a 3,86×: una iteración dura 2 ms y la barrera de cada iteración pesa; con chunks de
-10 000 filas solo hay 7 chunks para 12 workers y cae a 2,25×. Lo importante: el resultado es el mismo
-bit a bit para cualquier W.
+10 000 filas solo hay 7 chunks para 12 workers y cae a 2,25×. En Windows, con 32 CPU, el cargador da
+4,81× con 12 workers (intervalo 3,81 a 5,99). Lo importante: el resultado es el mismo bit a bit para
+cualquier W, y también en otra máquina: Dayana rehízo la PC3 en macOS (darwin/arm64) y obtuvo los
+mismos SHA-256 del silver y el gold, con 40 de 40 chequeos de la auditoría.
 
-*Dónde:* `reports/benchmark_cargador.json`, `reports/benchmark_kmeans.json` · *Quién:* Julio
-(cargador), Rody (K-Means) · *Lámina:* 10, 12 y el respaldo de speedup
+*Dónde:* `reports/benchmark_cargador.json`, `reports/benchmark_kmeans.json`,
+`reports/benchmark_cargador_windows.json`, `reports/revision_dayana/` · *Quién:* Julio (cargador y
+Windows), Rody (K-Means), Dayana (macOS) · *Lámina:* 10, 12, 24 y el respaldo de speedup
 
 ## Distribución: sockets, puertos y protocolo
 
@@ -229,7 +233,8 @@ para MongoDB y Redis y responde. Nada de ese camino espera a una base de datos.
 memoria. Un pedido de predicción se resuelve en la API en menos de un milisegundo. El que pasa por
 el clúster es el entrenamiento: `POST /api/entrenamientos` (solo admin) toma K nodos del pool,
 corre las rondas por TCP y, si el resultado coincide con el secuencial, reemplaza el modelo activo
-con un `Store` atómico. Las predicciones en curso terminan con el anterior.
+con un `Store` atómico. Las predicciones en curso terminan con el anterior. Si se piden más nodos que
+los libres, responde 422; si ya hay un entrenamiento en curso, 409.
 
 *Dónde:* `api/rutas.go:240`, `api/entrenamientos.go:267-284` (semáforo), `:517` · *Quién:* Rody ·
 *Lámina:* 8

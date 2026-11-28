@@ -49,12 +49,15 @@ revisa su parte antes de exponer.
 Exposición: **14:30** (Rody 5:00, Dayana 4:40, Julio 4:50) más **4:00** de demo. Después vienen
 las láminas de respaldo, que solo se abren si el docente pregunta (tecla `M` para el menú):
 Docker Compose, plazos del clúster y caída de un nodo, patrones de Go, reglas de limpieza, k = 3,
-speedup con Karp-Flatt, cuándo conviene repartir, rutas de la API y la pantalla de impacto.
+speedup con Karp-Flatt, cuándo conviene repartir, rutas de la API, las pantallas de admin
+(Clúster y Entrenamiento) y la de impacto.
 
 **Por qué este reparto.** Julio cuenta todo lo que el docente observó en la PC4 (sockets, puertos,
-el código de la API): tiene que poder abrir el código y señalar la línea. Dayana cuenta lo que ve
-el usuario (dato, interfaz, seguridad e impacto). Rody abre, cuenta la arquitectura y el K-Means,
-cierra y conduce la demo, porque tiene la sesión de admin.
+el código de la API): tiene que poder abrir el código y señalar la línea. Además midió el cargador
+en Windows (#42). Dayana cuenta lo que ve el usuario (dato, interfaz, seguridad e impacto) y
+rehízo la PC3 en macOS con los mismos SHA-256 (#45): si el docente pregunta por la
+reproducibilidad, responde ella. Rody abre, cuenta la arquitectura y el K-Means, cierra y conduce
+la demo, porque tiene la sesión de admin.
 
 ### Si dan menos tiempo
 
@@ -92,9 +95,9 @@ cambia el panel de la izquierda sin recargar.
 | # | Quién narra | Qué se hace | Qué se dice (idea, no texto) |
 |--:|:--|:--|:--|
 | 1 | Dayana · 0:30 | Panel: pasar el cursor por dos o tres estaciones del mapa; abrir una en la tabla | El último estado recibido de cada estación, su banda INCA y si está en alerta. «Último estado», no «ahora»: son datos de 2018 a 2022 |
-| 2 | Dayana · 0:45 | Simulación → «Un día de una estación» → elegir un día **con alerta** → Simular, ritmo Rápida | La UI manda las lecturas reales una por una a `POST /api/predicciones`. La ventana de 24 h se llena; en la lectura 18 aparece la media; cuando supera el ECA se enciende la alerta, y el panel de la izquierda cambia solo: es el evento `estacion.regimen` por WebSocket |
+| 2 | Dayana · 0:45 | Simulación → «Un día de una estación» → **CA-ESP-01, 21/12/2021** («cruza el ECA») → Simular, ritmo Rápida | La UI manda las lecturas reales una por una a `POST /api/predicciones`. La ventana de 24 h se llena; en la lectura 18 aparece la media; a las 07:00 la media de PM10 supera el ECA y se enciende la alerta, y el panel de la izquierda cambia solo: es el evento `estacion.regimen` por WebSocket |
 | 3 | Julio · 0:30 | Clúster: la tabla de nodos, la latencia por ruta con la línea de 100 ms y los eventos | Cada nodo con su **IP:puerto**: es la dirección remota de su conexión TCP, como la ve el coordinador. Las altas y bajas de los nodos son los eventos |
-| 4 | Rody · 0:50 | Entrenamiento: K = todos los nodos libres, réplicas 1, semilla por omisión → Lanzar | La API toma K nodos del pool, les manda `CARGAR` y una ronda por iteración. Cada ronda llega en vivo por el WebSocket con su inercia y lo que tardó cada nodo. Al final, la diferencia con el K-Means secuencial y «modelo activado» si está dentro de 10⁻⁹ |
+| 4 | Rody · 0:50 | Entrenamiento: K = todos los nodos libres, réplicas 1, semilla 42 → Lanzar entrenamiento | La API toma K nodos del pool, les manda `CARGAR` y una ronda por iteración. El entrenamiento real dura unos 50 ms; la UI reproduce sus 44 rondas más despacio, con la inercia y lo que tardó cada nodo. Al final, la diferencia con el K-Means secuencial (con 2 nodos fue 7,7 × 10⁻¹⁵) y «el modelo nuevo quedó activo» porque está dentro de 10⁻⁹. Si se piden más nodos que los libres, la API responde 422 y la UI lo dice |
 | 5 | Julio · 0:30 | Terminal: `docker compose ps` y `docker compose logs --tail 15 nodo` | Los servicios con sus puertos. En el log de un nodo: `conectado desde <IP>:<puerto> a <IP>:7070`, el `CARGAR` y la primera ronda: el `Dial` del nodo, en vivo |
 | 6 | Dayana · 0:20 | Impacto: bajar hasta «Cada estación vigila una actividad» | La unidad honesta es la actividad: junto a la refinería y las ladrilleras de Lurigancho, la mayoría de las horas superó el ECA |
 | 7 | Julio · 0:20 | `/docs` (Swagger): `POST /api/auth/invitado` → copiar el token → Authorize → `GET /api/metricas` | 403: el token es de rol usuario y la ruta es de admin. La UI esconde, la API decide |
@@ -112,8 +115,14 @@ sería otro modelo; los nodos vuelven a llamar solos». Se relanza con los que q
   tres o cuatro la ronda se ve mejor); un modelo activo.
 - [ ] En el `.env` del servidor, `JWT_DURACION=4h` y reiniciar la API: el token por omisión dura
   una hora y no se renueva.
-- [ ] Elegir en Simulación un día que encienda la alerta (la pantalla dice si el día es «limpio»)
-  y anotarlo aquí: ________.
+- [ ] **El estado no retrocede.** Si una estación ya tiene un estado posterior al día que se
+  simula, el panel no se mueve (la pantalla dice «Este tramo ya está cargado»). Comprobar en el
+  Panel que CA-ESP-01 no tiene estado posterior al 21/12/2021; si lo tiene, elegir otro día que
+  «cruza el ECA» de una estación sin estado y anotarlo aquí: ________. En el plan B el sistema
+  arranca limpio y no hace falta.
+- [ ] Opcional, si sobra un minuto: «Cargar el escenario» (admin, 48 h reales de 14 estaciones,
+  667 lecturas) llena el panel del invitado en la otra ventana; a ritmo lento tarda demasiado
+  para los cuatro minutos.
 - [ ] Probar un entrenamiento completo de punta a punta.
 - [ ] Plan B en la laptop (abajo): imágenes construidas con red, gold en `data/gold/`, `.env`
   completo. `docker compose build` necesita internet (módulos de Go, pnpm, imágenes base): no se
@@ -179,8 +188,10 @@ go test -race -run SobreTCP -v ./protocolo/
 ```
 
 **Nivel 3 · falla la laptop.** El deck en PDF desde el USB en otra máquina: tiene las capturas
-reales de la app (lámina 21 y el respaldo de Impacto), y el video del TB2 muestra el sistema de
-punta a punta.
+reales de la app (la lámina de la SPA y dos respaldos: las pantallas de admin, Clúster y
+Entrenamiento, y la de Impacto), y el video del TB2 muestra el sistema de punta a punta. Las
+capturas completas de cada pantalla, con su lista de punta a punta, están en
+`docs/informe/capturas/tb2/` (PR #117).
 
 ## Lo que no se dice
 

@@ -342,6 +342,8 @@ con {{< meta cifras.benchmark_cargador.w >}} workers: de {{< meta cifras.benchma
 - La fusión va **en orden de bloque, no de llegada**: silver y gold idénticos para todo W
 - Eficiencia de {{< meta cifras.benchmark_cargador.eficiencia >}}: la fusión en orden y las fases
   seriales ({{< meta cifras.limpieza.fraccion_serial >}}) no se reparten
+- En Windows, con {{< meta cifras.benchmark_cargador_windows.cpus >}} CPU: {{< meta cifras.benchmark_cargador_windows.speedup >}}× con
+  {{< meta cifras.benchmark_cargador_windows.w_resumen >}} workers
 :::
 :::
 ::::
@@ -357,7 +359,7 @@ El recolector fusiona en orden de bloque, no de llegada: por eso el silver y el 
 con 1 worker o con 12, lo comprobamos con su sha256. Un canal con búfer de 2W hace de semáforo: como
 mucho 2W bloques leídos sin fusionar.
 Con 12 workers, 4,94 veces más rápido. No es 12: la fusión en orden y las fases seriales no se
-reparten.
+reparten. Y lo medimos también en Windows, en una máquina de 32 CPU: 4,81 veces con 12 workers.
 :::
 
 ## Parte B: el K-Means en un worker pool
@@ -493,7 +495,8 @@ administrador: solo abre conexiones de salida. Y si el nodo pierde la conexión,
 La topología es una estrella: los nodos no se hablan entre sí, porque la fusión es una suma de
 parciales y solo el coordinador la necesita. Cada mensaje es una línea de JSON sobre la conexión,
 con plazos de lectura y escritura del propio socket. En el laboratorio, con 4 PC, una ronda
-completa por la red tarda medio milisegundo.
+completa por la red tarda medio milisegundo. (En la demo, la pantalla Clúster muestra la IP:puerto
+de cada nodo: es la dirección remota de su conexión TCP.)
 :::
 
 ## Una ronda: dos niveles, y la fusión en orden de nodo
@@ -823,6 +826,8 @@ secretos van en un .env que no está en el repositorio.
 | API en menos de 100 ms | `cmd/carga`, {{< meta cifras.api_latencia.pedidos_total >}} pedidos, 1 a {{< meta cifras.api_latencia.clientes_max >}} clientes | p99 ≤ {{< meta cifras.api_latencia.p99_max >}} ms; {{< meta cifras.api_latencia.sobre_el_limite >}} sobre el límite |
 | La API de punta a punta | Postman y newman, {{< meta cifras.datos_prueba.lecturas >}} lecturas de prueba | {{< meta cifras.datos_prueba.casos >}} casos, de {{< meta cifras.datos_prueba.estaciones >}} estaciones |
 | Limpieza y K-Means | Auditoría independiente en pandas y scikit-learn | {{< meta cifras.auditoria.ok >}} de {{< meta cifras.auditoria.chequeos >}} chequeos sin diferencias |
+| El mismo resultado en otra máquina | La PC3 rehecha en {{< meta cifras.revision.plataforma >}} | mismos SHA-256 del silver y el gold; {{< meta cifras.revision.ok >}} de {{< meta cifras.revision.chequeos >}} chequeos |
+| El cargador en otra plataforma | {{< meta cifras.benchmark_cargador_windows.plataforma >}}, {{< meta cifras.benchmark_cargador_windows.cpus >}} CPU, {{< meta cifras.benchmark_cargador_windows.repeticiones >}} repeticiones | {{< meta cifras.benchmark_cargador_windows.speedup >}}× con {{< meta cifras.benchmark_cargador_windows.w_resumen >}} workers, {{< meta cifras.benchmark_cargador_windows.speedup_ic >}} |
 | La pregunta de impacto | `scripts/impacto.py` sobre el gold y el silver | la lámina siguiente |
 :::
 
@@ -833,7 +838,9 @@ Vitest.
 El distribuido da el mismo modelo que el secuencial: bit a bit con un nodo, y con hasta cuatro, a
 10 a la menos 15. En el laboratorio, con 4 PC, una ronda tarda medio milisegundo. La API, menos de
 100 ms con 64 clientes. La colección de Postman con datos de prueba recorre la API de punta a
-punta. Y una auditoría independiente rehízo la limpieza y el K-Means en scikit-learn: 40 de 40.
+punta. Una auditoría independiente rehízo la limpieza y el K-Means en scikit-learn: 40 de 40. Y
+el determinismo vale también entre máquinas: Dayana rehízo la PC3 en macOS y obtuvo los mismos
+SHA-256 del silver y el gold; el cargador, en Windows, da 4,81 veces con 12 workers.
 :::
 
 ## Lo que responde: el aire junto a cada actividad
@@ -1180,6 +1187,26 @@ Gracias; ¿preguntas?
 | `POST /api/entrenamientos`, `GET /api/entrenamientos`, `GET /api/entrenamientos/{id}` | admin |
 
 [El servidor HTTP tiene plazos de lectura, de escritura y de inactividad (`ReadHeaderTimeout` de 5 s), y se apaga en orden con SIGTERM: corta el entrenamiento, termina los pedidos en curso y vacía las colas de escritura.]{.nota}
+
+## Las pantallas de admin: clúster y entrenamiento {.respaldo}
+
+[Respaldo · plan B de la demo · docs/informe/capturas/tb2/ (PR #117)]{.eyebrow}
+
+::: {.apps style="grid-template-columns: 1fr 1fr;"}
+::: {}
+![](img/app-cluster.png){.app}
+
+[Clúster: cada nodo con la IP:puerto de su conexión TCP, el latido y la ronda; CPU de la API, peor p99 y los eventos de altas y bajas]{.pie}
+:::
+
+::: {}
+![](img/app-entrenamiento.png){.app}
+
+[Entrenamiento configurado desde la UI (2 nodos, 1 réplica, semilla 42): 44 rondas, convergió, 7,7 × 10⁻¹⁵ con el secuencial y el modelo activado]{.pie}
+:::
+:::
+
+[Capturas de la corrida de punta a punta del 27/11/2026 sobre el Docker Compose del repo, con dos nodos.]{.nota}
 
 ## Impacto: la pantalla de la app {.respaldo}
 

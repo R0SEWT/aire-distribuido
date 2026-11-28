@@ -1,6 +1,6 @@
 # Deck (Quarto + reveal.js + D3)
 
-`index.qmd` es la sustentación del TB2: portada, 28 láminas y 9 de respaldo en 16:9 (1280×720).
+`index.qmd` es la sustentación del TB2: portada, 28 láminas y 10 de respaldo en 16:9 (1280×720).
 Dura unos 14 minutos y medio más 4 de demo, y se reparte entre los tres integrantes; cada lámina dice
 quién habla, arriba a la derecha, y sus notas traen el tiempo y qué decir. El reparto, la versión
 corta y el guion de la demo están en [`../reparto.md`](../reparto.md); las preguntas probables del
@@ -49,8 +49,12 @@ En línea, la de la PC3: <https://uni.rosewt.dev/concurrente/pc3/>. La del TB2 s
 - **El código Go** de las láminas de sockets, de la ronda y de la API es texto, no imagen, con el
   archivo encima: son extractos del código real (las referencias con su línea están en
   `../preguntas.md`). Si el código cambia, hay que revisarlos a mano.
-- **Las capturas de la app** (`img/app-*.png`) son de <https://aire.rosewt.dev> a 1440×860,
-  tomadas el 27/11/2026 con la cuenta de invitado.
+- **Las capturas de la app**: `img/app-{panel,simulacion,impacto}.png` son de
+  <https://aire.rosewt.dev> a 1440×860, tomadas el 27/11/2026 con la cuenta de invitado;
+  `img/app-{cluster,entrenamiento}.png` son copias de `docs/informe/capturas/tb2/` (PR #117), de la
+  corrida de punta a punta sobre el Compose del repo. Si se vuelven a tomar, se reemplazan aquí.
+- **Las cifras de otras plataformas** (el cargador en Windows y la reproducción en macOS) son
+  `cifras.benchmark_cargador_windows` y `cifras.revision`, del informe.
 - **Las figuras y diagramas** son los del informe (`docs/diagramas/`,
   `docs/informe/generado/figuras/`), referenciados, no copiados.
 - **Las capturas de terminal** son la pantalla entera y en una lámina no se leen: `recortes.py`
