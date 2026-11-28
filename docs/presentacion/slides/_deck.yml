@@ -2,6 +2,9 @@
 # Uso en el .qmd: shortcode meta con la clave deck.… (deck.impacto.episodios)
 deck:
   pruebas: "549"
+  pruebas_ci: "524"
+  pruebas_integracion: "25"
+  pruebas_cortas: "5"
   pruebas_web: "708"
   archivos_web: "36"
   ws:

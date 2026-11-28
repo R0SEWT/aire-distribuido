@@ -64,7 +64,9 @@ los nodos.
 
 **Respuesta.** El CSV de OEFA tiene 2 883 877 filas en formato largo (una por estación, parámetro y
 hora), 1,3 GB. El cargador las lee todas en paralelo; 1 434 498 son lecturas válidas, que se pivotan
-a 236 001 horas-estación, y 65 873 tienen PM2,5 y PM10 a la vez: esas entran al K-Means.
+a 236 001 horas-estación, y 65 873 tienen PM2,5 y PM10 a la vez: esas entran al K-Means. El
+segundo dataset, SENAMHI Lima (577 794 registros según el portal), estaba previsto como contraste
+entre redes en el TB2 y no se hizo: el informe lo dice entre lo que quedó sin responder.
 
 *Dónde:* `reports/limpieza.json` (`filas_largas`) · *Quién:* Dayana · *Lámina:* 2 y 6
 
@@ -111,9 +113,11 @@ los workers.
 
 **Respuesta.** Por diseño, no hay escritura compartida: cada worker escribe solo el parcial de su
 chunk, en su casilla `P[b]` de un arreglo preasignado, y los centroides son de solo lectura durante
-la iteración. Después de la barrera, `Fusionar` y `Actualizar` corren en una sola goroutine. Todas
-las pruebas corren con `go test -race` en cada push y PR, y el detector no encuentra ninguna en lo
-que ejercitan las pruebas (mira los caminos que corren; no prueba la ausencia en general). Y los
+la iteración. Después de la barrera, `Fusionar` y `Actualizar` corren en una sola goroutine. El CI
+corre `go test -race -short ./...` en cada push y PR: compila 524 de las 549 funciones `Test*` del
+repo (las 25 de integración, con la etiqueta `integracion`, piden MongoDB y Redis y se corren
+aparte), y `-short` salta parte de 5. El detector no encuentra ninguna carrera en lo que ejercitan
+las pruebas (mira los caminos que corren; no prueba la ausencia en general). Y los
 workers ven los centroides nuevos sin carrera porque los reciben después por el canal: en Go, lo que
 una goroutine escribe antes de enviar por un canal lo ve la que recibe.
 
@@ -268,7 +272,8 @@ para MongoDB y Redis y responde. Nada de ese camino espera a una base de datos.
 ### 18. ¿La predicción pasa por el clúster?
 
 **Respuesta.** No. El clúster entrena; la API predice con el modelo ya entrenado, que vive en su
-memoria. Un pedido de predicción se resuelve en la API en menos de un milisegundo. El que pasa por
+memoria. Dentro del handler, una predicción tarda fracciones de milisegundo (es el campo `ms` de la
+respuesta); medido desde el cliente, el p99 fue de 0,27 ms con un cliente y de 3,14 ms con 64. El que pasa por
 el clúster es el entrenamiento: `POST /api/entrenamientos` (solo admin) toma K nodos del pool,
 corre las rondas por TCP y, si el resultado coincide con el secuencial, reemplaza el modelo activo
 con un `Store` atómico. Las predicciones en curso terminan con el anterior. Si se piden más nodos que
@@ -284,9 +289,10 @@ clientes a la vez, medidos del lado del cliente. Con 64 clientes, p99 de 3,14 ms
 4,84 ms; ningún pedido sobre el límite y ningún error. Además la API mide la latencia de cada ruta
 y la publica en `GET /api/metricas`, que la pantalla Clúster dibuja con la línea de los 100 ms. Y
 la colección de Postman, que newman corre con 78 lecturas de prueba (5 casos de 14 estaciones),
-recorre la API de punta a punta. Mientras tanto MongoDB y Redis guardaron 80 800 predicciones cada
-uno, los 80 000 pedidos y los 800 de calentamiento, sin descartar ninguna; si una cola se llenara,
-la API descartaría y lo contaría, pero el pedido no espera.
+recorre la API de punta a punta. Mientras tanto, la cola de cada base procesó 80 800 predicciones,
+los 80 000 pedidos y los 800 de calentamiento, sin descartar ninguna: MongoDB las insertó todas;
+Redis, por lotes, se queda con el último régimen de cada estación. Si una cola se llenara, la API
+descartaría y lo contaría, pero el pedido no espera.
 
 *Dónde:* `reports/api_latencia.json`, `cmd/carga/`, `docs/postman/` · *Quién:* Julio · *Lámina:* 20 y 27
 
@@ -314,11 +320,13 @@ de un `select`, así que no necesita el `Lock()` del lab.
 
 **Respuesta.** El enunciado pide los dos niveles. MongoDB es lo que tiene que durar, en 5
 colecciones: `estaciones`, `predicciones`, `modelos`, `entrenamientos` (con sus rondas) y
-`eventos_cluster`, con 5 índices. Redis es la caché, lo que se lee rápido, en 3 claves: el último régimen de
+`eventos_cluster`, con 5 índices. Redis es la caché, lo que se lee rápido, en 3 tipos de clave: el último régimen de
 cada estación (lo que pinta el mapa), el modelo activo (para arrancar en caliente) y los centroides
 de la última ronda de un entrenamiento (todavía no se reanuda desde ahí). La API escribe con una cola con búfer y una goroutine por base, por lotes
-(`InsertMany` y un pipeline de Redis): bajo carga, 80 800 escrituras en cada una (80 000 pedidos y
-800 de calentamiento) y 0 descartadas.
+(`InsertMany` y un pipeline de Redis). Bajo carga, cada cola procesó 80 800 predicciones (80 000
+pedidos y 800 de calentamiento) sin descartar ninguna: MongoDB las insertó todas, y Redis, que
+reduce cada lote al último régimen de cada estación, guarda una clave por estación, no el
+historial.
 
 *Dónde:* `almacen/mongo/mongo.go:58-62` y `:240`, `almacen/redis/redis.go:40-43` y `:146`,
 `api/escritor.go:232-240`, `docs/diagramas/entidades.png` · *Quién:* Dayana · *Lámina:* 21
@@ -404,8 +412,10 @@ suma entre distritos.
 
 ### 28. ¿Con cuánta anticipación avisa? ¿Es un pronóstico?
 
-**Respuesta.** No es un pronóstico: es una medida descriptiva sobre las mismas lecturas del
-entrenamiento, sin partición temporal. En los 30 episodios, la primera lectura horaria sobre el
+**Respuesta.** No es un pronóstico: es una descripción dentro de la muestra, sobre las mismas
+lecturas del entrenamiento. La PC3 había diseñado una evaluación con partición temporal y dos
+referencias ingenuas (la tasa sin condicionar y «la lectura actual ya supera el umbral»); no se
+hizo, y no la llamamos evaluación. En los 30 episodios, la primera lectura horaria sobre el
 umbral apareció 20 h antes del cruce (mediana; cuartiles 16,2 a 22,0 h), y la primera hora en el
 régimen alto del K-Means, 18 h antes. Pero justo antes del cruce la señal estuvo encendida solo 1 h
 seguida: las señales van y vienen. Y el régimen alto acierta el 35 % de las veces que suena
@@ -422,7 +432,8 @@ es una predicción, ni garantiza que las mediciones no tengan errores.
 puestas donde OEFA fiscaliza, no donde vive la gente: una zona sin estación no es una zona con aire
 limpio. Solo 17 miden PM2,5 y PM10 por hora; las otras 16 no entran en ninguna cifra. Muchas son
 campañas de semanas y los datos son de 2018 a 2022: la UI dice «último estado recibido», nunca
-«ahora». Y con 65 873 filas repartir no acelera: la ronda por la red cuesta lo mismo que una
+«ahora». El contraste con SENAMHI Lima, previsto para el TB2, no se hizo. Y con 65 873 filas
+repartir no acelera: la ronda por la red cuesta lo mismo que una
 iteración en una máquina; el clúster se justifica con más datos.
 
 *Dónde:* `reports/impacto.json` (`alcance`), `reports/eda_criba.md` · *Quién:* Rody · *Lámina:* 30
@@ -473,6 +484,9 @@ Preguntas menos probables, con la respuesta en una línea.
 | «Las rondas en vivo» | La UI las reproduce más despacio, y su pantalla lo dice | «Las rondas llegan por el WebSocket; la UI las reproduce» |
 | «El 7070 no se publica por el `expose`» | `expose` es documentación | «No está en `ports`» |
 | «Distribuido = secuencial» | Con varios nodos difiere a 10⁻¹⁵ | «Bit a bit con un nodo; con varios, a 10⁻¹⁵, dentro de la tolerancia» |
+| «Evaluamos la anticipación» | Es una descripción dentro de la muestra; la evaluación con partición temporal no se hizo | «En los datos, la primera señal apareció 20 h antes, en la mediana» |
+| «549 pruebas en el CI» | El CI compila 524 y corre con `-short`; las 25 de integración van aparte | «524 en el CI, 549 en el repo» |
+| «Redis guardó 80 800 predicciones» | Redis guarda el último régimen de cada estación | «Cada cola procesó 80 800; MongoDB las insertó todas» |
 | «Predecimos episodios» o «avisamos con 20 horas» | La anticipación es descriptiva, sin partición temporal; la cota baja es 1 h | «En los datos, la primera señal apareció 20 h antes, en la mediana» |
 | «34 estaciones» | El portal lo dice; en el CSV hay 33 | «33 estaciones, 17 con PM por hora» |
 | «La alerta es la norma misma» o «no falla» | Aplicar una regla no garantiza datos sin errores | «La alerta compara la media de 24 h con los valores de referencia del ECA» |

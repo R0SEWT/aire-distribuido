@@ -9,7 +9,7 @@ y responder a las preguntas del docente». El video del TB2 (6 minutos como máx
   HTML que funciona sin red.
 - [`reparto.md`](reparto.md): quién dice cada lámina y cuánto dura, la versión corta, el guion de
   la demo en vivo, la preparación y el plan B si falla la red.
-- [`preguntas.md`](preguntas.md): las 28 preguntas más probables del docente, con una respuesta
+- [`preguntas.md`](preguntas.md): las 29 preguntas más probables del docente, con una respuesta
   corta y el archivo y la línea del código que la respaldan; las observaciones de la PC4 y cómo se
   responden ahora; lo que no se dice.
 - [`auditoria/`](auditoria/auditoria.md): la revisión con la skill `revisar-entrega` (modo A) contra

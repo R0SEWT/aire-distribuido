@@ -218,11 +218,31 @@ def tiempo_real() -> dict:
 
 
 def pruebas() -> int:
-    """Funciones Test* de los archivos versionados: lo que corre go test -race ./... (sin las copias
-    de las carpetas ocultas, como los worktrees de .claude/)."""
+    """Funciones Test* declaradas en los archivos versionados, con las de la etiqueta integracion (sin
+    las copias de las carpetas ocultas, como los worktrees de .claude/). No es lo que corre el CI:
+    ver pruebas_ci()."""
+    c = pruebas_ci()
+    return c["ci"] + c["integracion"]
+
+
+def pruebas_ci() -> dict:
+    """Las funciones Test* separadas en las que compila el CI (go test -race -short ./..., sin la
+    etiqueta de build integracion) y las de integración, que piden MongoDB y Redis y corren aparte.
+    `cortas` cuenta las que miran testing.Short(): el CI, con -short, salta parte de ellas."""
     patron = re.compile(r"^func Test\w*\(t \*testing\.T\)", re.M)
-    return sum(len(patron.findall(p.read_text(encoding="utf-8"))) for p in RAIZ.rglob("*_test.go")
-               if not any(parte.startswith(".") for parte in p.relative_to(RAIZ).parts))
+    cuenta = {"ci": 0, "integracion": 0}
+    cortas = 0
+    for p in RAIZ.rglob("*_test.go"):
+        if any(parte.startswith(".") for parte in p.relative_to(RAIZ).parts):
+            continue
+        texto = p.read_text(encoding="utf-8")
+        cabecera = "\n".join(texto.splitlines()[:5])
+        clave = "integracion" if re.search(r"^//go:build .*\bintegracion\b", cabecera, re.M) else "ci"
+        cuenta[clave] += len(patron.findall(texto))
+        cortas += sum(1 for f in re.split(r"\nfunc ", texto)
+                      if f.startswith("Test") and "testing.Short()" in f.split("\n}\n")[0])
+    cuenta["cortas"] = cortas
+    return cuenta
 
 
 def portada(limpieza: dict) -> str:
@@ -279,7 +299,10 @@ def main() -> None:
           "window.DATOS = " + json.dumps(datos, ensure_ascii=False, indent=1) + ";\n")
     (AQUI / "datos.js").write_text(js, encoding="utf-8")
     # Lo que el texto del deck cita y no está en cifras.yml: se lee con {{< meta deck.x >}}
-    lineas = [f'  pruebas: "{entero(datos["pruebas"])}"', f'  pruebas_web: "{entero(web)}"',
+    ci = pruebas_ci()
+    lineas = [f'  pruebas: "{entero(datos["pruebas"])}"', f'  pruebas_ci: "{entero(ci["ci"])}"',
+              f'  pruebas_integracion: "{entero(ci["integracion"])}"', f'  pruebas_cortas: "{entero(ci["cortas"])}"',
+              f'  pruebas_web: "{entero(web)}"',
               f'  archivos_web: "{entero(archivos_web)}"', "  ws:"]
     lineas += [f'    {k}: "{v}"' for k, v in ws.items()]
     lineas.append("  impacto:")

@@ -75,7 +75,7 @@ Las MEDIA y las que marcó el corrector en frío quedaron así:
 | «darían números distintos» (notas de 12) | Absoluto | «podrían dar» |
 | «bit a bit para todo W» (13) | Vale con el mismo chunk | «… y el mismo chunk» |
 | «Una iteración dura 2,03 ms» frente a 0,551 ms (13 y respaldo 39) | Parecía una contradicción | «2,03 ms con 1 worker y 0,551 ms con 12» |
-| «Sin condiciones de carrera: 549 funciones» (13 y 27) | El detector no prueba la ausencia | «`go test -race` no detecta carreras»; «ninguna detectada en 549 funciones» |
+| «Sin condiciones de carrera: 549 funciones» (13 y 27) | El detector no prueba la ausencia, y el CI no corre las 549 | «`go test -race` no detecta carreras»; «ninguna detectada en las 524 funciones que compila el CI» (las 25 de integración van aparte; `-short`) |
 | «sin permisos de administrador: solo conexiones de salida» (16) | Escuchar no pide admin; lo que bloquea es el firewall | «Colab está detrás de NAT y el firewall de las PC del laboratorio bloquea las entrantes» |
 | «la barrera de una ronda mide 0,515 ms» (16, 27, 39) | El smoke es de `PING`, sin cálculo | «una ronda de `PING` a todos a la vez, sin cálculo: lo que la barrera paga en red» |
 | «la misma suma que en una máquina» (17) | Es la misma función; agrupar por nodo cambia el orden | «la misma función»; «en el orden de 10⁻¹⁵ … porque agrupar por nodo cambia el orden de la suma» |
@@ -84,7 +84,7 @@ Las MEDIA y las que marcó el corrector en frío quedaron así:
 | «El 7070 no se publica» y los nodos del laboratorio (notas de 8, 16) | ¿Cómo llegaron? | En el laboratorio el coordinador corrió fuera de Docker; en Compose, el 7070 no está en `ports` |
 | «con `expose` queda dentro de la red» (pregunta 11) | `expose` es documentación | «no está en `ports`» |
 | «Puertos solo en 127.0.0.1» (25) | En la máquina pública están el 80 y el 443 | «En el Compose…; en la máquina pública, solo 80 y 443» |
-| «MongoDB y Redis guardaron cada predicción» (notas de 20) | La persistencia es de mejor esfuerzo; 80 000 frente a 80 800 | «en esa corrida, ninguna descartada»; 80 800 = 80 000 pedidos y 800 de calentamiento |
+| «MongoDB y Redis guardaron cada predicción» (notas de 20) | La persistencia es de mejor esfuerzo; 80 000 frente a 80 800; Redis no guarda el historial | «cada cola procesó 80 800 (80 000 pedidos y 800 de calentamiento), ninguna descartada: MongoDB las insertó todas; Redis guarda el último régimen de cada estación» |
 | «el punto de control de cada ronda» (21) | Nunca se lee | «los centroides de la última ronda; todavía no se reanuda desde ahí» |
 | «sigue cada ronda en vivo» (23, demo) | La UI las reproduce, y su pantalla lo dice | «las rondas llegan por el WebSocket; la UI las reproduce» |
 | «clúster (nodos, CPU…)» (23) | Es el CPU de la API | «CPU del proceso de la API» (y el de los nodos no viaja) |
@@ -104,7 +104,7 @@ Las MEDIA y las que marcó el corrector en frío quedaron así:
   la interfaz (`cifras.pruebas_tb2.web`, los `it`/`test` declarados) y su texto dice 708 (las que
   corre Vitest). Y el diagrama `docs/diagramas/arquitectura.png` dice que MongoDB guarda «corridas,
   centroides, regímenes» y Redis «predicciones, centroides por ronda», distinto de las 5 colecciones
-  y 3 claves reales.
+  y los 3 tipos de clave reales (una por estación, la del modelo activo y una por entrenamiento).
 
 ## Corrector en frío
 
@@ -127,6 +127,23 @@ Lo que aportó y no estaba en la matriz, con su destino:
 | La UI usa formato numérico inglés («1,184», «7.7 e-15») | Es del frontend: anotado para esa sesión |
 | Replicar el gold no es ML masivo; el clúster no acelera con la tabla real | Se mantiene, dicho con honestidad en el respaldo 39 y la respuesta 29 |
 | «20 h» como titular de la anticipación | Se mantiene, con la cota baja (1 h), el tope de 23 h y «no es un pronóstico» en la misma lámina |
+
+## Revisión de Sourcery en la PR #119
+
+Diez hilos, todos sobre frases que decían más de lo medido. Cómo quedó cada uno:
+
+| Hilo | Qué marcó | Qué se hizo |
+|:---|:---|:---|
+| Plan B: admin por la red | `-demo` trae `admin`/`admin` y escucha el 8080 en todas las interfaces | `reparto.md`: el plan B sin Docker corre con `-addr 127.0.0.1:8080 -nodos-addr 127.0.0.1:7070`, y dice por qué |
+| Plan B: nodos sin autenticar | El 7070 abierto deja entrar cualquier `HOLA` | El mismo cambio: el 7070 solo en `127.0.0.1`, y el nodo llama a `127.0.0.1:7070` |
+| Token de 4 h | Un token robado vale tres horas más | `reparto.md`: después de la clase se quita `JWT_DURACION` y se reinicia la API |
+| Anticipación | Se podía leer como la evaluación del TB2 | Lámina 29, sus notas, la respuesta 28 y «lo que no se dice»: descripción dentro de la muestra; la evaluación con partición temporal y referencias ingenuas que diseñó la PC3 no se hizo |
+| Redis | «80 800 predicciones» y «3 claves» | Cada cola procesó 80 800; MongoDB las insertó todas; Redis guarda el último régimen de cada estación, el modelo activo y los centroides de la última ronda: 3 tipos de clave (lámina 21, nota de la 20, respuestas 19 y 21) |
+| Las 549 pruebas | No son las que corre el CI | `datos.py` separa 524 (las que compila el CI con `-short`) de las 25 de integración; lámina 27, notas y respuesta 7 |
+| Latencia de la predicción | «menos de un milisegundo» frente al p99 de 3,14 ms | Respuesta 18: dentro del handler, fracciones de milisegundo; desde el cliente, p99 de 0,27 ms con 1 cliente y 3,14 ms con 64 |
+| Logs de los nodos | `logs --tail 15` después de entrenar no muestra el `CARGAR` | El nodo registra solo la primera `ITERAR`, pero con varios nodos un `--tail` corto la cortaría: Julio deja `logs -f --tail 0 nodo` corriendo antes de lanzar el entrenamiento |
+| SENAMHI | El contraste prometido no aparece | No se hizo, y el informe lo dice; ahora también la lámina 30 y las respuestas 3 y 29 |
+| README | 28 preguntas en vez de 29 | Corregido |
 
 ## Lectura humana (la cierra una persona, no la IA)
 

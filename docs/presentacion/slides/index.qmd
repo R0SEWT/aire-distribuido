@@ -693,13 +693,14 @@ El WebSocket también es nuestro, sobre net/http: un hub con canales de alta, ba
 ::: {.d3 data-grafico="latencia"}
 :::
 
-[{{< meta cifras.api_latencia.pedidos_total >}} pedidos a `POST /api/predicciones` con JWT ({{< meta cifras.api_latencia.pedidos_por_nivel >}} por nivel), medidos del lado del cliente con `cmd/carga`: {{< meta cifras.api_latencia.sobre_el_limite >}} sobre el límite y {{< meta cifras.api_latencia.errores >}} errores. Con MongoDB y Redis guardando: {{< meta cifras.api_latencia.escritas_mongo >}} escrituras en cada uno (los pedidos y el calentamiento), {{< meta cifras.api_latencia.escrituras_descartadas >}} descartadas.]{.nota}
+[{{< meta cifras.api_latencia.pedidos_total >}} pedidos a `POST /api/predicciones` con JWT ({{< meta cifras.api_latencia.pedidos_por_nivel >}} por nivel), medidos del lado del cliente con `cmd/carga`: {{< meta cifras.api_latencia.sobre_el_limite >}} sobre el límite y {{< meta cifras.api_latencia.errores >}} errores. Mientras tanto, la cola de cada base procesó {{< meta cifras.api_latencia.escritas_mongo >}} predicciones (los pedidos y el calentamiento), {{< meta cifras.api_latencia.escrituras_descartadas >}} descartadas: MongoDB las insertó todas; Redis se queda con el último régimen de cada estación.]{.nota}
 
 ::: notes
 [0:30 · Julio] Y la medición. 80 000 pedidos de predicción, con 1, 4, 16 y 64 clientes a la vez. La
 escala es logarítmica: con 64 clientes, el 99 % de los pedidos responde en 3,1 milisegundos, más de
-30 veces por debajo del límite de 100. Ninguno pasó el límite, ninguno falló, y en esa corrida
-MongoDB y Redis no descartaron ninguna predicción. Ojo: si una cola se llenara, la API descartaría y
+30 veces por debajo del límite de 100. Ninguno pasó el límite, ninguno falló, y en esa corrida las
+colas no descartaron ninguna predicción: MongoDB las insertó todas, y Redis, que guarda solo el
+último régimen de cada estación, las procesó todas. Ojo: si una cola se llenara, la API descartaría y
 lo contaría, pero el pedido no espera.
 :::
 
@@ -722,7 +723,7 @@ durar, con {{< meta cifras.datos.indices >}} índices.
 :::
 
 ::: {}
-[Redis · {{< meta cifras.datos.claves >}} claves]{.t}
+[Redis · {{< meta cifras.datos.claves >}} tipos de clave]{.t}
 
 `estacion:{id}:regimen` (el último de cada estación), `modelo:activo` (arranque en caliente) y
 `entrenamiento:{id}:punto` (los centroides de la última ronda; todavía no se reanuda desde ahí).
@@ -902,7 +903,7 @@ secretos van en un .env que no está en el repositorio.
 ::: {.eval}
 | Qué se probó | Cómo | Resultado |
 |:--|:--|:--|
-| Condiciones de carrera | `go test -race ./...` en cada push y PR (CI) | ninguna detectada en {{< meta deck.pruebas >}} funciones de prueba de Go |
+| Condiciones de carrera | `go test -race -short ./...` en cada push y PR (CI) | ninguna detectada en las {{< meta deck.pruebas_ci >}} funciones que compila el CI; las {{< meta deck.pruebas_integracion >}} de integración piden MongoDB y Redis y corren aparte |
 | La interfaz | Vitest, en el CI | {{< meta deck.pruebas_web >}} pruebas en {{< meta deck.archivos_web >}} archivos |
 | Tiempo real | una lectura que manda el admin llega por WebSocket al panel de un invitado ({{< meta deck.ws.lecturas >}} lecturas) | p50 de {{< meta deck.ws.p50 >}} ms y p99 de {{< meta deck.ws.p99 >}} ms; {{< meta deck.ws.sin_evento >}} sin evento |
 | Distribuido frente a secuencial | `cmd/distribuido` con 1 a {{< meta cifras.distribuido.nodos_max >}} nodos | 1 nodo: bit a bit; hasta {{< meta cifras.distribuido.nodos_max >}}: ≤ {{< meta cifras.distribuido.dif_max >}} (tolerancia {{< meta cifras.distribuido.tolerancia >}}) |
@@ -915,8 +916,9 @@ secretos van en un .env que no está en el repositorio.
 :::
 
 ::: notes
-[0:45 · Julio] La evaluación, en una tabla. Todas las pruebas de Go corren con el detector de
-carreras, en cada push y en cada PR: 549 funciones de prueba, y el detector no encuentra ninguna
+[0:45 · Julio] La evaluación, en una tabla. El CI corre las pruebas de Go con el detector de
+carreras y con -short, en cada push y en cada PR: compila 524 de las 549 funciones de prueba (las 25
+de integración necesitan MongoDB y Redis y se corren aparte), y el detector no encuentra ninguna
 carrera en lo que ejercitan. La interfaz tiene 708 pruebas en
 Vitest. Y el tiempo real se midió entre dos sesiones distintas: lo que manda el admin le llega al
 panel de un invitado en 2,25 milisegundos de mediana.
@@ -1004,7 +1006,7 @@ el ECA, y el régimen se muestra como dato.
 :::
 :::
 
-[Descriptivo, sobre las mismas lecturas con que se entrenó: no hay partición temporal, no es un pronóstico. La anticipación tiene un tope de {{< meta deck.impacto.tope >}} h por construcción.]{.nota}
+[Una descripción dentro de la muestra, sobre las mismas lecturas con que se entrenó: no es un pronóstico. La evaluación con partición temporal y referencias ingenuas que diseñó la PC3 no se hizo. La anticipación tiene un tope de {{< meta deck.impacto.tope >}} h por construcción.]{.nota}
 
 ::: notes
 [0:40 · Dayana] La segunda mitad de la pregunta: con cuánta anticipación. En los 30 episodios, la
@@ -1016,7 +1018,9 @@ de las veces que suena.
 mediana. Las señales van y vienen. Por eso la alerta compara la media de 24 horas con los valores de
 referencia del ECA, y las señales horarias, como el régimen, se muestran como dato. Ojo: no es una
 predicción, ni garantiza que las mediciones no tengan errores.
-Lo decimos claro: es descriptivo, sobre los mismos datos del entrenamiento. No es un pronóstico.
+Lo decimos claro: es una descripción dentro de la muestra, sobre los mismos datos del
+entrenamiento, no una evaluación con datos nuevos. La PC3 había diseñado una evaluación con
+partición temporal y dos referencias ingenuas, y no la hicimos. No es un pronóstico.
 :::
 
 ## Lo que este sistema no puede decir
@@ -1041,7 +1045,8 @@ OEFA fiscaliza, no donde vive la gente.
 - Muchas son campañas de semanas, y los datos van de 2018 a 2022: la UI dice «último estado
   recibido», nunca «ahora»
 - El K-Means describe regímenes; la alerta compara la media de 24 h con el ECA
-- La anticipación es descriptiva, sin partición temporal
+- La anticipación es una descripción dentro de la muestra, sin partición temporal
+- El contraste con SENAMHI Lima, previsto para el TB2, no se hizo
 :::
 :::
 ::::
@@ -1052,7 +1057,8 @@ puestas donde OEFA fiscaliza, no donde vive la gente: una zona sin estación no 
 limpio. Solo 17 miden material particulado por hora; las otras 16 no entran en ninguna cifra.
 Muchas midieron pocas semanas, y los datos son de 2018 a 2022: por eso la interfaz nunca dice
 «ahora», dice «último estado recibido». El K-Means describe regímenes; la alerta compara la media de
-24 horas con el ECA, y la anticipación es descriptiva.
+24 horas con el ECA, y la anticipación es una descripción dentro de la muestra. Y el contraste con
+la red de SENAMHI en Lima, que habíamos previsto para el TB2, no se hizo.
 :::
 
 ## {background-color="#10233B"}

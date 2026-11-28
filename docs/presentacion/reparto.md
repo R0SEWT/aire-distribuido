@@ -105,7 +105,7 @@ cambia el panel de la izquierda sin recargar.
 | 3 | Dayana · 0:45 | Simulación → «Un día de una estación» → **CA-ESP-01, 21/12/2021** («cruza el ECA») → Simular, ritmo Rápida | La UI manda las lecturas reales una por una a `POST /api/predicciones`. La ventana de 24 h se llena; en la lectura 18 aparece la media; a las 07:00 la media de PM10 supera el ECA y se enciende la alerta, y el panel de la izquierda cambia solo: es el evento `estacion.regimen` por WebSocket |
 | 4 | Julio · 0:30 | Clúster: la tabla de nodos, la latencia por ruta con la línea de 100 ms y los eventos | Cada nodo con su **IP:puerto**: es la dirección remota de su conexión TCP, como la ve el coordinador, y su latido. El CPU que se ve es el del proceso de la API, el coordinador: el de cada nodo no viaja por el protocolo. Las altas y bajas de los nodos son los eventos |
 | 5 | Rody · 0:50 | Entrenamiento: K = todos los nodos libres, réplicas 1, semilla 42 → Lanzar entrenamiento | La API toma K nodos del pool, les manda `CARGAR` y una ronda por iteración. Las rondas llegan por el WebSocket; como el entrenamiento real dura unos 50 ms, la UI reproduce sus 44 rondas más despacio, con la inercia y lo que tardó cada nodo: decirlo así, no «en vivo». Al final, la diferencia con el K-Means secuencial (con 2 nodos fue 7,7 × 10⁻¹⁵) y «el modelo nuevo quedó activo» porque está dentro de 10⁻⁹. Si se piden más nodos que los libres, la API responde 422 y la UI lo dice |
-| 6 | Julio · 0:30 | Terminal: `docker compose ps` y `docker compose logs --tail 15 nodo` | Los servicios con sus puertos. En el log de un nodo: `conectado desde <IP>:<puerto> a <IP>:7070`, el `CARGAR` y la primera ronda: el `Dial` del nodo, en vivo |
+| 6 | Julio · 0:30 | Terminal: `docker compose ps` y la terminal donde corre `docker compose logs -f --tail 0 nodo`, abierta **antes** de lanzar el entrenamiento del paso 5 | Los servicios con sus puertos. En el log de cada nodo, desde que empezó el entrenamiento: el `CARGAR`, la primera ronda, «corrida terminada» y el nuevo `conectado desde <IP>:<puerto> a <IP>:7070` con que vuelve a llamar: el `Dial` del nodo, en vivo |
 | 7 | Dayana · 0:15 | Impacto: bajar hasta «Cada estación vigila una actividad» | La unidad honesta es la actividad: junto a la refinería y las ladrilleras de Lurigancho, en la mayoría de las horas-estación la media superó el ECA |
 | 8 | Julio · 0:20 | `/docs` (Swagger): `POST /api/auth/invitado` → copiar el token → Authorize → `GET /api/metricas` | 403: el token es de rol usuario y la ruta es de admin. La UI esconde, la API decide |
 
@@ -121,7 +121,8 @@ nodo caído; los nodos vuelven a llamar solos». Se relanza con los que queden.
   los nodos en el pool (el despliegue de `despliegue/azure/` levanta dos, `--scale nodo=2`; con
   tres o cuatro la ronda se ve mejor); un modelo activo.
 - [ ] En el `.env` del servidor, `JWT_DURACION=4h` y reiniciar la API: el token por omisión dura
-  una hora y no se renueva.
+  una hora y no se renueva. **Después de la clase**, quitar la variable (vuelve a una hora) y
+  reiniciar la API: un token robado vale lo que dure.
 - [ ] **El estado no retrocede.** Si una estación ya tiene un estado posterior al día que se
   simula, el panel no se mueve (la pantalla dice «Este tramo ya está cargado»). Comprobar en el
   Panel que CA-ESP-01 no tiene estado posterior al 21/12/2021; si lo tiene, elegir otro día que
@@ -146,7 +147,10 @@ nodo caído; los nodos vuelven a llamar solos». Se relanza con los que queden.
 - [ ] Julio: una terminal abierta en el servidor (o en la laptop con el plan B). En el servidor,
   el Compose lleva el override de Azure; para no tipearlo en vivo:
   `alias dc='sudo docker compose -f docker-compose.yml -f despliegue/azure/compose.azure.yml'`, y
-  en la demo `dc ps` y `dc logs --tail 15 nodo`. `/docs` abierto en otra pestaña.
+  en la demo `dc ps`. Antes de que Rody lance el entrenamiento (paso 5), Julio deja corriendo
+  `dc logs -f --tail 0 nodo` en otra terminal: así el `CARGAR` y la primera ronda quedan a la vista
+  (el nodo registra solo la primera `ITERAR`, pero con varios nodos un `--tail` corto las cortaría).
+  `/docs` abierto en otra pestaña.
 - [ ] Probar el proyector con el deck en pantalla completa (`F`) y la vista del orador (`S`).
   Alt + clic (en Linux, Ctrl + clic) amplía una zona: sirve para los diagramas de las láminas 8 y
   21, que proyectados se leen mal; otro Alt + clic vuelve.
@@ -169,25 +173,28 @@ La UI queda en <http://localhost:8081>, con la misma demo. El seed carga el cat�
 arranca con el modelo de `reports/kmeans.json`; la simulación llena el estado de las estaciones.
 
 **Nivel 2 · falla Docker.** La API y los nodos son binarios de Go y corren sin Docker, sin red y
-sin MongoDB ni Redis (usan los dobles en memoria). Es la mejor forma de *mostrar los sockets*:
+sin MongoDB ni Redis (usan los dobles en memoria). Es la mejor forma de *mostrar los sockets*.
+**Solo en loopback**: con `-demo` la API trae `admin`/`admin`, y por omisión escucha el 8080 y el
+7070 en todas las interfaces, así que en la red del aula cualquiera podría pedir un token de admin o
+meter un nodo al pool. Con `-addr` y `-nodos-addr` en `127.0.0.1` solo llega la laptop:
 
 ```bash
 export JWT_SECRETO=$(openssl rand -hex 32)
 ```
 
 ```bash
-go run ./cmd/api -demo
+go run ./cmd/api -demo -addr 127.0.0.1:8080 -nodos-addr 127.0.0.1:7070
 ```
 
 En otra terminal:
 
 ```bash
-go run ./cmd/nodo -coordinador localhost:7070 -nombre nodo-1
+go run ./cmd/nodo -coordinador 127.0.0.1:7070 -nombre nodo-1
 ```
 
 Se ve en el log del nodo `conectado desde 127.0.0.1:<puerto> a 127.0.0.1:7070`, y en el de la API
 `pool: alta nodo-1 (127.0.0.1:<puerto>)`. Con `-demo` los usuarios son `admin`/`admin` y
-`demo`/`demo` (solo para la laptop). Sin el gold en `data/gold/` la API predice y recibe nodos,
+`demo`/`demo`: por eso, solo en `127.0.0.1`. Sin el gold en `data/gold/` la API predice y recibe nodos,
 pero no entrena. Comprobado el 27/11 en la laptop de Rody.
 
 Y la prueba que corre un coordinador y un nodo sobre TCP real, en dos segundos:
@@ -212,7 +219,8 @@ Las frases que el docente ya corrigió, o que el dato no sostiene. Están explic
   sockets TCP; dentro de cada proceso, goroutines, canales y `WaitGroup`».
 - ~~«La predicción la calcula el clúster».~~ El clúster entrena; la API predice con el modelo en
   memoria.
-- ~~«Predecimos episodios».~~ La anticipación es descriptiva, sin partición temporal.
+- ~~«Predecimos episodios»~~ ni ~~«evaluamos la anticipación»~~. Es una descripción dentro de la
+  muestra: la evaluación con partición temporal que diseñó la PC3 no se hizo.
 - ~~«34 estaciones».~~ El portal lo anuncia, pero en el CSV hay 33.
 - ~~«Una hora sobre 50 µg/m³ incumple el ECA».~~ El ECA es una media de 24 horas.
 - ~~«No usamos Mutex».~~ El bucle del K-Means no lo necesita; la API sí los usa (ventana de 24 h,
