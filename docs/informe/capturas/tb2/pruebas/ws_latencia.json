@@ -1,32 +1,49 @@
 {
   "metadatos": {
-    "momento": "2026-11-27T23:42:51.349Z",
+    "momento": "2026-11-28T02:06:52.691Z",
     "base": "http://localhost:8081",
-    "rol": "usuario",
+    "emisor": {
+      "usuario": "admin",
+      "rol": "admin",
+      "abre_websocket": false
+    },
+    "receptor": {
+      "usuario": "invitado (API_INVITADO)",
+      "rol": "usuario",
+      "abre_websocket": true,
+      "manda_lecturas": false
+    },
+    "mismo_token": false,
     "node": "v22.22.0",
     "dias": [
       "CA-JUPR-01-2022-05-03",
       "CA-CG-02-2022-06-02",
       "CA-MAC-01-2022-05-26"
     ],
-    "pausa_ms": 350
+    "pausa_ms": 350,
+    "plazos_ms": {
+      "pedido": 5000,
+      "apreton": 5000,
+      "evento": 5000
+    }
   },
   "lecturas": 132,
   "errores_http": 0,
   "sin_evento": 0,
+  "finales_que_no_coinciden": 0,
   "respuesta_ms": {
     "n": 132,
-    "p50": 1.91,
-    "p95": 2.96,
-    "p99": 3.74,
-    "max": 5.41
+    "p50": 1.98,
+    "p95": 6.18,
+    "p99": 9.52,
+    "max": 11.57
   },
   "evento_ms": {
     "n": 132,
-    "p50": 2.19,
-    "p95": 3.96,
-    "p99": 4.44,
-    "max": 4.7
+    "p50": 2.25,
+    "p95": 6.43,
+    "p99": 9.98,
+    "max": 11.78
   },
   "finales": [
     {
@@ -35,6 +52,7 @@
       "coincide": true,
       "esperado": {
         "regimen": 0,
+        "excede_eca": false,
         "alerta": false,
         "inca": "buena",
         "media_24h": {
@@ -45,6 +63,7 @@
       },
       "evento": {
         "regimen": 0,
+        "excede_eca": false,
         "alerta": false,
         "inca": "buena",
         "media_24h": {
@@ -60,6 +79,7 @@
       "coincide": true,
       "esperado": {
         "regimen": 0,
+        "excede_eca": false,
         "alerta": false,
         "inca": "moderada",
         "media_24h": {
@@ -70,6 +90,7 @@
       },
       "evento": {
         "regimen": 0,
+        "excede_eca": false,
         "alerta": false,
         "inca": "moderada",
         "media_24h": {
@@ -85,6 +106,7 @@
       "coincide": true,
       "esperado": {
         "regimen": 0,
+        "excede_eca": false,
         "alerta": false,
         "inca": null,
         "media_24h": {
@@ -95,6 +117,7 @@
       },
       "evento": {
         "regimen": 0,
+        "excede_eca": false,
         "alerta": false,
         "inca": null,
         "media_24h": {
@@ -104,5 +127,6 @@
         }
       }
     }
-  ]
+  ],
+  "cumple": true
 }

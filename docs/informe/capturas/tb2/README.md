@@ -42,7 +42,7 @@ página entera; las demás, lo que entra en la ventana. El 3 de `pruebas/` descr
 | 18 | La sesión avisa 5 minutos antes de vencer y, al vencer, vuelve al ingreso con «La sesión venció.» | ✅ | `seguridad/02`, `seguridad/03` |
 | 19 | Ninguna violación de la CSP en la consola de la ventana principal (invitado y después admin) en toda la corrida: los únicos errores son el 401 del paso 2 y el 422 del paso 12, a propósito | ✅ | consola de Playwright |
 | 20 | Latencia de la API < 100 ms medida en local, directo y a través del Caddy de la UI | ✅ | `pruebas/` (abajo) |
-| 21 | Una lectura llega al panel de otro cliente por el WebSocket en milisegundos, y el último estado coincide con lo esperado de `series.json` | ✅ | `pruebas/ws_latencia.json` |
+| 21 | Una lectura que manda el admin le llega por el WebSocket a otra sesión, un invitado que solo escucha, en milisegundos; y el último estado de cada día coincide con lo esperado de `series.json` | ✅ | `pruebas/ws_latencia.json` |
 
 ## 2. Las capturas
 
@@ -125,7 +125,7 @@ página entera; las demás, lo que entra en la ventana. El 3 de `pruebas/` descr
 
 | Archivo | Qué muestra |
 |---|---|
-| `compose-ps.txt` | `docker compose ps -a` del Compose levantado otra vez limpio, sobre esta rama con develop al día (`4cfc6dc`): `web`, `api`, dos `nodo`, `mongo` y `redis` sanos y `seed` terminado con 0 |
+| `compose-ps.txt` | `docker compose ps -a` del Compose levantado otra vez limpio, sobre esta rama con develop al día (`89d3631`): `web`, `api`, dos `nodo`, `mongo` y `redis` sanos y `seed` terminado con 0 |
 
 ### `seguridad/`
 
@@ -145,7 +145,7 @@ esta corrida: es lo mismo que pasa al final de la hora de un token normal, sin e
 `web-pruebas.txt` (lint sin errores, Vitest con 708 pruebas en 36 archivos, build) y `go-test-race.txt`
 (`go vet` y `go test -race -count=1 ./...`, todos los paquetes en verde). Una primera corrida de `go test -race`
 falló en `cmd/carga` por una prueba que exigía un p99 menor que 100 ms a un servidor de prueba con todos los
-paquetes corriendo a la vez (dio 102 ms); se corrigió la prueba en `e84281e`, no el comando.
+paquetes corriendo a la vez (dio 102 ms); se corrigió la prueba en `10a5239`, no el comando.
 
 **Latencia de la API, con `cmd/carga`** (`POST /api/predicciones`, 5000 pedidos medidos por nivel, las 78
 lecturas de prueba de Postman, 14 CPU lógicas). Se midió dos veces: directo a la API (`:8080`) y por el Caddy
@@ -162,18 +162,25 @@ escritura perdida en MongoDB ni en Redis.
 Archivos: `api_latencia_directa.json`, `api_latencia_caddy.json` (el formato de `reports/api_latencia.json`) y
 lo que imprimió cada corrida, `carga_directa.txt` y `carga_caddy.txt`.
 
-**Del pedido al panel por el WebSocket, con `medir_ws.mjs`** (Node 22, sin dependencias). Entra como invitado
-por el Caddy, abre `/ws` igual que la UI y manda una por una las 132 lecturas reales de tres días de
-`series.json` (CA-JUPR-01, CA-CG-02 y CA-MAC-01). Por cada una mide hasta la respuesta y hasta que llega su
-`estacion.regimen`:
+**De lo que manda un cliente a lo que ve otro por el WebSocket, con `medir_ws.mjs`** (Node 22, sin
+dependencias). Son dos sesiones distintas, las dos por el Caddy de la UI: el **admin** (con usuario y clave)
+manda una por una las 132 lecturas reales de tres días de `series.json` (CA-JUPR-01, CA-CG-02 y CA-MAC-01) y no
+abre ningún WebSocket; el **invitado** (rol `usuario`, otro token) solo escucha `/ws`, como el panel de otra
+persona, y no manda nada. Por cada lectura se mide, desde que el admin la manda, hasta que el admin tiene la
+respuesta y hasta que al invitado le llega su `estacion.regimen`. Cada pedido, su cuerpo y el apretón de manos
+del WebSocket tienen un plazo de 5 s, y el script sale con 1 si hubo un error HTTP, una lectura sin evento o un
+día que no coincide. Se corrió el 27/11 a las 21:06 sobre un Compose levantado limpio (sin ningún estado) con
+el commit `4bb8521` más este script:
 
 | | p50 | p95 | p99 | máx |
 |---|---:|---:|---:|---:|
-| Respuesta de `POST /api/predicciones` | 1.91 ms | 2.96 ms | 3.74 ms | 5.41 ms |
-| Llegada del evento `estacion.regimen` | 2.19 ms | 3.96 ms | 4.44 ms | 4.70 ms |
+| Respuesta de `POST /api/predicciones` al admin | 1.98 ms | 6.18 ms | 9.52 ms | 11.57 ms |
+| Llegada del `estacion.regimen` al invitado | 2.25 ms | 6.43 ms | 9.98 ms | 11.78 ms |
 
-Las 132 lecturas tuvieron su evento, y el último estado de cada día coincidió con lo `esperado` del archivo
-(régimen, alerta, banda INCA y medias), que `scripts/impacto.py` calcula sin la API. Archivo: `ws_latencia.json`.
+Ningún error HTTP y ninguna lectura sin su evento. El último estado de cada día coincidió en todo con lo
+`esperado` del archivo, que `scripts/impacto.py` calcula sin la API: régimen, `excede_eca`, alerta, banda INCA,
+las dos medias y cuántas lecturas tenía la ventana (`media_24h.lecturas`). Archivo: `ws_latencia.json`, que
+también dice quién mandó y quién escuchó.
 
 **Políticas de seguridad de la API** (`seguridad/politicas.txt`, todo por el Caddy de la UI):
 
@@ -196,15 +203,21 @@ Las 132 lecturas tuvieron su evento, y el último estado de cada día coincidió
 
 1. `cp .env.example .env`, completar `JWT_SECRETO` y `API_USUARIOS`, y poner `API_INVITADO=demo` y
    `JWT_DURACION=4h`. Con `GOLD_DIR` apuntando a la carpeta del gold.
-2. `docker compose down -v` (sistema limpio: el escenario no se puede cargar sobre estados más nuevos) y
-   `docker compose up --build -d --scale nodo=2`.
+2. `docker compose -p aire-tb2-frontend down -v` (sistema limpio: el escenario no se puede cargar sobre estados
+   más nuevos) y `docker compose -p aire-tb2-frontend up --build -d --scale nodo=2`. El `-p` tiene que ser el
+   mismo en los dos: sin él, `down -v` baja otro proyecto y deja este con sus estados.
 3. Recorrer la lista de la sección 1 en <http://localhost:8081>, en ese orden. El invitado, en otra ventana
    privada.
 4. Las mediciones, **después** de las capturas (`cmd/carga` deja estados de 2022 en las estaciones):
 
    ```bash
-   node docs/informe/capturas/tb2/pruebas/medir_ws.mjs http://localhost:8081 > docs/informe/capturas/tb2/pruebas/ws_latencia.json
+   EMISOR_CLAVE=… node docs/informe/capturas/tb2/pruebas/medir_ws.mjs http://localhost:8081 > docs/informe/capturas/tb2/pruebas/ws_latencia.json
    CARGA_CLAVE=… CARGA_CLAVE_ADMIN=… go run ./cmd/carga -url http://localhost:8081 -pedidos 5000 -salida docs/informe/capturas/tb2/pruebas/api_latencia_caddy.json
    ```
 
 Las capturas de `andamiaje/` son anteriores (21/11), del armazón con las pantallas todavía en construcción.
+
+**Sobre los hashes de los registros.** `pruebas/web-pruebas.txt`, `pruebas/go-test-race.txt` y
+`despliegue/compose-ps.txt` dicen el commit que había al correrlos. La rama se reescribió después para
+quitarles la metadata de IA a los mensajes, sin cambiar ningún archivo, así que esos hashes ya no existen.
+Equivalen a estos: `b90d451` → `487a2b0`, `e84281e` → `10a5239` y `4cfc6dc` → `89d3631`.
