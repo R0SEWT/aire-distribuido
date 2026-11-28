@@ -5,11 +5,18 @@ en la fila 12 de la captura del informe, sin marcar. Este recorte muestra las fi
 captura (docs/informe/capturas/pc4/kanban.png, sin editar nada más) con un recuadro en esa fila.
 
     python3 recorte_kanban.py      # deja img/kanban-pc4-76.png
+
+Requiere Pillow, que no está en ningún entorno del repo: si falta, `pip install pillow` o
+`uv run --with pillow python3 recorte_kanban.py`. El PNG se versiona, así que el deck se renderiza sin
+correr este script.
 """
 
 from pathlib import Path
 
-from PIL import Image, ImageDraw
+try:
+    from PIL import Image, ImageDraw
+except ModuleNotFoundError:
+    raise SystemExit("error: falta Pillow (pip install pillow, o uv run --with pillow python3 recorte_kanban.py)")
 
 AQUI = Path(__file__).resolve().parent
 ORIGEN = AQUI / "../../informe/capturas/pc4/kanban.png"
