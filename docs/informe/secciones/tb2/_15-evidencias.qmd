@@ -4,11 +4,11 @@ del informe, con sus decisiones, y el servicio web del TB2. -->
 
 ## Evidencias de la implementación y pruebas de funcionamiento de la PC4 {#sec-evidencias-pc4}
 
-Las evidencias de este entregable son de tres clases: las pruebas automáticas, que corren en cada
+Las evidencias de la PC4 son de tres clases: las pruebas automáticas, que corren en cada
 cambio; una corrida completa del sistema desplegado, con sus salidas tal como quedaron; y las
 figuras de esa misma secuencia. Los listados marcados como «salida real» se copian en
 cada render de los archivos de `docs/informe/capturas/pc4/`, que guardan la salida en texto de la
-corrida. Las figuras siguen el guion de esa carpeta (`GUION.md`) y se tomaron el día de la entrega
+corrida. Las figuras siguen el guion de esa carpeta (`GUION.md`) y se tomaron el día de la entrega de la PC4
 contra un Docker Compose recién levantado, con tres nodos. Las de Swagger UI y la del tablero son
 capturas del navegador. Las demás son la salida real de cada pedido o comando volcada a imagen, con
 el pedido o el comando a la vista: los pedidos son los de la colección de Postman, ejecutados uno
@@ -109,7 +109,7 @@ El @lst-salida-compose-tb2 es el sistema del TB2 recién levantado, con el servi
 
 ### Pruebas automáticas
 
-Los paquetes de este entregable se escribieron con sus pruebas, y todas corren con el detector de
+Los paquetes de la PC4 se escribieron con sus pruebas, y todas corren con el detector de
 carreras (`go test -race`), en la laptop y en la integración continua de GitHub en cada cambio. La
 @tbl-pruebas-pc4 las cuenta por paquete; con las de la PC3 (@tbl-pruebas), el repositorio tiene
 {{< meta cifras.pruebas.repo >}}.
@@ -351,6 +351,6 @@ El trabajo siguió el mismo Git Flow de la PC3: cada pieza en su rama `feature/*
 cambios hacia `develop` con su revisión y con la integración continua en verde, y la entrega por una
 rama `release/pc4` hacia `main`, con el tag `pc4`. Las piezas se escribieron en paralelo contra un
 contrato acordado antes (la especificación de diseño de la PC4 y el documento OpenAPI), que es lo
-que permitió que la API, el almacén, el coordinador, las pruebas de Postman y este informe avanzaran
+que permitió que la API, el almacén, el coordinador, las pruebas de Postman y el informe avanzaran
 a la vez. Las tareas están en el tablero Kanban (Anexo B) y el historial de cambios por integrante y
 de solicitudes fusionadas, en el Anexo C.
