@@ -58,7 +58,7 @@ export function CuantoTiempo({ impacto }: { impacto: Impacto }) {
     <Seccion id="cuanto-tiempo" pregunta="¿Cuánto tiempo?" titulo="Las horas en que la media de 24 horas superó el ECA">
       <div className="flex flex-wrap items-end gap-x-10 gap-y-4">
         <Cifra valor={t.horas_sobre_eca} unidad="horas-estación sobre el ECA" />
-        <Cifra tamano="mediana" rotulo="De las horas con media calculable" valor={t.horas_calculables} unidad={`horas-estación · ${porciento(t.horas_sobre_eca, t.horas_calculables)}`} />
+        <Cifra tamano="mediana" rotulo="De las horas-estación con media calculable" valor={t.horas_calculables} unidad={`horas-estación · ${porciento(t.horas_sobre_eca, t.horas_calculables)}`} />
       </div>
       <Frase tono="mala">
         De cada 100 horas-estación con media de 24 horas calculable, {numero((100 * t.horas_sobre_eca) / t.horas_calculables, 1)}{' '}
@@ -67,7 +67,7 @@ export function CuantoTiempo({ impacto }: { impacto: Impacto }) {
         ni la duración de un único episodio.
       </Frase>
       <div>
-        <p className="rotulo mb-2">Cómo se reparten esas {numero(t.horas_calculables)} horas entre las bandas INCA</p>
+        <p className="rotulo mb-2">Cómo se reparten esas {numero(t.horas_calculables)} horas-estación entre las bandas INCA</p>
         <BarraBandas horas={t.inca} de="todas las estaciones" alto={1.5} />
         <dl className="mt-3 grid grid-cols-2 gap-x-6 gap-y-3 sm:grid-cols-4">
           {ORDEN.map((b) => (
@@ -78,7 +78,7 @@ export function CuantoTiempo({ impacto }: { impacto: Impacto }) {
               </dt>
               <dd className="mt-0.5">
                 <span className="text-texto block font-mono text-lg leading-tight font-semibold tabular-nums">{numero(t.inca[b])}</span>
-                <span className="text-suave block text-sm">horas · {porciento(t.inca[b], t.horas_calculables)}</span>
+                <span className="text-suave block text-sm">horas-estación · {porciento(t.inca[b], t.horas_calculables)}</span>
               </dd>
             </div>
           ))}

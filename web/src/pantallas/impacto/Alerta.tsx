@@ -16,15 +16,15 @@ export function SirveLaAlerta({ impacto }: { impacto: Impacto }) {
       nombre: `Régimen alto (régimen ${s.regimen_alto.regimen})`,
       precision: s.regimen_alto.precision,
       cobertura: s.regimen_alto.cobertura,
-      detallePrecision: `${numero(s.regimen_alto.aciertos)} de ${numero(s.regimen_alto.horas)} horas`,
-      detalleCobertura: `${numero(s.regimen_alto.aciertos)} de ${numero(s.horas_sobre_eca)} horas`,
+      detallePrecision: `${numero(s.regimen_alto.aciertos)} de ${numero(s.regimen_alto.horas)} horas-estación`,
+      detalleCobertura: `${numero(s.regimen_alto.aciertos)} de ${numero(s.horas_sobre_eca)} horas-estación`,
     },
     {
       nombre: 'Lectura horaria sobre el umbral',
       precision: s.lectura_horaria.precision,
       cobertura: s.lectura_horaria.cobertura,
-      detallePrecision: `${numero(s.lectura_horaria.aciertos)} de ${numero(s.lectura_horaria.horas)} horas`,
-      detalleCobertura: `${numero(s.lectura_horaria.aciertos)} de ${numero(s.horas_sobre_eca)} horas`,
+      detallePrecision: `${numero(s.lectura_horaria.aciertos)} de ${numero(s.lectura_horaria.horas)} horas-estación`,
+      detalleCobertura: `${numero(s.lectura_horaria.aciertos)} de ${numero(s.horas_sobre_eca)} horas-estación`,
     },
   ]
   return (
@@ -48,20 +48,20 @@ export function SirveLaAlerta({ impacto }: { impacto: Impacto }) {
       </div>
       <Frase tono="aviso">
         El régimen alto acierta el {proporcion(s.regimen_alto.precision, 0)} de las veces que suena (precisión) y detecta el{' '}
-        {proporcion(s.regimen_alto.cobertura, 0)} de las horas sobre el ECA (cobertura). La lectura horaria detecta más (
+        {proporcion(s.regimen_alto.cobertura, 0)} de las horas-estación sobre el ECA (cobertura). La lectura horaria detecta más (
         {proporcion(s.lectura_horaria.cobertura, 0)}) y acierta menos ({proporcion(s.lectura_horaria.precision, 0)}): por
         eso el régimen se muestra como dato y la alerta es la de la media de 24 horas.
       </Frase>
       <DeDondeSale impacto={impacto} fuentes={['gold', 'asignaciones', 'regimenes', 'alerta_24h']}>
         <p>
           Se consideran solo horas-estación con media de 24 horas calculable. La precisión divide los aciertos entre
-          las horas con la señal encendida; la cobertura divide esos mismos aciertos entre todas las horas sobre el
-          ECA. Son denominadores distintos y no describen personas ni territorio cubierto.
+          las horas-estación con la señal encendida; la cobertura divide esos mismos aciertos entre todas las
+          horas-estación sobre el ECA. Son denominadores distintos y no describen personas ni territorio cubierto.
         </p>
         <p>
-          Régimen alto: encendido en {numero(s.regimen_alto.horas)} horas, {numero(s.regimen_alto.aciertos)} de ellas con
-          la media sobre el ECA. Lectura horaria: {numero(s.lectura_horaria.horas)} horas y{' '}
-          {numero(s.lectura_horaria.aciertos)} aciertos. Horas sobre el ECA: {numero(s.horas_sobre_eca)} de{' '}
+          Régimen alto: encendido en {numero(s.regimen_alto.horas)} horas-estación, {numero(s.regimen_alto.aciertos)} de
+          ellas con la media sobre el ECA. Lectura horaria: {numero(s.lectura_horaria.horas)} horas-estación y{' '}
+          {numero(s.lectura_horaria.aciertos)} aciertos. Horas-estación sobre el ECA: {numero(s.horas_sobre_eca)} de{' '}
           {numero(s.horas_calculables)} con media calculable.
         </p>
       </DeDondeSale>
@@ -258,7 +258,7 @@ export function LoQueNoPuedeDecir({ impacto }: { impacto: Impacto }) {
               {' '}
               Uno solo decidiría la cifra: {nombrePropio(mayor.distrito)}, por {enLetras(deMayor.length)}{' '}
               {deMayor.length === 1 ? 'estación' : 'estaciones'} ({[...porTipo].map(([tipo, codigos]) => `${enumerar(codigos)}: ${tipo}`).join('; ')}
-              ). Un número grande junto a «horas sobre el ECA» se lee como «personas afectadas», se escriba como se
+              ). Un número grande junto a «horas-estación sobre el ECA» se lee como «personas afectadas», se escriba como se
               escriba.
             </>
           )}

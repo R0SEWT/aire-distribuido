@@ -195,9 +195,9 @@ describe('Impacto', () => {
     expect(cifra('Régimen alto · cobertura')).toHaveTextContent('44.3%')
     expect(cifra('Lectura horaria · precisión')).toHaveTextContent('21.6%')
     expect(cifra('Lectura horaria · cobertura')).toHaveTextContent('54.8%')
-    expect(parte).toHaveTextContent('El régimen alto acierta el 35 % de las veces que suena (precisión) y detecta el 44 % de las horas sobre el ECA (cobertura)')
+    expect(parte).toHaveTextContent('El régimen alto acierta el 35 % de las veces que suena (precisión) y detecta el 44 % de las horas-estación sobre el ECA (cobertura)')
     expect(parte).toHaveTextContent('No es una predicción de horas futuras')
-    expect(parte).toHaveTextContent('encendido en 1,497 horas, 524 de ellas con la media sobre el ECA')
+    expect(parte).toHaveTextContent('encendido en 1,497 horas-estación, 524 de ellas con la media sobre el ECA')
     expect(within(parte).getByRole('img', { name: /Precisión y cobertura de cada señal/ })).toHaveAccessibleName(
       /Régimen alto \(régimen 1\): precisión 35\.0 % y cobertura 44\.3 %; Lectura horaria sobre el umbral: precisión 21\.6 % y cobertura 54\.8 %/,
     )
@@ -284,8 +284,10 @@ describe('Impacto', () => {
       const tiempo = await seccion(/Las horas en que la media de 24 horas superó el ECA/)
       expect(tiempo).toHaveTextContent('4,321horas-estación sobre el ECA')
       expect(tiempo).toHaveTextContent('50,000horas-estación · 8.6 %')
-      expect(tiempo).toHaveTextContent('40,000horas · 80.0 %')
-      expect(tiempo).toHaveTextContent('10horas · menos de 0.1 %')
+      expect(tiempo).toHaveTextContent('De las horas-estación con media calculable')
+      expect(tiempo).toHaveTextContent('Cómo se reparten esas 50,000 horas-estación entre las bandas INCA')
+      expect(tiempo).toHaveTextContent('40,000horas-estación · 80.0 %')
+      expect(tiempo).toHaveTextContent('10horas-estación · menos de 0.1 %')
       expect(tiempo).toHaveTextContent('Se suman las observaciones de 15 estaciones')
       expect(await seccion(/ECA y qué es el INCA/)).toHaveTextContent('37 µg/m³ de PM2.5 y 88 µg/m³ de PM10')
 
